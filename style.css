@@ -3,9 +3,10 @@
 body {
   font-family: helvetica, arial, sans-serif;
   margin: 2em;
+  background-color: #69F7BE;
 }
 
 h1 {
-  font-style: italic;
   color: #373fff;
+  font-size: 164pt;
 }
