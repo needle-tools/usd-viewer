@@ -1,12 +1,38 @@
-/* CSS files add styling rules to your content */
+/* Our CSS values that we'll use in the rest of our styling */
+:root {
+  --main-bg-color: #69F7BE;
+  --main-text-color: #373fff;
+}
+
+
 
 body {
   font-family: helvetica, arial, sans-serif;
-  margin: 2em;
-  background-color: #69F7BE;
+  background-color: var(--main-bg-color);
 }
 
 h1 {
-  color: #373fff;
+  color: var(--main-text-color);
   font-size: 164pt;
+}
+
+.wrapper {
+  min-height: 100vh; // height of the browser viewport
+  display: flex;
+    justify-content: center;
+  align-items: center;
+}
+
+.content {
+  height: 100px;
+  width: 200px;
+  background: #fff;
+  padding: 50px;
+  border-radius: 10px;
+  position: relative;
+  text-align: center;
+}
+
+.illustration {
+  
 }
