@@ -4,14 +4,29 @@
   --main-text-color: #373fff;
 }
 
+@font-face {
+    font-family: HK Grotesk;
+    src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Regular.otf?v=1602782380076") format("opentype");
+}
+
+@font-face {
+    font-family: HK Grotesk;
+    font-weight: bold;
+    src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Bold.otf?v=1602782484249") format("opentype");
+}
+
 body {
-  font-family: helvetica, arial, sans-serif;
+  font-family: HK Grotesk;
   background-color: var(--main-bg-color);
 }
 
 .title {
   color: var(--main-text-color);
-  font-size: 164pt;
+  font-family: HK Grotesk;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 164px;
+  line-height: 105%;
 }
 
 .wrapper {
@@ -21,10 +36,15 @@ body {
 }
 
 .content {
-  width: clamp(23ch, 50%, 46ch);
   display: flex;
   flex-direction: column;
   padding: 1rem;
+}
+
+/* Our remix on glitch button + grid for other actions */
+.remix {
+  display: grid;
+  place-items: end;
 }
 
 .btn--remix {
@@ -49,6 +69,5 @@ body {
 }
 
 .illustration {
-  position: relative;
-  bottom: 10em;
+
 }
