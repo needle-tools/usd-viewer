@@ -9,7 +9,7 @@ body {
   background-color: var(--main-bg-color);
 }
 
-h1 {
+.title {
   color: var(--main-text-color);
   font-size: 164pt;
 }
@@ -25,6 +25,27 @@ h1 {
   display: flex;
   flex-direction: column;
   padding: 1rem;
+}
+
+.btn--remix {
+  padding-left: .75rem;
+  padding-right: .75rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+  font-size: 1.1rem;
+  line-height: 1rem;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  cursor: pointer;
+  background: #FFFFFF;
+  border: 1px solid #000000;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+
+.btn--remix img {
+  margin-right: .75rem;
 }
 
 .illustration {
