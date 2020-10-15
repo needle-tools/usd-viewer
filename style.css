@@ -4,8 +4,6 @@
   --main-text-color: #373fff;
 }
 
-
-
 body {
   font-family: helvetica, arial, sans-serif;
   background-color: var(--main-bg-color);
@@ -17,22 +15,19 @@ h1 {
 }
 
 .wrapper {
-  min-height: 100vh; // height of the browser viewport
-  display: flex;
-    justify-content: center;
-  align-items: center;
+  min-height: 100vh;
+  display: grid;
+  place-items: left;
 }
 
 .content {
-  height: 100px;
-  width: 200px;
-  background: #fff;
-  padding: 50px;
-  border-radius: 10px;
-  position: relative;
-  text-align: center;
+  width: clamp(23ch, 50%, 46ch);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
 }
 
 .illustration {
-  
+  position: relative;
+  bottom: 10em;
 }
