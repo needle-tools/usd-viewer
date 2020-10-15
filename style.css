@@ -2,6 +2,13 @@
 :root {
   --main-bg-color: #69F7BE;
   --main-text-color: #373fff;
+  --wrapper-height: 95vh;
+}
+
+@media screen and (max-width: 750px) {
+  :root {
+    --wrapper-height: 120vh;
+  }
 }
 
 @font-face {
@@ -20,6 +27,7 @@ body {
   background-color: var(--main-bg-color);
 }
 
+
 .title {
   color: var(--main-text-color);
   font-family: HK Grotesk;
@@ -29,8 +37,9 @@ body {
   line-height: 105%;
 }
 
+
 .wrapper {
-  min-height: 95vh;
+  min-height: var(--wrapper-height);
   display: grid;
   place-items: center;
 }
@@ -69,7 +78,7 @@ body {
   margin-right: .75rem;
 }
 
+/* Very light scaling for our illustration */
 .illustration {
-  max-width: 80%;
-
+  max-width: 90%;
 }
