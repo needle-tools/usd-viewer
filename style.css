@@ -30,9 +30,9 @@ body {
 }
 
 .wrapper {
-  min-height: 100vh;
+  min-height: 95vh;
   display: grid;
-  place-items: left;
+  place-items: center;
 }
 
 .content {
@@ -48,6 +48,7 @@ body {
 }
 
 .btn--remix {
+  font-family: HK Grotesk;
   padding-left: .75rem;
   padding-right: .75rem;
   padding-top: .5rem;
@@ -69,5 +70,6 @@ body {
 }
 
 .illustration {
+  max-width: 80%;
 
 }
