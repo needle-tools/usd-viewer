@@ -1,60 +1,36 @@
-/* Our default values set for mobile */
+/* Our CSS values that we'll use in the rest of our styling */
 :root {
-  --color-bg: #69F7BE;
-  --color-text-main: #373fff;
-  --wrapper-height: 120vh;
-}
-
-/* Tablet portrait */
-@media (min-width: 768px) {
-  :root {
-  --wrapper-hight: 80vh;
-  }
-}
-
-/* Tablet Landscape */
-@media (min-width: 1024px) {
-  :root {
-    --wrapper-height: 80vh;
-  }
-}
-
-/* Desktop */
-@media (min-width: 1280px) {
-:root {
-    --wrapper-height: 90vh;
-  }
+  --main-bg-color: #69F7BE;
+  --main-text-color: #373fff;
 }
 
 @font-face {
-  font-family: HK Grotesk;
-  src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Regular.otf?v=1602782380076")
-    format("opentype");
+    font-family: HK Grotesk;
+    src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Regular.otf?v=1602782380076") format("opentype");
 }
 
 @font-face {
-  font-family: HK Grotesk;
-  font-weight: bold;
-  src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Bold.otf?v=1602782484249")
-    format("opentype");
+    font-family: HK Grotesk;
+    font-weight: bold;
+    src: url("https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FHKGrotesk-Bold.otf?v=1602782484249") format("opentype");
 }
 
 body {
   font-family: HK Grotesk;
-  background-color: var(--color-bg);
+  background-color: var(--main-bg-color);
 }
 
 .title {
-  color: var(--color-text-main);
+  color: var(--main-text-color);
   font-family: HK Grotesk;
   font-style: normal;
   font-weight: bold;
-  font-size: 134px;
+  font-size: 164px;
   line-height: 105%;
 }
 
 .wrapper {
-  min-height: var(--wrapper-height);
+  min-height: 95vh;
   display: grid;
   place-items: center;
 }
@@ -65,20 +41,18 @@ body {
   padding: 1rem;
 }
 
-/* Navigation grid */
-.navigation {
+/* Our remix on glitch button + grid for other actions */
+.remix {
   display: grid;
   place-items: end;
 }
 
-
-/* Our remix on glitch button + grid for other actions */
 .btn--remix {
   font-family: HK Grotesk;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-left: .75rem;
+  padding-right: .75rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
   font-size: 1.1rem;
   line-height: 1rem;
   font-weight: 500;
@@ -92,11 +66,10 @@ body {
 }
 
 .btn--remix img {
-  margin-right: 0.75rem;
+  margin-right: .75rem;
 }
 
-/* Very light scaling for our illustration */
 .illustration {
-  max-width: 70%;
-  max-height: 400px;
+  max-width: 80%;
+
 }
