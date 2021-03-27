@@ -1,12 +1,12 @@
-# Hello, and welcome to Glitch!
-Updates to your code will instantly deploy and update live.
+# Hello, and welcome to Glitch
+This is a basic static HTML starter project you can build on however you like. Noo need to save. Updates to your code will deploy instantly, as you'll see in the preview pane. You can upload assets like images or audio in `assets` to the left. Stylesheets and JavaScript live in the `public` folder. The rest is up to you and your imagination!
 
 
-## Your Project
+## What's in this project?
 
 ← `README.md`: That's this file, where you can tell people what your cool website does and how you built it.
 
-← `index.html`: Where you'll write the content of your website. 
+← `index.html`: This is the main HTML page for your site.
 
 ← `public/style.css`: CSS files add styling rules to your content.
 
