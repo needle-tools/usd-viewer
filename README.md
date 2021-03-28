@@ -1,5 +1,5 @@
 # Hello, and welcome to Glitch
-This is a basic static HTML starter project you can build on however you like. Noo need to save. Updates to your code will deploy instantly, as you'll see in the preview pane. You can upload assets like images or audio in `assets` to the left. Stylesheets and JavaScript live in the `public` folder. The rest is up to you and your imagination!
+This is a basic static HTML starter project you can build on however you like. No need to save. While you develop your site, your changes will happen 🪄 immediately in the preview window. You can upload assets like images or audio in `assets` to the left. Stylesheets and JavaScript live in the `public` folder. The rest is up to you and your imagination.
 
 
 ## What's in this project?
