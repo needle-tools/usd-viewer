@@ -3,43 +3,51 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href="https://glitch-hello-website.glitch.me/" />
     <link rel="icon" href="https://glitch.com/favicon.ico" />
 
     <title>Hello World!</title>
 
+    <!-- meta tags for SEO and social sharing -->
+    <meta name="description" content="A simple website, built with Glitch. Remix it to get your own." />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:title" content="Hello World!" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://glitch-hello-website.glitch.me/" />
+    <meta property="og:description" content="A simple website, built with Glitch. Remix it to get your own." />
+    <meta property="og:image" content="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2Fhello-website-social.png?v=1616712748147" />
+    <meta name="twitter:card" content="summary" />
+    
     <!-- import the webpage's stylesheet -->
     <link rel="stylesheet" href="/style.css" />
 
     <!-- import the webpage's javascript file -->
     <script src="/script.js" defer></script>
-    
-    <meta name="description" content="A simple website, built with Glitch. Remix it to get your own.">
-    <meta name="robots" content="index,follow">
-    <link rel="canonical" href="https://glitch-hello-website.glitch.me/">
-    <meta property="og:title" content="Hello World!">
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://glitch-hello-website.glitch.me/">
-    <meta property="og:description" content="A simple website, built with Glitch. Remix it to get your own.">
-    <meta property="og:image" content="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2Fhello-website-social.png?v=1616712748147">
-    <meta name="twitter:card" content="summary">
-    
   </head>
   <body>
     <div class="wrapper">
-        <div class="content">
-          <span class="title">Hello World!</span>
-          <img
-            src="https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2Fillustration.svg?v=1618177344016"
-            class="illustration"
-            alt="Editor illustration"
-          />
-        </div>
+      <div class="content">
+        <h1 class="title">Hello World!</h1>
+        <img
+          src="https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2Fillustration.svg?v=1618177344016"
+          class="illustration"
+          alt="Editor illustration"
+        />
       </div>
-      <nav class="navigation">
-        <a href="https://glitch.com/edit/#!/remix/glitch-hello-website" class="btn--remix" target="_top">
-          <img src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140" alt="" />
-          Remix on Glitch
-        </a>
-      </nav>
+    </div>
+    <footer class="footer">
+      <div class="links"></div>
+      <a
+        class="btn--remix"
+        target="_top"
+        href="https://glitch.com/edit/#!/remix/glitch-hello-website"
+      >
+        <img
+          src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140"
+          alt=""
+        />
+        Remix on Glitch
+      </a>
+    </footer>
   </body>
 </html>

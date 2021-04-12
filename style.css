@@ -1,44 +1,37 @@
-/* Our default values set for mobile */
+/******************************************************************************
+START Glitch hello-app default styles
+
+The styles in this section do some minimal CSS resets, set default fonts and 
+colors, and handle the layout for our footer and "Remix on Glitch" button. If
+you're new to CSS they may seem a little complicated, but you can scroll down
+to this section's matching END comment to see page-specific styles.
+******************************************************************************/
+/* Our default values set as CSS variables */
 :root {
   --color-bg: #69F7BE;
   --color-text-main: #2800FF;
+  --color-primary: #FFFF00;
   --wrapper-height: 87vh;
   --image-max-width: 300px;
   --image-margin: 3rem;
-
+  --font-family: "HK Grotesk";
+  --font-family-header: "HK Grotesk";
 }
 
-/* Tablet portrait */
-@media (min-width: 768px) {
-  :root {
-    --wrapper-height: 87vh;
-    --image-max-width: 400px;
-    --image-margin: 5rem;
-  }
+/* Basic page style resets */
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
 }
 
-/* Tablet Landscape */
-@media (min-width: 1024px) {
-  :root {
-    --wrapper-height: 87vh;
-    --image-max-width: 500px;
-  }
-}
-
-/* Desktop */
-@media (min-width: 1280px) {
-  :root {
-    --wrapper-height: 87vh;
-    --image-max-width: 500px;
-  }
-}
-
+/* Import fonts */
 @font-face {
   font-family: HK Grotesk;
   src: url("https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FHKGrotesk-Regular.otf?v=1603136326027")
     format("opentype");
 }
-
 @font-face {
   font-family: HK Grotesk;
   font-weight: bold;
@@ -46,28 +39,79 @@
     format("opentype");
 }
 
+/* Our remix on glitch button */
+.btn--remix {
+  font-family: HK Grotesk;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  line-height: 1rem;
+  font-weight: 500;
+  height: 2.75rem;
+  align-items: center;
+  cursor: pointer;
+  background: #FFFFFF;
+  border: 1px solid #000000;
+  box-sizing: border-box;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #000;
+  white-space: nowrap;
+}
+.btn--remix img {
+  margin-right: 0.5rem;
+}
+.btn--remix:hover {
+  background-color: #D0FFF1;
+}
+
+/* Navigation grid */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  margin: 1rem auto 0;
+  padding: 1rem 0 0.75rem 0;
+  width: 100%;
+  border-top: 4px solid #fff;
+}
+
+.footer a:not(.btn--remix):link,
+a:not(.btn--remix):visited {
+  font-family: HK Grotesk;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 1.1rem;
+  color: #000;
+  text-decoration: none;
+  border-style: none;
+}
+.footer a:hover {
+  background: var(--color-primary);
+}
+
+.footer .links {
+  padding: 0.5rem 1rem;
+}
+
+.divider {
+  padding: 0 1rem;
+}
+/******************************************************************************
+END Glitch hello-app default styles
+******************************************************************************/
+
 body {
   font-family: HK Grotesk;
   background-color: var(--color-bg);
 }
 
-.title {
-  color: var(--color-text-main);
-  font-family: HK Grotesk;
-  font-style: normal;
-  font-weight: bold;
-  font-size: 120px;
-  line-height: 105%;
-}
-
+/* Page structure */
 .wrapper {
   min-height: var(--wrapper-height);
   display: grid;
   place-items: center;
   margin-left: 2rem;
-  margin-top: 3rem;
+  margin-top: 0;
 }
-
 .content {
   display: flex;
   flex-direction: column;
@@ -75,43 +119,15 @@ body {
   justify-content: center;
 }
 
-/* Navigation grid */
-.navigation {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Our remix on glitch button + grid for other actions */
-.btn--remix {
+/* Very light scaling for our illustration */
+.title {
+  color: var(--color-text-main);
   font-family: HK Grotesk;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-  font-size: 1.1rem;
-  line-height: 1rem;
-  font-weight: 500;
-  align-items: center;
-  display: inline-flex;
-  cursor: pointer;
-  background: #FFFFFF;
-  border: 1px solid #000000;
-  box-sizing: border-box;
-  border-radius: 4px;
-  color: #000;
-  text-decoration: none;
-}
-
-.btn--remix:hover {
-  background-color: #D0FFF1;
-}
-
-.btn--remix img {
-  margin-right: 0.5rem;
-}
-
-.btn--remix {
-  margin-right: 1rem;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 120px;
+  line-height: 105%;
+  margin: 0;
 }
 
 /* Very light scaling for our illustration */
@@ -120,8 +136,3 @@ body {
   max-height: var(--image-max-width);
   margin-top: var(--image-margin);
 }
-
-
-/*
-  Add hover state to the buttons!! oops
-*/
