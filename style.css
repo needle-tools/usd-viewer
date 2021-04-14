@@ -109,8 +109,7 @@ body {
   min-height: var(--wrapper-height);
   display: grid;
   place-items: center;
-  margin-left: 2rem;
-  margin-top: 0;
+  margin: 0 1rem;
 }
 .content {
   display: flex;
