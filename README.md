@@ -1,17 +1,32 @@
-# Hello, and welcome to Glitch
-This is a basic HTML starter project you can build on however you like. No need to save. While you develop your site, your changes will happen 🪄 immediately in the preview window. You can upload assets like images or audio in `assets` to the left. Stylesheets and JavaScript live in the `public` folder. The rest is up to you and your imagination.
+# Hello website!
 
+This is a basic HTML starter project you can build on however you like. No need to save. While you develop your site, your changes will happen ✨ immediately in the preview window. On the left you'll see the files that make up your site, including HTML, JavaScript, and CSS. You can upload assets like images or audio in `assets`. The rest is up to you and your imagination. 🦄
 
 ## What's in this project?
 
 ← `README.md`: That's this file, where you can tell people what your cool website does and how you built it.
 
-← `index.html`: This is the main HTML page for your site.
+← `index.html`: This is the main web page for your site. The HTML defines the structure and content of the page using _elements_. You'll see references in the HTML to the JS and CSS files. Try clicking the image in the center of the page!
 
-← `style.css`: CSS files add styling rules to your content.
+← `style.css`: CSS files add styling rules to your content. The CSS applies styles to the elements in your HTML page. The style rules also make the image move when you click it.
 
-← `script.js`: If you're feeling fancy you can add interactivity to your site with JavaScript.
+← `script.js`: If you're feeling fancy you can add interactivity to your site with JavaScript. The code in the JavaScript file runs when the page loads, and when the visitor clicks the button you can add below.
 
+Open each file and check out the comments (in gray) for more info.
+
+## Next steps 🚀
+
+Make an edit to your website! In `index.html`, add this code on the line after the comment with "ADD BUTTON HERE" in it (you can copy and paste the button element HTML):
+
+```html
+<button>
+    Click me!
+</button>
+```
+
+Look at the page to see the button. Click it!
+
+Open `script.js` to see the script that makes the button rotate.
 
 ![Glitch](https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2FLogo_Color.svg?v=1602781328576)
 

@@ -6,6 +6,14 @@ colors, and handle the layout for our footer and "Remix on Glitch" button. If
 you're new to CSS they may seem a little complicated, but you can scroll down
 to this section's matching END comment to see page-specific styles.
 ******************************************************************************/
+
+
+/* 
+  The style rules specify elements by type and by attributes such as class and ID
+  Each section indicates an element or elements, then lists the style properties to apply
+  See if you can cross-reference the rules in this file with the elements in index.html
+*/
+
 /* Our default values set as CSS variables */
 :root {
   --color-bg: #69F7BE;
@@ -137,4 +145,40 @@ body {
   max-width: 100%;
   max-height: var(--image-max-width);
   margin-top: var(--image-margin);
+}
+
+/* Instructions */
+.instructions {
+  margin: 1rem auto 0;
+}
+
+/* Button - Add it from the README instructions */
+button,
+input {
+  font-family: inherit;
+  font-size: 100%;
+  background: #FFFFFF;
+  border: 1px solid #000000;
+  box-sizing: border-box;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  transition: 500ms;
+}
+
+/* Subheading */
+h2 {
+  color: #2800FF;
+}
+
+/* Interactive image */
+.illustration:active {
+  transform: translateY(5px);
+}
+
+/* Button rotate
+- Toggling this class on and off will rotate it forward and back
+- The button transition property above determines the speed of rotation (500ms)
+*/
+.rotated {
+  transform: rotate(360deg);
 }
