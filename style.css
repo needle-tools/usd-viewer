@@ -175,10 +175,10 @@ h2 {
   transform: translateY(5px);
 }
 
-/* Button rotate
-- Toggling this class on and off will rotate it forward and back
-- The button transition property above determines the speed of rotation (500ms)
+/* Button dip
+- Toggling this class on and off will move it down and up again
+- The button transition property above determines the speed of the translate (500ms)
 */
-.rotated {
-  transform: rotate(360deg);
+.dipped {
+  transform: translateY(5px);
 }
