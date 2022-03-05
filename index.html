@@ -1,6 +1,21 @@
+<!DOCTYPE html>
 <html>
+<head>
+  <title>USD Viewer</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, user-scalable=no, viewport-fit=cover" />
+  
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:creator" content="https://autodesk-forks.github.io/USD/ and @hybridherbst"/>
+  <meta property="og:url" content="https://usd-viewer.glitch.me/" />
+  <meta property="og:title" content="USD Viewer" />
+  <meta property="og:description" content="Simple USD Viewer based on Autodesk's USD WASM Fork" />
+  <meta property="og:image" content="https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/usd-viewer-preview2.webp?v=1646525510950" />
+  
+  <link rel="stylesheet" href="css/styles.css">
+</head>
 <body>
-  <script src="coi-serviceworker.min.js"></script>
+  <script src="coi-serviceworker.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.js"></script>
   <script src="emHdBindings.js" type="text/javascript"></script>
   <script type="module">
@@ -14,10 +29,12 @@
     let params = (new URL(document.location)).searchParams;
     let name = params.get("name");
 
-    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/simpleShading.usda?v=1646512425508';
-
+    let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
+    
     // Load the usd file
     let loadUSDPromise = new Promise( (resolve, reject) => {
+      if (!filename) resolve(null);
+      
       let req = new XMLHttpRequest();
       req.open("GET", filename, true);
       req.responseType = "arraybuffer";
@@ -38,26 +55,36 @@
 
     Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
       window.Usd = Usd;
-
-      let extension = filename.split('.')[1];
-      let inputFile = 'input.' + extension;
+      if (filename)
+        loadUsdFileFromArrayBuffer(filename, usdFile);
+    });
+    
+    function loadUsdFileFromArrayBuffer(filename, usdFile) {
+      let parts = filename.split('.');
+      let extension = parts[parts.length - 1];
+      extension = extension.split('?')[0];
+      let fileName = (Math.random() + 1).toString(36).substring(7);
+      // fileName = "input"; // TODO need to unload the old file again
+      let inputFile = fileName + "." + extension;
 
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
-      let renderInterface = new RenderDelegateInterface(inputFile);
+      let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
       let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
 
+      console.log(driver);
       driver.Draw();
 
       const stage = window.usdStage = window.driver.GetStage();
       const endTimeCode = stage.GetEndTimeCode();
       animate(1000 / stage.GetTimeCodesPerSecond(), endTimeCode);
-    });
+    }
 
     async function init() {
       const camera = window.camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
-      camera.position.z = params.get('cameraZ') || 7;;
+      camera.position.z = params.get('cameraZ') || 7;
       camera.position.y = params.get('cameraY') || 7;
+      camera.position.x = params.get('cameraX') || 0;
 
       const scene = window.scene = new THREE.Scene();
       scene.background = new THREE.Color(0xffffff);
@@ -89,7 +116,7 @@
       const envMapPromise = new Promise(resolve => {
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
 				pmremGenerator.compileCubemapShader();
-        new RGBELoader().load('https://cdn.glitch.me/bee386a1-31e6-4710-8850-a1d5b7026a09/helicopter-landing-pad-vis-4K.hdr?v=1646512728472', (texture) => {
+        new RGBELoader().load('https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/helicopter-landing-pad-vis-4K.hdr?v=1646516575468', (texture) => {
           const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
 
           texture.mapping = THREE.EquirectangularReflectionMapping;
@@ -104,7 +131,12 @@
       controls.update();
 
       window.addEventListener( 'resize', onWindowResize );
+      
+      renderer.domElement.addEventListener("drop", dropHandler);
+      renderer.domElement.addEventListener("dragover", dragOverHandler);
 
+      render();
+      
       return envMapPromise;
     }
 
@@ -151,7 +183,73 @@
       window.renderer.render( window.scene, window.camera );
 
     }
+  
+    async function loadFile(fileOrHandle) {
+      let file = undefined;
+      try {
+        if(fileOrHandle.getFile !== undefined) {
+          file = await fileOrHandle.getFile();
+        }
+        else
+          file = fileOrHandle;
+
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          loadUsdFileFromArrayBuffer(file.name, event.target.result);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      catch(ex) {
+        console.warn("Error loading file", fileOrHandle, ex);
+      }
+    }
+    
+    function testAndLoadFile(file) {
+      let ext = file.name.split('.').pop();
+      console.log(file.name + ", " + file.size + ", " + ext);
+      if(ext == 'usd' || ext == 'usdz') {
+        loadFile(file);
+      }
+    }
+    
+    function dropHandler(ev) {
+      console.log('File(s) dropped');
+
+      // Prevent default behavior (Prevent file from being opened)
+      ev.preventDefault();
+
+      if (ev.dataTransfer.items)
+      {
+        for (var i = 0; i < ev.dataTransfer.items.length; i++)
+        {
+          let item = ev.dataTransfer.items[i];
+          if (item.kind === 'file')
+          {
+            var file = item.getAsFile();
+            testAndLoadFile(file);
+          }
+        }
+      } else {
+        for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+          let file = ev.dataTransfer.files[i];
+          testAndLoadFile(file);
+        }
+      }
+    }
+
+    function dragOverHandler(ev) {
+      ev.preventDefault();
+    }
+    
   </script>
-  <div id="container"></div>
+  <div id="container" style="position:absolute; margin:5px;">
+    <button><a href="?file=">Clear (drop USD/USDZ to load)</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a></button>
+    <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a></button>
+    <button><a href="https://autodesk-forks.github.io/USD/" target="_blank">File Attributions / More Info</a></button>
+  </div>
 </body>
 </html>
