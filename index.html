@@ -67,8 +67,9 @@
 
     async function init() {
       const camera = window.camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
-      camera.position.z = params.get('cameraZ') || 7;;
+      camera.position.z = params.get('cameraZ') || 7;
       camera.position.y = params.get('cameraY') || 7;
+      camera.position.x = params.get('cameraX') || 0;
 
       const scene = window.scene = new THREE.Scene();
       scene.background = new THREE.Color(0xffffff);
@@ -224,6 +225,14 @@
     }
     
   </script>
-  <div id="container"></div>
+  <div id="container" style="position:absolute; margin:5px;">
+    <button><a href="?file=">Clear</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a></button>
+    <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a></button>
+    <button><a href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a></button>
+    <button><a href="https://autodesk-forks.github.io/USD/" target="_">File Attributions / More Info</a></button>
+  </div>
 </body>
 </html>
