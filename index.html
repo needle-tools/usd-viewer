@@ -44,6 +44,7 @@
 
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
+      extension = extension.split('?')[0];
       let inputFile = 'input.' + extension;
       console.log(inputFile, extension);
 
@@ -156,6 +157,79 @@
       window.renderer.render( window.scene, window.camera );
 
     }
+  </script>
+  
+  <script>
+  
+    async function loadFile(fileOrHandle) {
+      let mv = document.getElementById("model-viewer");
+      let file = undefined;
+
+      try {
+        if(fileOrHandle.getFile !== undefined) {
+          file = await fileOrHandle.getFile();
+          // watchFileChanges(fileOrHandle);
+        }
+        else
+          file = fileOrHandle;
+
+        // show in model-viewer
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          mv.src = event.target.result;
+
+          let progressOverlay = document.querySelector("#progressOverlay");
+          if (progressOverlay) progressOverlay.style.display = "none";
+        };
+        reader.readAsDataURL(file);
+      }
+      catch(ex) {
+        console.warn("Error loading file", fileOrHandle, ex);
+        // await set("file", null); // clear to avoid future errors
+      }
+    }
+    
+    function testAndLoadFile(file) {
+      let ext = file.name.split('.').pop();
+      console.log(file.name + ", " + file.size + ", " + ext);
+      if(ext == 'usd' || ext == 'usdz') { // && file.size < 5000000) {
+        loadFile(file);
+      }
+    }
+    
+    function dropHandler(ev) {
+      console.log('File(s) dropped');
+
+      // Prevent default behavior (Prevent file from being opened)
+      ev.preventDefault();
+
+      if (ev.dataTransfer.items)
+      {
+        for (var i = 0; i < ev.dataTransfer.items.length; i++)
+        {
+          // getAsFileSystemHandle
+          let item = ev.dataTransfer.items[i];
+          if (item.kind === 'file')
+          {
+            var file = item.getAsFile();
+            // watchFileChanges(item.getAsFileSystemHandle());
+            testAndLoadFile(file);
+          }
+        }
+      } else {
+        // Use DataTransfer interface to access the file(s)
+        for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+          let file = ev.dataTransfer.files[i];
+          testAndLoadFile(file);
+        }
+      }
+    }
+
+    function dragOverHandler(ev) {
+      // Prevent default behavior (Prevent file from being opened)
+      ev.preventDefault();
+    }
+    
   </script>
   <div id="container"></div>
 </body>
