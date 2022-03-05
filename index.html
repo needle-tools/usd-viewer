@@ -1,4 +1,7 @@
 <html>
+<head>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
 <body>
   <script src="coi-serviceworker.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.js"></script>
@@ -39,7 +42,8 @@
     Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
       window.Usd = Usd;
 
-      let extension = filename.split('.')[1];
+      let parts = filename.split('.');
+      let extension = parts[parts.length - 1];
       let inputFile = 'input.' + extension;
       console.log(inputFile, extension);
 
