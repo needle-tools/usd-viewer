@@ -21,12 +21,13 @@ if (typeof window === 'undefined') {
             return;
         }
       
+        /*
         const url = new URL(event.request.url);
         const name = url.pathname;
-        console.log(url.pathname, url.pathname.endsWith(".js"));
         if(!name.endsWith(".js") && !name.endsWith(".data") && !name.endsWith(".wasm")) {
           return;
         }
+        */
 
         event.respondWith(
             fetch(event.request)
