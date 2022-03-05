@@ -17,7 +17,7 @@
     let params = (new URL(document.location)).searchParams;
     let name = params.get("name");
 
-    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz';
+    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz';
 
     // Load the usd file
     let loadUSDPromise = new Promise( (resolve, reject) => {
@@ -48,19 +48,13 @@
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
       extension = extension.split('?')[0];
-      // let randomFileName = (Math.random() + 1).toString(36).substring(7);
-      let randomFileName = "input";
-      let inputFile = randomFileName + "." + extension;
+      let fileName = (Math.random() + 1).toString(36).substring(7);
+      // fileName = "input"; // TODO need to unload the old file again
+      let inputFile = fileName + "." + extension;
 
-      console.log(Usd.FS);
-      try {
-        Usd.FS.unlink(inputFile);
-        if(window.driver)
-          delete(window.driver);
-      } catch { }
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
-      let renderInterface = new RenderDelegateInterface(inputFile);
+      let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
       let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
 
       console.log(driver);
@@ -173,35 +167,29 @@
     }
   
     async function loadFile(fileOrHandle) {
-      let mv = document.getElementById("model-viewer");
       let file = undefined;
-
       try {
         if(fileOrHandle.getFile !== undefined) {
           file = await fileOrHandle.getFile();
-          // watchFileChanges(fileOrHandle);
         }
         else
           file = fileOrHandle;
 
-        // show in model-viewer
         var reader = new FileReader();
         reader.onload = function(event) {
-          
           loadUsdFileFromArrayBuffer(file.name, event.target.result);
         };
         reader.readAsArrayBuffer(file);
       }
       catch(ex) {
         console.warn("Error loading file", fileOrHandle, ex);
-        // await set("file", null); // clear to avoid future errors
       }
     }
     
     function testAndLoadFile(file) {
       let ext = file.name.split('.').pop();
       console.log(file.name + ", " + file.size + ", " + ext);
-      if(ext == 'usd' || ext == 'usdz') { // && file.size < 5000000) {
+      if(ext == 'usd' || ext == 'usdz') {
         loadFile(file);
       }
     }
@@ -216,17 +204,14 @@
       {
         for (var i = 0; i < ev.dataTransfer.items.length; i++)
         {
-          // getAsFileSystemHandle
           let item = ev.dataTransfer.items[i];
           if (item.kind === 'file')
           {
             var file = item.getAsFile();
-            // watchFileChanges(item.getAsFileSystemHandle());
             testAndLoadFile(file);
           }
         }
       } else {
-        // Use DataTransfer interface to access the file(s)
         for (var i = 0; i < ev.dataTransfer.files.length; i++) {
           let file = ev.dataTransfer.files[i];
           testAndLoadFile(file);
@@ -235,7 +220,6 @@
     }
 
     function dragOverHandler(ev) {
-      // Prevent default behavior (Prevent file from being opened)
       ev.preventDefault();
     }
     
