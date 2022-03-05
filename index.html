@@ -14,7 +14,7 @@
     let params = (new URL(document.location)).searchParams;
     let name = params.get("name");
 
-    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/simpleShading.usda?v=1646512425508';
+    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz';
 
     // Load the usd file
     let loadUSDPromise = new Promise( (resolve, reject) => {
@@ -41,6 +41,7 @@
 
       let extension = filename.split('.')[1];
       let inputFile = 'input.' + extension;
+      console.log(inputFile, extension);
 
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
