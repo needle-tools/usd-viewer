@@ -28,15 +28,9 @@ if (typeof window === 'undefined') {
           return;
         }
 
-        const versionedCacheName = "web-share-target-v2";
-      
         event.respondWith(
-          (async() => {
-            const r = await caches.match(event.request);
-            if (r) { return r; } 
-            
             fetch(event.request)
-                .then(async (response) => {
+                .then((response) => {
                     if (response.status === 0) {
                         return response;
                     }
@@ -45,20 +39,13 @@ if (typeof window === 'undefined') {
                     newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
                     newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
 
-                    const adjustedResponse = 
-                    new Response(response.body, {
+                    return new Response(response.body, {
                         status: response.status,
                         statusText: response.statusText,
                         headers: newHeaders,
                     });
-              
-                  const webShareTargetCache = await caches.open(versionedCacheName);
-                  webShareTargetCache.put(event.request, adjustedResponse.clone());
-              
-                  return adjustedResponse; 
                 })
                 .catch((e) => console.error(e))
-          })()
         );
     });
 
