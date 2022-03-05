@@ -1,101 +1,157 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <!--
-      This is the page head - it contains info the browser uses to display the page
-      You won't see what's in the head in the page
-      Scroll down to the body element for the page content
-    -->
+<html>
+<body>
+  <script src="coi-serviceworker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.js"></script>
+  <script src="emHdBindings.js" type="text/javascript"></script>
+  <script type="module">
+    import { RenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
+    import { RGBELoader } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/loaders/RGBELoader.js';
+    import { OrbitControls } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/controls/OrbitControls.js';
+    
+    let scene;
+    let defaultTexture;
 
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="https://glitch.com/favicon.ico" />
+    let params = (new URL(document.location)).searchParams;
+    let name = params.get("name");
 
-    <!-- 
-      This is an HTML comment
-      You can write text in a comment and the content won't be visible in the page
-    -->
+    let filename = params.get("file") || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/simpleShading.usda?v=1646512425508';
 
-    <title>Hello World!</title>
+    // Load the usd file
+    let loadUSDPromise = new Promise( (resolve, reject) => {
+      let req = new XMLHttpRequest();
+      req.open("GET", filename, true);
+      req.responseType = "arraybuffer";
 
-    <!-- Meta tags for SEO and social sharing -->
-    <link rel="canonical" href="https://glitch-hello-website.glitch.me/" />
-    <meta
-      name="description"
-      content="A simple website, built with Glitch. Remix it to get your own."
-    />
-    <meta name="robots" content="index,follow" />
-    <meta property="og:title" content="Hello World!" />
-    <meta property="og:type" content="article" />
-    <meta property="og:url" content="https://glitch-hello-website.glitch.me/" />
-    <meta
-      property="og:description"
-      content="A simple website, built with Glitch. Remix it to get your own."
-    />
-    <meta
-      property="og:image"
-      content="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2Fhello-website-social.png?v=1616712748147"
-    />
-    <meta name="twitter:card" content="summary" />
+      req.onload = function (oEvent) {
+        let arrayBuffer = req.response; // Note: not oReq.responseText
+        if (arrayBuffer) {
+          resolve(arrayBuffer);
+        } else {
+          reject();
+        }
+      };
 
-    <!-- Import the webpage's stylesheet -->
-    <link rel="stylesheet" href="/style.css" />
+      req.send(null);
+    });
 
-    <!-- Import the webpage's javascript file -->
-    <script src="/script.js" defer></script>
-  </head>
-  <body>
-    <!--
-      This is the body of the page
-      Look at the elements and see how they appear in the rendered page on the right
-      Each element is defined using tags, with < and > indicating where each one opens and closes
-      There are elements for sections of the page, images, text, and more
-      The elements include attributes referenced in the CSS for the page style
-    -->
+    const initPromise = init();
 
-    <!-- The wrapper and content divs set margins and positioning -->
-    <div class="wrapper">
-      <div class="content" role="main">
-        <!-- This is the start of content for our page -->
-        <h1 class="title">Hello World!</h1>
+    Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+      window.Usd = Usd;
 
-        <img
-          src="https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2Fillustration.svg?v=1618177344016"
-          class="illustration"
-          alt="Editor illustration"
-          title="Click the image!"
-        />
-        <!-- Instructions on using this project -->
-        <div class="instructions">
-          <h2>
-            Using this project
-          </h2>
-          <p>
-            This is the Glitch <strong>Hello Website</strong> project. You can
-            use it to build your own site. Check out README.md in the editor for
-            more info and next steps you can take!
-          </p>
-          <!-- ADD BUTTON HERE -->
-          
-          <!-- Once you've added the button from the readme, click it in the page -->
-          <!-- Check out the function in script.js to see how it works -->
-        </div>
-      </div>
-    </div>
-    <!-- The footer holds our remix button — you can use it for structure or cut it out ✂ -->
-    <footer class="footer">
-      <div class="links"></div>
-      <a
-        class="btn--remix"
-        target="_top"
-        href="https://glitch.com/edit/#!/remix/glitch-hello-website"
-      >
-        <img
-          src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140"
-          alt=""
-        />
-        Remix on Glitch
-      </a>
-    </footer>
-  </body>
+      let extension = filename.split('.')[1];
+      let inputFile = 'input.' + extension;
+
+      Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
+
+      let renderInterface = new RenderDelegateInterface(inputFile);
+      let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
+
+      driver.Draw();
+
+      const stage = window.usdStage = window.driver.GetStage();
+      const endTimeCode = stage.GetEndTimeCode();
+      animate(1000 / stage.GetTimeCodesPerSecond(), endTimeCode);
+    });
+
+    async function init() {
+      const camera = window.camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
+      camera.position.z = params.get('cameraZ') || 7;;
+      camera.position.y = params.get('cameraY') || 7;
+
+      const scene = window.scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+
+      scene.add( new THREE.AmbientLight( 0x111111 ) );
+
+      let pointLight = new THREE.PointLight( 0xff8888 );
+      pointLight.position.set( -30, 20, 220 );
+      pointLight.castShadow = true;
+      pointLight.shadow.camera.near = 8;
+      pointLight.shadow.camera.far = 1000;
+      pointLight.shadow.mapSize.width = 1024;
+      pointLight.shadow.mapSize.height = 1024;
+      pointLight.shadow.bias = - 0.002;
+
+      pointLight.shadow.radius = 4;
+      pointLight.shadow.samples = 8;
+      scene.add( pointLight );
+
+      const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true } );
+      renderer.setPixelRatio( window.devicePixelRatio );
+      renderer.setSize( window.innerWidth, window.innerHeight );
+      renderer.toneMapping = THREE.CineonToneMapping;
+      renderer.toneMappingExposure = 2;
+      renderer.shadowMap.enabled = false;
+      renderer.shadowMap.type = THREE.VSMShadowMap;
+
+      const envMapPromise = new Promise(resolve => {
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+				pmremGenerator.compileCubemapShader();
+        new RGBELoader().load('https://cdn.glitch.me/bee386a1-31e6-4710-8850-a1d5b7026a09/helicopter-landing-pad-vis-4K.hdr?v=1646512728472', (texture) => {
+          const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
+
+          texture.mapping = THREE.EquirectangularReflectionMapping;
+          texture.needsUpdate = true;
+          window.envMap = hdrRenderTarget.texture;
+          resolve();
+        });
+      });
+
+      document.body.appendChild( renderer.domElement );
+      const controls = window._controls = new OrbitControls( camera, renderer.domElement );
+      controls.update();
+
+      window.addEventListener( 'resize', onWindowResize );
+
+      return envMapPromise;
+    }
+
+    // A little helper. Press space to pause/enable rendering. Useful when looking at animated scenes.
+    let stop = false;
+    document.body.onkeyup = function(e){
+      if(e.keyCode == 32){
+        stop = !stop;
+      }
+    }
+
+    async function animate(timeout = 40, endTimecode) {
+
+      if (stop) {
+        requestAnimationFrame( animate.bind(null, timeout, endTimecode) );
+        return;
+      }
+
+      window._controls.update();
+      let secs = new Date().getTime() / 1000;
+      await new Promise(resolve => setTimeout(resolve, 10));
+      const time = secs * (1000 / timeout) % endTimecode;
+      window.driver.SetTime(time);
+      driver.Draw();
+
+      render();
+
+      requestAnimationFrame( animate.bind(null, timeout, endTimecode) );
+    }
+
+    function onWindowResize() {
+
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize( window.innerWidth, window.innerHeight );
+
+    }
+
+    function render() {
+
+      const time = Date.now() * 0.001;
+
+      window.renderer.render( window.scene, window.camera );
+
+    }
+  </script>
+  <div id="container"></div>
+</body>
 </html>
