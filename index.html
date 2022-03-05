@@ -48,7 +48,8 @@
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
       extension = extension.split('?')[0];
-      let inputFile = 'input.' + extension;
+      // let randomFileName = (Math.random() + 1).toString(36).substring(7);
+      let inputFile = randomFileName + "." + extension;
 
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
@@ -112,6 +113,9 @@
       controls.update();
 
       window.addEventListener( 'resize', onWindowResize );
+      
+      renderer.domElement.addEventListener("drop", dropHandler);
+      renderer.domElement.addEventListener("dragover", dragOverHandler);
 
       return envMapPromise;
     }
@@ -159,9 +163,6 @@
       window.renderer.render( window.scene, window.camera );
 
     }
-  </script>
-  
-  <script>
   
     async function loadFile(fileOrHandle) {
       let mv = document.getElementById("model-viewer");
@@ -179,13 +180,9 @@
         var reader = new FileReader();
         reader.onload = function(event) {
           
-          loadUsdFileFromArrayBuffer()
-          mv.src = event.target.result;
-
-          let progressOverlay = document.querySelector("#progressOverlay");
-          if (progressOverlay) progressOverlay.style.display = "none";
+          loadUsdFileFromArrayBuffer(file.name, event.target.result);
         };
-        reader.r(file);
+        reader.readAsArrayBuffer(file);
       }
       catch(ex) {
         console.warn("Error loading file", fileOrHandle, ex);
