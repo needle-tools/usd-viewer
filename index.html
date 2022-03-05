@@ -49,13 +49,21 @@
       let extension = parts[parts.length - 1];
       extension = extension.split('?')[0];
       // let randomFileName = (Math.random() + 1).toString(36).substring(7);
+      let randomFileName = "input";
       let inputFile = randomFileName + "." + extension;
 
+      console.log(Usd.FS);
+      try {
+        Usd.FS.unlink(inputFile);
+        if(window.driver)
+          delete(window.driver);
+      } catch { }
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
       let renderInterface = new RenderDelegateInterface(inputFile);
       let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
 
+      console.log(driver);
       driver.Draw();
 
       const stage = window.usdStage = window.driver.GetStage();
