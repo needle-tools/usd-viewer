@@ -202,7 +202,6 @@
       for(let link of fileLoadingLinks) {
         link.addEventListener('click', async function(event) {
           event.preventDefault();
-          console.log("fetching " + event.target.href);
           
           let params = (new URL(event.target.href)).searchParams;
           filename = params.get("file");
