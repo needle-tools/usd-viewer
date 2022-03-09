@@ -52,8 +52,11 @@
     });
 
     const initPromise = init();
-
+    
+    console.log("Loading USD Module...");
+      
     Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+      console.log("Loading File...");
       window.Usd = Usd;
       animate();
       if (filename)
@@ -91,6 +94,7 @@
       
       // adjust camera framing
       fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+      console.log("Loading done.");
     }
     
     // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
