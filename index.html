@@ -60,7 +60,7 @@
         loadUsdFileFromArrayBuffer(filename, usdFile);
     });
     
-    var oldFileName = undefined;
+    var currentFileName = undefined;
     var timeout = 40;
     var endTimeCode = 1;
     
@@ -69,25 +69,21 @@
       let extension = parts[parts.length - 1];
       extension = extension.split('?')[0];
       let fileName = (Math.random() + 1).toString(36).substring(7);
-      // fileName = "input"; // TODO need to unload the old file again
       let inputFile = fileName + "." + extension;
       
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
-
-      delete window.renderInterface;
-      delete window.driver;
+      
+      // clear existing objects
+      window.usdRoot.clear();
+      if (currentFileName) {
+        Usd.FS.unlink(currentFileName, true);
+      }
+      currentFileName = inputFile;
       
       let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
       let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
 
-      console.log(driver);
       driver.Draw();
-      
-      if (oldFileName) {
-        Usd.FS.unlink(oldFileName, true);
-        console.log("removing previous file: " + oldFileName);
-      }
-      oldFileName = inputFile;
       
       const stage = window.usdStage = window.driver.GetStage();
       endTimeCode = stage.GetEndTimeCode();
@@ -106,6 +102,8 @@
 
       scene.add( new THREE.AmbientLight( 0x111111 ) );
       const usdRoot = window.usdRoot = new THREE.Group();
+      usdRoot.name = "USD Root";
+      scene.add(usdRoot);
 
       let pointLight = new THREE.PointLight( 0xff8888 );
       pointLight.position.set( -30, 20, 220 );
