@@ -55,11 +55,14 @@
 
     Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
       window.Usd = Usd;
+      animate();
       if (filename)
         loadUsdFileFromArrayBuffer(filename, usdFile);
     });
     
     var oldFileName = undefined;
+    var timeout = 40;
+    var endTimeCode = 1;
     
     function loadUsdFileFromArrayBuffer(filename, usdFile) {
       let parts = filename.split('.');
@@ -82,8 +85,8 @@
       oldFileName = inputFile;
       
       const stage = window.usdStage = window.driver.GetStage();
-      const endTimeCode = stage.GetEndTimeCode();
-      animate(1000 / stage.GetTimeCodesPerSecond(), endTimeCode);
+      endTimeCode = stage.GetEndTimeCode();
+      timeout = 1000 / stage.GetTimeCodesPerSecond();
     }
 
     async function init() {
@@ -154,23 +157,25 @@
       }
     }
 
-    async function animate(timeout = 40, endTimecode) {
-
+    async function animate() {
+      
       if (stop) {
-        requestAnimationFrame( animate.bind(null, timeout, endTimecode) );
+        requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
         return;
       }
 
       window._controls.update();
       let secs = new Date().getTime() / 1000;
       await new Promise(resolve => setTimeout(resolve, 10));
-      const time = secs * (1000 / timeout) % endTimecode;
-      window.driver.SetTime(time);
-      driver.Draw();
-
+      const time = secs * (1000 / timeout) % endTimeCode;
+      
+      if (window.driver) {
+        window.driver.SetTime(time);
+        window.driver.Draw();
+      }
       render();
 
-      requestAnimationFrame( animate.bind(null, timeout, endTimecode) );
+      requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
     }
 
     function onWindowResize() {
