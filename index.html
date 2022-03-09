@@ -59,6 +59,8 @@
         loadUsdFileFromArrayBuffer(filename, usdFile);
     });
     
+    var oldFileName = undefined;
+    
     function loadUsdFileFromArrayBuffer(filename, usdFile) {
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
@@ -66,7 +68,7 @@
       let fileName = (Math.random() + 1).toString(36).substring(7);
       // fileName = "input"; // TODO need to unload the old file again
       let inputFile = fileName + "." + extension;
-
+      
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
       let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
@@ -74,7 +76,11 @@
 
       console.log(driver);
       driver.Draw();
-
+      
+      if (oldFileName)
+        Usd.FS.unlink(oldFileName, true);
+      oldFileName = inputFile;
+      
       const stage = window.usdStage = window.driver.GetStage();
       const endTimeCode = stage.GetEndTimeCode();
       animate(1000 / stage.GetTimeCodesPerSecond(), endTimeCode);
