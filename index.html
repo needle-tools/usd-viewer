@@ -51,6 +51,11 @@
 
         req.send(null);
       });
+      
+      // set quick look link
+      let url = filename.substring(filename.indexOf('?'))
+      document.querySelector("a#quick-look-link").href = url.toString();
+      
       return loadUSDPromise;
     }
 
@@ -346,7 +351,7 @@
     <button><a href="https://autodesk-forks.github.io/USD/" target="_blank">File Attributions / More Info</a></button>
   </div>
   <div class="footer">
-    <a href=""><img width="128" height="128" src="ARKit_Glyph.svg" style="max-width:100%; height:auto;"/></a>
+    <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" style="max-width:100%; height:auto;"/></a>
   </div>
 </body>
 </html>
