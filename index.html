@@ -74,14 +74,19 @@
       
       Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
 
+      delete window.renderInterface;
+      delete window.driver;
+      
       let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
       let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
 
       console.log(driver);
       driver.Draw();
       
-      if (oldFileName)
+      if (oldFileName) {
         Usd.FS.unlink(oldFileName, true);
+        console.log("removing previous file: " + oldFileName);
+      }
       oldFileName = inputFile;
       
       const stage = window.usdStage = window.driver.GetStage();
