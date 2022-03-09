@@ -1,6 +1,7 @@
 body {
   margin:0;
   padding:0;
+  font-family:sans-serif;
 }
 
 .footer {
@@ -8,4 +9,8 @@ body {
   bottom: 0;
   right: 0;
   margin-bottom:15px;
+}
+
+#message-log {
+  opacity:0.5;
 }

@@ -30,6 +30,7 @@
     let name = params.get("name");
 
     let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
+    let messageLog = document.querySelector("#message-log");
     
     function getUsdFile() {
       // Load the usd file from filename
@@ -53,8 +54,13 @@
       });
       
       // set quick look link
-      let url = filename.substring(filename.indexOf('?'))
-      document.querySelector("a#quick-look-link").href = url.toString();
+      let indexOfQuery = filename.indexOf('?');
+      let url = filename;
+      if (indexOfQuery >= 0)
+        url = url.substring(0, indexOfQuery);
+      document.querySelector("a#quick-look-link").href = url;
+      
+      window.history.pushState({}, filename, "https://usd-viewer.glitch.me?file=" + filename);
       
       return loadUSDPromise;
     }
@@ -62,13 +68,18 @@
     const initPromise = init();
     
     console.log("Loading USD Module...");
+    messageLog.textContent = "Loading USD Module...";
       
     Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
-      console.log("Loading File...");
       window.Usd = Usd;
+      messageLog.textContent = "Loading done";
       animate();
-      if (filename)
+      if (filename) {
+        console.log("Loading File...");
+        messageLog.textContent = "Loading File " + filename;
+      
         loadUsdFileFromArrayBuffer(filename, usdFile);
+      }
     });
     
     var currentFileName = undefined;
@@ -104,6 +115,7 @@
       // adjust camera framing
       fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
       console.log("Loading done.");
+      messageLog.textContent = "";
     }
     
     // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
@@ -349,6 +361,10 @@
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a></button>
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a></button>
     <button><a href="https://autodesk-forks.github.io/USD/" target="_blank">File Attributions / More Info</a></button>
+    <br/>
+    <p id="message-log">
+      Initializing...
+    </p>
   </div>
   <div class="footer">
     <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" style="max-width:100%; height:auto;"/></a>
