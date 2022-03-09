@@ -69,20 +69,32 @@
     
     console.log("Loading USD Module...");
     messageLog.textContent = "Loading USD Module...";
-      
-    Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
-      window.Usd = Usd;
-      messageLog.textContent = "Loading done";
-      animate();
-      if (filename) {
-        console.log("Loading File...");
-        messageLog.textContent = "Loading File " + filename;
-      
-        loadUsdFileFromArrayBuffer(filename, usdFile);
+    
+    try {
+      Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+        window.Usd = Usd;
+        messageLog.textContent = "Loading done";
+        animate();
+        if (filename) {
+          console.log("Loading File...");
+          messageLog.textContent = "Loading File " + filename;
+
+          loadUsdFileFromArrayBuffer(filename, usdFile);
+        }
+      });
+    }
+    catch (error) {
+      if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
+        let err = "Your current browser configuration doesn't support SharedArrayBuffer which is required for USD.";
+        console.log(error, err);
+        messageLog.textContent = err;
       }
-    }).catch(reason => {
-      console.log(reason); 
-    });
+      else {
+        let err = "Error during initialization: " + error;
+        console.log(err);
+        messageLog.textContent = err;
+      }
+    }
     
     var currentFileName = undefined;
     var timeout = 40;
