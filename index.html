@@ -31,33 +31,34 @@
 
     let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
     
-    function getUsdLoadPromise
-    
-    // Load the usd file
-    const loadUSDPromise = new Promise( (resolve, reject) => {
-      if (!filename) resolve(null);
-      
-      let req = new XMLHttpRequest();
-      req.open("GET", filename, true);
-      req.responseType = "arraybuffer";
+    function getUsdFile() {
+      // Load the usd file from filename
+      const loadUSDPromise = new Promise( (resolve, reject) => {
+        if (!filename) resolve(null);
 
-      req.onload = function (oEvent) {
-        let arrayBuffer = req.response; // Note: not oReq.responseText
-        if (arrayBuffer) {
-          resolve(arrayBuffer);
-        } else {
-          reject();
-        }
-      };
+        let req = new XMLHttpRequest();
+        req.open("GET", filename, true);
+        req.responseType = "arraybuffer";
 
-      req.send(null);
-    });
+        req.onload = function (oEvent) {
+          let arrayBuffer = req.response; // Note: not oReq.responseText
+          if (arrayBuffer) {
+            resolve(arrayBuffer);
+          } else {
+            reject();
+          }
+        };
+
+        req.send(null);
+      });
+      return loadUSDPromise;
+    }
 
     const initPromise = init();
     
     console.log("Loading USD Module...");
       
-    Promise.all([loadUSDPromise, getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+    Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
       console.log("Loading File...");
       window.Usd = Usd;
       animate();
@@ -187,6 +188,8 @@
 
       document.body.appendChild( renderer.domElement );
       const controls = window._controls = new OrbitControls( camera, renderer.domElement );
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.2;
       controls.update();
 
       window.addEventListener( 'resize', onWindowResize );
@@ -194,7 +197,7 @@
       renderer.domElement.addEventListener("drop", dropHandler);
       renderer.domElement.addEventListener("dragover", dragOverHandler);
 
-      // attach to link click handlers
+      // attach to link click handlers so that we don't have to reload the entire page
       const fileLoadingLinks = document.querySelectorAll("button a.file");
       for(let link of fileLoadingLinks) {
         link.addEventListener('click', async function(event) {
@@ -204,17 +207,23 @@
           let params = (new URL(event.target.href)).searchParams;
           filename = params.get("file");
           
-          if (filename) {
-            let usdFile = await loadUSDPromise();
-            loadUsdFileFromArrayBuffer(filename, usdFile);
-          }
-          else {
-            // clear existing objects
+          if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
+          if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
+          if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
+          window._controls.update();
+          
+          // clear existing objects
+          if (filename !== undefined) {
             window.usdRoot.clear();
             if (currentFileName) {
               Usd.FS.unlink(currentFileName, true);
               currentFileName = undefined;
             }
+          }
+          
+          if (filename) {
+            let usdFile = await getUsdFile();
+            loadUsdFileFromArrayBuffer(filename, usdFile);
           }
         });
       }
