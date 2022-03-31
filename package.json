@@ -16,6 +16,7 @@
   "repository": {
     "url": "https://glitch.com/edit/#!/usd-viewer"
   },
+  "license": "Apache 2.0 License",
   "keywords": [
     "usd",
     "usdz",
