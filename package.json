@@ -1,0 +1,25 @@
+{
+  "name": "usd-viewer",
+  "version": "0.1.0",
+  "description": "Basic USD viewer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "fastify": "^3.27.4",
+    "fastify-static": "^4.6.1"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/usd-viewer"
+  },
+  "license": "Apache 2.0 License",
+  "keywords": [
+    "usd",
+    "usdz",
+    "viewer"
+  ]
+}

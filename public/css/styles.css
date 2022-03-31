@@ -1,0 +1,17 @@
+body {
+  margin:0;
+  padding:0;
+  font-family:sans-serif;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin-bottom:15px;
+}
+
+#message-log {
+  opacity:0.5;
+  font-size:0.75em;
+}
