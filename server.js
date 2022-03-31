@@ -2,14 +2,14 @@ const fastify = require('fastify')()
 const path = require('path') 
 
 fastify.register(require('fastify-static'), {
-  root: path.join(__dirname, ''),
-  prefix: '/', // optional: default '/',
+  root: path.join(__dirname, 'public'),
+  prefix: '/',
   setHeaders: function(res, path, stat) {
-    res.header(name, value)
+    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   },
 })
 
-// Run the server and report out to the logs
 fastify.listen(process.env.PORT, '0.0.0.0', function(err, address) {
   if (err) {
     fastify.log.error(err);

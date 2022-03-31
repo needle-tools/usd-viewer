@@ -1,9 +1,6 @@
 dependencies:
   fastify: 3.27.4
-  fastify-formbody: 5.2.0
   fastify-static: 4.6.1
-  handlebars: 4.7.7
-  point-of-view: 5.2.0
 packages:
   /@fastify/ajv-compiler/1.1.0:
     dependencies:
@@ -174,12 +171,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-oCfpcsDndgnDVgiI7bwFKAun2dO+4h84vBlkWsWnz/OUK9Reff5UFoFl241xTiLeHWX/vU9zkDVXqYUxjOwHcQ==
-  /fastify-formbody/5.2.0:
-    dependencies:
-      fastify-plugin: 3.0.1
-    dev: false
-    resolution:
-      integrity: sha512-d8Y5hCL82akPyoFiXh2wYOm3es0pV9jqoPo3pO9OV2cNF0cQx39J5WAVXzCh4MSt9Z2qF4Fy5gHlvlyESwjtvg==
   /fastify-plugin/3.0.1:
     dev: false
     resolution:
@@ -264,24 +255,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-lmLf6gtyrPq8tTjSmrO94wBeQbFR3HbLHbuyD69wuyQkImp2hWqMGB47OX65FBkPffO641IP9jWa1z4ivqG26Q==
-  /handlebars/4.7.7:
-    dependencies:
-      minimist: 1.2.6
-      neo-async: 2.6.2
-      source-map: 0.6.1
-      wordwrap: 1.0.0
-    dev: false
-    engines:
-      node: '>=0.4.7'
-    hasBin: true
-    optionalDependencies:
-      uglify-js: 3.15.3
-    resolution:
-      integrity: sha512-aAcXm5OAfE/8IXkcZvCepKU3VzW1/39Fb5ZuqMtgI/hT8X2YgoMvBY5dLhq/cpOvw7Lk1nK/UF71aLG/ZnVYRA==
-  /hashlru/2.3.0:
-    dev: false
-    resolution:
-      integrity: sha512-0cMsjjIC8I+D3M44pOQdsy0OHXGLVz6Z0beRuufhKa0KfaD2wGwAev6jILzXsd3/vpnNQJmWyZtIILqM1N+n5A==
   /http-errors/1.8.1:
     dependencies:
       depd: 1.1.2
@@ -349,10 +322,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==
-  /minimist/1.2.6:
-    dev: false
-    resolution:
-      integrity: sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q==
   /ms/2.0.0:
     dev: false
     resolution:
@@ -365,10 +334,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
-  /neo-async/2.6.2:
-    dev: false
-    resolution:
-      integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
   /on-finished/2.3.0:
     dependencies:
       ee-first: 1.1.1
@@ -414,13 +379,6 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-iuhEDel3Z3hF9Jfe44DPXR8l07bhjuFY3GMHIXbjnY9XcafbyDDwl2sN2vw2GjMPf5Nkoe+OFao7ffn9SXaKDg==
-  /point-of-view/5.2.0:
-    dependencies:
-      fastify-plugin: 3.0.1
-      hashlru: 2.3.0
-    dev: false
-    resolution:
-      integrity: sha512-PYoeqEunutxZTmNih6NXXoz8xZZopzw2MWgBoKPLcofOJNagEoXVpzbHT30AkK/9ArKjJYrvV6iU8JAg87+VMw==
   /process-warning/1.0.0:
     dev: false
     resolution:
@@ -549,12 +507,6 @@ packages:
     dev: false
     resolution:
       integrity: sha512-LRHh/A8tpW7ru89lrlkU4AszXt1dbwSjVWguGrmlxE7tawVmDBlI1PILMkXAxJTwqhgsEeTHzj36D5CmHgQmNg==
-  /source-map/0.6.1:
-    dev: false
-    engines:
-      node: '>=0.10.0'
-    resolution:
-      integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
   /statuses/1.5.0:
     dev: false
     engines:
@@ -583,14 +535,6 @@ packages:
       node: '>=0.6'
     resolution:
       integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==
-  /uglify-js/3.15.3:
-    dev: false
-    engines:
-      node: '>=0.8.0'
-    hasBin: true
-    optional: true
-    resolution:
-      integrity: sha512-6iCVm2omGJbsu3JWac+p6kUiOpg3wFO2f8lIXjfEb8RrmLjzog1wTPMmwKB7swfzzqxj9YM+sGUM++u1qN4qJg==
   /uri-js/4.4.1:
     dependencies:
       punycode: 2.1.1
@@ -601,10 +545,6 @@ packages:
     dev: false
     resolution:
       integrity: sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8=
-  /wordwrap/1.0.0:
-    dev: false
-    resolution:
-      integrity: sha1-J1hIEIkUVqQXHI0CJkQa3pDLyus=
   /wrappy/1.0.2:
     dev: false
     resolution:
@@ -624,7 +564,4 @@ shrinkwrapMinorVersion: 9
 shrinkwrapVersion: 3
 specifiers:
   fastify: ^3.27.1
-  fastify-formbody: ^5.2.0
   fastify-static: ^4.5.0
-  handlebars: ^4.7.7
-  point-of-view: ^5.1.0
