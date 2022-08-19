@@ -22,6 +22,9 @@
     import { RGBELoader } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/loaders/RGBELoader.js';
     import { OrbitControls } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/controls/OrbitControls.js';
     
+    // wait for document
+    document.addEventListener("DOMContentLoaded", function() {
+    console.log("DOCUMENT LOADING")
     let scene;
     let defaultTexture;
 
@@ -98,6 +101,16 @@
     var currentFileName = undefined;
     var timeout = 40;
     var endTimeCode = 1;
+    
+    const usdzExportBtn = document.getElementById('export-usdz');
+    if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
+      alert("usdz");
+    });
+    
+    const gltfExportBtn = document.getElementById('export-gltf');
+    if (gltfExportBtn) gltfExportBtn.addEventListener('click', () => {
+      alert("gltf");
+    });
     
     function loadUsdFileFromArrayBuffer(filename, usdFile) {
       let parts = filename.split('.');
@@ -365,16 +378,23 @@
     function dragOverHandler(ev) {
       ev.preventDefault();
     }
-    
+    });
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <button><a class="file" href="?file=">Clear (drop USD/USDZ to load)</a></button>
+    |
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a></button>
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a></button>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a></button>
     <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a></button>
+    |
     <button><a href="https://autodesk-forks.github.io/USD/" target="_blank">File Attributions / More Info</a></button>
+    <br/>
+    <!--
+    <button><a href="#" id="export-usdz">Export as USDZ</a></button>
+    <button><a href="#" id="export-gltf">Export as glTF</a></button>
+    -->
     <br/>
     <p id="message-log">
       Initializing...
