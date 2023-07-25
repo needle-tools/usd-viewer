@@ -22,6 +22,9 @@
     import { RGBELoader } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/loaders/RGBELoader.js';
     import { OrbitControls } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/controls/OrbitControls.js';
     
+    // wait for document
+    document.addEventListener("load", function() {
+    console.log("DOCUMENT LOADING")
     let scene;
     let defaultTexture;
 
@@ -373,7 +376,7 @@
     function dragOverHandler(ev) {
       ev.preventDefault();
     }
-    
+    });
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <button><a class="file" href="?file=">Clear (drop USD/USDZ to load)</a></button>
