@@ -23,7 +23,7 @@
     import { OrbitControls } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/controls/OrbitControls.js';
     
     // wait for document
-    document.addEventListener("load", function() {
+    document.addEventListener("DOMContentLoaded", function() {
     console.log("DOCUMENT LOADING")
     let scene;
     let defaultTexture;
@@ -102,11 +102,13 @@
     var timeout = 40;
     var endTimeCode = 1;
     
-    document.getElementById('export-usdz').addEventListener('click', () => {
+    const usdzExportBtn = document.getElementById('export-usdz');
+    if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
       alert("usdz");
     });
     
-    document.getElementById('export-gltf').addEventListener('click', () => {
+    const gltfExportBtn = document.getElementById('export-gltf');
+    if (gltfExportBtn) gltfExportBtn.addEventListener('click', () => {
       alert("gltf");
     });
     
