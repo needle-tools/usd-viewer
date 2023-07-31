@@ -15,3 +15,8 @@ body {
   opacity:0.5;
   font-size:0.75em;
 }
+
+#container {
+  background-color: black;
+  border-radius: 20px;
+}
