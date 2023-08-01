@@ -1,7 +1,20 @@
+:root {
+  --color-bg-0: rgb(255, 255, 255);
+  --color-bg-1: hsl(209, 36%, 86%);
+  --color-bg-2: hsl(224, 44%, 95%);
+  --color-theme-1: #000000;
+  --color-theme-2: #4075a6;
+  --color-text: rgba(23, 22, 22, 0.7);
+}
+
 body {
   margin:0;
   padding:0;
   font-family:sans-serif;
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-color: var(--color-bg-1);
+  background-image: linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
 }
 
 .footer {
@@ -18,20 +31,25 @@ body {
     margin-left: 14px;
     margin-top: 0;
   font-style:italic;
+    margin-bottom: 0;
+    margin-top: 0;
 }
 
 #container {
-  background-color: black;
+  background-color: var(--color-bg-0);
   border-radius: 20px;
     font-size: 0.9em;
 }
 
 #container .buttons {
-  display: flex;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-direction: row;
 }
 
 #container a {
-  color: white;
+  color: var(--text-color);
   text-decoration: none;
   padding: 10px;
   margin: 0 4px;
@@ -46,4 +64,19 @@ body {
 #container a span {
   font-size: 0.8em;
   opacity: 0.8;
+}
+
+.have-custom-file a {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+      --color-bg-0: rgb(23, 22, 22);
+      --color-bg-1: hsl(209, 36%, 16%);
+      --color-bg-2: hsl(224, 44%, 5%);
+      --color-theme-1: #ffffff;
+      --color-theme-2: #4075a6;
+      --color-text: rgba(255, 255, 255, 0.7);
+  }
 }

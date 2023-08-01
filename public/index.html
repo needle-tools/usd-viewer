@@ -34,6 +34,12 @@
     let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
     let messageLog = document.querySelector("#message-log");
     
+    if (filename) {
+      const el = document.querySelector("#container");
+      el.classList.add("have-custom-file");
+      el.querySelector(".filename").innerText = filename;
+    }  
+      
     function getUsdFile() {
       // Load the usd file from filename
       const loadUSDPromise = new Promise( (resolve, reject) => {
@@ -187,8 +193,8 @@
       camera.position.x = params.get('cameraX') || 0;
 
       const scene = window.scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xffffff);
-
+      // scene.background = new THREE.Color(0xffffff);
+      
 
       scene.add( new THREE.AmbientLight( 0x111111 ) );
       const usdRoot = window.usdRoot = new THREE.Group();
@@ -208,13 +214,14 @@
       pointLight.shadow.samples = 8;
       scene.add( pointLight );
 
-      const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true } );
+      const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
       renderer.toneMapping = THREE.CineonToneMapping;
       renderer.toneMappingExposure = 2;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
+      renderer.setClearColor( 0x000000, 0 ); // the default
 
       const envMapPromise = new Promise(resolve => {
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -391,6 +398,10 @@
     <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
     |
     <a href="https://autodesk-forks.github.io/USD/" target="_blank">Attributions</a>
+      
+      <p class="filename">
+        
+      </p>
     <br/>
     <!--
     <button><a href="#" id="export-usdz">Export as USDZ</a></button>
