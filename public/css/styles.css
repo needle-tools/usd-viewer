@@ -49,16 +49,15 @@ body {
 }
 
 #container a {
-  color: var(--text-color);
+  color: var(--color-text);
   text-decoration: none;
   padding: 10px;
   margin: 0 4px;
-  opacity: 0.8;
-  transition: opacity 0.2s linear;
+  transition: color 0.2s linear;
 }
 
 #container a:hover {
-  opacity: 1;
+  color: var(--color-theme-1);
 }
 
 #container a span {
@@ -66,7 +65,7 @@ body {
   opacity: 0.8;
 }
 
-.have-custom-file a {
+.have-custom-file a.file {
   display: none;
 }
 

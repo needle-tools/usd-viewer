@@ -37,7 +37,11 @@
     if (filename) {
       const el = document.querySelector("#container");
       el.classList.add("have-custom-file");
-      el.querySelector(".filename").innerText = filename;
+      // get filename from URL
+      var _filename = filename.split('/').pop().split('#')[0].split('?')[0];
+
+
+      el.querySelector(".filename").innerText = _filename;
     }  
       
     function getUsdFile() {
@@ -390,18 +394,17 @@
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
       <a class="file" href="?file=">Clear<br/><span>drop USDZ to load</span></a>
-    |
+    
     <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
     <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
     <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
     <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
-    |
-    <a href="https://autodesk-forks.github.io/USD/" target="_blank">Attributions</a>
+    
+      <a class="filename"> </a>
+    <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
       
-      <p class="filename">
-        
-      </p>
+      
     <br/>
     <!--
     <button><a href="#" id="export-usdz">Export as USDZ</a></button>
