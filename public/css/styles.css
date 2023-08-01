@@ -14,9 +14,36 @@ body {
 #message-log {
   opacity:0.5;
   font-size:0.75em;
+  color: white;
+    margin-left: 14px;
+    margin-top: 0;
+  font-style:italic;
 }
 
 #container {
   background-color: black;
   border-radius: 20px;
+    font-size: 0.9em;
+}
+
+#container .buttons {
+  display: flex;
+}
+
+#container a {
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  margin: 0 4px;
+  opacity: 0.8;
+  transition: opacity 0.2s linear;
+}
+
+#container a:hover {
+  opacity: 1;
+}
+
+#container a span {
+  font-size: 0.8em;
+  opacity: 0.8;
 }

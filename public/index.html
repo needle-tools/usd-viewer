@@ -241,7 +241,7 @@
       renderer.domElement.addEventListener("dragover", dragOverHandler);
 
       // attach to link click handlers so that we don't have to reload the entire page
-      const fileLoadingLinks = document.querySelectorAll("button a.file");
+      const fileLoadingLinks = document.querySelectorAll("a.file");
       for(let link of fileLoadingLinks) {
         link.addEventListener('click', async function(event) {
           event.preventDefault();
@@ -381,21 +381,24 @@
     });
   </script>
   <div id="container" style="position:absolute; margin:5px;">
-    <button><a class="file" href="?file=">Clear (drop USD/USDZ to load)</a></button>
+    <div class="buttons">
+      <a class="file" href="?file=">Clear<br/><span>drop USDZ to load</span></a>
     |
-    <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a></button>
-    <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a></button>
+    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
-    <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a></button>
-    <button><a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a></button>
+    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
+    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
     |
-    <button><a href="https://autodesk-forks.github.io/USD/" target="_blank">File Attributions / More Info</a></button>
+    <a href="https://autodesk-forks.github.io/USD/" target="_blank">Attributions</a>
     <br/>
     <!--
     <button><a href="#" id="export-usdz">Export as USDZ</a></button>
     <button><a href="#" id="export-gltf">Export as glTF</a></button>
     -->
     <br/>
+    </div>
+    
     <p id="message-log">
       Initializing...
     </p>
