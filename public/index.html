@@ -230,7 +230,7 @@
       const envMapPromise = new Promise(resolve => {
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
 				pmremGenerator.compileCubemapShader();
-        new RGBELoader().load('https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/helicopter-landing-pad-vis-4K.hdr?v=1646516575468', (texture) => {
+        new RGBELoader().load('https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/neutral.hdr?v=1691070995510', (texture) => {
           const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
 
           texture.mapping = THREE.EquirectangularReflectionMapping;
