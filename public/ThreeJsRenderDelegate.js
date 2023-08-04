@@ -1,5 +1,3 @@
-import * as THREE from "three";
-
 class TextureRegistry {
   constructor(basename) {
     this.basename = basename;
@@ -23,12 +21,11 @@ class TextureRegistry {
     }
 
     let filetype = undefined;
-    let fileNameLower = filename.toLowerCase();
-    if (fileNameLower.indexOf('.png') >= filename.length - 5) {
+    if (filename.indexOf('.png') >= filename.length - 5) {
       filetype = 'image/png';
-    } else if (fileNameLower.indexOf('.jpg') >= filename.length - 5) {
+    } else if (filename.indexOf('.jpg') >= filename.length - 5) {
       filetype = 'image/jpeg';
-    } else if (fileNameLower.indexOf('.jpeg') >= filename.length - 5) {
+    } else if (filename.indexOf('.jpeg') >= filename.length - 5) {
       filetype = 'image/jpeg';
     } else {
       throw new Error('Unknown filetype');
