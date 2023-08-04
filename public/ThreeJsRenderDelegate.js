@@ -234,6 +234,8 @@ class HydraMaterial {
     // makes sense, but that would complicate this loader a lot. Most Three.js loaders don't seem to do it either.
     // Instead, we simply provide the 8bit image as an RGB texture, even though this might be less efficient.
     'r': THREE.RGBFormat,
+    'g': THREE.RGBFormat,
+    'b': THREE.RGBFormat,
     'rgb': THREE.RGBFormat,
     'rgba': THREE.RGBAFormat
   };
@@ -312,6 +314,7 @@ class HydraMaterial {
         // Clone texture and set the correct format.
         const clonedTexture = texture.clone();
         clonedTexture.format = HydraMaterial.channelMap[channel];
+        // clonedTexture.encoding = THREE.LinearEncoding;
         clonedTexture.needsUpdate = true;
         clonedTexture.wrapS = THREE.RepeatWrapping;
         clonedTexture.wrapT = THREE.RepeatWrapping;

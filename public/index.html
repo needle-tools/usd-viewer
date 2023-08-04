@@ -221,8 +221,8 @@
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
-      renderer.toneMapping = THREE.CineonToneMapping;
-      renderer.toneMappingExposure = 2;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      // renderer.toneMappingExposure = 2;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.setClearColor( 0x000000, 0 ); // the default
