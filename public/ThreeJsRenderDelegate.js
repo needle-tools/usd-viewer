@@ -195,6 +195,8 @@ class HydraMesh {
         break;
       case 'uv':
       case "UVMap":
+      case "uvmap":
+      case "uv0":
       case "UVW":
       case "uvw":
         this.setUV(data, dimension, interpolation);
@@ -290,7 +292,7 @@ class HydraMaterial {
       console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'...`);
 
       this._interface.registry.getTexture(textureFileName).then(texture => {
-        // console.log("getTexture", texture);
+        console.log("getTexture", texture);
         if (materialParameterMapName === 'alphaMap') {
           // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
           // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
