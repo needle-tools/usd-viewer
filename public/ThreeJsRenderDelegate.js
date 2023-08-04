@@ -329,6 +329,8 @@ class HydraMaterial {
           return;
         } else if (materialParameterMapName === 'metalnessMap') {
           this._material.metalness = 1.0;
+        } else if (materialParameterMapName === 'roughnessMap') {
+          this._material.roughness = 0.0;
         } else if (materialParameterMapName === 'emissiveMap') {
           this._material.emissive = new THREE.Color(0xffffff);
         } else if (!HydraMaterial.channelMap[channel]) {
