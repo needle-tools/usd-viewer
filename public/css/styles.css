@@ -65,7 +65,7 @@ body {
   opacity: 0.8;
 }
 
-.have-custom-file a.file {
+.have-custom-file a.file.hide {
   display: none;
 }
 

@@ -279,7 +279,7 @@ class HydraMaterial {
       return;
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
-      const textureFileName = mainMaterial[parameterName].nodeIn.file//.replace("./", "");
+      const textureFileName = mainMaterial[parameterName].nodeIn.file.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
