@@ -371,7 +371,7 @@
     function testAndLoadFile(file) {
       let ext = file.name.split('.').pop();
       console.log(file.name + ", " + file.size + ", " + ext);
-      if(ext == 'usd' || ext == 'usdz') {
+      if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
         loadFile(file);
       }
     }

@@ -195,6 +195,8 @@ class HydraMesh {
         break;
       case 'uv':
       case "UVMap":
+      case "UVW":
+      case "uvw":
         this.setUV(data, dimension, interpolation);
         break;
       default:
