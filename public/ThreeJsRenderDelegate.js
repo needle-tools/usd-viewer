@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 class TextureRegistry {
   constructor(basename) {
     this.basename = basename;
