@@ -130,7 +130,7 @@ class HydraMesh {
 
   // This is always called before prims are updated
   setMaterial(materialId) {
-    console.log('Material: ' + materialId);
+    // console.log('Material: ' + materialId);
     if (this._interface.materials[materialId]) {
       this._mesh.material = this._interface.materials[materialId]._material;
     }
@@ -182,7 +182,7 @@ class HydraMesh {
       return;
     }
 
-    console.log('Setting PrimVar: ' + name);
+    // console.log('Setting PrimVar: ' + name);
 
     // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
     if (name.startsWith('st')) {
@@ -251,6 +251,7 @@ class HydraMaterial {
     'metallic': 'metalness',
     'opacity': 'opacity',
     'roughness': 'roughness',
+    'opacityThreshold': undefined,
   };
 
   constructor(id, hydraInterface) {
@@ -268,7 +269,7 @@ class HydraMaterial {
   }
 
   updateNode(networkId, path, parameters) {
-    console.log('Updating Material Node: ' + networkId + ' ' + path);
+    // console.log('Updating Material Node: ' + networkId + ' ' + path);
     this._nodes[path] = parameters;
   }
 
@@ -301,7 +302,8 @@ class HydraMaterial {
             // TODO: Extract the alpha channel into a new RGB texture.
           }
 
-          this._material.transparent = true;
+          if (!this._material.alphaClip)
+            this._material.transparent = true;
           this._material.needsUpdate = true;
           return;
         } else if (materialParameterMapName === 'metalnessMap') {
@@ -333,7 +335,14 @@ class HydraMaterial {
   assignProperty(mainMaterial, parameterName) {
     const materialParameterName = HydraMaterial.usdPreviewToMeshPhysicalMap[parameterName];
     if (materialParameterName === undefined) {
-      console.warn(`Unsupported material parameter '${parameterName}'.`);
+      if (parameterName == 'opacityThreshold') {
+        this._material.transparent = false;
+        this._material.alphaClip = true;
+        console.log("material is now alpha clip")
+      }
+      else {
+        console.warn(`Unsupported material parameter '${parameterName}'.`);
+      }
       return;
     }
     if (mainMaterial[parameterName] !== undefined && !mainMaterial[parameterName].nodeIn) {
@@ -344,6 +353,7 @@ class HydraMaterial {
         this._material[materialParameterName] = mainMaterial[parameterName];
         if (materialParameterName === 'opacity' && mainMaterial[parameterName] < 1.0) {
           this._material.transparent = true;
+          console.log("material is now transparent")
         }
       }
     }
@@ -392,7 +402,7 @@ class HydraMaterial {
       this._material.envMap = window.envMap;
     }
 
-    console.log(this._material);
+    console.log("Material Node", mainMaterialNode, "Resulting Material", this._material);
   }
 }
 
