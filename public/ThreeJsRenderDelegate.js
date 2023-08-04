@@ -251,7 +251,7 @@ class HydraMaterial {
     'metallic': 'metalness',
     'opacity': 'opacity',
     'roughness': 'roughness',
-    'opacityThreshold': undefined,
+    'opacityThreshold': 'alphaTest',
   };
 
   constructor(id, hydraInterface) {
@@ -335,14 +335,7 @@ class HydraMaterial {
   assignProperty(mainMaterial, parameterName) {
     const materialParameterName = HydraMaterial.usdPreviewToMeshPhysicalMap[parameterName];
     if (materialParameterName === undefined) {
-      if (parameterName == 'opacityThreshold') {
-        this._material.transparent = false;
-        this._material.alphaClip = true;
-        console.log("material is now alpha clip")
-      }
-      else {
-        console.warn(`Unsupported material parameter '${parameterName}'.`);
-      }
+      console.warn(`Unsupported material parameter '${parameterName}'.`);
       return;
     }
     if (mainMaterial[parameterName] !== undefined && !mainMaterial[parameterName].nodeIn) {
@@ -353,7 +346,10 @@ class HydraMaterial {
         this._material[materialParameterName] = mainMaterial[parameterName];
         if (materialParameterName === 'opacity' && mainMaterial[parameterName] < 1.0) {
           this._material.transparent = true;
-          console.log("material is now transparent")
+        }
+        if (parameterName == 'opacityThreshold') {
+          this._material.transparent = false;
+          this._material.alphaClip = true;
         }
       }
     }
