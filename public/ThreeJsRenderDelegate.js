@@ -32,7 +32,6 @@ class TextureRegistry {
     }
 
     window.driver.getFile(resourcePath, (loadedFile) => {
-      // resourcePath = resourcePath.replace("./", "");
       if (!loadedFile) {
         textureReject(new Error('Unknown file: ' + resourcePath));
         return;
@@ -195,6 +194,7 @@ class HydraMesh {
         this.setDisplayColor(data, interpolation);
         break;
       case 'uv':
+      case "UVMap":
         this.setUV(data, dimension, interpolation);
         break;
       default:
@@ -279,7 +279,7 @@ class HydraMaterial {
       return;
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
-      const textureFileName = mainMaterial[parameterName].nodeIn.file; //.replace("./", "");
+      const textureFileName = mainMaterial[parameterName].nodeIn.file//.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
@@ -287,7 +287,7 @@ class HydraMaterial {
       console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'...`);
 
       this._interface.registry.getTexture(textureFileName).then(texture => {
-        console.log("getTexture", texture);
+        // console.log("getTexture", texture);
         if (materialParameterMapName === 'alphaMap') {
           // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
           // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
