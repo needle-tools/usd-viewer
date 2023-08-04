@@ -284,7 +284,8 @@ class HydraMaterial {
       return;
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
-      const textureFileName = mainMaterial[parameterName].nodeIn.file.replace("./", "");
+      const nodeIn = mainMaterial[parameterName].nodeIn;
+      const textureFileName = nodeIn.file.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
@@ -292,7 +293,7 @@ class HydraMaterial {
       console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'...`);
 
       this._interface.registry.getTexture(textureFileName).then(texture => {
-        console.log("getTexture", texture);
+        console.log("getTexture", texture, nodeIn);
         if (materialParameterMapName === 'alphaMap') {
           // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
           // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
@@ -324,6 +325,19 @@ class HydraMaterial {
         clonedTexture.format = HydraMaterial.channelMap[channel];
         // clonedTexture.encoding = THREE.LinearEncoding;
         clonedTexture.needsUpdate = true;
+        
+        if (nodeIn.st && nodeIn.st.nodeOut && nodeIn.st.nodeOut) {
+          const uvData = nodeIn.st.nodeOut;
+          console.log("Tiling data", uvData);
+          /*
+          if (uvData.scale) 
+            clonedTexture.repeat.set(uvData.scale.x, uvData.scale.y);
+          if (uvData.translation)
+            clonedTexture.offset.set(uvData.translation.x, uvData.translation.y);
+            */
+        }
+        
+        // TODO use nodeIn.wrapS and wrapT and map to THREE
         clonedTexture.wrapS = THREE.RepeatWrapping;
         clonedTexture.wrapT = THREE.RepeatWrapping;
 
