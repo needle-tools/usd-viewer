@@ -277,6 +277,22 @@ class HydraMaterial {
     this._nodes[path] = parameters;
   }
 
+  convertWrap(usdWrapMode) {
+     if (usdWrapMode === undefined)
+        return THREE.RepeatWrapping;
+    
+    const WRAPPINGS = {
+			'repeat': 1000, // RepeatWrapping
+			'clamp': 1001, // ClampToEdgeWrapping
+			'mirror': 1002 // MirroredRepeatWrapping
+		};
+    
+    if (WRAPPINGS[usdWrapMode])
+      return WRAPPINGS[usdWrapMode];
+    
+    return THREE.RepeatWrapping;
+  }
+  
   assignTexture(mainMaterial, parameterName) {
     const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
     if (materialParameterMapName === undefined) {
@@ -326,20 +342,24 @@ class HydraMaterial {
         // clonedTexture.encoding = THREE.LinearEncoding;
         clonedTexture.needsUpdate = true;
         
-        if (nodeIn.st && nodeIn.st.nodeOut && nodeIn.st.nodeOut) {
-          const uvData = nodeIn.st.nodeOut;
+        if (nodeIn.st && nodeIn.st.nodeIn) {
+          const uvData = nodeIn.st.nodeIn;
           console.log("Tiling data", uvData);
-          /*
+          
+          // TODO this is messed up but works for scale and translation, not for rotation.
+          // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
+          // (which is also not perfect but close)
           if (uvData.scale) 
-            clonedTexture.repeat.set(uvData.scale.x, uvData.scale.y);
+            clonedTexture.repeat.set(uvData.scale[0], uvData.scale[1]);
           if (uvData.translation)
-            clonedTexture.offset.set(uvData.translation.x, uvData.translation.y);
-            */
+            clonedTexture.offset.set(uvData.translation[0], uvData.translation[1]);
+          if (uvData.rotation)
+           clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
         }
         
         // TODO use nodeIn.wrapS and wrapT and map to THREE
-        clonedTexture.wrapS = THREE.RepeatWrapping;
-        clonedTexture.wrapT = THREE.RepeatWrapping;
+        clonedTexture.wrapS = this.convertWrap(nodeIn.wrapS);
+        clonedTexture.wrapT = this.convertWrap(nodeIn.wrapT);
 
         this._material[materialParameterMapName] = clonedTexture;
 
