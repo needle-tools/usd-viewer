@@ -309,7 +309,7 @@ class HydraMaterial {
       console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'...`);
 
       this._interface.registry.getTexture(textureFileName).then(texture => {
-        console.log("getTexture", texture, nodeIn);
+        // console.log("getTexture", texture, nodeIn);
         if (materialParameterMapName === 'alphaMap') {
           // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
           // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
@@ -344,17 +344,34 @@ class HydraMaterial {
         
         if (nodeIn.st && nodeIn.st.nodeIn) {
           const uvData = nodeIn.st.nodeIn;
-          console.log("Tiling data", uvData);
+          // console.log("Tiling data", uvData);
           
-          // TODO this is messed up but works for scale and translation, not for rotation.
+          // TODO this is messed up but works for scale and translation, not really for rotation.
           // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
           // (which is also not perfect but close)
+          
+          const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
+          const offset = uvData.translation ? new THREE.Vector2(uvData.translation[0], uvData.translation[1]) : new THREE.Vector2(0,0);
+          const repeat = uvData.scale ? new THREE.Vector2(uvData.scale[0], uvData.scale[1]) : new THREE.Vector2(1,1);
+          
+          const xRotationOffset = Math.sin( rotation );
+          const yRotationOffset = Math.cos( rotation );
+          
+          offset.y = offset.y - (1 - yRotationOffset) * repeat.y;
+          offset.x = offset.x - xRotationOffset * repeat.x;
+          // offset.y = 1 - offset.y - repeat.y;
+          /*
           if (uvData.scale) 
             clonedTexture.repeat.set(uvData.scale[0], uvData.scale[1]);
           if (uvData.translation)
             clonedTexture.offset.set(uvData.translation[0], uvData.translation[1]);
           if (uvData.rotation)
            clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
+           */
+          
+          clonedTexture.repeat.set(repeat.x, repeat.y);
+          clonedTexture.offset.set(offset.x, offset.y);
+          clonedTexture.rotation = rotation;
         }
         
         // TODO use nodeIn.wrapS and wrapT and map to THREE
