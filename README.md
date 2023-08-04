@@ -12,6 +12,14 @@ Code here: [github.com/autodesk-forks/USD/tree/gh-pages](https://github.com/auto
 - added camera orbit dampening
 - setting headers server-side instead of via ServiceWorker
 
+## Fixes
+
+- g,b texture channels were missing with RBGFormat
+- files of the form somefile.usdz[./textures/myTexture.jpg] weren't resolved correctly
+- UVMap primvar type wasn't correctly resolved to uv
+- support for texture wrap modes
+- support for texture transforms (rotation isn't properly working yet)
+
 ## Headers
 
 Some JavaScript features used here require specific HTTP headers (SharedArrayBuffers).  

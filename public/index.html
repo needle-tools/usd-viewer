@@ -24,7 +24,6 @@
     
     // wait for document
     document.addEventListener("DOMContentLoaded", function() {
-    console.log("DOCUMENT LOADING")
     let scene;
     let defaultTexture;
 
@@ -34,14 +33,17 @@
     let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
     let messageLog = document.querySelector("#message-log");
     
+    function setFilenameText(__filename) {
+      var _filename = __filename.split('/').pop().split('#')[0].split('?')[0];
+      const _el = document.querySelector(".filename");
+      if (_el) _el.innerText = _filename;
+    }
+      
     if (filename) {
       const el = document.querySelector("#container");
       el.classList.add("have-custom-file");
       // get filename from URL
-      var _filename = filename.split('/').pop().split('#')[0].split('?')[0];
-
-
-      el.querySelector(".filename").innerText = _filename;
+      setFilenameText(filename);
     }  
       
     function getUsdFile() {
@@ -125,6 +127,9 @@
     function loadUsdFileFromArrayBuffer(filename, usdFile) {
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
+      
+      setFilenameText(filename);
+      
       extension = extension.split('?')[0];
       let fileName = (Math.random() + 1).toString(36).substring(7);
       let inputFile = fileName + "." + extension;
@@ -221,8 +226,8 @@
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
-      renderer.toneMapping = THREE.CineonToneMapping;
-      renderer.toneMappingExposure = 2;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      // renderer.toneMappingExposure = 2;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.setClearColor( 0x000000, 0 ); // the default
@@ -230,7 +235,7 @@
       const envMapPromise = new Promise(resolve => {
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
 				pmremGenerator.compileCubemapShader();
-        new RGBELoader().load('https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/neutral.hdr?v=1691070995510', (texture) => {
+        new RGBELoader().load('environments/neutral.hdr', (texture) => {
           const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
 
           texture.mapping = THREE.EquirectangularReflectionMapping;
@@ -257,7 +262,11 @@
         link.addEventListener('click', async function(event) {
           event.preventDefault();
           
-          let params = (new URL(event.target.href)).searchParams;
+          let params = new Map();
+          try {
+            params = (new URL(event.target.href)).searchParams;
+          }
+          catch {}
           filename = params.get("file");
           
           if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
@@ -271,10 +280,16 @@
             if (currentFileName) {
               Usd.FS.unlink(currentFileName, true);
               currentFileName = undefined;
+              
+            setFilenameText("");
             }
           }
           
+          const el = document.querySelector("#container");
+          el.classList.remove("have-custom-file");
+          
           if (filename) {
+            el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
             let usdFile = await getUsdFile();
             loadUsdFileFromArrayBuffer(filename, usdFile);
@@ -356,7 +371,7 @@
     function testAndLoadFile(file) {
       let ext = file.name.split('.').pop();
       console.log(file.name + ", " + file.size + ", " + ext);
-      if(ext == 'usd' || ext == 'usdz') {
+      if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
         loadFile(file);
       }
     }
@@ -393,15 +408,15 @@
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
-      <a class="file" href="?file=">Clear<br/><span>drop USDZ to load</span></a>
+      <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
-    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
-    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
-    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
-    <a class="file" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
     
-      <a class="filename"> </a>
+    <a class="filename"></a>
     <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
       
       

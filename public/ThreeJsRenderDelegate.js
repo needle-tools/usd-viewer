@@ -130,7 +130,7 @@ class HydraMesh {
 
   // This is always called before prims are updated
   setMaterial(materialId) {
-    console.log('Material: ' + materialId);
+    // console.log('Material: ' + materialId);
     if (this._interface.materials[materialId]) {
       this._mesh.material = this._interface.materials[materialId]._material;
     }
@@ -182,7 +182,7 @@ class HydraMesh {
       return;
     }
 
-    console.log('Setting PrimVar: ' + name);
+    // console.log('Setting PrimVar: ' + name);
 
     // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
     if (name.startsWith('st')) {
@@ -194,6 +194,11 @@ class HydraMesh {
         this.setDisplayColor(data, interpolation);
         break;
       case 'uv':
+      case "UVMap":
+      case "uvmap":
+      case "uv0":
+      case "UVW":
+      case "uvw":
         this.setUV(data, dimension, interpolation);
         break;
       default:
@@ -234,6 +239,8 @@ class HydraMaterial {
     // makes sense, but that would complicate this loader a lot. Most Three.js loaders don't seem to do it either.
     // Instead, we simply provide the 8bit image as an RGB texture, even though this might be less efficient.
     'r': THREE.RGBFormat,
+    'g': THREE.RGBFormat,
+    'b': THREE.RGBFormat,
     'rgb': THREE.RGBFormat,
     'rgba': THREE.RGBAFormat
   };
@@ -248,6 +255,7 @@ class HydraMaterial {
     'metallic': 'metalness',
     'opacity': 'opacity',
     'roughness': 'roughness',
+    'opacityThreshold': 'alphaTest',
   };
 
   constructor(id, hydraInterface) {
@@ -265,10 +273,26 @@ class HydraMaterial {
   }
 
   updateNode(networkId, path, parameters) {
-    console.log('Updating Material Node: ' + networkId + ' ' + path);
+    // console.log('Updating Material Node: ' + networkId + ' ' + path);
     this._nodes[path] = parameters;
   }
 
+  convertWrap(usdWrapMode) {
+     if (usdWrapMode === undefined)
+        return THREE.RepeatWrapping;
+    
+    const WRAPPINGS = {
+			'repeat': 1000, // RepeatWrapping
+			'clamp': 1001, // ClampToEdgeWrapping
+			'mirror': 1002 // MirroredRepeatWrapping
+		};
+    
+    if (WRAPPINGS[usdWrapMode])
+      return WRAPPINGS[usdWrapMode];
+    
+    return THREE.RepeatWrapping;
+  }
+  
   assignTexture(mainMaterial, parameterName) {
     const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
     if (materialParameterMapName === undefined) {
@@ -276,7 +300,8 @@ class HydraMaterial {
       return;
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
-      const textureFileName = mainMaterial[parameterName].nodeIn.file;
+      const nodeIn = mainMaterial[parameterName].nodeIn;
+      const textureFileName = nodeIn.file.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
@@ -284,6 +309,7 @@ class HydraMaterial {
       console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'...`);
 
       this._interface.registry.getTexture(textureFileName).then(texture => {
+        // console.log("getTexture", texture, nodeIn);
         if (materialParameterMapName === 'alphaMap') {
           // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
           // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
@@ -297,11 +323,14 @@ class HydraMaterial {
             // TODO: Extract the alpha channel into a new RGB texture.
           }
 
-          this._material.transparent = true;
+          if (!this._material.alphaClip)
+            this._material.transparent = true;
           this._material.needsUpdate = true;
           return;
         } else if (materialParameterMapName === 'metalnessMap') {
           this._material.metalness = 1.0;
+        } else if (materialParameterMapName === 'roughnessMap') {
+          this._material.roughness = 0.0;
         } else if (materialParameterMapName === 'emissiveMap') {
           this._material.emissive = new THREE.Color(0xffffff);
         } else if (!HydraMaterial.channelMap[channel]) {
@@ -312,9 +341,44 @@ class HydraMaterial {
         // Clone texture and set the correct format.
         const clonedTexture = texture.clone();
         clonedTexture.format = HydraMaterial.channelMap[channel];
+        // clonedTexture.encoding = THREE.LinearEncoding;
         clonedTexture.needsUpdate = true;
-        clonedTexture.wrapS = THREE.RepeatWrapping;
-        clonedTexture.wrapT = THREE.RepeatWrapping;
+        
+        if (nodeIn.st && nodeIn.st.nodeIn) {
+          const uvData = nodeIn.st.nodeIn;
+          // console.log("Tiling data", uvData);
+          
+          // TODO this is messed up but works for scale and translation, not really for rotation.
+          // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
+          // (which is also not perfect but close)
+          
+          const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
+          const offset = uvData.translation ? new THREE.Vector2(uvData.translation[0], uvData.translation[1]) : new THREE.Vector2(0,0);
+          const repeat = uvData.scale ? new THREE.Vector2(uvData.scale[0], uvData.scale[1]) : new THREE.Vector2(1,1);
+          
+          const xRotationOffset = Math.sin( rotation );
+          const yRotationOffset = Math.cos( rotation );
+          
+          offset.y = offset.y - (1 - yRotationOffset) * repeat.y;
+          offset.x = offset.x - xRotationOffset * repeat.x;
+          // offset.y = 1 - offset.y - repeat.y;
+          /*
+          if (uvData.scale) 
+            clonedTexture.repeat.set(uvData.scale[0], uvData.scale[1]);
+          if (uvData.translation)
+            clonedTexture.offset.set(uvData.translation[0], uvData.translation[1]);
+          if (uvData.rotation)
+           clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
+           */
+          
+          clonedTexture.repeat.set(repeat.x, repeat.y);
+          clonedTexture.offset.set(offset.x, offset.y);
+          clonedTexture.rotation = rotation;
+        }
+        
+        // TODO use nodeIn.wrapS and wrapT and map to THREE
+        clonedTexture.wrapS = this.convertWrap(nodeIn.wrapS);
+        clonedTexture.wrapT = this.convertWrap(nodeIn.wrapT);
 
         this._material[materialParameterMapName] = clonedTexture;
 
@@ -339,6 +403,10 @@ class HydraMaterial {
         this._material[materialParameterName] = mainMaterial[parameterName];
         if (materialParameterName === 'opacity' && mainMaterial[parameterName] < 1.0) {
           this._material.transparent = true;
+        }
+        if (parameterName == 'opacityThreshold') {
+          this._material.transparent = false;
+          this._material.alphaClip = true;
         }
       }
     }
@@ -387,7 +455,7 @@ class HydraMaterial {
       this._material.envMap = window.envMap;
     }
 
-    console.log(this._material);
+    console.log("Material Node", mainMaterialNode, "Resulting Material", this._material);
   }
 }
 
