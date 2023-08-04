@@ -1,7 +1,7 @@
 const fastify = require('fastify')()
 const path = require('path') 
 
-fastify.register(require('fastify-static'), {
+fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
   prefix: '/',
   setHeaders: function(res, path, stat) {
@@ -10,7 +10,9 @@ fastify.register(require('fastify-static'), {
   },
 })
 
-fastify.listen(process.env.PORT, '0.0.0.0', function(err, address) {
+fastify.listen({
+    port: process.env.PORT
+  }, function(err, address) {
   if (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -15,12 +15,22 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.js"></script>
+  <script async  crossorigin="anonymous" src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script 
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+        "three-addons/": "https://unpkg.com/three@0.154.0/examples/jsm/"
+      }
+    }
+  </script>
   <script src="emHdBindings.js" type="text/javascript"></script>
   <script type="module">
+    import * as THREE from "three";
     import { RenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
-    import { RGBELoader } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/loaders/RGBELoader.js';
-    import { OrbitControls } from 'https://cdn.skypack.dev/three@v0.128.0/examples/jsm/controls/OrbitControls.js';
+    import { RGBELoader } from 'three-addons/loaders/RGBELoader.js';
+    import { OrbitControls } from 'three-addons/controls/OrbitControls.js';
     
     // wait for document
     document.addEventListener("DOMContentLoaded", function() {
@@ -221,7 +231,7 @@
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      // renderer.toneMapping = THREE.ACESFilmicToneMapping;
       // renderer.toneMappingExposure = 2;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
