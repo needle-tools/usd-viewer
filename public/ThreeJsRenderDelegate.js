@@ -21,11 +21,12 @@ class TextureRegistry {
     }
 
     let filetype = undefined;
-    if (filename.indexOf('.png') >= filename.length - 5) {
+    let fileNameLower = filename.toLowerCase();
+    if (fileNameLower.indexOf('.png') >= filename.length - 5) {
       filetype = 'image/png';
-    } else if (filename.indexOf('.jpg') >= filename.length - 5) {
+    } else if (fileNameLower.indexOf('.jpg') >= filename.length - 5) {
       filetype = 'image/jpeg';
-    } else if (filename.indexOf('.jpeg') >= filename.length - 5) {
+    } else if (fileNameLower.indexOf('.jpeg') >= filename.length - 5) {
       filetype = 'image/jpeg';
     } else {
       throw new Error('Unknown filetype');
