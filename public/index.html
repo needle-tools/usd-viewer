@@ -82,7 +82,7 @@
     const initPromise = init();
     
     console.log("Loading USD Module...");
-    messageLog.textContent = "Loading USD Module...";
+    messageLog.textContent = "Loading USD Module – this can take a moment...";
     
     try {
       Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
@@ -99,12 +99,12 @@
     }
     catch (error) {
       if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
-        let err = "Your current browser configuration doesn't support SharedArrayBuffer which is required for USD.";
+        let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
         console.log(error, err);
         messageLog.textContent = err;
       }
       else {
-        let err = "Error during initialization: " + error;
+        let err = "Your current browser doesn't support USD-for-web. Error during initialization: " + error;
         console.log(err);
         messageLog.textContent = err;
       }
@@ -205,11 +205,14 @@
       // scene.background = new THREE.Color(0xffffff);
       
 
+      /*
       scene.add( new THREE.AmbientLight( 0x111111 ) );
+      */
       const usdRoot = window.usdRoot = new THREE.Group();
       usdRoot.name = "USD Root";
       scene.add(usdRoot);
 
+      /*
       let pointLight = new THREE.PointLight( 0xff8888 );
       pointLight.position.set( -30, 20, 220 );
       pointLight.castShadow = true;
@@ -222,12 +225,14 @@
       pointLight.shadow.radius = 4;
       pointLight.shadow.samples = 8;
       scene.add( pointLight );
+      */
 
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      // renderer.toneMappingExposure = 2;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMappingExposure = .5;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.setClearColor( 0x000000, 0 ); // the default
