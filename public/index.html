@@ -82,7 +82,7 @@
     const initPromise = init();
     
     console.log("Loading USD Module...");
-    messageLog.textContent = "Loading USD Module...";
+    messageLog.textContent = "Loading USD Module – this can take a moment...";
     
     try {
       Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
@@ -99,12 +99,12 @@
     }
     catch (error) {
       if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
-        let err = "Your current browser configuration doesn't support SharedArrayBuffer which is required for USD.";
+        let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
         console.log(error, err);
         messageLog.textContent = err;
       }
       else {
-        let err = "Error during initialization: " + error;
+        let err = "Your current browser doesn't support USD-for-web. Error during initialization: " + error;
         console.log(err);
         messageLog.textContent = err;
       }
