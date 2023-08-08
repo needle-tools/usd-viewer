@@ -210,6 +210,7 @@
       usdRoot.name = "USD Root";
       scene.add(usdRoot);
 
+      /*
       let pointLight = new THREE.PointLight( 0xff8888 );
       pointLight.position.set( -30, 20, 220 );
       pointLight.castShadow = true;
@@ -222,11 +223,13 @@
       pointLight.shadow.radius = 4;
       pointLight.shadow.samples = 8;
       scene.add( pointLight );
+      */
 
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.outputEncoding = THREE.sRGBEncoding;
       // renderer.toneMappingExposure = 2;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;

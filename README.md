@@ -19,6 +19,7 @@ Code here: [github.com/autodesk-forks/USD/tree/gh-pages](https://github.com/auto
 - UVMap primvar type wasn't correctly resolved to uv
 - support for texture wrap modes
 - support for texture transforms (rotation isn't properly working yet)
+- fixed output color space, added neutral HDR, fixed point light changing color appearance of scene
 
 ## Headers
 
@@ -34,4 +35,4 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 ## Credits
 
 Adjusted by [@hybridherbst](https://twitter.com/hybridherbst)  
-[prefrontal cortex](https://prefrontalcortex.de) / 🌵 [Needle](https://needle.tools)
+🌵 [Needle](https://needle.tools) & [prefrontal cortex](https://prefrontalcortex.de)
