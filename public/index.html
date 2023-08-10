@@ -205,7 +205,9 @@
       // scene.background = new THREE.Color(0xffffff);
       
 
+      /*
       scene.add( new THREE.AmbientLight( 0x111111 ) );
+      */
       const usdRoot = window.usdRoot = new THREE.Group();
       usdRoot.name = "USD Root";
       scene.add(usdRoot);
@@ -230,7 +232,7 @@
       renderer.setSize( window.innerWidth, window.innerHeight );
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.outputEncoding = THREE.sRGBEncoding;
-      // renderer.toneMappingExposure = 2;
+      renderer.toneMappingExposure = .5;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
       renderer.setClearColor( 0x000000, 0 ); // the default
