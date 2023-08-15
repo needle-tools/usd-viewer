@@ -74,7 +74,10 @@
         url = url.substring(0, indexOfQuery);
       document.querySelector("a#quick-look-link").href = url;
       
-      window.history.pushState({}, filename, "https://usd-viewer.glitch.me?file=" + filename);
+      const currentUrl = new URL(window.location.href);
+      // set the file query parameter
+      currentUrl.searchParams.set("file", filename);
+      window.history.pushState({}, filename, currentUrl);
       
       return loadUSDPromise;
     }
@@ -93,7 +96,8 @@
           console.log("Loading File...");
           messageLog.textContent = "Loading File " + filename;
 
-          loadUsdFileFromArrayBuffer(filename, usdFile);
+          clearStage();
+          loadUsdFileFromArrayBuffer("/", filename, usdFile);
         }
       });
     }
@@ -110,7 +114,7 @@
       }
     }
     
-    var currentFileName = undefined;
+    var currentRootFileName = undefined;
     var timeout = 40;
     var endTimeCode = 1;
     
@@ -124,39 +128,74 @@
       alert("gltf");
     });
     
-    function loadUsdFileFromArrayBuffer(filename, usdFile) {
+    const loadedFiles = [];
+    function clearStage() {
+      window.usdRoot.clear();
+      for (const file of loadedFiles) {
+        Usd.FS.unlink(file, true);
+      }
+      if (currentRootFileName) {
+        Usd.FS.unlink(currentRootFileName, true);
+        currentRootFileName = undefined;
+      }
+    }
+
+    function getRandomFilename(filename) {
       let parts = filename.split('.');
       let extension = parts[parts.length - 1];
-      
-      setFilenameText(filename);
-      
       extension = extension.split('?')[0];
       let fileName = (Math.random() + 1).toString(36).substring(7);
       let inputFile = fileName + "." + extension;
-      
-      Usd.FS.createDataFile('/', inputFile, new Uint8Array(usdFile), true, true, true);
-      
-      // clear existing objects
-      window.usdRoot.clear();
-      if (currentFileName) {
-        Usd.FS.unlink(currentFileName, true);
-        currentFileName = undefined;
-      }
-      currentFileName = inputFile;
-      
-      let renderInterface = window.renderInterface = new RenderDelegateInterface(inputFile);
-      let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, inputFile);
+      return inputFile;
+    }
 
-      driver.Draw();
+    function loadUsdFileFromArrayBuffer(directory, filename, usdFile, isRootFile = true) {
+      const path = directory + filename;
+      console.log("loading " + path, isRootFile);
+      setFilenameText(filename);
+
+      // let inputFile = getRandomFilename(filename);
+      let inputFile = filename;
+      // make sure we have all directories up to here
+      const dirs = directory.split('/');
+      for (const dir of dirs) {
+        if (dir.length === 0) continue;
+        const parentDir = dirs.slice(0, dirs.indexOf(dir)).join('/');
+        Usd.FS.createPath(parentDir, dir, true, true);
+      }
+      Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
       
-      const stage = window.usdStage = window.driver.GetStage();
-      endTimeCode = stage.GetEndTimeCode();
-      timeout = 1000 / stage.GetTimeCodesPerSecond();
+
+      // clear existing objects
+      /*
+      window.usdRoot.clear();
+      if (currentRootFileName) {
+        Usd.FS.unlink(currentRootFileName, true);
+        currentRootFileName = undefined;
+      }
+      */
+
+      if (!isRootFile )
+        loadedFiles.push(path);
+      if (isRootFile)
+        currentRootFileName = path;
       
-      // adjust camera framing
-      fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-      console.log("Loading done.");
-      messageLog.textContent = "";
+      // should be loaded last
+      if (isRootFile) {
+        let renderInterface = window.renderInterface = new RenderDelegateInterface(path);
+        let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
+
+        driver.Draw();
+        
+        const stage = window.usdStage = window.driver.GetStage();
+        endTimeCode = stage.GetEndTimeCode();
+        timeout = 1000 / stage.GetTimeCodesPerSecond();
+        
+        // adjust camera framing
+        fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+        console.log("Loading done.");
+        messageLog.textContent = "";
+      }
     }
     
     // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
@@ -282,9 +321,9 @@
           // clear existing objects
           if (filename !== undefined) {
             window.usdRoot.clear();
-            if (currentFileName) {
-              Usd.FS.unlink(currentFileName, true);
-              currentFileName = undefined;
+            if (currentRootFileName) {
+              Usd.FS.unlink(currentRootFileName, true);
+              currentRootFileName = undefined;
               
             setFilenameText("");
             }
@@ -297,7 +336,8 @@
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
             let usdFile = await getUsdFile();
-            loadUsdFileFromArrayBuffer(filename, usdFile);
+            clearStage();
+            loadUsdFileFromArrayBuffer("/", filename, usdFile);
           }
         });
       }
@@ -353,7 +393,7 @@
 
     }
   
-    async function loadFile(fileOrHandle) {
+    async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
       let file = undefined;
       try {
         if(fileOrHandle.getFile !== undefined) {
@@ -363,10 +403,21 @@
           file = fileOrHandle;
 
         var reader = new FileReader();
+        const loadingPromise = new Promise((resolve, reject) => {
+          reader.onloadend = resolve;
+          reader.onerror = reject;
+        });
         reader.onload = function(event) {
-          loadUsdFileFromArrayBuffer(file.name, event.target.result);
+          let fileName = file.name;
+          let directory = "/";
+          if (fullPath !== undefined) {
+            fileName = fullPath.split('/').pop();
+            directory = fullPath.substring(0, fullPath.length - fileName.length);
+          }
+          loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
         };
         reader.readAsArrayBuffer(file);
+        await loadingPromise;
       }
       catch(ex) {
         console.warn("Error loading file", fileOrHandle, ex);
@@ -377,25 +428,211 @@
       let ext = file.name.split('.').pop();
       console.log(file.name + ", " + file.size + ", " + ext);
       if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
+        clearStage();
         loadFile(file);
       }
     }
+
+    async function readDirectory(directory) {
+      let entries = [];
+      let getEntries = async (directory) => {
+        let dirReader = directory.createReader();
+        await new Promise((resolve, reject) => {
+          dirReader.readEntries(
+            async (results) => {
+              if (results.length) {
+                // entries = entries.concat(results);
+                for (let entry of results) {
+                  if (entry.isDirectory) {
+                    await getEntries(entry);
+                  }
+                  else {
+                    entries.push(entry);
+                  }
+                }
+              }
+              resolve();
+            },
+            (error) => {
+              /* handle error — error is a FileError object */
+            },
+          )});
+      };
+
+      await getEntries(directory);
+      return entries;
+    }
     
+    async function handleFilesystemEntries(entries) {
+      const allFiles = [];
+      const fileIgnoreList = [
+        '.gitignore',
+        'README.md',
+        '.DS_Store',
+      ]
+      const dirIgnoreList = [
+        '.git',
+        'node_modules',
+      ]
+
+      for (let entry of entries) {
+        console.log("file entry", entry)
+        if (entry.isFile) {
+          console.log("single file", entry);
+          if (fileIgnoreList.includes(entry.name)) {
+            continue;
+          }
+          allFiles.push(entry);
+        }
+        else if (entry.isDirectory) {
+          if (dirIgnoreList.includes(entry.name)) {
+            continue;
+          }
+          const files = await readDirectory(entry);
+          console.log("all files", files);
+          for (const file of files) {
+            if (fileIgnoreList.includes(file.name)) {
+              continue;
+            }
+            allFiles.push(file);
+          }
+        }
+      }
+
+      // clear current set of files
+      clearStage();
+
+      // determine which of these is likely the root file
+      let rootFileCandidates = [];
+      let usdaCandidates = [];
+      for (const file of allFiles) {
+        console.log(file);
+        // fullPath should only contain one slash, and should contain a valid USD extension
+        if (file.fullPath.split('/').length > 2) {
+          continue;
+        }
+        let ext = file.name.split('.').pop();
+        if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
+          rootFileCandidates.push(file);
+        }
+        if(ext == 'usda') {
+          usdaCandidates.push(file);
+        }
+      }
+
+      let rootFile = undefined;
+
+      // if there's multiple, use the first usda
+      if (rootFileCandidates.length > 1) {
+        if (usdaCandidates.length > 0) {
+          rootFile = usdaCandidates[0];
+        }
+        else {
+          rootFile = rootFileCandidates[0];
+        }
+      }
+      else {
+        // find the first usda file
+        for (const file of allFiles) {
+          let ext = file.name.split('.').pop();
+          if(ext == 'usda') {
+            rootFile = file;
+            break;
+          }
+        }
+      }
+
+      console.log("most likely root file: ", rootFile);
+
+      // remove the root file from the list of all files
+      if (rootFile) {
+        allFiles.splice(allFiles.indexOf(rootFile), 1);
+      }
+
+      async function getFile(fileEntry) {
+        try {
+          return new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+        } catch (err) {
+          console.log(err);
+        }
+      }
+
+      // sort so that USD files come last
+      allFiles.sort((a, b) => {
+        let extA = a.name.split('.').pop();
+        let extB = b.name.split('.').pop();
+        if (extA == 'usd' || extA == 'usdz' || extA == 'usda' || extA == 'usdc') {
+          return 1;
+        }
+        if (extB == 'usd' || extB == 'usdz' || extB == 'usda' || extB == 'usdc') {
+          return -1;
+        }
+        return 0;
+      });
+
+      // load all files into memory
+      for (const file of allFiles) {
+        console.log("loading file ", file)
+        await loadFile(await getFile(file), false, file.fullPath);
+      }
+
+      // THEN load the root file
+      if (rootFile)
+        await loadFile(await getFile(rootFile), true, rootFile.fullPath);
+    }
+
     function dropHandler(ev) {
-      console.log('File(s) dropped');
+      console.log('File(s) dropped', ev.dataTransfer.items, ev.dataTransfer.files);
 
       // Prevent default behavior (Prevent file from being opened)
       ev.preventDefault();
 
       if (ev.dataTransfer.items)
       {
+        const allEntries = [];
+
+        let haveGetAsEntry = false;
+        if (ev.dataTransfer.items.length > 0)
+          haveGetAsEntry = ("getAsEntry" in ev.dataTransfer.items[0]) || ("webkitGetAsEntry" in ev.dataTransfer.items[0]);
+
+        if (haveGetAsEntry) {
+          console.log("assembling entries")
+          for (var i = 0; i < ev.dataTransfer.items.length; i++)
+          {
+            let item = ev.dataTransfer.items[i];
+            let entry = ("getAsEntry" in item) ? item.getAsEntry() : item.webkitGetAsEntry();
+            allEntries.push(entry);
+          }
+          handleFilesystemEntries(allEntries);
+          return;
+        }
+
         for (var i = 0; i < ev.dataTransfer.items.length; i++)
         {
           let item = ev.dataTransfer.items[i];
+          
+          // API when there's no "getAsEntry" support
+          console.log(item.kind, item, entry);
           if (item.kind === 'file')
           {
             var file = item.getAsFile();
             testAndLoadFile(file);
+          }
+          // could also be a directory
+          else if (item.kind === 'directory')
+          {
+            var dirReader = item.createReader();
+            dirReader.readEntries(function(entries) {
+              for (var i = 0; i < entries.length; i++) {
+                console.log(entries[i].name);
+                var entry = entries[i];
+                if (entry.isFile) {
+                  entry.file(function(file) {
+                    testAndLoadFile(file);
+                  });
+                }
+              }
+            });
           }
         }
       } else {
