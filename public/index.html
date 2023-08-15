@@ -179,6 +179,25 @@
       }
       Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
       
+      // SUPER HACKY check if the root file can be interpreted as string, if yes, get the upAxis from it
+      // THis should be handled elsewhere... seems that is not exposed/not handled by the WASM API right now
+      if (isRootFile) {
+        const usdString = new TextDecoder("utf-8").decode(usdFile);
+        // check if we find "upAxis"
+        const upAxisIndex = usdString.indexOf("upAxis");
+        if (upAxisIndex >= 0) {
+          const nextLineBreak = usdString.indexOf("\n", upAxisIndex);
+          const upAxisString = usdString.substring(upAxisIndex, nextLineBreak);
+          const upAxisValue = upAxisString.split('"');
+          // check if any entry is "Z" or "Y"
+          if (upAxisValue.includes("Z")) {
+            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
+          }
+          else if (upAxisValue.includes("Y")) {
+            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(0, 0, 0));
+          }
+        }
+      }
 
       // clear existing objects
       /*
