@@ -1,6 +1,7 @@
 const debugTextures = false;
 const debugMaterials = false;
 const debugMeshes = false;
+const debugPrims = false;
 
 class TextureRegistry {
   constructor(basename, allPaths) {
@@ -324,7 +325,7 @@ class HydraMaterial {
     }
     this._material = defaultMaterial;
 
-    console.log("Hydra Material", this)
+    if (debugMaterials) console.log("Hydra Material", this)
   }
 
   updateNode(networkId, path, parameters) {
@@ -474,9 +475,8 @@ class HydraMaterial {
       relationship.nodeIn[relationship.inputName] = relationship;
       relationship.nodeOut[relationship.outputName] = relationship;
     }
-    console.log('Finalizing Material: ' + this._id);
-
-    console.log("updateFinished", type, relationships)
+    if (debugMaterials) console.log('Finalizing Material: ' + this._id);
+    if (debugMaterials) console.log("updateFinished", type, relationships)
 
     // find the main material node
     let mainMaterialNode = undefined;
@@ -526,21 +526,21 @@ export class RenderDelegateInterface {
   }
 
   createRPrim(typeId, id, instancerId) {
-    console.log('Creating RPrim: ', typeId, id);
+    if (debugPrims) console.log('Creating RPrim: ', typeId, id);
     let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;
   }
 
   createBPrim(typeId, id) {
-    console.log('Creating BPrim: ', typeId, id);
+    if (debugPrims) console.log('Creating BPrim: ', typeId, id);
     /*let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;*/
   }
 
   createSPrim(typeId, id) {
-    console.log('Creating SPrim: ', typeId, id);
+    if (debugPrims) console.log('Creating SPrim: ', typeId, id);
 
     if (typeId === 'material') {
       let material = new HydraMaterial(id, this);
