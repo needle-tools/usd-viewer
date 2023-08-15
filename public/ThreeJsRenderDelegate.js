@@ -1,10 +1,16 @@
+const debugTextures = false;
+const debugMaterials = false;
+const debugMeshes = false;
+
 class TextureRegistry {
-  constructor(basename) {
+  constructor(basename, allPaths) {
     this.basename = basename;
+    this.allPaths = allPaths;
     this.textures = [];
     this.loader = new THREE.TextureLoader();
   }
   getTexture(filename) {
+    if (debugTextures) console.log("get texture", filename);
     if (this.textures[filename]) {
       return this.textures[filename];
     }
@@ -15,10 +21,26 @@ class TextureRegistry {
       textureReject = reject;
     });
 
-    let resourcePath = filename;
-    if (filename[0] !== '/') {
-      resourcePath = this.basename + '[' + filename +']';
+    function getResourcePath(filename, basename) {
+      let resourcePath = filename;
+      if (filename[0] !== '/') {
+        if (debugTextures) console.log(filename, basename);
+        // check if basename ends with ".usdz", then this is a sub-resource
+        if (basename.indexOf('.usdz') === basename.length - 5) {
+          resourcePath = basename + '[' + filename +']';
+        }
+        // otherwise, this is a relative file path
+        else {
+          // strip out base filename, we want the directory, not the filename
+          let baseDirectory = basename.substring(0, basename.lastIndexOf('/'));
+          resourcePath = baseDirectory + "/" + resourcePath;
+        }
+      }
+      if (debugTextures) console.log("resource path", resourcePath)
+      return resourcePath;
     }
+    
+    let resourcePath = getResourcePath(filename, this.basename);
 
     let filetype = undefined;
     if (filename.indexOf('.png') >= filename.length - 5) {
@@ -31,33 +53,62 @@ class TextureRegistry {
       throw new Error('Unknown filetype');
     }
 
-    window.driver.getFile(resourcePath, (loadedFile) => {
+    window.driver.getFile(resourcePath, async (loadedFile) => {
+      
+      const loader = this.loader;
+      function loadFromFile(_loadedFile) {
+        let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
+        let blobUrl = URL.createObjectURL(blob);
+  
+        // Load the texture
+        loader.load(
+          // resource URL
+          blobUrl,
+  
+          // onLoad callback
+          (texture) => {
+            textureResolve(texture);
+          },
+  
+          // onProgress callback currently not used
+          undefined,
+  
+          // onError callback
+          (err) => {
+            textureReject(err);
+          }
+        );
+      }
+      
       if (!loadedFile) {
-        textureReject(new Error('Unknown file: ' + resourcePath));
-        return;
+        if (debugTextures) console.log("File not found, trying to load from other paths", resourcePath);
+
+        // iterate over all possible paths and check if we can get the file from there
+        for (let i = 0; i < this.allPaths.length; i++) {
+          let path = getResourcePath(filename, this.allPaths[i]);
+          if (debugTextures) console.log('Trying to load texture from path: ' + path);
+
+          await new Promise((resolve, reject) => {
+            window.driver.getFile(path, (_loadedFile) => {
+              if (debugTextures) console.log("tried getting file from " + path, _loadedFile)
+              if (_loadedFile) {
+                loadedFile = _loadedFile;
+              }
+              resolve();
+            });
+          });
+
+          if (loadedFile) {
+            break;
+          }
+        }
+        if (!loadedFile) {
+          textureReject(new Error('Unknown file: ' + resourcePath));
+          return;
+        }
       }
 
-      let blob = new Blob([loadedFile.slice(0)], {type: filetype});
-      let blobUrl = URL.createObjectURL(blob);
-
-      // Load the texture
-      this.loader.load(
-        // resource URL
-        blobUrl,
-
-        // onLoad callback
-        (texture) => {
-          textureResolve(texture);
-        },
-
-        // onProgress callback currently not used
-        undefined,
-
-        // onError callback
-        (err) => {
-          textureReject(err);
-        }
-      );
+      loadFromFile(loadedFile);
     });
 
     return this.textures[filename];
@@ -88,6 +139,7 @@ class HydraMesh {
   }
 
   updateOrder(attribute, attributeName, dimension = 3) {
+    if (debugMeshes) console.log("updateOrder", attribute, attributeName, dimension);
     if (attribute && this._indices) {
       let values = [];
       for (let i = 0; i < this._indices.length; i++) {
@@ -101,6 +153,7 @@ class HydraMesh {
   }
 
   updateIndices(indices) {
+    if (debugMeshes) console.log("updateIndices", indices);
     this._indices = [];
     for (let i = 0; i< indices.length; i++) {
       this._indices.push(indices[i]);
@@ -270,10 +323,12 @@ class HydraMaterial {
       });
     }
     this._material = defaultMaterial;
+
+    console.log("Hydra Material", this)
   }
 
   updateNode(networkId, path, parameters) {
-    // console.log('Updating Material Node: ' + networkId + ' ' + path);
+    // console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
     this._nodes[path] = parameters;
   }
 
@@ -421,6 +476,8 @@ class HydraMaterial {
     }
     console.log('Finalizing Material: ' + this._id);
 
+    console.log("updateFinished", type, relationships)
+
     // find the main material node
     let mainMaterialNode = undefined;
     for (let node of Object.values(this._nodes)) {
@@ -461,28 +518,29 @@ class HydraMaterial {
 
 export class RenderDelegateInterface {
 
-  constructor(filename) {
-    this.registry = new TextureRegistry(filename);
+  constructor(filename, allPaths) {
+    if (debugMaterials) console.log("RenderDelegateInterface", filename, allPaths);
+    this.registry = new TextureRegistry(filename, allPaths);
     this.materials = {};
     this.meshes = {};
   }
 
   createRPrim(typeId, id, instancerId) {
-    console.log('Creating RPrim: ' + typeId + ' ' + id);
+    console.log('Creating RPrim: ', typeId, id);
     let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;
   }
 
   createBPrim(typeId, id) {
-    console.log('Creating BPrim: ' + typeId + ' ' + id);
+    console.log('Creating BPrim: ', typeId, id);
     /*let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;*/
   }
 
   createSPrim(typeId, id) {
-    console.log('Creating SPrim: ' + typeId + ' ' + id);
+    console.log('Creating SPrim: ', typeId, id);
 
     if (typeId === 'material') {
       let material = new HydraMaterial(id, this);
