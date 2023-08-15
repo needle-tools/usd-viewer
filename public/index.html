@@ -132,7 +132,7 @@
     
     const loadedFiles = [];
     function clearStage() {
-      console.log("Clearing...", loadedFiles, currentRootFileName)
+      console.log("Clearing stage.", [currentRootFileName, ...loadedFiles])
 
       window.usdRoot.clear();
 
@@ -208,6 +208,24 @@
         // adjust camera framing
         fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
         console.log("Loading done.");
+
+        // some experiments for understanding what parts of the USD API are exposed in WASM
+        /*
+        const rootLayer = stage.GetRootLayer();
+        rootLayer.Traverse("/", (primPath) => {
+          const prim = stage.GetPrimAtPath(primPath);
+          console.log("Prim", primPath, prim);
+        });
+        */
+        try {
+          console.log("Currently Exposed API", {
+            "Stage": Object.getPrototypeOf(stage),
+            "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+            "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+          });
+        } catch(_) {}
+
+        // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
         messageLog.textContent = "";
       }
     }
@@ -401,7 +419,6 @@
     function render() {
 
       const time = Date.now() * 0.001;
-
       window.renderer.render( window.scene, window.camera );
 
     }
@@ -519,7 +536,7 @@
       let rootFileCandidates = [];
       let usdaCandidates = [];
       for (const file of allFiles) {
-        console.log(file);
+        if (debugFileHandling) console.log(file);
         // fullPath should only contain one slash, and should contain a valid USD extension
         if (file.fullPath.split('/').length > 2) {
           continue;
