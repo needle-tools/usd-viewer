@@ -27,6 +27,8 @@
     let scene;
     let defaultTexture;
 
+    const debugFileHandling = false;
+
     let params = (new URL(document.location)).searchParams;
     let name = params.get("name");
 
@@ -97,7 +99,7 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
-          loadUsdFileFromArrayBuffer("/", filename, usdFile);
+          loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
         }
       });
     }
@@ -130,11 +132,16 @@
     
     const loadedFiles = [];
     function clearStage() {
+      console.log("Clearing...", loadedFiles, currentRootFileName)
+
       window.usdRoot.clear();
+
       for (const file of loadedFiles) {
         Usd.FS.unlink(file, true);
       }
-      if (currentRootFileName) {
+      loadedFiles.length = 0;
+
+      if (currentRootFileName !== undefined) {
         Usd.FS.unlink(currentRootFileName, true);
         currentRootFileName = undefined;
       }
@@ -150,12 +157,19 @@
     }
 
     function loadUsdFileFromArrayBuffer(directory, filename, usdFile, isRootFile = true) {
-      const path = directory + filename;
-      console.log("loading " + path, isRootFile);
       setFilenameText(filename);
 
-      // let inputFile = getRandomFilename(filename);
       let inputFile = filename;
+      
+      // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
+      if (directory === undefined) {
+        directory = "/";
+        inputFile = getRandomFilename(filename);
+      }
+
+      const path = directory + inputFile;
+      if (debugFileHandling) console.log("loading " + path, isRootFile);
+
       // make sure we have all directories up to here
       const dirs = directory.split('/');
       for (const dir of dirs) {
@@ -182,7 +196,7 @@
       
       // should be loaded last
       if (isRootFile) {
-        let renderInterface = window.renderInterface = new RenderDelegateInterface(path);
+        let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles);
         let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
 
         driver.Draw();
@@ -320,24 +334,23 @@
           
           // clear existing objects
           if (filename !== undefined) {
-            window.usdRoot.clear();
-            if (currentRootFileName) {
-              Usd.FS.unlink(currentRootFileName, true);
-              currentRootFileName = undefined;
-              
+            // clearStage();  
             setFilenameText("");
-            }
           }
           
           const el = document.querySelector("#container");
           el.classList.remove("have-custom-file");
           
+          clearStage();
+
           if (filename) {
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
             let usdFile = await getUsdFile();
-            clearStage();
-            loadUsdFileFromArrayBuffer("/", filename, usdFile);
+            // get just the filename, no paths
+            const parts = filename.split('/');
+            filename = parts[parts.length - 1];
+            loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
           }
         });
       }
@@ -426,7 +439,7 @@
     
     function testAndLoadFile(file) {
       let ext = file.name.split('.').pop();
-      console.log(file.name + ", " + file.size + ", " + ext);
+      if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + ext);
       if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
         clearStage();
         loadFile(file);
@@ -476,9 +489,9 @@
       ]
 
       for (let entry of entries) {
-        console.log("file entry", entry)
+        if (debugFileHandling) console.log("file entry", entry)
         if (entry.isFile) {
-          console.log("single file", entry);
+          if (debugFileHandling) console.log("single file", entry);
           if (fileIgnoreList.includes(entry.name)) {
             continue;
           }
@@ -489,7 +502,7 @@
             continue;
           }
           const files = await readDirectory(entry);
-          console.log("all files", files);
+          if (debugFileHandling) console.log("all files", files);
           for (const file of files) {
             if (fileIgnoreList.includes(file.name)) {
               continue;
@@ -542,9 +555,15 @@
         }
       }
 
-      console.log("most likely root file: ", rootFile);
+      if (!rootFile && allFiles.length > 0) {
+        // use first file
+        rootFile = allFiles[0];
+      }
 
-      // remove the root file from the list of all files
+      // TODO if there are still multiple candidates we should ask the user which one to use
+      console.log("Assuming this is the root file: ", rootFile);
+
+      // remove the root file from the list of all files, we load it last
       if (rootFile) {
         allFiles.splice(allFiles.indexOf(rootFile), 1);
       }
@@ -557,22 +576,19 @@
         }
       }
 
-      // sort so that USD files come last
+      // Sort so that USD files come last and all references are already there.
+      // As long as the root file is the last one this actually shouldn't matter
       allFiles.sort((a, b) => {
         let extA = a.name.split('.').pop();
         let extB = b.name.split('.').pop();
-        if (extA == 'usd' || extA == 'usdz' || extA == 'usda' || extA == 'usdc') {
-          return 1;
-        }
-        if (extB == 'usd' || extB == 'usdz' || extB == 'usda' || extB == 'usdc') {
-          return -1;
-        }
+        if (extA == 'usd' || extA == 'usdz' || extA == 'usda' || extA == 'usdc') return 1;
+        if (extB == 'usd' || extB == 'usdz' || extB == 'usda' || extB == 'usdc') return -1;
         return 0;
       });
 
       // load all files into memory
       for (const file of allFiles) {
-        console.log("loading file ", file)
+        if (debugFileHandling) console.log("loading file ", file)
         await loadFile(await getFile(file), false, file.fullPath);
       }
 
@@ -582,7 +598,7 @@
     }
 
     function dropHandler(ev) {
-      console.log('File(s) dropped', ev.dataTransfer.items, ev.dataTransfer.files);
+      if (debugFileHandling) console.log('File(s) dropped', ev.dataTransfer.items, ev.dataTransfer.files);
 
       // Prevent default behavior (Prevent file from being opened)
       ev.preventDefault();
@@ -596,7 +612,6 @@
           haveGetAsEntry = ("getAsEntry" in ev.dataTransfer.items[0]) || ("webkitGetAsEntry" in ev.dataTransfer.items[0]);
 
         if (haveGetAsEntry) {
-          console.log("assembling entries")
           for (var i = 0; i < ev.dataTransfer.items.length; i++)
           {
             let item = ev.dataTransfer.items[i];
@@ -650,7 +665,7 @@
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
-      <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
+    <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
     <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
     <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
@@ -660,7 +675,6 @@
     
     <a class="filename"></a>
     <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
-      
       
     <br/>
     <!--
