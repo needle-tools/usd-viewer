@@ -1,16 +1,22 @@
 const fastify = require('fastify')()
 const path = require('path') 
 
-fastify.register(require('fastify-static'), {
+// Headers are required for SharedArrayBuffers and WebAssembly
+// Otherwise we wouldn't need a server at all.
+fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
   prefix: '/',
   setHeaders: function(res, path, stat) {
+
+    const needsHeaders = path.replaceAll("\\", '/').includes('/emHd');
+    if (!needsHeaders) return;
+    
     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   },
 })
 
-fastify.listen(process.env.PORT, '0.0.0.0', function(err, address) {
+fastify.listen({port: process.env.PORT}, function(err, address) {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
