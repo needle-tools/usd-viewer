@@ -8,7 +8,7 @@ fastify.register(require('@fastify/static'), {
   prefix: '/',
   setHeaders: function(res, path, stat) {
 
-    const needsHeaders = path.replaceAll("\\", '/').includes('/emHd');
+    const needsHeaders = path.replaceAll("\\", '/').includes('/emHd') || path.endsWith('index.html');
     if (!needsHeaders) return;
     
     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
@@ -16,7 +16,7 @@ fastify.register(require('@fastify/static'), {
   },
 })
 
-fastify.listen({port: process.env.PORT}, function(err, address) {
+fastify.listen({port: process.env.PORT || 3003}, function(err, address) {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
