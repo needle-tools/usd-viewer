@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 const debugTextures = false;
 const debugMaterials = false;
 const debugMeshes = false;
