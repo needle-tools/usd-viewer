@@ -202,7 +202,7 @@
       }
 
       const path = directory + inputFile;
-      if (debugFileHandling) console.log("loading " + path, isRootFile);
+      if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
       // make sure we have all directories up to here
       const dirs = directory.split('/');
@@ -496,6 +496,7 @@
           if (fullPath !== undefined) {
             fileName = fullPath.split('/').pop();
             directory = fullPath.substring(0, fullPath.length - fileName.length);
+            if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
           }
           loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
         };
