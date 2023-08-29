@@ -31,6 +31,7 @@
     import { RenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
     import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
     
     // wait for document
     document.addEventListener("DOMContentLoaded", function() {
@@ -44,11 +45,13 @@
 
     let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
     let messageLog = document.querySelector("#message-log");
-    
+    let currentDisplayFilename = "";
+
     function setFilenameText(__filename) {
       var _filename = __filename.split('/').pop().split('#')[0].split('?')[0];
       const _el = document.querySelector(".filename");
       if (_el) _el.innerText = _filename;
+      currentDisplayFilename = _filename;
     }
       
     if (filename) {
@@ -136,8 +139,29 @@
     });
     
     const gltfExportBtn = document.getElementById('export-gltf');
-    if (gltfExportBtn) gltfExportBtn.addEventListener('click', () => {
-      alert("gltf");
+    if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
+      const exporter = new GLTFExporter();
+      console.log(window.usdRoot);
+      exporter.parse( window.usdRoot, function ( gltf ) {
+        const blob = new Blob([gltf], {type: 'application/octet-stream'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        let filename = currentDisplayFilename;
+        // strip extension, strip path
+        filename = filename.split('/').pop().split('.')[0].split('?')[0];
+        a.download = filename + ".glb";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, { 
+        binary: true,
+        // not possible right now since USD controls animation bindings,
+        // it's not a three.js clip
+        animations: [
+          // window.usdRoot.animations[0]
+        ]
+      });
+      evt.preventDefault();
     });
     
     const loadedFiles = [];
@@ -724,10 +748,12 @@
     <a href="https://github.com/needle-tools/usd-viewer" target="_blank">GitHub</a>
       
     <br/>
+
     <!--
     <button><a href="#" id="export-usdz">Export as USDZ</a></button>
-    <button><a href="#" id="export-gltf">Export as glTF</a></button>
     -->
+
+    <a id="export-gltf">Export as .glb</a></button>
     <br/>
     </div>
     
