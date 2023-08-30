@@ -5,7 +5,7 @@ const debugMaterials = false;
 const debugMeshes = false;
 const debugPrims = false;
 const disableTextures = false;
-const disableMaterials = true;
+const disableMaterials = false;
 
 class TextureRegistry {
   constructor(basename, allPaths) {
@@ -191,8 +191,21 @@ class HydraMesh {
   }
 
   updateNormals(normals) {
+    return;
+
     this._normals = normals.slice(0);
     this.updateOrder(this._normals, 'normal');
+  }
+
+  setNormals(data, interpolation) {
+    if (interpolation === 'facevarying') {
+      // The UV buffer has already been prepared on the C++ side, so we just set it
+      this._geometry.setAttribute('normal', new THREE.Float32BufferAttribute(data, 3));
+    } else if (interpolation === 'vertex') {
+      // We have per-vertex UVs, so we need to sort them accordingly
+      this._normals = data.slice(0);
+      this.updateOrder(this._normals, 'normal');
+    }
   }
 
   // This is always called before prims are updated
@@ -246,12 +259,12 @@ class HydraMesh {
   }
 
   updatePrimvar(name, data, dimension, interpolation) {
-    if (name === 'points' || name === 'normals') {
+    if (name === 'points') { // || name === 'normals') {
       // Points and normals are set separately
       return;
     }
 
-    // console.log('Setting PrimVar: ' + name);
+    // console.log('Setting PrimVar: ' + name + ", interpolation: " + interpolation);
 
     // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
     if (name.startsWith('st')) {
@@ -269,6 +282,9 @@ class HydraMesh {
       case "UVW":
       case "uvw":
         this.setUV(data, dimension, interpolation);
+        break;
+      case "normals":
+        this.setNormals(data, interpolation); 
         break;
       default:
         console.warn('Unsupported primvar', name);
