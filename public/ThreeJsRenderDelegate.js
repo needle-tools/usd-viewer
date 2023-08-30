@@ -4,6 +4,8 @@ const debugTextures = false;
 const debugMaterials = false;
 const debugMeshes = false;
 const debugPrims = false;
+const disableTextures = false;
+const disableMaterials = true;
 
 class TextureRegistry {
   constructor(basename, allPaths) {
@@ -202,6 +204,8 @@ class HydraMesh {
   }
 
   setDisplayColor(data, interpolation) {
+    if (disableMaterials) return;
+
     let wasDefaultMaterial = false;
     if (this._mesh.material === defaultMaterial) {
       this._mesh.material = this._mesh.material.clone();
@@ -340,6 +344,10 @@ class HydraMaterial {
         envMap: window.envMap,
       });
     }
+    // proper color when materials are disabled
+    if (disableMaterials)
+      defaultMaterial.color = new THREE.Color(0x999999);
+
     this._material = defaultMaterial;
 
     if (debugMaterials) console.log("Hydra Material", this)
@@ -639,7 +647,7 @@ class HydraMaterial {
       }
     }
 
-    if (!mainMaterialNode) {
+    if (!mainMaterialNode || disableMaterials) {
       this._material = defaultMaterial;
       return;
     }
@@ -666,28 +674,30 @@ class HydraMaterial {
       haveOcclusionMap
     });
 
-    const texturePromises = [];
-    for (let key in HydraMaterial.usdPreviewToMeshPhysicalTextureMap) {
-      texturePromises.push(this.assignTexture(mainMaterialNode, key));
-    }
-    await Promise.all(texturePromises);
+    if (!disableTextures) {
+      const texturePromises = [];
+      for (let key in HydraMaterial.usdPreviewToMeshPhysicalTextureMap) {
+        texturePromises.push(this.assignTexture(mainMaterialNode, key));
+      }
+      await Promise.all(texturePromises);
 
-    // Need to sanitize metallic/roughness/occlusion maps - if we want to export glTF they need to be identical right now
-    if (haveRoughnessMap && !haveMetalnessMap)
-    {
-      if (debugMaterials) console.log(this._material.roughnessMap, this._material);
-      this._material.metalnessMap = this._material.roughnessMap;
-      this._material.metalnessMap.needsUpdate = true;
-    }
-    else if (haveMetalnessMap && !haveRoughnessMap)
-    {
-      this._material.roughnessMap = this._material.metalnessMap;
-      this._material.roughnessMap.needsUpdate = true;
-    }
-    else if (haveMetalnessMap && haveRoughnessMap) {
-      // need to merge textures
-      // TODO
-      console.warn("TODO separate metalness and roughness textures, need to be merged");
+      // Need to sanitize metallic/roughness/occlusion maps - if we want to export glTF they need to be identical right now
+      if (haveRoughnessMap && !haveMetalnessMap)
+      {
+        if (debugMaterials) console.log(this._material.roughnessMap, this._material);
+        this._material.metalnessMap = this._material.roughnessMap;
+        this._material.metalnessMap.needsUpdate = true;
+      }
+      else if (haveMetalnessMap && !haveRoughnessMap)
+      {
+        this._material.roughnessMap = this._material.metalnessMap;
+        this._material.roughnessMap.needsUpdate = true;
+      }
+      else if (haveMetalnessMap && haveRoughnessMap) {
+        // need to merge textures
+        // TODO
+        console.warn("TODO separate metalness and roughness textures, need to be merged");
+      }
     }
 
     // Assign material properties
