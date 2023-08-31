@@ -589,12 +589,15 @@
       // determine which of these is likely the root file
       let rootFileCandidates = [];
       let usdaCandidates = [];
+      
+      // sort so shorter paths come first
+      allFiles.sort((a, b) => {
+        return a.fullPath.split('/').length - b.fullPath.split('/').length;
+      });
+
       for (const file of allFiles) {
         if (debugFileHandling) console.log(file);
         // fullPath should only contain one slash, and should contain a valid USD extension
-        if (file.fullPath.split('/').length > 2) {
-          continue;
-        }
         let ext = file.name.split('.').pop();
         if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
           rootFileCandidates.push(file);
@@ -632,7 +635,7 @@
       }
 
       // TODO if there are still multiple candidates we should ask the user which one to use
-      console.log("Assuming this is the root file: ", rootFile);
+      console.log("Assuming this is the root file: ", rootFile?.name);
 
       // remove the root file from the list of all files, we load it last
       if (rootFile) {
