@@ -672,6 +672,7 @@ class HydraMaterial {
     // Creating a new one requires to also update any meshes that reference it. So we're relying on the C++ side to
     // call this before also calling `setMaterial` on the affected meshes.
     this._material = new THREE.MeshPhysicalMaterial({});
+    this._material.side = THREE.DoubleSide;
     // split _id
     let _name = this._id;
     let lastSlash = _name.lastIndexOf('/');
