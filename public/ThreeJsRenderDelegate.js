@@ -190,8 +190,13 @@ class HydraMesh {
     this._mesh.matrixAutoUpdate = false;
   }
 
+  /**
+   * Sets automatically generated normals on the mesh. Should only be used if there are no authored normals.
+   * @param {} normals 
+   */
   updateNormals(normals) {
-    return;
+    // don't apply automatically generated normals if there are already authored normals.
+    if (this._geometry.hasAttribute('normal')) return;
 
     this._normals = normals.slice(0);
     this.updateOrder(this._normals, 'normal');
