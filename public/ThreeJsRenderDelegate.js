@@ -13,7 +13,18 @@ class TextureRegistry {
     this.allPaths = allPaths;
     this.textures = [];
     this.loader = new THREE.TextureLoader();
+
+    // HACK get URL ?file parameter again
+    let urlParams = new URLSearchParams(window.location.search);
+    let fileParam = urlParams.get('file');
+    if (fileParam) {
+      let lastSlash = fileParam.lastIndexOf('/');
+      if (lastSlash >= 0)
+        fileParam = fileParam.substring(0, lastSlash);
+      this.baseUrl = fileParam;
+    }
   }
+
   getTexture(filename) {
     if (debugTextures) console.log("get texture", filename);
     if (this.textures[filename]) {
@@ -61,14 +72,22 @@ class TextureRegistry {
     window.driver.getFile(resourcePath, async (loadedFile) => {
       
       const loader = this.loader;
+      const baseUrl = this.baseUrl;
       function loadFromFile(_loadedFile) {
-        let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
-        let blobUrl = URL.createObjectURL(blob);
-  
+        let url = undefined;
+        if (_loadedFile) {
+          let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
+          url = URL.createObjectURL(blob);
+        } else {
+          if (baseUrl)
+            url = baseUrl + '/' + resourcePath;
+          else
+            url = resourcePath;
+        }
         // Load the texture
         loader.load(
           // resource URL
-          blobUrl,
+          url,
   
           // onLoad callback
           (texture) => {
@@ -108,9 +127,16 @@ class TextureRegistry {
             break;
           }
         }
+
         if (!loadedFile) {
-          textureReject(new Error('Unknown file: ' + resourcePath));
-          return;
+          // if the file is not part of the filesystem, we can still try to fetch it from the network
+          if (baseUrl) {
+            console.log("File not found in filesystem, trying to fetch", resourcePath);
+          }
+          else {
+            textureReject(new Error('Unknown file: ' + resourcePath));
+            return;
+          }
         }
       }
 
