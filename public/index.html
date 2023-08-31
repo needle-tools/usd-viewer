@@ -663,9 +663,15 @@
         await loadFile(await getFile(file), false, file.fullPath);
       }
 
-      // THEN load the root file
-      if (rootFile)
-        await loadFile(await getFile(rootFile), true, rootFile.fullPath);
+      // THEN load the root file if it's a supported format
+
+      if (rootFile) {
+        const isSupportedFormat = ['usd', 'usdz', 'usda', 'usdc'].includes(rootFile.name.split('.').pop());
+        if (!isSupportedFormat)
+          console.error("Not a supported file format: ", rootFile.name);
+        else
+         loadFile(await getFile(rootFile), true, rootFile.fullPath);
+      }
     }
 
     function dropHandler(ev) {
