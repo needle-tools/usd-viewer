@@ -62,6 +62,15 @@
     }  
       
     function getUsdFile() {
+
+      // Workaround for CORS issues: 
+      // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
+      // to the raw version https://raw.githubusercontent.com/usd-wg/assets/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
+      if (filename.includes("github.com")) {
+        filename = filename.replace("github.com", "raw.githubusercontent.com");
+        filename = filename.replace("/blob/", "/");
+      }
+
       // Load the usd file from filename
       const loadUSDPromise = new Promise( (resolve, reject) => {
         if (!filename) resolve(null);
@@ -87,6 +96,7 @@
       let url = filename;
       if (indexOfQuery >= 0)
         url = url.substring(0, indexOfQuery);
+
       document.querySelector("a#quick-look-link").href = url;
       
       const currentUrl = new URL(window.location.href);
