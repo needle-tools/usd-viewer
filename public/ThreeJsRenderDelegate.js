@@ -38,6 +38,10 @@ class TextureRegistry {
     });
 
     function getResourcePath(filename, basename) {
+      if (!filename) {
+        console.error("Error when loading texture: filename is undefined", basename);
+        return undefined;
+      }
       let resourcePath = filename;
       if (filename[0] !== '/') {
         if (debugTextures) console.log(filename, basename);
@@ -57,6 +61,9 @@ class TextureRegistry {
     }
     
     let resourcePath = getResourcePath(filename, this.basename);
+    if (!resourcePath) {
+      return Promise.reject(new Error('Empty resource path for file: ' + filename + ' at ' + this.basename));
+    }
 
     let filetype = undefined;
     if (filename.indexOf('.png') >= filename.length - 5) {
@@ -65,8 +72,12 @@ class TextureRegistry {
       filetype = 'image/jpeg';
     } else if (filename.indexOf('.jpeg') >= filename.length - 5) {
       filetype = 'image/jpeg';
+    } else if (filename.indexOf('.exr') >= filename.length - 4) {
+      console.warn("EXR textures are not supported yet, ignoring", filename);
+      filetype = 'image/x-exr';
     } else {
-      throw new Error('Unknown filetype');
+      console.error("Error when loading texture: unknown filetype", filename);
+      // throw new Error('Unknown filetype');
     }
 
     window.driver.getFile(resourcePath, async (loadedFile) => {
@@ -431,7 +442,10 @@ class HydraMaterial {
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
       const nodeIn = mainMaterial[parameterName].nodeIn;
-      const textureFileName = nodeIn.file.replace("./", "");
+      if (!nodeIn.file) {
+        console.warn("Texture node has no file!", nodeIn);
+      }
+      const textureFileName = nodeIn.file?.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
@@ -549,6 +563,10 @@ class HydraMaterial {
         this._material.needsUpdate = true;
 
         if (debugTextures) console.log("RESOLVED TEXTURE", matName, parameterName);
+        resolve();
+        return;
+      }).catch(err => {
+        console.warn("Error when loading texture", err);
         resolve();
         return;
       });
