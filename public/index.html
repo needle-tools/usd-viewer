@@ -602,8 +602,12 @@
       
       // sort so shorter paths come first
       allFiles.sort((a, b) => {
-        return a.fullPath.split('/').length - b.fullPath.split('/').length;
+        const diff = a.fullPath.split('/').length - b.fullPath.split('/').length;
+        if (diff !== 0) return diff;
+        return a.fullPath.localeCompare(b.fullPath);
       });
+
+      // console.log("path candidates", allFiles);
 
       for (const file of allFiles) {
         if (debugFileHandling) console.log(file);
@@ -632,7 +636,7 @@
         // find the first usda file
         for (const file of allFiles) {
           let ext = file.name.split('.').pop();
-          if(ext == 'usda') {
+          if(ext == 'usda' || ext == 'usdc' || ext == 'usdz' || ext == 'usd') {
             rootFile = file;
             break;
           }

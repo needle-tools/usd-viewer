@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { TGALoader } from 'three/addons/loaders/TGALoader.js';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 const debugTextures = false;
 const debugMaterials = false;
@@ -13,6 +15,8 @@ class TextureRegistry {
     this.allPaths = allPaths;
     this.textures = [];
     this.loader = new THREE.TextureLoader();
+    this.tgaLoader = new TGALoader();
+    this.exrLoader = new EXRLoader();
 
     // HACK get URL ?file parameter again
     let urlParams = new URLSearchParams(window.location.search);
@@ -66,15 +70,21 @@ class TextureRegistry {
     }
 
     let filetype = undefined;
-    if (filename.indexOf('.png') >= filename.length - 5) {
+    let lowercaseFilename = filename.toLowerCase();
+    if (lowercaseFilename.indexOf('.png') >= lowercaseFilename.length - 5) {
       filetype = 'image/png';
-    } else if (filename.indexOf('.jpg') >= filename.length - 5) {
+    } else if (lowercaseFilename.indexOf('.jpg') >= lowercaseFilename.length - 5) {
       filetype = 'image/jpeg';
-    } else if (filename.indexOf('.jpeg') >= filename.length - 5) {
+    } else if (lowercaseFilename.indexOf('.jpeg') >= lowercaseFilename.length - 5) {
       filetype = 'image/jpeg';
-    } else if (filename.indexOf('.exr') >= filename.length - 4) {
-      console.warn("EXR textures are not supported yet, ignoring", filename);
+    } else if (lowercaseFilename.indexOf('.exr') >= lowercaseFilename.length - 4) {
+      console.warn("EXR textures are not fully supported yet", filename);
+      // using EXRLoader explicitly
       filetype = 'image/x-exr';
+    } else if (lowercaseFilename.indexOf('.tga') >= lowercaseFilename.length - 4) {
+      console.warn("TGA textures are not fully supported yet", filename);
+      // using TGALoader explicitly
+      filetype = 'image/tga';
     } else {
       console.error("Error when loading texture: unknown filetype", filename);
       // throw new Error('Unknown filetype');
@@ -82,7 +92,12 @@ class TextureRegistry {
 
     window.driver.getFile(resourcePath, async (loadedFile) => {
       
-      const loader = this.loader;
+      let loader = this.loader;
+      if (filetype === 'image/tga')
+        loader = this.tgaLoader;
+      else if (filetype === 'image/x-exr')
+        loader = this.exrLoader;
+      
       const baseUrl = this.baseUrl;
       function loadFromFile(_loadedFile) {
         let url = undefined;
@@ -578,6 +593,15 @@ class HydraMaterial {
   })
   }
 
+  // from https://github.com/mrdoob/three.js/blob/dev/src/math/ColorManagement.js
+  static SRGBToLinear( c ) {
+    return ( c < 0.04045 ) ? c * 0.0773993808 : Math.pow( c * 0.9478672986 + 0.0521327014, 2.4 );
+  }
+  
+  static LinearToSRGB( c ) {
+    return ( c < 0.0031308 ) ? c * 12.92 : 1.055 * ( Math.pow( c, 0.41666 ) ) - 0.055;
+  }
+
   /**
    * Swizzle image channels (e.g. move red channel to green channel)
    * @param {*} image three.js image
@@ -652,10 +676,10 @@ class HydraMaterial {
 
 			for ( let i = 0; i < data.length; i ++ ) {
 				if ( data instanceof Uint8Array || data instanceof Uint8ClampedArray ) {
-					data[ i ] = Math.floor( SRGBToLinear( data[ i ] / 255 ) * 255 );
+					data[ i ] = Math.floor( this.SRGBToLinear( data[ i ] / 255 ) * 255 );
 				} else {
 					// assuming float
-					data[ i ] = SRGBToLinear( data[ i ] );
+					data[ i ] = this.SRGBToLinear( data[ i ] );
 				}
 			}
 
