@@ -215,13 +215,7 @@
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
       // make sure we have all directories up to here
-      const dirs = directory.split('/');
-      for (const dir of dirs) {
-        if (dir.length === 0) continue;
-        const parentDir = dirs.slice(0, dirs.indexOf(dir)).join('/');
-        Usd.FS.createPath(parentDir, dir, true, true);
-      }
-      Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+      Usd.FS.createPath("", directory, true, true);
       
       //try 
       {
