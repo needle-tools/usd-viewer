@@ -327,7 +327,7 @@ class HydraMesh {
 
   updatePrimvar(name, data, dimension, interpolation) {
     if (!name) return;
-    
+
     if (name === 'points') { // || name === 'normals') {
       // Points and normals are set separately
       return;
@@ -720,7 +720,7 @@ class HydraMaterial {
       return;
     }
     if (mainMaterial[parameterName] !== undefined && !mainMaterial[parameterName].nodeIn) {
-      console.log(`Assigning property ${parameterName}: ${mainMaterial[parameterName]}`);
+      // console.log(`Assigning property ${parameterName}: ${mainMaterial[parameterName]}`);
       if (Array.isArray(mainMaterial[parameterName])) {
         this._material[materialParameterName] = new THREE.Color().fromArray(mainMaterial[parameterName]);
       } else {
@@ -818,7 +818,7 @@ class HydraMaterial {
       this._material.envMap = window.envMap;
     }
 
-    console.log("Material Node " + this._material.name, mainMaterialNode, "Resulting Material", this._material);
+    console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
   }
 }
 

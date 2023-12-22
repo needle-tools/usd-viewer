@@ -311,6 +311,12 @@
       box.getSize(size);
       box.getCenter(center );
 
+      if (Number.isNaN(tempSize.x) || Number.isNaN(tempSize.y) || Number.isNaN(tempSize.z) || 
+          Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
+        console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, tempSize);
+        return;
+      }
+
       const maxSize = Math.max(size.x, size.y, size.z);
       const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
       const fitWidthDistance = fitHeightDistance / camera.aspect;
@@ -690,7 +696,7 @@
       }
 
       // TODO if there are still multiple candidates we should ask the user which one to use
-      console.log("Assuming this is the root file: " + rootFile?.name + ". Total: " + allFiles.length, allFiles.map(f => f.fullPath).join('\n'));
+      console.log("Assuming this is the root file: " + rootFile?.name); // + ". Total: " + allFiles.length, allFiles.map(f => f.fullPath).join('\n'));
 
       // remove the root file from the list of all files, we load it last
       if (rootFile) {
