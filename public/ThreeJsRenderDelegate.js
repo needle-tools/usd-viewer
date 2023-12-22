@@ -200,6 +200,8 @@ class HydraMesh {
       _name = _name.substring(lastSlash + 1);
     }
     this._mesh.name = _name;
+
+    // console.log("Creating HydraMesh: " + id + " -> " + _name);
     
     window.usdRoot.add(this._mesh); // FIXME
   }
@@ -296,7 +298,13 @@ class HydraMesh {
       this._colors = data.slice(0);
       this.updateOrder(this._colors, 'color');
     } else {
-      console.warn(`Unsupported displayColor interpolation type '${interpolation}'.`);
+      if (warningMessagesToCount.has(interpolation)) {
+        warningMessagesToCount.set(interpolation, warningMessagesToCount.get(interpolation) + 1);
+      }
+      else {
+        warningMessagesToCount.set(interpolation, 1);
+        console.warn(`Unsupported displayColor interpolation type '${interpolation}'.`);
+      }
     }
   }
 
@@ -318,6 +326,8 @@ class HydraMesh {
   }
 
   updatePrimvar(name, data, dimension, interpolation) {
+    if (!name) return;
+    
     if (name === 'points') { // || name === 'normals') {
       // Points and normals are set separately
       return;

@@ -543,30 +543,51 @@
       }
     }
 
+    /**
+     * @param {FileSystemDirectoryEntry} directory
+     */
     async function readDirectory(directory) {
       let entries = [];
+
+      let getAllDirectoryEntries = async (dirReader) => {
+        let entries = [];
+        let readEntries = async () => {
+          let result = await new Promise((resolve, reject) => dirReader.readEntries(resolve, reject));
+          if (result.length === 0)
+            return entries;
+          else
+            return entries.concat(result, await readEntries());
+        }
+        return await readEntries();
+      }
+
+      /**
+       * @param {FileSystemDirectoryReader} dirReader
+       * @param {FileSystemDirectoryEntry} directory
+       * @returns {Promise<number>}
+       */
       let getEntries = async (directory) => {
         let dirReader = directory.createReader();
-        await new Promise((resolve, reject) => {
-          dirReader.readEntries(
-            async (results) => {
-              if (results.length) {
-                // entries = entries.concat(results);
-                for (let entry of results) {
-                  if (entry.isDirectory) {
-                    await getEntries(entry);
-                  }
-                  else {
-                    entries.push(entry);
-                  }
+        await new Promise(async (resolve, reject) => {
+          // Call the reader.readEntries() until no more results are returned.
+
+            const results = await getAllDirectoryEntries(dirReader);
+
+            if (results.length) {
+              // entries = entries.concat(results);
+              for (let entry of results) {
+                if (entry.isDirectory) {
+                  const foundFiles = await getEntries(entry);
+                  if (foundFiles === 100)
+                    console.warn("Found more than 100 files in directory", entry);
+                }
+                else {
+                  entries.push(entry);
                 }
               }
-              resolve();
-            },
-            (error) => {
-              /* handle error — error is a FileError object */
-            },
-          )});
+            }
+            resolve(results.length);
+        });
       };
 
       await getEntries(directory);
@@ -669,7 +690,7 @@
       }
 
       // TODO if there are still multiple candidates we should ask the user which one to use
-      console.log("Assuming this is the root file: ", rootFile?.name);
+      console.log("Assuming this is the root file: " + rootFile?.name + ". Total: " + allFiles.length, allFiles.map(f => f.fullPath).join('\n'));
 
       // remove the root file from the list of all files, we load it last
       if (rootFile) {
