@@ -4525,7 +4525,13 @@ var getUsdModule = (function () {
         return parent.node_ops.lookup(parent, name);
       },
       mknod: function (path, mode, dev) {
-        var lookup = FS.lookupPath(path, { parent: true });
+        let lookup = undefined;
+        try {
+          lookup = FS.lookupPath(path, { parent: true });
+        }
+        catch (e) {
+          console.error(path, mode, dev, e);
+        }
         var parent = lookup.node;
         var name = PATH.basename(path);
         if (!name || name === "." || name === "..") {
