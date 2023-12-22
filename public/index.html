@@ -223,6 +223,16 @@
       }
       Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
       
+      //try 
+      {
+        Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+      }
+      /*
+      catch(e) {
+        console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
+        throw e;
+      }
+      */
       // SUPER HACKY check if the root file can be interpreted as string, if yes, get the upAxis from it
       // THis should be handled elsewhere... seems that is not exposed/not handled by the WASM API right now
       if (isRootFile) {
@@ -270,7 +280,7 @@
         
         // adjust camera framing
         fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-        console.log("Loading done.");
+        console.log("Loading done. Scene: ", window.usdRoot);
 
         // some experiments for understanding what parts of the USD API are exposed in WASM
         /*
@@ -325,8 +335,16 @@
       camera.updateProjectionMatrix();
 
       camera.position.copy(controls.target).sub(direction);
-
       controls.update();
+
+      console.log("Fitting camera to selection", {
+        size,
+        center,
+        maxSize,
+        distance,
+        near: camera.near,
+        far: camera.far,
+      });
     }
 
     async function init() {
@@ -508,7 +526,11 @@
             directory = fullPath.substring(0, fullPath.length - fileName.length);
             if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
           }
-          loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
+          //try 
+          {
+            loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
+          }
+          // catch (e) { console.error("Error loading file", file, fullPath, e); }
         };
         reader.readAsArrayBuffer(file);
         await loadingPromise;
@@ -557,7 +579,11 @@
       return entries;
     }
     
+    /**
+     * @param {FileSystemEntry[]} entries
+     */
     async function handleFilesystemEntries(entries) {
+      /** @type {FileSystemEntry[]} */
       const allFiles = [];
       const fileIgnoreList = [
         '.gitignore',
@@ -691,6 +717,9 @@
       }
     }
 
+    /**
+     * @param {DragEvent} ev
+     */
     function dropHandler(ev) {
       if (debugFileHandling) console.log('File(s) dropped', ev.dataTransfer.items, ev.dataTransfer.files);
 
@@ -699,6 +728,7 @@
 
       if (ev.dataTransfer.items)
       {
+        /** @type {FileSystemEntry[]} */
         const allEntries = [];
 
         let haveGetAsEntry = false;
@@ -709,6 +739,7 @@
           for (var i = 0; i < ev.dataTransfer.items.length; i++)
           {
             let item = ev.dataTransfer.items[i];
+            /** @type {FileSystemEntry} */
             let entry = ("getAsEntry" in item) ? item.getAsEntry() : item.webkitGetAsEntry();
             allEntries.push(entry);
           }
@@ -786,7 +817,7 @@
     </p>
   </div>
   <div class="footer">
-    <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" style="max-width:100%; height:auto;"></a>
+    <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" title="ARKit Glyph" style="max-width:100%; height:auto;"></a>
   </div>
 </body>
 </html>
