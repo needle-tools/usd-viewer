@@ -312,7 +312,9 @@ class HydraMesh {
       this._uvs = data.slice(0);
       this.updateOrder(this._uvs, 'uv', 2);
     }
-    this._geometry.attributes.uv2 = this._geometry.attributes.uv;
+
+    if (this._geometry.hasAttribute('uv'))
+      this._geometry.attributes.uv2 = this._geometry.attributes.uv;
   }
 
   updatePrimvar(name, data, dimension, interpolation) {
@@ -344,7 +346,13 @@ class HydraMesh {
         this.setNormals(data, interpolation); 
         break;
       default:
-        console.warn('Unsupported primvar', name);
+        if (warningMessagesToCount.has(name)) {
+          warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
+        }
+        else {
+          warningMessagesToCount.set(name, 1);
+          console.warn('Unsupported primvar: ', name);
+        }
     }
   }
 
@@ -359,6 +367,7 @@ class HydraMesh {
 
 }
 
+let warningMessagesToCount = new Map();
 let defaultMaterial;
 
 class HydraMaterial {
