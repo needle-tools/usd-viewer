@@ -311,9 +311,9 @@
       box.getSize(size);
       box.getCenter(center );
 
-      if (Number.isNaN(tempSize.x) || Number.isNaN(tempSize.y) || Number.isNaN(tempSize.z) || 
+      if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
           Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
-        console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, tempSize);
+        console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, size);
         return;
       }
 
