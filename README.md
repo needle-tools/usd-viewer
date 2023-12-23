@@ -42,6 +42,38 @@ There are two main parts:
 The three.js Hydra Delegate is in `public/ThreeJsRenderDelegate.js`.  
 Loading and rendering are currently intermingled in `public/index.html`.  
 
+### Rebuilding USD-wasm
+
+NOTE: Origins for these instructions can be found [here](https://github.com/autodesk-forks/USD/blob/adsk/feature/webgpu/pxr/usdImaging/bin/usdviewweb/README.md)
+
+1. Setup emscripten if it's not already setup.
+    1. Download and Install [emscripten](https://emscripten.org) from [HERE](https://emscripten.org/docs/getting_started/downloads.html).
+    2. MacOS
+        1. Download and install the latest SDK tools.
+            1. `./emsdk install 3.1.47`
+        2. Make the specific SDK "active" for the current user. (writes .emscripten file)
+            1. `./emsdk activate 3.1.47`
+        3. Activate PATH and other environment variables in the current terminal
+            1. `source ./emsdk_env.sh`
+      3. Windows
+          1. Download and install the latest SDK tools.
+              1. `emsdk install 3.1.47`
+          2. Make the specific SDK for the current user. (writes .emscripten file)
+              1. `emsdk activate 3.1.47`
+  2. Pull [this branch](https://github.com/autodesk-forks/USD/tree/adsk/feature/webgpu) from Autodesk's USD fork
+      1. `git clone --recursive https://git.autodesk.com/autodesk-forks/usd/tree/adsk/feature/webgpu` 
+  3. Build USD-wasm
+      1. Go into the root of usd source repo, if the folder name is "usd_repo"
+          1. `cd usd_repo`
+      2. Build USD with the --emscripten flag, for example "../build_dir" is your local build folder
+          2. `python3 ./build_scripts/build_usd.py --emscripten ../build_dir`
+      3. This will put the resulting files in ../build_dir/bin
+          1. `emHdBindings.js`
+          2. `emHdBindings.wasm`
+          3. `emHdBindings.worker.js`
+          4. `emHdBindings.data`
+      4. Note: It's possible the build will fail due to comments in `pxr/base/arch/hints.h`, removing all comments from line 1-26 allowed the build to complete successfully
+
 ## Origin
 
 Based on [autodesk-forks.github.io/USD/usd_for_web_demos](https://autodesk-forks.github.io/USD/usd_for_web_demos/)  
