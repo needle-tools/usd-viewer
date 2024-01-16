@@ -181,12 +181,12 @@
       window.usdRoot.clear();
 
       for (const file of loadedFiles) {
-        Usd.FS.unlink(file, true);
+        Usd.FS_unlink(file, true);
       }
       loadedFiles.length = 0;
 
       if (currentRootFileName !== undefined) {
-        Usd.FS.unlink(currentRootFileName, true);
+        Usd.FS_unlink(currentRootFileName, true);
         currentRootFileName = undefined;
       }
     }
@@ -215,11 +215,11 @@
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
       // make sure we have all directories up to here
-      Usd.FS.createPath("", directory, true, true);
+      Usd.FS_createPath("", directory, true, true);
       
       //try 
       {
-        Usd.FS.createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+        Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
       }
       /*
       catch(e) {
@@ -251,7 +251,7 @@
       /*
       window.usdRoot.clear();
       if (currentRootFileName) {
-        Usd.FS.unlink(currentRootFileName, true);
+        Usd.FS_unlink(currentRootFileName, true);
         currentRootFileName = undefined;
       }
       */
