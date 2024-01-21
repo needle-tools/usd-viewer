@@ -476,10 +476,10 @@ class HydraMaterial {
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
       const nodeIn = mainMaterial[parameterName].nodeIn;
-      if (!nodeIn.file) {
+      if (!nodeIn.resolvedPath) {
         console.warn("Texture node has no file!", nodeIn);
       }
-      const textureFileName = nodeIn.file?.replace("./", "");
+      const textureFileName = nodeIn.resolvedPath?.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
