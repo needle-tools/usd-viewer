@@ -29,48 +29,24 @@ class TextureRegistry {
     }
   }
 
-  getTexture(filename) {
-    if (debugTextures) console.log("get texture", filename);
-    if (this.textures[filename]) {
-      return this.textures[filename];
+  getTexture(resourcePath) {
+    if (debugTextures) console.log("get texture", resourcePath);
+    if (this.textures[resourcePath]) {
+      return this.textures[resourcePath];
     }
 
     let textureResolve, textureReject;
-    this.textures[filename] = new Promise((resolve, reject) => {
+    this.textures[resourcePath] = new Promise((resolve, reject) => {
       textureResolve = resolve;
       textureReject = reject;
     });
 
-    function getResourcePath(filename, basename) {
-      if (!filename) {
-        console.error("Error when loading texture: filename is undefined", basename);
-        return undefined;
-      }
-      let resourcePath = filename;
-      if (filename[0] !== '/') {
-        if (debugTextures) console.log(filename, basename);
-        // check if basename ends with ".usdz", then this is a sub-resource
-        if (basename.indexOf('.usdz') === basename.length - 5) {
-          resourcePath = basename + '[' + filename +']';
-        }
-        // otherwise, this is a relative file path
-        else {
-          // strip out base filename, we want the directory, not the filename
-          let baseDirectory = basename.substring(0, basename.lastIndexOf('/'));
-          resourcePath = baseDirectory + "/" + resourcePath;
-        }
-      }
-      if (debugTextures) console.log("resource path", resourcePath)
-      return resourcePath;
-    }
-    
-    let resourcePath = getResourcePath(filename, this.basename);
     if (!resourcePath) {
-      return Promise.reject(new Error('Empty resource path for file: ' + filename + ' at ' + this.basename));
+      return Promise.reject(new Error('Empty resource path for file: ' + resourcePath + ' at ' + this.basename));
     }
 
     let filetype = undefined;
-    let lowercaseFilename = filename.toLowerCase();
+    let lowercaseFilename = resourcePath.toLowerCase();
     if (lowercaseFilename.indexOf('.png') >= lowercaseFilename.length - 5) {
       filetype = 'image/png';
     } else if (lowercaseFilename.indexOf('.jpg') >= lowercaseFilename.length - 5) {
@@ -82,11 +58,11 @@ class TextureRegistry {
       // using EXRLoader explicitly
       filetype = 'image/x-exr';
     } else if (lowercaseFilename.indexOf('.tga') >= lowercaseFilename.length - 4) {
-      console.warn("TGA textures are not fully supported yet", filename);
+      console.warn("TGA textures are not fully supported yet", resourcePath);
       // using TGALoader explicitly
       filetype = 'image/tga';
     } else {
-      console.error("Error when loading texture: unknown filetype", filename);
+      console.error("Error when loading texture: unknown filetype", resourcePath);
       // throw new Error('Unknown filetype');
     }
 
@@ -117,7 +93,7 @@ class TextureRegistry {
   
           // onLoad callback
           (texture) => {
-            texture.name = filename;
+            texture.name = resourcePath;
             textureResolve(texture);
           },
   
@@ -132,44 +108,20 @@ class TextureRegistry {
       }
       
       if (!loadedFile) {
-        if (debugTextures) console.log("File not found, trying to load from other paths", resourcePath);
-
-        // iterate over all possible paths and check if we can get the file from there
-        for (let i = 0; i < this.allPaths.length; i++) {
-          let path = getResourcePath(filename, this.allPaths[i]);
-          if (debugTextures) console.log('Trying to load texture from path: ' + path);
-
-          await new Promise((resolve, reject) => {
-            window.driver.getFile(path, (_loadedFile) => {
-              if (debugTextures) console.log("tried getting file from " + path, _loadedFile)
-              if (_loadedFile) {
-                loadedFile = _loadedFile;
-              }
-              resolve();
-            });
-          });
-
-          if (loadedFile) {
-            break;
-          }
+        // if the file is not part of the filesystem, we can still try to fetch it from the network
+        if (baseUrl) {
+          console.log("File not found in filesystem, trying to fetch", resourcePath);
         }
-
-        if (!loadedFile) {
-          // if the file is not part of the filesystem, we can still try to fetch it from the network
-          if (baseUrl) {
-            console.log("File not found in filesystem, trying to fetch", resourcePath);
-          }
-          else {
-            textureReject(new Error('Unknown file: ' + resourcePath));
-            return;
-          }
+        else {
+          textureReject(new Error('Unknown file: ' + resourcePath));
+          return;
         }
       }
 
       loadFromFile(loadedFile);
     });
 
-    return this.textures[filename];
+    return this.textures[resourcePath];
   }
 }
 
@@ -476,10 +428,10 @@ class HydraMaterial {
     }
     if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
       const nodeIn = mainMaterial[parameterName].nodeIn;
-      if (!nodeIn.file) {
+      if (!nodeIn.resolvedPath) {
         console.warn("Texture node has no file!", nodeIn);
       }
-      const textureFileName = nodeIn.file?.replace("./", "");
+      const textureFileName = nodeIn.resolvedPath?.replace("./", "");
       const channel = mainMaterial[parameterName].inputName;
 
       // For debugging
