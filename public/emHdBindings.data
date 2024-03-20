@@ -35,6 +35,25 @@
 }
 {
     "Plugins": [
+      {
+        "Info": {
+          "Types": [
+            {
+              "BaseName": "ArResolver",
+              "Name": "HttpResolver"
+            }
+          ]
+        },
+        "Name": "HttpResolver",
+        "LibraryPath": "",
+        "ResourcePath": "resources", 
+        "Root": "..", 
+        "Type": "library"
+      }
+    ]
+}
+{
+    "Plugins": [
         {
             "Info": {
                 "Types": {
