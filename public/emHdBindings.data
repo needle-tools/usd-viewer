@@ -37,12 +37,11 @@
     "Plugins": [
       {
         "Info": {
-          "Types": [
-            {
-              "BaseName": "ArResolver",
-              "Name": "HttpResolver"
+          "Types": {
+            "HttpResolver": {
+              "bases": ["ArDefaultResolver"]
             }
-          ]
+          }
         },
         "Name": "HttpResolver",
         "LibraryPath": "",

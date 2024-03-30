@@ -122,6 +122,8 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
+          console.log("FILENAME: ", filename)
+          console.log("USDFILE:", usdFile)
           loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
         }
       });
@@ -206,20 +208,20 @@
       let inputFile = filename;
       
       // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
-      if (directory === undefined) {
-        directory = "/";
-        inputFile = getRandomFilename(filename);
-      }
+      // if (directory === undefined) {
+      //   directory = "/";
+      //   inputFile = getRandomFilename(filename);
+      // }
 
-      const path = directory + inputFile;
+      let path = directory + inputFile;
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
       // make sure we have all directories up to here
-      Usd.FS_createPath("", directory, true, true);
+      //Usd.FS_createPath("", directory, true, true);
       
       //try 
       {
-        Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+        //Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
       }
       /*
       catch(e) {
@@ -263,37 +265,48 @@
       
       // should be loaded last
       if (isRootFile) {
-        let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles);
-        let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
-
-        driver.Draw();
+        let filePath = "/tmp/Teapot.usd";
+        path = "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd";
+        let renderInterface = window.renderInterface = new RenderDelegateInterface(filePath, [])
         
-        const stage = window.usdStage = window.driver.GetStage();
-        endTimeCode = stage.GetEndTimeCode();
-        timeout = 1000 / stage.GetTimeCodesPerSecond();
+        new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
+          // The promise is resolved, and the driver is available here
+          window.driver = driver;
+          console.log("done...", driver)
+          window.driver.Draw();
         
-        // adjust camera framing
-        fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-        console.log("Loading done. Scene: ", window.usdRoot);
+          const stage = window.usdStage = window.driver.GetStage();
+          endTimeCode = stage.GetEndTimeCode();
+          timeout = 1000 / stage.GetTimeCodesPerSecond();
+          
+          // adjust camera framing
+          fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+          console.log("Loading done. Scene: ", window.usdRoot);
 
-        // some experiments for understanding what parts of the USD API are exposed in WASM
-        /*
-        const rootLayer = stage.GetRootLayer();
-        rootLayer.Traverse("/", (primPath) => {
-          const prim = stage.GetPrimAtPath(primPath);
-          console.log("Prim", primPath, prim);
-        });
-        */
-        try {
-          console.log("Currently Exposed API", {
-            "Stage": Object.getPrototypeOf(stage),
-            "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-            "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+          // some experiments for understanding what parts of the USD API are exposed in WASM
+          /*
+          const rootLayer = stage.GetRootLayer();
+          rootLayer.Traverse("/", (primPath) => {
+            const prim = stage.GetPrimAtPath(primPath);
+            console.log("Prim", primPath, prim);
           });
-        } catch(_) {}
+          */
+          try {
+            console.log("Currently Exposed API", {
+              "Stage": Object.getPrototypeOf(stage),
+              "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+              "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+            });
+          } catch(_) {}
 
-        // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
-        messageLog.textContent = "";
+          // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
+          messageLog.textContent = "";
+          // Use driver as needed, treating it as the specific type you expect
+        }).catch(error => {
+            console.error("Failed to initialize driver:", error);
+        });
+
+        console.log("waiting...")
       }
     }
     
@@ -445,10 +458,12 @@
           if (filename) {
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
+            console.log("filename downloading: ", filename)
             let usdFile = await getUsdFile();
             // get just the filename, no paths
             const parts = filename.split('/');
             filename = parts[parts.length - 1];
+            console.log("filename parts: ", filename)
             loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
           }
         });
@@ -479,7 +494,7 @@
       await new Promise(resolve => setTimeout(resolve, 10));
       const time = secs * (1000 / timeout) % endTimeCode;
       
-      if (window.driver) {
+      if (window.driver.SetTime && window.driver.Draw) {
         window.driver.SetTime(time);
         window.driver.Draw();
       }
@@ -500,7 +515,9 @@
     function render() {
 
       const time = Date.now() * 0.001;
-      window.renderer.render( window.scene, window.camera );
+      if (window.renderer.render && window.scene){
+        window.renderer.render( window.scene, window.camera );
+      }
 
     }
   
