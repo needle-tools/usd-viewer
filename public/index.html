@@ -122,8 +122,6 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
-          console.log("FILENAME: ", filename)
-          console.log("USDFILE:", usdFile)
           loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
         }
       });
@@ -270,19 +268,15 @@
         let renderInterface = window.renderInterface = new RenderDelegateInterface(filePath, [])
         
         new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
-          // The promise is resolved, and the driver is available here
           window.driver = driver;
-          console.log("done...", driver)
           window.driver.Draw();
         
           const stage = window.usdStage = window.driver.GetStage();
           endTimeCode = stage.GetEndTimeCode();
           timeout = 1000 / stage.GetTimeCodesPerSecond();
-          
           // adjust camera framing
           fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
           console.log("Loading done. Scene: ", window.usdRoot);
-
           // some experiments for understanding what parts of the USD API are exposed in WASM
           /*
           const rootLayer = stage.GetRootLayer();
@@ -493,32 +487,25 @@
       let secs = new Date().getTime() / 1000;
       await new Promise(resolve => setTimeout(resolve, 10));
       const time = secs * (1000 / timeout) % endTimeCode;
-      
-      if (window.driver.SetTime && window.driver.Draw) {
+      if (window.driver && window.driver.SetTime && window.driver.Draw) {
         window.driver.SetTime(time);
         window.driver.Draw();
+        render();
       }
-      render();
-
       requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
     }
 
     function onWindowResize() {
-
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-
       renderer.setSize( window.innerWidth, window.innerHeight );
-
     }
 
     function render() {
-
       const time = Date.now() * 0.001;
       if (window.renderer.render && window.scene){
         window.renderer.render( window.scene, window.camera );
       }
-
     }
   
     async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
