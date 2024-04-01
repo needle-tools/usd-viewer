@@ -142,6 +142,7 @@
     var currentRootFileName = undefined;
     var timeout = 40;
     var endTimeCode = 1;
+    var ready = false;
     
     const usdzExportBtn = document.getElementById('export-usdz');
     if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
@@ -204,29 +205,42 @@
       setFilenameText(filename);
 
       let inputFile = filename;
-      
-      // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
-      // if (directory === undefined) {
-      //   directory = "/";
-      //   inputFile = getRandomFilename(filename);
-      // }
-
       let path = directory + inputFile;
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
-      // make sure we have all directories up to here
-      //Usd.FS_createPath("", directory, true, true);
+      if (filename.includes('.usdz')){
+        // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
+        if (directory === undefined) {
+          directory = "/";
+          inputFile = getRandomFilename(filename);
+        }
+
+        path = directory + inputFile;
+
+        // make sure we have all directories up to here
+        Usd.FS_createPath("", directory, true, true);
       
-      //try 
-      {
-        //Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+        //try 
+        {
+          Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+        }
+        /*
+        catch(e) {
+          console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
+          throw e;
+        }*/
+
+        if (!isRootFile )
+          loadedFiles.push(path);
+        if (isRootFile)
+          currentRootFileName = path;
       }
-      /*
-      catch(e) {
-        console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
-        throw e;
+      else {
+        path = filename
+        loadedFiles.length = 0;
       }
-      */
+      
+      
       // SUPER HACKY check if the root file can be interpreted as string, if yes, get the upAxis from it
       // THis should be handled elsewhere... seems that is not exposed/not handled by the WASM API right now
       if (isRootFile) {
@@ -256,19 +270,12 @@
       }
       */
 
-      if (!isRootFile )
-        loadedFiles.push(path);
-      if (isRootFile)
-        currentRootFileName = path;
-      
       // should be loaded last
       if (isRootFile) {
-        let filePath = "/tmp/Teapot.usd";
-        path = "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd";
-        let renderInterface = window.renderInterface = new RenderDelegateInterface(filePath, [])
-        
-        new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
-          window.driver = driver;
+
+        let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
+        if (path.includes('.usdz')){
+          window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
           window.driver.Draw();
         
           const stage = window.usdStage = window.driver.GetStage();
@@ -293,14 +300,55 @@
             });
           } catch(_) {}
 
+          ready = true;
           // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
           messageLog.textContent = "";
-          // Use driver as needed, treating it as the specific type you expect
-        }).catch(error => {
-            console.error("Failed to initialize driver:", error);
-        });
+        }
+        else {
+          new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
+            window.driver = driver;
+            window.driver.Draw();
 
-        console.log("waiting...")
+            // TODO: this 250ms wait is dumb and is here to try to get materials with references to show but it doesn't work
+            // window.driver.Draw kicks off a call to _engine.Execute which runs Sync on all prims which then calls into the asset Resolver
+            // window.driver.Draw returns after it kicks off that call, but the resolution isn't done yet.
+            // if window.driver.GetStage() is called before that resolution is finished, the app hits an assertion failure and dies
+            new Promise(resolve => setTimeout(resolve, 1000)).then(()=>{
+              const stage = window.usdStage = window.driver.GetStage();
+              if (stage.GetEndTimeCode){
+                endTimeCode = stage.GetEndTimeCode();
+                timeout = 1000 / stage.GetTimeCodesPerSecond();
+              }
+             
+              // adjust camera framing
+              fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+              console.log("Loading done. Scene: ", window.usdRoot);
+              // some experiments for understanding what parts of the USD API are exposed in WASM
+              /*
+              const rootLayer = stage.GetRootLayer();
+              rootLayer.Traverse("/", (primPath) => {
+                const prim = stage.GetPrimAtPath(primPath);
+                console.log("Prim", primPath, prim);
+              });
+              */
+              try {
+                console.log("Currently Exposed API", {
+                  "Stage": Object.getPrototypeOf(stage),
+                  "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+                  "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+                });
+              } catch(_) {}
+
+              // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
+              messageLog.textContent = "";
+
+              ready = true;
+
+            });
+          }).catch(error => {
+              console.error("Failed to initialize driver:", error);
+          });
+        }
       }
     }
     
@@ -452,12 +500,10 @@
           if (filename) {
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
-            console.log("filename downloading: ", filename)
             let usdFile = await getUsdFile();
             // get just the filename, no paths
             const parts = filename.split('/');
             filename = parts[parts.length - 1];
-            console.log("filename parts: ", filename)
             loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
           }
         });
@@ -487,7 +533,7 @@
       let secs = new Date().getTime() / 1000;
       await new Promise(resolve => setTimeout(resolve, 10));
       const time = secs * (1000 / timeout) % endTimeCode;
-      if (window.driver && window.driver.SetTime && window.driver.Draw) {
+      if (window.driver && window.driver.SetTime && window.driver.Draw && ready) {
         window.driver.SetTime(time);
         window.driver.Draw();
         render();
