@@ -333,6 +333,7 @@
       if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
           Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
         console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, size);
+        controls.update();
         return;
       }
 
@@ -340,6 +341,11 @@
       const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
       const fitWidthDistance = fitHeightDistance / camera.aspect;
       const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+
+      if (distance == 0) {
+        console.warn("Fit Camera failed: distance is 0, some objects may not have any mesh data.");
+        return;
+      }
 
       const direction = controls.target.clone()
         .sub(camera.position)
