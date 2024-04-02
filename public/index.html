@@ -61,7 +61,7 @@
       setFilenameText(filename);
     }  
       
-    function getUsdFile() {
+    function updateUrl() {
 
       // Workaround for CORS issues: 
       // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
@@ -70,26 +70,6 @@
         filename = filename.replace("github.com", "raw.githubusercontent.com");
         filename = filename.replace("/blob/", "/");
       }
-
-      // Load the usd file from filename
-      const loadUSDPromise = new Promise( (resolve, reject) => {
-        if (!filename) resolve(null);
-
-        let req = new XMLHttpRequest();
-        req.open("GET", filename, true);
-        req.responseType = "arraybuffer";
-
-        req.onload = function (oEvent) {
-          let arrayBuffer = req.response; // Note: not oReq.responseText
-          if (arrayBuffer) {
-            resolve(arrayBuffer);
-          } else {
-            reject();
-          }
-        };
-
-        req.send(null);
-      });
       
       // set quick look link
       let indexOfQuery = filename.indexOf('?');
@@ -103,17 +83,15 @@
       // set the file query parameter
       currentUrl.searchParams.set("file", filename);
       window.history.pushState({}, filename, currentUrl);
-      
-      return loadUSDPromise;
     }
 
     const initPromise = init();
     
     console.log("Loading USD Module...");
     messageLog.textContent = "Loading USD Module – this can take a moment...";
-    
+    updateUrl();
     try {
-      Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+      Promise.all([getUsdModule(), initPromise]).then(async ([Usd]) => {
         window.Usd = Usd;
         messageLog.textContent = "Loading done";
         animate();
@@ -122,7 +100,7 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
-          loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
+          loadUsdFile(undefined, filename, true);
         }
       });
     }
@@ -192,127 +170,47 @@
       }
     }
 
-    function getRandomFilename(filename) {
-      let parts = filename.split('.');
-      let extension = parts[parts.length - 1];
-      extension = extension.split('?')[0];
-      let fileName = (Math.random() + 1).toString(36).substring(7);
-      let inputFile = fileName + "." + extension;
-      return inputFile;
-    }
-
-    function loadUsdFileFromArrayBuffer(directory, filename, usdFile, isRootFile = true) {
+    function loadUsdFile(directory, filename, isRootFile = true) {
       setFilenameText(filename);
-
-      let inputFile = filename;
-      let path = directory + inputFile;
+      let path = (new URL(document.location)).searchParams.get("file").split('?')[0];
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
-
-      if (filename.includes('.vvv')){
-        // // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
-        // if (directory === undefined) {
-        //   directory = "/";
-        //   inputFile = getRandomFilename(filename);
-        // }
-
-        // path = directory + inputFile;
-
-        // // make sure we have all directories up to here
-        // Usd.FS_createPath("", directory, true, true);
-      
-        // //try 
-        // {
-        //   Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
-        // }
-        // /*
-        // catch(e) {
-        //   console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
-        //   throw e;
-        // }*/
-
-        // if (!isRootFile )
-        //   loadedFiles.push(path);
-        // if (isRootFile)
-        //   currentRootFileName = path;
-      }
-      else {
-        path = (new URL(document.location)).searchParams.get("file").split('?')[0];
-        console.log("path; ", path)
-        console.log("location: ", document.location);
-        loadedFiles.length = 0;
-        ready = false;
-      }
-      
-      
-      // SUPER HACKY check if the root file can be interpreted as string, if yes, get the upAxis from it
-      // THis should be handled elsewhere... seems that is not exposed/not handled by the WASM API right now
-      if (isRootFile) {
-        const usdString = new TextDecoder("utf-8").decode(usdFile);
-        // check if we find "upAxis"
-        const upAxisIndex = usdString.indexOf("upAxis");
-        if (upAxisIndex >= 0) {
-          const nextLineBreak = usdString.indexOf("\n", upAxisIndex);
-          const upAxisString = usdString.substring(upAxisIndex, nextLineBreak);
-          const upAxisValue = upAxisString.split('"');
-          // check if any entry is "Z" or "Y"
-          if (upAxisValue.includes("Z")) {
-            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
-          }
-          else if (upAxisValue.includes("Y")) {
-            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(0, 0, 0));
-          }
-        }
-      }
-
-      // clear existing objects
-      /*
-      window.usdRoot.clear();
-      if (currentRootFileName) {
-        Usd.FS_unlink(currentRootFileName, true);
-        currentRootFileName = undefined;
-      }
-      */
+      loadedFiles.length = 0;
+      ready = false;
 
       // should be loaded last
       if (isRootFile) {
 
         let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
-        if (path.includes('.vvv')){
-          
-        }
-        else {
+        new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
+          window.driver = driver;
+          window.driver.Draw();
+          messageLog.textContent = "";
 
-          new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
-            window.driver = driver;
-            window.driver.Draw();
-            messageLog.textContent = "";
+          // TODO: this 300ms wait is dumb and is here to try to get materials with references to show but it doesn't work
+          // window.driver.Draw kicks off a call to _engine.Execute which runs Sync on all prims which then calls into the asset Resolver
+          // window.driver.Draw returns after it kicks off that call, but the resolution isn't done yet.
+          // if window.driver.GetStage() is called before that resolution is finished, the app hits an assertion failure and dies
+          new Promise(resolve => setTimeout(resolve, 300)).then(()=>{
+            const stage = window.usdStage = window.driver.GetStage();
+            if (stage.GetEndTimeCode){
+              endTimeCode = stage.GetEndTimeCode();
+              timeout = 1000 / stage.GetTimeCodesPerSecond();
+            }
+            fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+            console.log("Loading done. Scene: ", window.usdRoot);
+            ready = true;
 
-            // TODO: this 250ms wait is dumb and is here to try to get materials with references to show but it doesn't work
-            // window.driver.Draw kicks off a call to _engine.Execute which runs Sync on all prims which then calls into the asset Resolver
-            // window.driver.Draw returns after it kicks off that call, but the resolution isn't done yet.
-            // if window.driver.GetStage() is called before that resolution is finished, the app hits an assertion failure and dies
-            new Promise(resolve => setTimeout(resolve, 300)).then(()=>{
-              const stage = window.usdStage = window.driver.GetStage();
-              if (stage.GetEndTimeCode){
-                endTimeCode = stage.GetEndTimeCode();
-                timeout = 1000 / stage.GetTimeCodesPerSecond();
-              }
-              fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-              console.log("Loading done. Scene: ", window.usdRoot);
-              ready = true;
-
-              try {
-                console.log("Currently Exposed API", {
-                  "Stage": Object.getPrototypeOf(stage),
-                  "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-                  "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-                });
-              } catch(_) {}
-             });
-          }).catch(error => {
-              console.error("Failed to initialize driver:", error);
-          });
-        }
+            try {
+              console.log("Currently Exposed API", {
+                "Stage": Object.getPrototypeOf(stage),
+                "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+                "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+              });
+            } catch(_) {}
+            });
+        }).catch(error => {
+            console.error("Failed to initialize driver:", error);
+        });
       }
     }
     
@@ -470,11 +368,11 @@
           if (filename) {
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
-            let usdFile = await getUsdFile();
+            updateUrl();
             // get just the filename, no paths
             const parts = filename.split('/');
             filename = parts[parts.length - 1];
-            loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
+            loadUsdFile(undefined, filename, true);
           }
         });
       }
@@ -548,7 +446,7 @@
           }
           //try 
           {
-            loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
+            loadUsdFile(directory, fileName, event.target.result, isRootFile);
           }
           // catch (e) { console.error("Error loading file", file, fullPath, e); }
         };
@@ -851,14 +749,14 @@
 
     <a id="export-gltf">Export as .glb</a></button>
     <br/>
-    <div class="buttons">
-      <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
-      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
-      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
-      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
-      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
-      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/Vehicles/index.usda">Vehicles</a>
-    </div>
+  </div>
+  <div class="buttons">
+    <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/Vehicles/index.usda">Vehicles</a>
   </div>
     
     <p id="message-log">
