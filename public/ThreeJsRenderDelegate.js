@@ -76,6 +76,7 @@ class TextureRegistry {
       const baseUrl = this.baseUrl;
       function loadFromFile(_loadedFile) {
         let url = undefined;
+        if (debugTextures) console.log("window.driver.getFile",resourcePath, " => ", _loadedFile);
         if (_loadedFile) {
           let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
           url = URL.createObjectURL(blob);
@@ -85,6 +86,7 @@ class TextureRegistry {
           else
             url = resourcePath;
         }
+        if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "_loadedFile", _loadedFile, "baseUrl", baseUrl, "resourcePath", resourcePath);
         // Load the texture
         loader.load(
           // resource URL
@@ -397,7 +399,7 @@ class HydraMaterial {
   }
 
   updateNode(networkId, path, parameters) {
-    // console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
+    if (debugTextures) console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
     this._nodes[path] = parameters;
   }
 
@@ -430,6 +432,8 @@ class HydraMaterial {
         if (!nodeIn.resolvedPath) {
           console.warn("Texture node has no file!", nodeIn);
         }
+        if (debugTextures)
+          console.log("Assigning texture with resolved path", parameterName, nodeIn.resolvedPath);
         const textureFileName = nodeIn.resolvedPath?.replace("./", "");
         const channel = mainMaterial[parameterName].inputName;
 
@@ -438,6 +442,10 @@ class HydraMaterial {
         if (debugTextures) console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'... with channel '${channel}'`);
 
         this._interface.registry.getTexture(textureFileName).then(texture => {
+          if (!this._material) {
+            console.error("Material not set when trying to assign texture, this is likely a bug");
+            resolve();
+          }
           // console.log("getTexture", texture, nodeIn);
           if (materialParameterMapName === 'alphaMap') {
             // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
@@ -742,12 +750,14 @@ class HydraMaterial {
       {
         if (debugMaterials) console.log(this._material.roughnessMap, this._material);
         this._material.metalnessMap = this._material.roughnessMap;
-        this._material.metalnessMap.needsUpdate = true;
+        if (this._material.metalnessMap) this._material.metalnessMap.needsUpdate = true;
+        else console.error("Something went wrong with the texture promise; haveRoughnessMap is true but no roughnessMap was loaded.");
       }
       else if (haveMetalnessMap && !haveRoughnessMap)
       {
         this._material.roughnessMap = this._material.metalnessMap;
-        this._material.roughnessMap.needsUpdate = true;
+        if (this._material.roughnessMap) this._material.roughnessMap.needsUpdate = true;
+        else console.error("Something went wrong with the texture promise; haveMetalnessMap is true but no metalnessMap was loaded.");
       }
       else if (haveMetalnessMap && haveRoughnessMap) {
         // need to merge textures
