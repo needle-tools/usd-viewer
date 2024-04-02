@@ -208,36 +208,39 @@
       let path = directory + inputFile;
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
 
-      if (filename.includes('.usdz')){
-        // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
-        if (directory === undefined) {
-          directory = "/";
-          inputFile = getRandomFilename(filename);
-        }
+      if (filename.includes('.vvv')){
+        // // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
+        // if (directory === undefined) {
+        //   directory = "/";
+        //   inputFile = getRandomFilename(filename);
+        // }
 
-        path = directory + inputFile;
+        // path = directory + inputFile;
 
-        // make sure we have all directories up to here
-        Usd.FS_createPath("", directory, true, true);
+        // // make sure we have all directories up to here
+        // Usd.FS_createPath("", directory, true, true);
       
-        //try 
-        {
-          Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
-        }
-        /*
-        catch(e) {
-          console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
-          throw e;
-        }*/
+        // //try 
+        // {
+        //   Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
+        // }
+        // /*
+        // catch(e) {
+        //   console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
+        //   throw e;
+        // }*/
 
-        if (!isRootFile )
-          loadedFiles.push(path);
-        if (isRootFile)
-          currentRootFileName = path;
+        // if (!isRootFile )
+        //   loadedFiles.push(path);
+        // if (isRootFile)
+        //   currentRootFileName = path;
       }
       else {
-        path = filename
+        path = (new URL(document.location)).searchParams.get("file").split('?')[0];
+        console.log("path; ", path)
+        console.log("location: ", document.location);
         loadedFiles.length = 0;
+        ready = false;
       }
       
       
@@ -274,63 +277,30 @@
       if (isRootFile) {
 
         let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
-        if (path.includes('.usdz')){
-          window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
-          window.driver.Draw();
-        
-          const stage = window.usdStage = window.driver.GetStage();
-          endTimeCode = stage.GetEndTimeCode();
-          timeout = 1000 / stage.GetTimeCodesPerSecond();
-          // adjust camera framing
-          fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-          console.log("Loading done. Scene: ", window.usdRoot);
-          // some experiments for understanding what parts of the USD API are exposed in WASM
-          /*
-          const rootLayer = stage.GetRootLayer();
-          rootLayer.Traverse("/", (primPath) => {
-            const prim = stage.GetPrimAtPath(primPath);
-            console.log("Prim", primPath, prim);
-          });
-          */
-          try {
-            console.log("Currently Exposed API", {
-              "Stage": Object.getPrototypeOf(stage),
-              "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-              "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-            });
-          } catch(_) {}
-
-          ready = true;
-          // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
-          messageLog.textContent = "";
+        if (path.includes('.vvv')){
+          
         }
         else {
+
           new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
             window.driver = driver;
             window.driver.Draw();
+            messageLog.textContent = "";
 
             // TODO: this 250ms wait is dumb and is here to try to get materials with references to show but it doesn't work
             // window.driver.Draw kicks off a call to _engine.Execute which runs Sync on all prims which then calls into the asset Resolver
             // window.driver.Draw returns after it kicks off that call, but the resolution isn't done yet.
             // if window.driver.GetStage() is called before that resolution is finished, the app hits an assertion failure and dies
-            new Promise(resolve => setTimeout(resolve, 1000)).then(()=>{
+            new Promise(resolve => setTimeout(resolve, 300)).then(()=>{
               const stage = window.usdStage = window.driver.GetStage();
               if (stage.GetEndTimeCode){
                 endTimeCode = stage.GetEndTimeCode();
                 timeout = 1000 / stage.GetTimeCodesPerSecond();
               }
-             
-              // adjust camera framing
               fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
               console.log("Loading done. Scene: ", window.usdRoot);
-              // some experiments for understanding what parts of the USD API are exposed in WASM
-              /*
-              const rootLayer = stage.GetRootLayer();
-              rootLayer.Traverse("/", (primPath) => {
-                const prim = stage.GetPrimAtPath(primPath);
-                console.log("Prim", primPath, prim);
-              });
-              */
+              ready = true;
+
               try {
                 console.log("Currently Exposed API", {
                   "Stage": Object.getPrototypeOf(stage),
@@ -338,13 +308,7 @@
                   "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
                 });
               } catch(_) {}
-
-              // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
-              messageLog.textContent = "";
-
-              ready = true;
-
-            });
+             });
           }).catch(error => {
               console.error("Failed to initialize driver:", error);
           });
@@ -863,11 +827,11 @@
     <div class="buttons">
     <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/spherebot2.usdz?v=1712012969693&cameraY=30&cameraZ=100">Spherebot2</a>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/gearbox.usdz?v=1712012939566&cameraY=30&cameraZ=300">GearBox</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/knife.usdz?v=1712012954472&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
     
     <a class="filename"></a>
     <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
@@ -881,7 +845,15 @@
 
     <a id="export-gltf">Export as .glb</a></button>
     <br/>
+    <div class="buttons">
+      <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/Vehicles/index.usda">Vehicles</a>
     </div>
+  </div>
     
     <p id="message-log">
       Initializing...
