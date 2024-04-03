@@ -347,21 +347,21 @@ class HydraMaterial {
     'opacity': 'alphaMap'
   };
 
-  static usdPreviewToEncodingMap = {
-    'diffuseColor': THREE.sRGBEncoding,
-    'emissiveColor': THREE.sRGBEncoding,
-    'opacity': THREE.sRGBEncoding,
+  static usdPreviewToColorSpaceMap = {
+    'diffuseColor': THREE.SRGBColorSpace,
+    'emissiveColor': THREE.SRGBColorSpace,
+    'opacity': THREE.SRGBColorSpace,
   };
 
   static channelMap = {
     // Three.js expects many 8bit values such as roughness or metallness in a specific RGB texture channel.
     // We could write code to combine multiple 8bit texture files into different channels of one RGB texture where it
     // makes sense, but that would complicate this loader a lot. Most Three.js loaders don't seem to do it either.
-    // Instead, we simply provide the 8bit image as an RGB texture, even though this might be less efficient.
-    'r': THREE.RGBFormat,
-    'g': THREE.RGBFormat,
-    'b': THREE.RGBFormat,
-    'rgb': THREE.RGBFormat,
+    // Instead, we simply provide the 8bit image as an RGBA texture, even though this might be less efficient.
+    'r': THREE.RGBAFormat,
+    'g': THREE.RGBAFormat,
+    'b': THREE.RGBAFormat,
+    'rgb': THREE.RGBAFormat,
     'rgba': THREE.RGBAFormat
   };
 
@@ -497,7 +497,7 @@ class HydraMaterial {
             targetSwizzle = channel + channel + channel + channel;
           }
 
-          clonedTexture.encoding = HydraMaterial.usdPreviewToEncodingMap[parameterName] || THREE.LinearEncoding;
+          clonedTexture.colorSpace = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || THREE.LinearSRGBColorSpace;
           
           // console.log("Cloned texture", clonedTexture, "swizzled with", targetSwizzle);
           // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
@@ -509,7 +509,6 @@ class HydraMaterial {
           // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, channel, 'g')
 
           clonedTexture.format = HydraMaterial.channelMap[channel];
-          // clonedTexture.encoding = THREE.LinearEncoding;
           clonedTexture.needsUpdate = true;
           if (nodeIn.st && nodeIn.st.nodeIn) {
             const uvData = nodeIn.st.nodeIn;
