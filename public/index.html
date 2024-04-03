@@ -130,7 +130,7 @@
     const gltfExportBtn = document.getElementById('export-gltf');
     if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
       const exporter = new GLTFExporter();
-      console.log(window.usdRoot);
+      console.log("EXPORTING GLTF", window.usdRoot);
       exporter.parse( window.usdRoot, function ( gltf ) {
         const blob = new Blob([gltf], {type: 'application/octet-stream'});
         const url = URL.createObjectURL(blob);
@@ -142,7 +142,11 @@
         a.download = filename + ".glb";
         a.click();
         URL.revokeObjectURL(url);
-      }, { 
+      },
+      function (error) {
+        console.error(error);
+      },
+      { 
         binary: true,
         // not possible right now since USD controls animation bindings,
         // it's not a three.js clip
