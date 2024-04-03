@@ -170,7 +170,7 @@
       }
     }
 
-    function loadUsdFile(directory, filename, isRootFile = true) {
+    async function loadUsdFile(directory, filename, isRootFile = true) {
       setFilenameText(filename);
       let path = (new URL(document.location)).searchParams.get("file").split('?')[0];
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
@@ -178,39 +178,35 @@
       ready = false;
 
       // should be loaded last
-      if (isRootFile) {
+      if (!isRootFile) return;
 
-        let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
-        new Usd.HdWebSyncDriver(renderInterface, path).then(driver => {
-          window.driver = driver;
-          window.driver.Draw();
-          messageLog.textContent = "";
+      const renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
+      const driver = await new Usd.HdWebSyncDriver(renderInterface, path);
+      window.driver = driver;
+      window.driver.Draw();
+      messageLog.textContent = "";
 
-          // TODO: this 300ms wait is dumb and is here to try to get materials with references to show but it doesn't work
-          // window.driver.Draw kicks off a call to _engine.Execute which runs Sync on all prims which then calls into the asset Resolver
-          // window.driver.Draw returns after it kicks off that call, but the resolution isn't done yet.
-          // if window.driver.GetStage() is called before that resolution is finished, the app hits an assertion failure and dies
-          new Promise(resolve => setTimeout(resolve, 300)).then(()=>{
-            const stage = window.usdStage = window.driver.GetStage();
-            if (stage.GetEndTimeCode){
-              endTimeCode = stage.GetEndTimeCode();
-              timeout = 1000 / stage.GetTimeCodesPerSecond();
-            }
-            fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-            console.log("Loading done. Scene: ", window.usdRoot);
-            ready = true;
+      let stage = window.usdStage = window.driver.GetStage();
+      if (stage instanceof Promise) {
+        stage = await stage;
+        stage = window.usdStage = window.driver.GetStage();
+      }
+      if (stage.GetEndTimeCode){
+        endTimeCode = stage.GetEndTimeCode();
+        timeout = 1000 / stage.GetTimeCodesPerSecond();
+      }
+      fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+      console.log("Loading done. Scene: ", window.usdRoot);
+      ready = true;
 
-            try {
-              console.log("Currently Exposed API", {
-                "Stage": Object.getPrototypeOf(stage),
-                "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-                "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-              });
-            } catch(_) {}
-            });
-        }).catch(error => {
-            console.error("Failed to initialize driver:", error);
+      try {
+        console.log("Currently Exposed API", {
+          "Stage": Object.getPrototypeOf(stage),
+          "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+          "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
         });
+      } catch(e) {
+        console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
       }
     }
     
