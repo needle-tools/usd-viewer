@@ -223,9 +223,12 @@ class HydraMesh {
 
   // This is always called before prims are updated
   setMaterial(materialId) {
-    //console.log('Material: ' + materialId);
+    if (debugMaterials) console.log('Setting material on hydra prim: ' + materialId, this._mesh, materialId, this._interface.materials[materialId]);
     if (this._interface.materials[materialId]) {
       this._mesh.material = this._interface.materials[materialId]._material;
+    }
+    else {
+      console.error("Material not found", materialId, this._interface.materials);
     }
   }
 
@@ -319,6 +322,7 @@ class HydraMesh {
       case "uv0":
       case "UVW":
       case "uvw":
+      case "map1":
         this.setUV(data, dimension, interpolation);
         break;
       case "normals":
@@ -403,6 +407,7 @@ class HydraMaterial {
         side: THREE.DoubleSide,
         color: new THREE.Color(0xff2997), // a bright pink color to indicate a missing material
         envMap: window.envMap,
+        name: 'DefaultMaterial',
       });
     }
     // proper color when materials are disabled
@@ -564,7 +569,7 @@ class HydraMaterial {
           this._material[materialParameterMapName] = clonedTexture;
           this._material.needsUpdate = true;
 
-          if (debugTextures) console.log("RESOLVED TEXTURE", matName, parameterName);
+          if (debugTextures) console.log("RESOLVED TEXTURE", clonedTexture.name, matName, parameterName);
           resolve();
           return;
         }).catch(err => {
