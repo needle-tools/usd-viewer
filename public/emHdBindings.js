@@ -7501,9 +7501,9 @@ var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["asynci
 
 var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
 
-var ___start_em_js = Module["___start_em_js"] = 3738716;
+var ___start_em_js = Module["___start_em_js"] = 3739180;
 
-var ___stop_em_js = Module["___stop_em_js"] = 3739802;
+var ___stop_em_js = Module["___stop_em_js"] = 3740266;
 
 function applySignatureConversions(wasmExports) {
  wasmExports = Object.assign({}, wasmExports);

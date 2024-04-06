@@ -135,13 +135,14 @@ class HydraMesh {
     this._normals = undefined;
     this._colors = undefined;
     this._uvs = undefined;
-    this._indices = undefined;
+    this._indices = undefined; 
+    this._materials = [];
 
     const material = new THREE.MeshPhysicalMaterial( {
       side: THREE.DoubleSide,
       color: new THREE.Color(0x00ff00) // a green color to indicate a missing material
     } );
-
+    this._materials.push(material);
     this._mesh = new THREE.Mesh( this._geometry, material );
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
@@ -222,9 +223,21 @@ class HydraMesh {
 
   // This is always called before prims are updated
   setMaterial(materialId) {
-    // console.log('Material: ' + materialId);
+    //console.log('Material: ' + materialId);
     if (this._interface.materials[materialId]) {
       this._mesh.material = this._interface.materials[materialId]._material;
+    }
+  }
+
+  setGeomSubsetMaterial(startIndex, length, materialId) {
+    console.log('geom subset Material: ' + materialId, startIndex, length);
+    if (this._interface.materials[materialId]) {
+      this._materials.push(this._interface.materials[materialId]._material);
+      this._geometry.addGroup(startIndex * 6, length * 6, this._materials.length - 1);
+      //console.log("geo: ", this._geometry)
+      //console.log("this._materials: ", this._materials)
+      this._mesh = new THREE.Mesh( this._geometry, this._materials);
+      window.usdRoot.add(this._mesh);
     }
   }
 
