@@ -143,7 +143,7 @@ class HydraMesh {
       color: new THREE.Color(0x00ff00) // a green color to indicate a missing material
     } );
     this._materials.push(material);
-    this._mesh = new THREE.Mesh( this._geometry, material );
+    this._mesh = new THREE.Mesh( this._geometry );
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
 
