@@ -229,16 +229,19 @@ class HydraMesh {
     }
   }
 
-  setGeomSubsetMaterial(startIndex, length, materialId) {
-    console.log('geom subset Material: ' + materialId, startIndex, length);
-    if (this._interface.materials[materialId]) {
-      this._materials.push(this._interface.materials[materialId]._material);
-      this._geometry.addGroup(startIndex * 6, length * 6, this._materials.length - 1);
-      //console.log("geo: ", this._geometry)
-      //console.log("this._materials: ", this._materials)
-      this._mesh = new THREE.Mesh( this._geometry, this._materials);
-      window.usdRoot.add(this._mesh);
+  setGeomSubsetMaterial(sections) {
+    //console.log("setting subset material: ", this._id, sections)
+
+    for(let i = 0; i < sections.length; i++){
+      const section = sections[i];
+      if (this._interface.materials[section.materialId]) {
+        this._materials.push(this._interface.materials[section.materialId]._material);
+        this._geometry.addGroup(section.start, section.length, i + 1);
+      }
     }
+
+    this._mesh = new THREE.Mesh( this._geometry, this._materials);
+    window.usdRoot.add(this._mesh);
   }
 
   setDisplayColor(data, interpolation) {
