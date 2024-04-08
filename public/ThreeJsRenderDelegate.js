@@ -67,7 +67,6 @@ class TextureRegistry {
     }
 
     window.driver.getFile(resourcePath, async (loadedFile) => {
-      
       let loader = this.loader;
       if (filetype === 'image/tga')
         loader = this.tgaLoader;
@@ -77,6 +76,7 @@ class TextureRegistry {
       const baseUrl = this.baseUrl;
       function loadFromFile(_loadedFile) {
         let url = undefined;
+        if (debugTextures) console.log("window.driver.getFile",resourcePath, " => ", _loadedFile);
         if (_loadedFile) {
           let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
           url = URL.createObjectURL(blob);
@@ -86,6 +86,7 @@ class TextureRegistry {
           else
             url = resourcePath;
         }
+        if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "_loadedFile", _loadedFile, "baseUrl", baseUrl, "resourcePath", resourcePath);
         // Load the texture
         loader.load(
           // resource URL
@@ -134,13 +135,14 @@ class HydraMesh {
     this._normals = undefined;
     this._colors = undefined;
     this._uvs = undefined;
-    this._indices = undefined;
+    this._indices = undefined; 
+    this._materials = [];
 
     const material = new THREE.MeshPhysicalMaterial( {
       side: THREE.DoubleSide,
       color: new THREE.Color(0x00ff00) // a green color to indicate a missing material
     } );
-
+    this._materials.push(material);
     this._mesh = new THREE.Mesh( this._geometry, material );
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
@@ -221,10 +223,28 @@ class HydraMesh {
 
   // This is always called before prims are updated
   setMaterial(materialId) {
-    // console.log('Material: ' + materialId);
+    if (debugMaterials) console.log('Setting material on hydra prim: ' + materialId, this._mesh, materialId, this._interface.materials[materialId]);
     if (this._interface.materials[materialId]) {
       this._mesh.material = this._interface.materials[materialId]._material;
     }
+    else {
+      console.error("Material not found", materialId, this._interface.materials);
+    }
+  }
+
+  setGeomSubsetMaterial(sections) {
+    //console.log("setting subset material: ", this._id, sections)
+
+    for(let i = 0; i < sections.length; i++){
+      const section = sections[i];
+      if (this._interface.materials[section.materialId]) {
+        this._materials.push(this._interface.materials[section.materialId]._material);
+        this._geometry.addGroup(section.start, section.length, i + 1);
+      }
+    }
+
+    this._mesh = new THREE.Mesh( this._geometry, this._materials);
+    window.usdRoot.add(this._mesh);
   }
 
   setDisplayColor(data, interpolation) {
@@ -302,6 +322,7 @@ class HydraMesh {
       case "uv0":
       case "UVW":
       case "uvw":
+      case "map1":
         this.setUV(data, dimension, interpolation);
         break;
       case "normals":
@@ -346,21 +367,21 @@ class HydraMaterial {
     'opacity': 'alphaMap'
   };
 
-  static usdPreviewToEncodingMap = {
-    'diffuseColor': THREE.sRGBEncoding,
-    'emissiveColor': THREE.sRGBEncoding,
-    'opacity': THREE.sRGBEncoding,
+  static usdPreviewToColorSpaceMap = {
+    'diffuseColor': THREE.SRGBColorSpace,
+    'emissiveColor': THREE.SRGBColorSpace,
+    'opacity': THREE.SRGBColorSpace,
   };
 
   static channelMap = {
     // Three.js expects many 8bit values such as roughness or metallness in a specific RGB texture channel.
     // We could write code to combine multiple 8bit texture files into different channels of one RGB texture where it
     // makes sense, but that would complicate this loader a lot. Most Three.js loaders don't seem to do it either.
-    // Instead, we simply provide the 8bit image as an RGB texture, even though this might be less efficient.
-    'r': THREE.RGBFormat,
-    'g': THREE.RGBFormat,
-    'b': THREE.RGBFormat,
-    'rgb': THREE.RGBFormat,
+    // Instead, we simply provide the 8bit image as an RGBA texture, even though this might be less efficient.
+    'r': THREE.RGBAFormat,
+    'g': THREE.RGBAFormat,
+    'b': THREE.RGBAFormat,
+    'rgb': THREE.RGBAFormat,
     'rgba': THREE.RGBAFormat
   };
 
@@ -386,6 +407,7 @@ class HydraMaterial {
         side: THREE.DoubleSide,
         color: new THREE.Color(0xff2997), // a bright pink color to indicate a missing material
         envMap: window.envMap,
+        name: 'DefaultMaterial',
       });
     }
     // proper color when materials are disabled
@@ -398,7 +420,7 @@ class HydraMaterial {
   }
 
   updateNode(networkId, path, parameters) {
-    // console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
+    if (debugTextures) console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
     this._nodes[path] = parameters;
   }
 
@@ -420,148 +442,147 @@ class HydraMaterial {
   
   assignTexture(mainMaterial, parameterName) {
     return new Promise((resolve, reject) => {
-    const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
-    if (materialParameterMapName === undefined) {
-      console.warn(`Unsupported material texture parameter '${parameterName}'.`);
-      resolve();
-      return;
-    }
-    if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
-      const nodeIn = mainMaterial[parameterName].nodeIn;
-      if (!nodeIn.resolvedPath) {
-        console.warn("Texture node has no file!", nodeIn);
+      const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
+      if (materialParameterMapName === undefined) {
+        console.warn(`Unsupported material texture parameter '${parameterName}'.`);
+        resolve();
+        return;
       }
-      const textureFileName = nodeIn.resolvedPath?.replace("./", "");
-      const channel = mainMaterial[parameterName].inputName;
+      if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
+        const nodeIn = mainMaterial[parameterName].nodeIn;
+        if (!nodeIn.resolvedPath) {
+          console.warn("Texture node has no file!", nodeIn);
+        }
+        if (debugTextures)
+          console.log("Assigning texture with resolved path", parameterName, nodeIn.resolvedPath);
+        const textureFileName = nodeIn.resolvedPath?.replace("./", "");
+        const channel = mainMaterial[parameterName].inputName;
 
-      // For debugging
-      const matName = Object.keys(this._nodes).find(key => this._nodes[key] === mainMaterial);
-      console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'... with channel '${channel}'`);
+        // For debugging
+        const matName = Object.keys(this._nodes).find(key => this._nodes[key] === mainMaterial);
+        if (debugTextures) console.log(`Setting texture '${materialParameterMapName}' (${textureFileName}) of material '${matName}'... with channel '${channel}'`);
 
-      this._interface.registry.getTexture(textureFileName).then(texture => {
-        // console.log("getTexture", texture, nodeIn);
-        if (materialParameterMapName === 'alphaMap') {
-          // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
-          // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
-          // If not, we need to copy the alpha channel into a new texture's green channel, because that's what Three.js
-          // expects for alpha maps (not supported at the moment).
-          // NOTE that this only works if diffuse maps are always set before opacity maps, so the order of
-          // 'assingTexture' calls for a material matters.
-          if (nodeIn.file === mainMaterial.diffuseColor?.nodeIn?.file && channel === 'a') {
-            this._material.map.format = THREE.RGBAFormat;
-          } else {
-            // TODO: Extract the alpha channel into a new RGB texture.
-            console.warn("Separate alpha channel is currently not supported.", nodeIn.file, mainMaterial.diffuseColor?.nodeIn?.file, channel);
+        this._interface.registry.getTexture(textureFileName).then(texture => {
+          if (!this._material) {
+            console.error("Material not set when trying to assign texture, this is likely a bug");
+            resolve();
+          }
+          // console.log("getTexture", texture, nodeIn);
+          if (materialParameterMapName === 'alphaMap') {
+            // If this is an opacity map, check if it's using the alpha channel of the diffuse map.
+            // If so, simply change the format of that diffuse map to RGBA and make the material transparent.
+            // If not, we need to copy the alpha channel into a new texture's green channel, because that's what Three.js
+            // expects for alpha maps (not supported at the moment).
+            // NOTE that this only works if diffuse maps are always set before opacity maps, so the order of
+            // 'assingTexture' calls for a material matters.
+            if (nodeIn.file === mainMaterial.diffuseColor?.nodeIn?.file && channel === 'a') {
+              this._material.map.format = THREE.RGBAFormat;
+            } else {
+              // TODO: Extract the alpha channel into a new RGB texture.
+              console.warn("Separate alpha channel is currently not supported.", nodeIn.file, mainMaterial.diffuseColor?.nodeIn?.file, channel);
+            }
+            if (!this._material.alphaClip)
+              this._material.transparent = true;
+            
+            this._material.needsUpdate = true;
+            resolve();
+            return;
+          } else if (materialParameterMapName === 'metalnessMap') {
+            this._material.metalness = 1.0;
+          } else if (materialParameterMapName === 'roughnessMap') {
+            this._material.roughness = 1.0;
+          } else if (materialParameterMapName === 'emissiveMap') {
+            this._material.emissive = new THREE.Color(0xffffff);
+          } else if (!HydraMaterial.channelMap[channel]) {
+            console.warn(`Unsupported texture channel '${channel}'!`);
+            resolve();
+            return;
+          }
+          // TODO need to apply bias/scale to the texture in some cases.
+          // May be able to extract that for metalness/roughness/opacity/normalScale
+
+          // Clone texture and set the correct format.
+          const clonedTexture = texture.clone();
+          let targetSwizzle = 'rgba';
+
+          if (materialParameterMapName == 'roughnessMap' && channel != 'g') {
+            targetSwizzle = '0' + channel + '11';
+          }
+          if (materialParameterMapName == 'metalnessMap' && channel != 'b') {
+            targetSwizzle = '01' + channel + '1';
+          }
+          if (materialParameterMapName == 'occlusionMap' && channel != 'r') {
+            targetSwizzle = channel + '111';
+          }
+          if (materialParameterMapName == 'opacityMap' && channel != 'a') {
+            targetSwizzle = channel + channel + channel + channel;
           }
 
-          if (!this._material.alphaClip)
-            this._material.transparent = true;
+          clonedTexture.colorSpace = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || THREE.LinearSRGBColorSpace;
           
+          // console.log("Cloned texture", clonedTexture, "swizzled with", targetSwizzle);
+          // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
+          // if (materialParameterToTargetChannel[materialParameterMapName] && channel != materialParameterToTargetChannel[materialParameterMapName])
+          if (targetSwizzle != 'rgba')
+          {
+            clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
+          }
+          // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, channel, 'g')
+
+          clonedTexture.format = HydraMaterial.channelMap[channel];
+          clonedTexture.needsUpdate = true;
+          if (nodeIn.st && nodeIn.st.nodeIn) {
+            const uvData = nodeIn.st.nodeIn;
+            // console.log("Tiling data", uvData);
+            
+            // TODO this is messed up but works for scale and translation, not really for rotation.
+            // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
+            // (which is also not perfect but close)
+            
+            const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
+            const offset = uvData.translation ? new THREE.Vector2(uvData.translation[0], uvData.translation[1]) : new THREE.Vector2(0,0);
+            const repeat = uvData.scale ? new THREE.Vector2(uvData.scale[0], uvData.scale[1]) : new THREE.Vector2(1,1);
+            
+            const xRotationOffset = Math.sin( rotation );
+            const yRotationOffset = Math.cos( rotation );
+            offset.y = offset.y - (1 - yRotationOffset) * repeat.y;
+            offset.x = offset.x - xRotationOffset * repeat.x;
+            // offset.y = 1 - offset.y - repeat.y;
+            /*
+            if (uvData.scale) 
+              clonedTexture.repeat.set(uvData.scale[0], uvData.scale[1]);
+            if (uvData.translation)
+              clonedTexture.offset.set(uvData.translation[0], uvData.translation[1]);
+            if (uvData.rotation)
+            clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
+            */
+            
+            clonedTexture.repeat.set(repeat.x, repeat.y);
+            clonedTexture.offset.set(offset.x, offset.y);
+            clonedTexture.rotation = rotation;
+          }
+          
+          // TODO use nodeIn.wrapS and wrapT and map to THREE
+          clonedTexture.wrapS = this.convertWrap(nodeIn.wrapS);
+          clonedTexture.wrapT = this.convertWrap(nodeIn.wrapT);
+          if (debugTextures) console.log("Setting texture " + materialParameterMapName + " to", clonedTexture)
+          this._material[materialParameterMapName] = clonedTexture;
           this._material.needsUpdate = true;
+
+          if (debugTextures) console.log("RESOLVED TEXTURE", clonedTexture.name, matName, parameterName);
           resolve();
           return;
-        } else if (materialParameterMapName === 'metalnessMap') {
-          this._material.metalness = 1.0;
-        } else if (materialParameterMapName === 'roughnessMap') {
-          this._material.roughness = 1.0;
-        } else if (materialParameterMapName === 'emissiveMap') {
-          this._material.emissive = new THREE.Color(0xffffff);
-        } else if (!HydraMaterial.channelMap[channel]) {
-          console.warn(`Unsupported texture channel '${channel}'!`);
+        }).catch(err => {
+          console.warn("Error when loading texture", err);
           resolve();
           return;
-        }
-
-        // TODO need to apply bias/scale to the texture in some cases.
-        // May be able to extract that for metalness/roughness/opacity/normalScale
-
-        // Clone texture and set the correct format.
-        const clonedTexture = texture.clone();
-        let targetSwizzle = 'rgba';
-
-        if (materialParameterMapName == 'roughnessMap' && channel != 'g') {
-          targetSwizzle = '0' + channel + '11';
-        }
-        if (materialParameterMapName == 'metalnessMap' && channel != 'b') {
-          targetSwizzle = '01' + channel + '1';
-        }
-        if (materialParameterMapName == 'occlusionMap' && channel != 'r') {
-          targetSwizzle = channel + '111';
-        }
-        if (materialParameterMapName == 'opacityMap' && channel != 'a') {
-          targetSwizzle = channel + channel + channel + channel;
-        }
-
-        clonedTexture.encoding = HydraMaterial.usdPreviewToEncodingMap[parameterName] || THREE.LinearEncoding;
-        
-        // console.log("Cloned texture", clonedTexture, "swizzled with", targetSwizzle);
-        // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
-        // if (materialParameterToTargetChannel[materialParameterMapName] && channel != materialParameterToTargetChannel[materialParameterMapName])
-        if (targetSwizzle != 'rgba')
-        {
-          clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
-        }
-
-        // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, channel, 'g')
-
-        clonedTexture.format = HydraMaterial.channelMap[channel];
-        // clonedTexture.encoding = THREE.LinearEncoding;
-        clonedTexture.needsUpdate = true;
-
-        if (nodeIn.st && nodeIn.st.nodeIn) {
-          const uvData = nodeIn.st.nodeIn;
-          // console.log("Tiling data", uvData);
-          
-          // TODO this is messed up but works for scale and translation, not really for rotation.
-          // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
-          // (which is also not perfect but close)
-          
-          const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
-          const offset = uvData.translation ? new THREE.Vector2(uvData.translation[0], uvData.translation[1]) : new THREE.Vector2(0,0);
-          const repeat = uvData.scale ? new THREE.Vector2(uvData.scale[0], uvData.scale[1]) : new THREE.Vector2(1,1);
-          
-          const xRotationOffset = Math.sin( rotation );
-          const yRotationOffset = Math.cos( rotation );
-          
-          offset.y = offset.y - (1 - yRotationOffset) * repeat.y;
-          offset.x = offset.x - xRotationOffset * repeat.x;
-          // offset.y = 1 - offset.y - repeat.y;
-          /*
-          if (uvData.scale) 
-            clonedTexture.repeat.set(uvData.scale[0], uvData.scale[1]);
-          if (uvData.translation)
-            clonedTexture.offset.set(uvData.translation[0], uvData.translation[1]);
-          if (uvData.rotation)
-           clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
-           */
-          
-          clonedTexture.repeat.set(repeat.x, repeat.y);
-          clonedTexture.offset.set(offset.x, offset.y);
-          clonedTexture.rotation = rotation;
-        }
-        
-        // TODO use nodeIn.wrapS and wrapT and map to THREE
-        clonedTexture.wrapS = this.convertWrap(nodeIn.wrapS);
-        clonedTexture.wrapT = this.convertWrap(nodeIn.wrapT);
-
-        if (debugTextures) console.log("Setting texture " + materialParameterMapName + " to", clonedTexture)
-        this._material[materialParameterMapName] = clonedTexture;
-        this._material.needsUpdate = true;
-
-        if (debugTextures) console.log("RESOLVED TEXTURE", matName, parameterName);
+        });
+      } else {
+        this._material[materialParameterMapName] = undefined;
         resolve();
         return;
-      }).catch(err => {
-        console.warn("Error when loading texture", err);
-        resolve();
-        return;
-      });
-    } else {
-      this._material[materialParameterMapName] = undefined;
-      resolve();
-      return;
-    }
-  })
+      }
+    });
   }
 
   // from https://github.com/mrdoob/three.js/blob/dev/src/math/ColorManagement.js
@@ -729,11 +750,13 @@ class HydraMaterial {
     const haveMetalnessMap = !!(mainMaterialNode.metallic && mainMaterialNode.metallic.nodeIn);
     const haveOcclusionMap = !!(mainMaterialNode.occlusion && mainMaterialNode.occlusion.nodeIn);
 
-    console.log('Creating Material: ' + this._id, mainMaterialNode, {
-      haveRoughnessMap,
-      haveMetalnessMap,
-      haveOcclusionMap
-    });
+    if (debugMaterials) {
+      console.log('Creating Material: ' + this._id, mainMaterialNode, {
+        haveRoughnessMap,
+        haveMetalnessMap,
+        haveOcclusionMap
+      });
+    }
 
     if (!disableTextures) {
       const texturePromises = [];
@@ -747,12 +770,14 @@ class HydraMaterial {
       {
         if (debugMaterials) console.log(this._material.roughnessMap, this._material);
         this._material.metalnessMap = this._material.roughnessMap;
-        this._material.metalnessMap.needsUpdate = true;
+        if (this._material.metalnessMap) this._material.metalnessMap.needsUpdate = true;
+        else console.error("Something went wrong with the texture promise; haveRoughnessMap is true but no roughnessMap was loaded.");
       }
       else if (haveMetalnessMap && !haveRoughnessMap)
       {
         this._material.roughnessMap = this._material.metalnessMap;
-        this._material.roughnessMap.needsUpdate = true;
+        if (this._material.roughnessMap) this._material.roughnessMap.needsUpdate = true;
+        else console.error("Something went wrong with the texture promise; haveMetalnessMap is true but no metalnessMap was loaded.");
       }
       else if (haveMetalnessMap && haveRoughnessMap) {
         // need to merge textures
@@ -770,7 +795,7 @@ class HydraMaterial {
       this._material.envMap = window.envMap;
     }
 
-    console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
+    if (debugMaterials) console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
   }
 }
 

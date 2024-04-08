@@ -19,12 +19,12 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
       }
     }
   </script>
-  <script type="module" src="https://unpkg.com/three@0.128.0/build/three.module.js"></script>
+  <script type="module" src="https://unpkg.com/three@0.163.0/build/three.module.js"></script>
   <script src="emHdBindings.js" type="text/javascript"></script>
   <script type="module">
     import * as THREE from 'three';
@@ -61,7 +61,7 @@
       setFilenameText(filename);
     }  
       
-    function getUsdFile() {
+    function updateUrl() {
 
       // Workaround for CORS issues: 
       // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
@@ -70,26 +70,6 @@
         filename = filename.replace("github.com", "raw.githubusercontent.com");
         filename = filename.replace("/blob/", "/");
       }
-
-      // Load the usd file from filename
-      const loadUSDPromise = new Promise( (resolve, reject) => {
-        if (!filename) resolve(null);
-
-        let req = new XMLHttpRequest();
-        req.open("GET", filename, true);
-        req.responseType = "arraybuffer";
-
-        req.onload = function (oEvent) {
-          let arrayBuffer = req.response; // Note: not oReq.responseText
-          if (arrayBuffer) {
-            resolve(arrayBuffer);
-          } else {
-            reject();
-          }
-        };
-
-        req.send(null);
-      });
       
       // set quick look link
       let indexOfQuery = filename.indexOf('?');
@@ -103,17 +83,15 @@
       // set the file query parameter
       currentUrl.searchParams.set("file", filename);
       window.history.pushState({}, filename, currentUrl);
-      
-      return loadUSDPromise;
     }
 
     const initPromise = init();
     
     console.log("Loading USD Module...");
     messageLog.textContent = "Loading USD Module – this can take a moment...";
-    
+    updateUrl();
     try {
-      Promise.all([getUsdFile(), getUsdModule(), initPromise]).then(async ([usdFile, Usd]) => {
+      Promise.all([getUsdModule(), initPromise]).then(async ([Usd]) => {
         window.Usd = Usd;
         messageLog.textContent = "Loading done";
         animate();
@@ -122,7 +100,7 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
-          loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
+          loadUsdFile(undefined, filename, true);
         }
       });
     }
@@ -142,6 +120,7 @@
     var currentRootFileName = undefined;
     var timeout = 40;
     var endTimeCode = 1;
+    var ready = false;
     
     const usdzExportBtn = document.getElementById('export-usdz');
     if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
@@ -151,7 +130,7 @@
     const gltfExportBtn = document.getElementById('export-gltf');
     if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
       const exporter = new GLTFExporter();
-      console.log(window.usdRoot);
+      console.log("EXPORTING GLTF", window.usdRoot);
       exporter.parse( window.usdRoot, function ( gltf ) {
         const blob = new Blob([gltf], {type: 'application/octet-stream'});
         const url = URL.createObjectURL(blob);
@@ -163,7 +142,11 @@
         a.download = filename + ".glb";
         a.click();
         URL.revokeObjectURL(url);
-      }, { 
+      },
+      function (error) {
+        console.error(error);
+      },
+      { 
         binary: true,
         // not possible right now since USD controls animation bindings,
         // it's not a three.js clip
@@ -191,109 +174,43 @@
       }
     }
 
-    function getRandomFilename(filename) {
-      let parts = filename.split('.');
-      let extension = parts[parts.length - 1];
-      extension = extension.split('?')[0];
-      let fileName = (Math.random() + 1).toString(36).substring(7);
-      let inputFile = fileName + "." + extension;
-      return inputFile;
-    }
-
-    function loadUsdFileFromArrayBuffer(directory, filename, usdFile, isRootFile = true) {
+    async function loadUsdFile(directory, filename, isRootFile = true) {
       setFilenameText(filename);
-
-      let inputFile = filename;
-      
-      // if this is a file from the URL, we don't know anything about directories, and give it a random root file name.
-      if (directory === undefined) {
-        directory = "/";
-        inputFile = getRandomFilename(filename);
-      }
-
-      const path = directory + inputFile;
+      let path = (new URL(document.location)).searchParams.get("file").split('?')[0];
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
+      loadedFiles.length = 0;
+      ready = false;
 
-      // make sure we have all directories up to here
-      Usd.FS_createPath("", directory, true, true);
-      
-      //try 
-      {
-        Usd.FS_createDataFile(directory, inputFile, new Uint8Array(usdFile), true, true, true);
-      }
-      /*
-      catch(e) {
-        console.error("Error creating data file: [" + directory + "]: " + inputFile + ":::", usdFile, e);
-        throw e;
-      }
-      */
-      // SUPER HACKY check if the root file can be interpreted as string, if yes, get the upAxis from it
-      // THis should be handled elsewhere... seems that is not exposed/not handled by the WASM API right now
-      if (isRootFile) {
-        const usdString = new TextDecoder("utf-8").decode(usdFile);
-        // check if we find "upAxis"
-        const upAxisIndex = usdString.indexOf("upAxis");
-        if (upAxisIndex >= 0) {
-          const nextLineBreak = usdString.indexOf("\n", upAxisIndex);
-          const upAxisString = usdString.substring(upAxisIndex, nextLineBreak);
-          const upAxisValue = upAxisString.split('"');
-          // check if any entry is "Z" or "Y"
-          if (upAxisValue.includes("Z")) {
-            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
-          }
-          else if (upAxisValue.includes("Y")) {
-            window.usdRoot.quaternion.setFromEuler(new THREE.Euler(0, 0, 0));
-          }
-        }
-      }
-
-      // clear existing objects
-      /*
-      window.usdRoot.clear();
-      if (currentRootFileName) {
-        Usd.FS_unlink(currentRootFileName, true);
-        currentRootFileName = undefined;
-      }
-      */
-
-      if (!isRootFile )
-        loadedFiles.push(path);
-      if (isRootFile)
-        currentRootFileName = path;
-      
       // should be loaded last
-      if (isRootFile) {
-        let renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles);
-        let driver = window.driver = new Usd.HdWebSyncDriver(renderInterface, path);
+      if (!isRootFile) return;
 
-        driver.Draw();
-        
-        const stage = window.usdStage = window.driver.GetStage();
+      const renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
+      const driver = await new Usd.HdWebSyncDriver(renderInterface, path);
+      window.driver = driver;
+      window.driver.Draw();
+      messageLog.textContent = "";
+
+      let stage = window.usdStage = window.driver.GetStage();
+      if (stage instanceof Promise) {
+        stage = await stage;
+        stage = window.usdStage = window.driver.GetStage();
+      }
+      if (stage.GetEndTimeCode){
         endTimeCode = stage.GetEndTimeCode();
         timeout = 1000 / stage.GetTimeCodesPerSecond();
-        
-        // adjust camera framing
-        fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-        console.log("Loading done. Scene: ", window.usdRoot);
+      }
+      fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+      console.log("Loading done. Scene: ", window.usdRoot);
+      ready = true;
 
-        // some experiments for understanding what parts of the USD API are exposed in WASM
-        /*
-        const rootLayer = stage.GetRootLayer();
-        rootLayer.Traverse("/", (primPath) => {
-          const prim = stage.GetPrimAtPath(primPath);
-          console.log("Prim", primPath, prim);
+      try {
+        console.log("Currently Exposed API", {
+          "Stage": Object.getPrototypeOf(stage),
+          "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+          "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
         });
-        */
-        try {
-          console.log("Currently Exposed API", {
-            "Stage": Object.getPrototypeOf(stage),
-            "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-            "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-          });
-        } catch(_) {}
-
-        // console.log(stage.GetRootLayer(), "up", stage.GetRootLayer().GetPropertyAtPath("upAxis"));
-        messageLog.textContent = "";
+      } catch(e) {
+        console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
       }
     }
     
@@ -314,6 +231,7 @@
       if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
           Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
         console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, size);
+        controls.update();
         return;
       }
 
@@ -321,6 +239,11 @@
       const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
       const fitWidthDistance = fitHeightDistance / camera.aspect;
       const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+
+      if (distance == 0) {
+        console.warn("Fit Camera failed: distance is 0, some objects may not have any mesh data.");
+        return;
+      }
 
       const direction = controls.target.clone()
         .sub(camera.position)
@@ -382,8 +305,8 @@
       const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
-      // renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      // renderer.toneMapping = THREE.AgXToneMapping;
       // renderer.toneMappingExposure = 1;
       renderer.shadowMap.enabled = false;
       renderer.shadowMap.type = THREE.VSMShadowMap;
@@ -445,11 +368,11 @@
           if (filename) {
             el.classList.add("have-custom-file");
             messageLog.textContent = "Downloading File " + filename + "...";
-            let usdFile = await getUsdFile();
+            updateUrl();
             // get just the filename, no paths
             const parts = filename.split('/');
             filename = parts[parts.length - 1];
-            loadUsdFileFromArrayBuffer(undefined, filename, usdFile, true);
+            loadUsdFile(undefined, filename, true);
           }
         });
       }
@@ -478,30 +401,25 @@
       let secs = new Date().getTime() / 1000;
       await new Promise(resolve => setTimeout(resolve, 10));
       const time = secs * (1000 / timeout) % endTimeCode;
-      
-      if (window.driver) {
+      if (window.driver && window.driver.SetTime && window.driver.Draw && ready) {
         window.driver.SetTime(time);
         window.driver.Draw();
+        render();
       }
-      render();
-
       requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
     }
 
     function onWindowResize() {
-
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-
       renderer.setSize( window.innerWidth, window.innerHeight );
-
     }
 
     function render() {
-
       const time = Date.now() * 0.001;
-      window.renderer.render( window.scene, window.camera );
-
+      if (window.renderer.render && window.scene){
+        window.renderer.render( window.scene, window.camera );
+      }
     }
   
     async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
@@ -528,7 +446,7 @@
           }
           //try 
           {
-            loadUsdFileFromArrayBuffer(directory, fileName, event.target.result, isRootFile);
+            loadUsdFile(directory, fileName, event.target.result, isRootFile);
           }
           // catch (e) { console.error("Error loading file", file, fullPath, e); }
         };
@@ -813,11 +731,11 @@
     <div class="buttons">
     <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz?v=1646512428693&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/spherebot2.usdz?v=1646512428721&cameraY=30&cameraZ=100">Spherebot2</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/spherebot2.usdz?v=1712012969693&cameraY=30&cameraZ=100">Spherebot2</a>
     <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/gearbox.usdz?v=1646512435332&cameraY=30&cameraZ=300">GearBox</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/knife.usdz?v=1646512427453&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/gearbox.usdz?v=1712012939566&cameraY=30&cameraZ=300">GearBox</a>
+    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/knife.usdz?v=1712012954472&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
     
     <a class="filename"></a>
     <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
@@ -831,7 +749,15 @@
 
     <a id="export-gltf">Export as .glb</a></button>
     <br/>
-    </div>
+  </div>
+  <div class="buttons">
+    <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/Vehicles/index.usda">Vehicles</a>
+  </div>
     
     <p id="message-log">
       Initializing...
