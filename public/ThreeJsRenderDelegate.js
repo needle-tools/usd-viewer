@@ -138,9 +138,10 @@ class HydraMesh {
     this._indices = undefined; 
     this._materials = [];
 
-    const material = new THREE.MeshBasicMaterial( {
+    let material = new THREE.MeshPhysicalMaterial( {
       side: THREE.DoubleSide,
-      color: new THREE.Color(0xaaaaaa) // a green color to indicate a missing material
+      color: new THREE.Color(0xB4B4B4),
+      envMap: window.envMap,
     } );
     this._materials.push(material);
     this._mesh = new THREE.Mesh( this._geometry, material );
