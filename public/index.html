@@ -100,7 +100,8 @@
           messageLog.textContent = "Loading File " + filename;
 
           clearStage();
-          loadUsdFile(undefined, filename, true);
+          const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
+          loadUsdFile(undefined, filename, urlPath, true);
         }
       });
     }
@@ -170,18 +171,18 @@
       }
     }
 
-    async function loadUsdFile(directory, filename, isRootFile = true) {
+    async function loadUsdFile(directory, filename, path, isRootFile = true) {
       setFilenameText(filename);
-      let path = (new URL(document.location)).searchParams.get("file").split('?')[0];
       if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
-      loadedFiles.length = 0;
       ready = false;
 
       // should be loaded last
       if (!isRootFile) return;
-
       const renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
-      const driver = await new Usd.HdWebSyncDriver(renderInterface, path);
+      let driver = new Usd.HdWebSyncDriver(renderInterface, path);
+      if (driver instanceof Promise) {
+        driver = await driver;
+      }
       window.driver = driver;
       window.driver.Draw();
       messageLog.textContent = "";
@@ -368,7 +369,8 @@
             // get just the filename, no paths
             const parts = filename.split('/');
             filename = parts[parts.length - 1];
-            loadUsdFile(undefined, filename, true);
+            const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
+            loadUsdFile(undefined, filename, urlPath, true);
           }
         });
       }
@@ -440,11 +442,9 @@
             directory = fullPath.substring(0, fullPath.length - fileName.length);
             if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
           }
-          //try 
-          {
-            loadUsdFile(directory, fileName, event.target.result, isRootFile);
-          }
-          // catch (e) { console.error("Error loading file", file, fullPath, e); }
+          Usd.FS_createPath("", directory, true, true);
+          Usd.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+          loadUsdFile(directory, fileName, fullPath, isRootFile);
         };
         reader.readAsArrayBuffer(file);
         await loadingPromise;
