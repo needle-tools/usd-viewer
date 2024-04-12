@@ -187,11 +187,12 @@
       window.driver.Draw();
       messageLog.textContent = "";
 
-      let stage = window.usdStage = window.driver.GetStage();
+      let stage = window.driver.GetStage();
       if (stage instanceof Promise) {
         stage = await stage;
-        stage = window.usdStage = window.driver.GetStage();
+        stage = window.driver.GetStage();
       }
+      window.usdStage = stage
       if (stage.GetEndTimeCode){
         endTimeCode = stage.GetEndTimeCode();
         timeout = 1000 / stage.GetTimeCodesPerSecond();

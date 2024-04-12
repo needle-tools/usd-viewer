@@ -889,6 +889,13 @@ function __asyncjs__fetch_asset(route, dataPtr) {
  });
 }
 
+function addToLoadedFiles(path) {
+ if (typeof loadedFiles === "undefined") {
+  var loadedFiles = [];
+ }
+ loadedFiles.push(UTF8ToString(path));
+}
+
 function downloadJS(data, filenamedata) {
  const text = UTF8ToString(data);
  const filename = UTF8ToString(filenamedata);
@@ -7293,6 +7300,7 @@ var wasmImports = {
  /** @export */ _munmap_js: __munmap_js,
  /** @export */ _setitimer_js: __setitimer_js,
  /** @export */ abort: _abort,
+ /** @export */ addToLoadedFiles: addToLoadedFiles,
  /** @export */ downloadJS: downloadJS,
  /** @export */ emscripten_check_blocking_allowed: _emscripten_check_blocking_allowed,
  /** @export */ emscripten_date_now: _emscripten_date_now,
@@ -7503,7 +7511,7 @@ var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify
 
 var ___start_em_js = Module["___start_em_js"] = 3739116;
 
-var ___stop_em_js = Module["___stop_em_js"] = 3740202;
+var ___stop_em_js = Module["___stop_em_js"] = 3740331;
 
 function applySignatureConversions(wasmExports) {
  wasmExports = Object.assign({}, wasmExports);
