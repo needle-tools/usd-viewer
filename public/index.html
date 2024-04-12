@@ -258,9 +258,10 @@
       camera.near = distance / 100;
       camera.far = distance * 100;
 
+      camera.updateProjectionMatrix();
+
       camera.position.copy(controls.target).sub(direction);
       controls.update();
-      camera.updateMatrixWorld(true);
 
       console.log("Fitting camera to selection", {
         size,
