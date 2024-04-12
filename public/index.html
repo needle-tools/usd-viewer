@@ -243,6 +243,10 @@
         return;
       }
 
+      camera.position.z = params.get('cameraZ') || 7;
+      camera.position.y = params.get('cameraY') || 7;
+      camera.position.x = params.get('cameraX') || 0;
+
       const direction = controls.target.clone()
         .sub(camera.position)
         .normalize()
@@ -253,10 +257,10 @@
 
       camera.near = distance / 100;
       camera.far = distance * 100;
-      camera.updateProjectionMatrix();
 
       camera.position.copy(controls.target).sub(direction);
       controls.update();
+      camera.updateMatrixWorld(true);
 
       console.log("Fitting camera to selection", {
         size,
