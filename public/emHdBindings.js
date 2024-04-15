@@ -637,11 +637,15 @@ if (ENVIRONMENT_IS_PTHREAD) {
  if (Module["wasmMemory"]) {
   wasmMemory = Module["wasmMemory"];
  } else {
-  wasmMemory = new WebAssembly.Memory({
-   "initial": INITIAL_MEMORY / 65536,
-   "maximum": 4294967296 / 65536,
-   "shared": true
-  });
+  function isMobileDevice(){
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+  
+  const MAX_MEMORY_MOBILE=1024*1024*1024;
+  const MAX_MEMORY_DESKTOP=4*1024*1024*1024;
+  const MAX_DEVICE_MEMORY=isMobileDevice() ? MAX_MEMORY_MOBILE : MAX_MEMORY_DESKTOP;
+  
+  wasmMemory = new WebAssembly.Memory({"initial":INITIAL_MEMORY/65536,"maximum":MAX_DEVICE_MEMORY/65536,"shared":true})
   if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) {
    err("requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag");
    if (ENVIRONMENT_IS_NODE) {
