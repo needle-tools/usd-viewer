@@ -336,6 +336,10 @@ class HydraMesh {
     }
   }
 
+  skelDetected(id, primVarName) {
+    console.warn('UsdSkel detected. Skinned Meshes are not fully supported: ', primVarName, id);
+  }
+
   updatePoints(points) {
     this._points = points.slice(0);
     this.updateOrder(this._points, 'position');

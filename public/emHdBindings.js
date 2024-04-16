@@ -198,6 +198,9 @@ Module.expectedDataFileDownloads++;
    Module["FS_createPath"]("/usd", "usdShaders", true, true);
    Module["FS_createPath"]("/usd/usdShaders", "resources", true, true);
    Module["FS_createPath"]("/usd/usdShaders/resources", "shaders", true, true);
+   Module["FS_createPath"]("/usd", "usdSkel", true, true);
+   Module["FS_createPath"]("/usd/usdSkel", "resources", true, true);
+   Module["FS_createPath"]("/usd/usdSkel/resources", "usdSkel", true, true);
    Module["FS_createPath"]("/usd", "usdVol", true, true);
    Module["FS_createPath"]("/usd/usdVol", "resources", true, true);
    Module["FS_createPath"]("/usd/usdVol/resources", "usdVol", true, true);
@@ -426,19 +429,31 @@ Module.expectedDataFileDownloads++;
    "start": 748216,
    "end": 749439
   }, {
-   "filename": "/usd/usdVol/resources/generatedSchema.usda",
+   "filename": "/usd/usdSkel/resources/generatedSchema.usda",
    "start": 749439,
-   "end": 773884
+   "end": 764930
+  }, {
+   "filename": "/usd/usdSkel/resources/plugInfo.json",
+   "start": 764930,
+   "end": 767924
+  }, {
+   "filename": "/usd/usdSkel/resources/usdSkel/schema.usda",
+   "start": 767924,
+   "end": 778329
+  }, {
+   "filename": "/usd/usdVol/resources/generatedSchema.usda",
+   "start": 778329,
+   "end": 802774
   }, {
    "filename": "/usd/usdVol/resources/plugInfo.json",
-   "start": 773884,
-   "end": 776320
+   "start": 802774,
+   "end": 805210
   }, {
    "filename": "/usd/usdVol/resources/usdVol/schema.usda",
-   "start": 776320,
-   "end": 782196
+   "start": 805210,
+   "end": 811086
   } ],
-  "remote_package_size": 782196
+  "remote_package_size": 811086
  });
 })();
 
@@ -7415,6 +7430,10 @@ var dynCall_viiiii = Module["dynCall_viiiii"] = (a0, a1, a2, a3, a4, a5) => (dyn
 
 var dynCall_diii = Module["dynCall_diii"] = (a0, a1, a2, a3) => (dynCall_diii = Module["dynCall_diii"] = wasmExports["dynCall_diii"])(a0, a1, a2, a3);
 
+var dynCall_iiid = Module["dynCall_iiid"] = (a0, a1, a2, a3) => (dynCall_iiid = Module["dynCall_iiid"] = wasmExports["dynCall_iiid"])(a0, a1, a2, a3);
+
+var dynCall_iiiiid = Module["dynCall_iiiiid"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iiiiid = Module["dynCall_iiiiid"] = wasmExports["dynCall_iiiiid"])(a0, a1, a2, a3, a4, a5);
+
 var dynCall_viif = Module["dynCall_viif"] = (a0, a1, a2, a3) => (dynCall_viif = Module["dynCall_viif"] = wasmExports["dynCall_viif"])(a0, a1, a2, a3);
 
 var dynCall_iiffi = Module["dynCall_iiffi"] = (a0, a1, a2, a3, a4) => (dynCall_iiffi = Module["dynCall_iiffi"] = wasmExports["dynCall_iiffi"])(a0, a1, a2, a3, a4);
@@ -7499,8 +7518,6 @@ var dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a
 
 var dynCall_iiiiij = Module["dynCall_iiiiij"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiij = Module["dynCall_iiiiij"] = wasmExports["dynCall_iiiiij"])(a0, a1, a2, a3, a4, a5, a6);
 
-var dynCall_iiiiid = Module["dynCall_iiiiid"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iiiiid = Module["dynCall_iiiiid"] = wasmExports["dynCall_iiiiid"])(a0, a1, a2, a3, a4, a5);
-
 var dynCall_iiiiijj = Module["dynCall_iiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiijj = Module["dynCall_iiiiijj"] = wasmExports["dynCall_iiiiijj"])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
 
 var dynCall_iiiiiijj = Module["dynCall_iiiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiijj = Module["dynCall_iiiiiijj"] = wasmExports["dynCall_iiiiiijj"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -7513,9 +7530,9 @@ var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["asynci
 
 var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
 
-var ___start_em_js = Module["___start_em_js"] = 3739116;
+var ___start_em_js = Module["___start_em_js"] = 3754860;
 
-var ___stop_em_js = Module["___stop_em_js"] = 3740331;
+var ___stop_em_js = Module["___stop_em_js"] = 3756075;
 
 function applySignatureConversions(wasmExports) {
  wasmExports = Object.assign({}, wasmExports);
