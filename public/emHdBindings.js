@@ -198,6 +198,9 @@ Module.expectedDataFileDownloads++;
    Module["FS_createPath"]("/usd", "usdShaders", true, true);
    Module["FS_createPath"]("/usd/usdShaders", "resources", true, true);
    Module["FS_createPath"]("/usd/usdShaders/resources", "shaders", true, true);
+   Module["FS_createPath"]("/usd", "usdSkel", true, true);
+   Module["FS_createPath"]("/usd/usdSkel", "resources", true, true);
+   Module["FS_createPath"]("/usd/usdSkel/resources", "usdSkel", true, true);
    Module["FS_createPath"]("/usd", "usdVol", true, true);
    Module["FS_createPath"]("/usd/usdVol", "resources", true, true);
    Module["FS_createPath"]("/usd/usdVol/resources", "usdVol", true, true);
@@ -426,19 +429,31 @@ Module.expectedDataFileDownloads++;
    "start": 748216,
    "end": 749439
   }, {
-   "filename": "/usd/usdVol/resources/generatedSchema.usda",
+   "filename": "/usd/usdSkel/resources/generatedSchema.usda",
    "start": 749439,
-   "end": 773884
+   "end": 764930
+  }, {
+   "filename": "/usd/usdSkel/resources/plugInfo.json",
+   "start": 764930,
+   "end": 767924
+  }, {
+   "filename": "/usd/usdSkel/resources/usdSkel/schema.usda",
+   "start": 767924,
+   "end": 778329
+  }, {
+   "filename": "/usd/usdVol/resources/generatedSchema.usda",
+   "start": 778329,
+   "end": 802774
   }, {
    "filename": "/usd/usdVol/resources/plugInfo.json",
-   "start": 773884,
-   "end": 776320
+   "start": 802774,
+   "end": 805210
   }, {
    "filename": "/usd/usdVol/resources/usdVol/schema.usda",
-   "start": 776320,
-   "end": 782196
+   "start": 805210,
+   "end": 811086
   } ],
-  "remote_package_size": 782196
+  "remote_package_size": 811086
  });
 })();
 
@@ -637,11 +652,15 @@ if (ENVIRONMENT_IS_PTHREAD) {
  if (Module["wasmMemory"]) {
   wasmMemory = Module["wasmMemory"];
  } else {
-  wasmMemory = new WebAssembly.Memory({
-   "initial": INITIAL_MEMORY / 65536,
-   "maximum": 4294967296 / 65536,
-   "shared": true
-  });
+  function isMobileDevice(){
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+  
+  const MAX_MEMORY_MOBILE=1024*1024*1024;
+  const MAX_MEMORY_DESKTOP=4*1024*1024*1024;
+  const MAX_DEVICE_MEMORY=isMobileDevice() ? MAX_MEMORY_MOBILE : MAX_MEMORY_DESKTOP;
+  
+  wasmMemory = new WebAssembly.Memory({"initial":INITIAL_MEMORY/65536,"maximum":MAX_DEVICE_MEMORY/65536,"shared":true})
   if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) {
    err("requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag");
    if (ENVIRONMENT_IS_NODE) {
@@ -887,6 +906,13 @@ function __asyncjs__fetch_asset(route, dataPtr) {
    Module.HEAP32[(dataPtr >> 2) + 1] = 0;
   }
  });
+}
+
+function addToLoadedFiles(path) {
+ if (typeof loadedFiles === "undefined") {
+  var loadedFiles = [];
+ }
+ loadedFiles.push(UTF8ToString(path));
 }
 
 function downloadJS(data, filenamedata) {
@@ -7293,6 +7319,7 @@ var wasmImports = {
  /** @export */ _munmap_js: __munmap_js,
  /** @export */ _setitimer_js: __setitimer_js,
  /** @export */ abort: _abort,
+ /** @export */ addToLoadedFiles: addToLoadedFiles,
  /** @export */ downloadJS: downloadJS,
  /** @export */ emscripten_check_blocking_allowed: _emscripten_check_blocking_allowed,
  /** @export */ emscripten_date_now: _emscripten_date_now,
@@ -7403,6 +7430,10 @@ var dynCall_viiiii = Module["dynCall_viiiii"] = (a0, a1, a2, a3, a4, a5) => (dyn
 
 var dynCall_diii = Module["dynCall_diii"] = (a0, a1, a2, a3) => (dynCall_diii = Module["dynCall_diii"] = wasmExports["dynCall_diii"])(a0, a1, a2, a3);
 
+var dynCall_iiid = Module["dynCall_iiid"] = (a0, a1, a2, a3) => (dynCall_iiid = Module["dynCall_iiid"] = wasmExports["dynCall_iiid"])(a0, a1, a2, a3);
+
+var dynCall_iiiiid = Module["dynCall_iiiiid"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iiiiid = Module["dynCall_iiiiid"] = wasmExports["dynCall_iiiiid"])(a0, a1, a2, a3, a4, a5);
+
 var dynCall_viif = Module["dynCall_viif"] = (a0, a1, a2, a3) => (dynCall_viif = Module["dynCall_viif"] = wasmExports["dynCall_viif"])(a0, a1, a2, a3);
 
 var dynCall_iiffi = Module["dynCall_iiffi"] = (a0, a1, a2, a3, a4) => (dynCall_iiffi = Module["dynCall_iiffi"] = wasmExports["dynCall_iiffi"])(a0, a1, a2, a3, a4);
@@ -7487,8 +7518,6 @@ var dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] = (a0, a1, a2, a3, a4, a5, a
 
 var dynCall_iiiiij = Module["dynCall_iiiiij"] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiij = Module["dynCall_iiiiij"] = wasmExports["dynCall_iiiiij"])(a0, a1, a2, a3, a4, a5, a6);
 
-var dynCall_iiiiid = Module["dynCall_iiiiid"] = (a0, a1, a2, a3, a4, a5) => (dynCall_iiiiid = Module["dynCall_iiiiid"] = wasmExports["dynCall_iiiiid"])(a0, a1, a2, a3, a4, a5);
-
 var dynCall_iiiiijj = Module["dynCall_iiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiijj = Module["dynCall_iiiiijj"] = wasmExports["dynCall_iiiiijj"])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
 
 var dynCall_iiiiiijj = Module["dynCall_iiiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiijj = Module["dynCall_iiiiiijj"] = wasmExports["dynCall_iiiiiijj"])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -7501,9 +7530,9 @@ var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["asynci
 
 var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
 
-var ___start_em_js = Module["___start_em_js"] = 3739164;
+var ___start_em_js = Module["___start_em_js"] = 3754860;
 
-var ___stop_em_js = Module["___stop_em_js"] = 3740250;
+var ___stop_em_js = Module["___stop_em_js"] = 3756075;
 
 function applySignatureConversions(wasmExports) {
  wasmExports = Object.assign({}, wasmExports);
