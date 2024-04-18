@@ -303,13 +303,7 @@ var getUsdModule = (() => {
                     const MAX_DEVICE_MEMORY = isMobileDevice() ? MAX_MEMORY_MOBILE : MAX_MEMORY_DESKTOP;
 
                     wasmMemory = new WebAssembly.Memory({ "initial": INITIAL_MEMORY / 65536, "maximum": MAX_DEVICE_MEMORY / 65536, "shared": true })
-                    if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) {
-                        err("requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag");
-                        if (ENVIRONMENT_IS_NODE) {
-                            err("(on node you may need: --experimental-wasm-threads --experimental-wasm-bulk-memory and/or recent version)")
-                        }
-                        throw Error("bad memory")
-                    }
+                    if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) { err("requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag"); if (ENVIRONMENT_IS_NODE) { err("(on node you may need: --experimental-wasm-threads --experimental-wasm-bulk-memory and/or recent version)") } throw Error("bad memory") }
                 }
             }
             updateMemoryViews();
@@ -603,7 +597,7 @@ var getUsdModule = (() => {
                 var endIdx = idx + maxBytesToRead;
                 var endPtr = idx;
                 while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
-                if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) { return UTF8Decoder.decode(heapOrArray.buffer instanceof SharedArrayBuffer ? heapOrArray.slice(idx, endPtr) : heapOrArray.subarray(idx, endPtr)) }
+                if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) { return UTF8Decoder.decode(heapOrArray.slice(idx, endPtr)) }
                 var str = "";
                 while (idx < endPtr) {
                     var u0 = heapOrArray[idx++];
@@ -2415,14 +2409,14 @@ var getUsdModule = (() => {
                 if (handle === null) { if (this.isReference) { throwBindingError(`null is not a valid ${this.name}`) } if (this.isSmartPointer) { ptr = this.rawConstructor(); if (destructors !== null) { destructors.push(this.rawDestructor, ptr) } return ptr } else { return 0 } }
                 if (!handle.$$) { throwBindingError(`Cannot pass "${embindRepr(handle)}" as a ${this.name}`) }
                 if (!handle.$$.ptr) { throwBindingError(`Cannot pass deleted object as a pointer of type ${this.name}`) }
-                if (!this.isConst && handle.$$.ptrType.isConst) { throwBindingError(`Cannot convert argument of type ${handle.$$.smartPtrType ? handle.$$.smartPtrType.name : handle.$$.ptrType.name} to parameter type ${this.name}`) }
+                if (!this.isConst && handle.$$.ptrType.isConst) { throwBindingError(`Cannot convert argument of type ${handle.$$.smartPtrType?handle.$$.smartPtrType.name:handle.$$.ptrType.name} to parameter type ${this.name}`) }
                 var handleClass = handle.$$.ptrType.registeredClass;
                 ptr = upcastPointer(handle.$$.ptr, handleClass, this.registeredClass);
                 if (this.isSmartPointer) {
                     if (undefined === handle.$$.smartPtr) { throwBindingError("Passing raw pointer to smart pointer is illegal") }
                     switch (this.sharingPolicy) {
                         case 0:
-                            if (handle.$$.smartPtrType === this) { ptr = handle.$$.smartPtr } else { throwBindingError(`Cannot convert argument of type ${handle.$$.smartPtrType ? handle.$$.smartPtrType.name : handle.$$.ptrType.name} to parameter type ${this.name}`) }
+                            if (handle.$$.smartPtrType === this) { ptr = handle.$$.smartPtr } else { throwBindingError(`Cannot convert argument of type ${handle.$$.smartPtrType?handle.$$.smartPtrType.name:handle.$$.ptrType.name} to parameter type ${this.name}`) }
                             break;
                         case 1:
                             ptr = handle.$$.smartPtr;
@@ -2746,7 +2740,7 @@ var getUsdModule = (() => {
                     argsList += (i !== 0 ? ", " : "") + "arg" + i;
                     argsListWired += (i !== 0 ? ", " : "") + "arg" + i + "Wired"
                 }
-                var invokerFnBody = `\n        return function ${makeLegalFunctionName(humanName)}(${argsList}) {\n        if (arguments.length !== ${argCount - 2}) {\n          throwBindingError('function ${humanName} called with ' + arguments.length + ' arguments, expected ${argCount - 2}');\n        }`;
+                var invokerFnBody = `\n        return function ${makeLegalFunctionName(humanName)}(${argsList}) {\n        if (arguments.length !== ${argCount-2}) {\n          throwBindingError('function ${humanName} called with ' + arguments.length + ' arguments, expected ${argCount-2}');\n        }`;
                 if (needsDestructorStack) { invokerFnBody += "var destructors = [];\n" }
                 var dtorStack = needsDestructorStack ? "destructors" : "null";
                 var args1 = ["throwBindingError", "invoker", "fn", "runDestructors", "retType", "classParam"];
@@ -2869,7 +2863,7 @@ var getUsdModule = (() => {
                     classType = classType[0];
                     var humanName = `constructor ${classType.name}`;
                     if (undefined === classType.registeredClass.constructor_body) { classType.registeredClass.constructor_body = [] }
-                    if (undefined !== classType.registeredClass.constructor_body[argCount - 1]) { throw new BindingError(`Cannot register multiple constructors with identical number of parameters (${argCount - 1}) for class '${classType.name}'! Overload resolution is currently only performed using the parameter count, not actual type info!`) }
+                    if (undefined !== classType.registeredClass.constructor_body[argCount - 1]) { throw new BindingError(`Cannot register multiple constructors with identical number of parameters (${argCount-1}) for class '${classType.name}'! Overload resolution is currently only performed using the parameter count, not actual type info!`) }
                     classType.registeredClass.constructor_body[argCount - 1] = () => { throwUnboundTypeError(`Cannot construct ${classType.name} due to unbound types`, rawArgTypes) };
                     whenDependentTypesAreResolved([], rawArgTypes, argTypes => {
                         argTypes.splice(1, 0, null);
@@ -4022,7 +4016,7 @@ var getUsdModule = (() => {
             handleAllocatorInit();
             init_emval();
             var proxiedFunctionTable = [_proc_exit, exitOnMainThread, pthreadCreateProxied, ___syscall_chmod, ___syscall_faccessat, ___syscall_fadvise64, ___syscall_fchmod, ___syscall_fcntl64, ___syscall_fstat64, ___syscall_getcwd, ___syscall_getdents64, ___syscall_ioctl, ___syscall_lstat64, ___syscall_mkdirat, ___syscall_newfstatat, ___syscall_openat, ___syscall_readlinkat, ___syscall_renameat, ___syscall_stat64, ___syscall_unlinkat, __emscripten_runtime_keepalive_clear, __mmap_js, __munmap_js, __setitimer_js, _emscripten_force_exit, _environ_get, _environ_sizes_get, _fd_close, _fd_fdstat_get, _fd_pread, _fd_pwrite, _fd_read, _fd_seek, _fd_write];
-            var wasmImports = { Na: __asyncjs__fetch_asset, ja: ___call_sighandler, e: ___cxa_throw, pa: ___emscripten_init_main_thread_js, I: ___emscripten_thread_cleanup, la: ___pthread_create_js, N: ___syscall_chmod, za: ___syscall_faccessat, V: ___syscall_fadvise64, va: ___syscall_fchmod, O: ___syscall_fcntl64, ua: ___syscall_fstat64, qa: ___syscall_getcwd, ia: ___syscall_getdents64, Ca: ___syscall_ioctl, ra: ___syscall_lstat64, na: ___syscall_mkdirat, sa: ___syscall_newfstatat, L: ___syscall_openat, ha: ___syscall_readlinkat, ga: ___syscall_renameat, ta: ___syscall_stat64, ca: ___syscall_unlinkat, Z: __embind_register_bigint, Ga: __embind_register_bool, n: __embind_register_class, u: __embind_register_class_class_function, A: __embind_register_class_class_property, p: __embind_register_class_constructor, k: __embind_register_class_function, j: __embind_register_class_property, Fa: __embind_register_emval, R: __embind_register_enum, C: __embind_register_enum_value, Q: __embind_register_float, Ja: __embind_register_function, z: __embind_register_integer, s: __embind_register_memory_view, y: __embind_register_smart_ptr, P: __embind_register_std_string, G: __embind_register_std_wstring, Ha: __embind_register_void, ya: __emscripten_get_now_is_monotonic, da: __emscripten_notify_mailbox_postmessage, ma: __emscripten_receive_on_main_thread_js, ka: __emscripten_runtime_keepalive_clear, oa: __emscripten_thread_mailbox_await, xa: __emscripten_thread_set_strongref, g: __emval_as, $: __emval_as_int64, _: __emval_as_uint64, B: __emval_call, v: __emval_call_method, c: __emval_decref, Ia: __emval_equals, r: __emval_get_global, w: __emval_get_method_caller, h: __emval_get_property, m: __emval_incref, t: __emval_instanceof, l: __emval_new_array, o: __emval_new_cstring, D: __emval_new_object, f: __emval_run_destructors, i: __emval_set_property, d: __emval_take_value, Ka: __emval_typeof, W: __mmap_js, X: __munmap_js, H: __setitimer_js, q: _abort, Ma: addToLoadedFiles, La: downloadJS, J: _emscripten_check_blocking_allowed, M: _emscripten_date_now, wa: _emscripten_exit_with_live_runtime, S: _emscripten_force_exit, ea: _emscripten_get_heap_max, b: _emscripten_get_now, fa: _emscripten_num_logical_cores, ba: _emscripten_resize_heap, Da: _environ_get, Ea: _environ_sizes_get, x: _exit, E: _fd_close, K: _fd_fdstat_get, U: _fd_pread, T: _fd_pwrite, Ba: _fd_read, Y: _fd_seek, F: _fd_write, a: wasmMemory || Module["wasmMemory"], Aa: _proc_exit, aa: _strftime_l };
+            var wasmImports = { Ia: __asyncjs__fetch_asset, ca: ___call_sighandler, b: ___cxa_throw, ia: ___emscripten_init_main_thread_js, B: ___emscripten_thread_cleanup, ea: ___pthread_create_js, G: ___syscall_chmod, sa: ___syscall_faccessat, O: ___syscall_fadvise64, oa: ___syscall_fchmod, H: ___syscall_fcntl64, na: ___syscall_fstat64, ja: ___syscall_getcwd, ba: ___syscall_getdents64, va: ___syscall_ioctl, ka: ___syscall_lstat64, ga: ___syscall_mkdirat, la: ___syscall_newfstatat, E: ___syscall_openat, aa: ___syscall_readlinkat, $: ___syscall_renameat, ma: ___syscall_stat64, X: ___syscall_unlinkat, S: __embind_register_bigint, za: __embind_register_bool, g: __embind_register_class, m: __embind_register_class_class_function, t: __embind_register_class_class_property, h: __embind_register_class_constructor, e: __embind_register_class_function, c: __embind_register_class_property, ya: __embind_register_emval, K: __embind_register_enum, u: __embind_register_enum_value, J: __embind_register_float, Ca: __embind_register_function, q: __embind_register_integer, j: __embind_register_memory_view, r: __embind_register_smart_ptr, I: __embind_register_std_string, z: __embind_register_std_wstring, Aa: __embind_register_void, ra: __emscripten_get_now_is_monotonic, Y: __emscripten_notify_mailbox_postmessage, fa: __emscripten_receive_on_main_thread_js, da: __emscripten_runtime_keepalive_clear, ha: __emscripten_thread_mailbox_await, qa: __emscripten_thread_set_strongref, k: __emval_as, U: __emval_as_int64, T: __emval_as_uint64, w: __emval_call, p: __emval_call_method, Na: __emval_decref, Ba: __emval_equals, Da: __emval_get_global, o: __emval_get_method_caller, v: __emval_get_property, n: __emval_incref, Ea: __emval_instanceof, La: __emval_new_array, Ja: __emval_new_cstring, Ka: __emval_new_object, Ma: __emval_run_destructors, l: __emval_set_property, d: __emval_take_value, Fa: __emval_typeof, P: __mmap_js, Q: __munmap_js, A: __setitimer_js, i: _abort, Ha: addToLoadedFiles, Ga: downloadJS, C: _emscripten_check_blocking_allowed, F: _emscripten_date_now, pa: _emscripten_exit_with_live_runtime, L: _emscripten_force_exit, Z: _emscripten_get_heap_max, f: _emscripten_get_now, _: _emscripten_num_logical_cores, W: _emscripten_resize_heap, wa: _environ_get, xa: _environ_sizes_get, s: _exit, x: _fd_close, D: _fd_fdstat_get, N: _fd_pread, M: _fd_pwrite, ua: _fd_read, R: _fd_seek, y: _fd_write, a: wasmMemory || Module["wasmMemory"], ta: _proc_exit, V: _strftime_l };
             var wasmExports = createWasm();
             var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["Oa"])();
             var _pthread_self = Module["_pthread_self"] = () => (_pthread_self = Module["_pthread_self"] = wasmExports["Pa"])();
@@ -4047,22 +4041,22 @@ var getUsdModule = (() => {
             var stackRestore = a0 => (stackRestore = wasmExports["fb"])(a0);
             var stackAlloc = a0 => (stackAlloc = wasmExports["gb"])(a0);
             var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["hb"])(a0);
-            var dynCall_ii = Module["dynCall_ii"] = (a0, a1) => (dynCall_ii = Module["dynCall_ii"] = wasmExports["ib"])(a0, a1);
+            var dynCall_v = Module["dynCall_v"] = a0 => (dynCall_v = Module["dynCall_v"] = wasmExports["ib"])(a0);
             var dynCall_vi = Module["dynCall_vi"] = (a0, a1) => (dynCall_vi = Module["dynCall_vi"] = wasmExports["jb"])(a0, a1);
-            var dynCall_iii = Module["dynCall_iii"] = (a0, a1, a2) => (dynCall_iii = Module["dynCall_iii"] = wasmExports["kb"])(a0, a1, a2);
-            var dynCall_iiii = Module["dynCall_iiii"] = (a0, a1, a2, a3) => (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["lb"])(a0, a1, a2, a3);
+            var dynCall_ii = Module["dynCall_ii"] = (a0, a1) => (dynCall_ii = Module["dynCall_ii"] = wasmExports["kb"])(a0, a1);
+            var dynCall_iii = Module["dynCall_iii"] = (a0, a1, a2) => (dynCall_iii = Module["dynCall_iii"] = wasmExports["lb"])(a0, a1, a2);
             var dynCall_viii = Module["dynCall_viii"] = (a0, a1, a2, a3) => (dynCall_viii = Module["dynCall_viii"] = wasmExports["mb"])(a0, a1, a2, a3);
-            var dynCall_vii = Module["dynCall_vii"] = (a0, a1, a2) => (dynCall_vii = Module["dynCall_vii"] = wasmExports["nb"])(a0, a1, a2);
-            var dynCall_viiii = Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) => (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["ob"])(a0, a1, a2, a3, a4);
-            var dynCall_vid = Module["dynCall_vid"] = (a0, a1, a2) => (dynCall_vid = Module["dynCall_vid"] = wasmExports["pb"])(a0, a1, a2);
-            var dynCall_viid = Module["dynCall_viid"] = (a0, a1, a2, a3) => (dynCall_viid = Module["dynCall_viid"] = wasmExports["qb"])(a0, a1, a2, a3);
-            var dynCall_di = Module["dynCall_di"] = (a0, a1) => (dynCall_di = Module["dynCall_di"] = wasmExports["rb"])(a0, a1);
-            var dynCall_dii = Module["dynCall_dii"] = (a0, a1, a2) => (dynCall_dii = Module["dynCall_dii"] = wasmExports["sb"])(a0, a1, a2);
-            var dynCall_i = Module["dynCall_i"] = a0 => (dynCall_i = Module["dynCall_i"] = wasmExports["tb"])(a0);
-            var dynCall_iiiii = Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) => (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["ub"])(a0, a1, a2, a3, a4);
-            var dynCall_viiid = Module["dynCall_viiid"] = (a0, a1, a2, a3, a4) => (dynCall_viiid = Module["dynCall_viiid"] = wasmExports["vb"])(a0, a1, a2, a3, a4);
-            var dynCall_iiiid = Module["dynCall_iiiid"] = (a0, a1, a2, a3, a4) => (dynCall_iiiid = Module["dynCall_iiiid"] = wasmExports["wb"])(a0, a1, a2, a3, a4);
-            var dynCall_v = Module["dynCall_v"] = a0 => (dynCall_v = Module["dynCall_v"] = wasmExports["xb"])(a0);
+            var dynCall_iiii = Module["dynCall_iiii"] = (a0, a1, a2, a3) => (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["nb"])(a0, a1, a2, a3);
+            var dynCall_vid = Module["dynCall_vid"] = (a0, a1, a2) => (dynCall_vid = Module["dynCall_vid"] = wasmExports["ob"])(a0, a1, a2);
+            var dynCall_di = Module["dynCall_di"] = (a0, a1) => (dynCall_di = Module["dynCall_di"] = wasmExports["pb"])(a0, a1);
+            var dynCall_i = Module["dynCall_i"] = a0 => (dynCall_i = Module["dynCall_i"] = wasmExports["qb"])(a0);
+            var dynCall_vii = Module["dynCall_vii"] = (a0, a1, a2) => (dynCall_vii = Module["dynCall_vii"] = wasmExports["rb"])(a0, a1, a2);
+            var dynCall_viiii = Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) => (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["sb"])(a0, a1, a2, a3, a4);
+            var dynCall_viid = Module["dynCall_viid"] = (a0, a1, a2, a3) => (dynCall_viid = Module["dynCall_viid"] = wasmExports["tb"])(a0, a1, a2, a3);
+            var dynCall_dii = Module["dynCall_dii"] = (a0, a1, a2) => (dynCall_dii = Module["dynCall_dii"] = wasmExports["ub"])(a0, a1, a2);
+            var dynCall_iiiii = Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) => (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["vb"])(a0, a1, a2, a3, a4);
+            var dynCall_viiid = Module["dynCall_viiid"] = (a0, a1, a2, a3, a4) => (dynCall_viiid = Module["dynCall_viiid"] = wasmExports["wb"])(a0, a1, a2, a3, a4);
+            var dynCall_iiiid = Module["dynCall_iiiid"] = (a0, a1, a2, a3, a4) => (dynCall_iiiid = Module["dynCall_iiiid"] = wasmExports["xb"])(a0, a1, a2, a3, a4);
             var dynCall_viiiii = Module["dynCall_viiiii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_viiiii = Module["dynCall_viiiii"] = wasmExports["yb"])(a0, a1, a2, a3, a4, a5);
             var dynCall_diii = Module["dynCall_diii"] = (a0, a1, a2, a3) => (dynCall_diii = Module["dynCall_diii"] = wasmExports["zb"])(a0, a1, a2, a3);
             var dynCall_iiid = Module["dynCall_iiid"] = (a0, a1, a2, a3) => (dynCall_iiid = Module["dynCall_iiid"] = wasmExports["Ab"])(a0, a1, a2, a3);
@@ -4115,8 +4109,8 @@ var getUsdModule = (() => {
             var _asyncify_stop_unwind = () => (_asyncify_stop_unwind = wasmExports["tc"])();
             var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["uc"])(a0);
             var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["vc"])();
-            var ___start_em_js = Module["___start_em_js"] = 3755180;
-            var ___stop_em_js = Module["___stop_em_js"] = 3756395;
+            var ___start_em_js = Module["___start_em_js"] = 3802460;
+            var ___stop_em_js = Module["___stop_em_js"] = 3803675;
 
             function applySignatureConversions(wasmExports) {
                 wasmExports = Object.assign({}, wasmExports);
