@@ -288,12 +288,8 @@ var getUsdModule = (() => {
             }
             var INITIAL_MEMORY = Module["INITIAL_MEMORY"] || 16777216;
             assert(INITIAL_MEMORY >= 5242880, "INITIAL_MEMORY should be larger than STACK_SIZE, was " + INITIAL_MEMORY + "! (STACK_SIZE=" + 5242880 + ")");
-            if (ENVIRONMENT_IS_PTHREAD) {
-                wasmMemory = Module["wasmMemory"]
-            } else {
-                if (Module["wasmMemory"]) {
-                    wasmMemory = Module["wasmMemory"]
-                } else {
+            if (ENVIRONMENT_IS_PTHREAD) { wasmMemory = Module["wasmMemory"] } else {
+                if (Module["wasmMemory"]) { wasmMemory = Module["wasmMemory"] } else {
                     function isMobileDevice() {
                         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     }
@@ -302,7 +298,7 @@ var getUsdModule = (() => {
                     const MAX_MEMORY_DESKTOP = 4 * 1024 * 1024 * 1024;
                     const MAX_DEVICE_MEMORY = isMobileDevice() ? MAX_MEMORY_MOBILE : MAX_MEMORY_DESKTOP;
 
-                    wasmMemory = new WebAssembly.Memory({ "initial": INITIAL_MEMORY / 65536, "maximum": MAX_DEVICE_MEMORY / 65536, "shared": true })
+                    wasmMemory = new WebAssembly.Memory({ "initial": INITIAL_MEMORY / 65536, "maximum": MAX_DEVICE_MEMORY / 65536, "shared": true });
                     if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) { err("requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag"); if (ENVIRONMENT_IS_NODE) { err("(on node you may need: --experimental-wasm-threads --experimental-wasm-bulk-memory and/or recent version)") } throw Error("bad memory") }
                 }
             }
@@ -597,7 +593,7 @@ var getUsdModule = (() => {
                 var endIdx = idx + maxBytesToRead;
                 var endPtr = idx;
                 while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
-                if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) { return UTF8Decoder.decode(heapOrArray.slice(idx, endPtr)) }
+                if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) { return UTF8Decoder.decode(heapOrArray.buffer instanceof SharedArrayBuffer ? heapOrArray.slice(idx, endPtr) : heapOrArray.subarray(idx, endPtr)) }
                 var str = "";
                 while (idx < endPtr) {
                     var u0 = heapOrArray[idx++];
@@ -4016,7 +4012,7 @@ var getUsdModule = (() => {
             handleAllocatorInit();
             init_emval();
             var proxiedFunctionTable = [_proc_exit, exitOnMainThread, pthreadCreateProxied, ___syscall_chmod, ___syscall_faccessat, ___syscall_fadvise64, ___syscall_fchmod, ___syscall_fcntl64, ___syscall_fstat64, ___syscall_getcwd, ___syscall_getdents64, ___syscall_ioctl, ___syscall_lstat64, ___syscall_mkdirat, ___syscall_newfstatat, ___syscall_openat, ___syscall_readlinkat, ___syscall_renameat, ___syscall_stat64, ___syscall_unlinkat, __emscripten_runtime_keepalive_clear, __mmap_js, __munmap_js, __setitimer_js, _emscripten_force_exit, _environ_get, _environ_sizes_get, _fd_close, _fd_fdstat_get, _fd_pread, _fd_pwrite, _fd_read, _fd_seek, _fd_write];
-            var wasmImports = { Ia: __asyncjs__fetch_asset, ca: ___call_sighandler, b: ___cxa_throw, ia: ___emscripten_init_main_thread_js, B: ___emscripten_thread_cleanup, ea: ___pthread_create_js, G: ___syscall_chmod, sa: ___syscall_faccessat, O: ___syscall_fadvise64, oa: ___syscall_fchmod, H: ___syscall_fcntl64, na: ___syscall_fstat64, ja: ___syscall_getcwd, ba: ___syscall_getdents64, va: ___syscall_ioctl, ka: ___syscall_lstat64, ga: ___syscall_mkdirat, la: ___syscall_newfstatat, E: ___syscall_openat, aa: ___syscall_readlinkat, $: ___syscall_renameat, ma: ___syscall_stat64, X: ___syscall_unlinkat, S: __embind_register_bigint, za: __embind_register_bool, g: __embind_register_class, m: __embind_register_class_class_function, t: __embind_register_class_class_property, h: __embind_register_class_constructor, e: __embind_register_class_function, c: __embind_register_class_property, ya: __embind_register_emval, K: __embind_register_enum, u: __embind_register_enum_value, J: __embind_register_float, Ca: __embind_register_function, q: __embind_register_integer, j: __embind_register_memory_view, r: __embind_register_smart_ptr, I: __embind_register_std_string, z: __embind_register_std_wstring, Aa: __embind_register_void, ra: __emscripten_get_now_is_monotonic, Y: __emscripten_notify_mailbox_postmessage, fa: __emscripten_receive_on_main_thread_js, da: __emscripten_runtime_keepalive_clear, ha: __emscripten_thread_mailbox_await, qa: __emscripten_thread_set_strongref, k: __emval_as, U: __emval_as_int64, T: __emval_as_uint64, w: __emval_call, p: __emval_call_method, Na: __emval_decref, Ba: __emval_equals, Da: __emval_get_global, o: __emval_get_method_caller, v: __emval_get_property, n: __emval_incref, Ea: __emval_instanceof, La: __emval_new_array, Ja: __emval_new_cstring, Ka: __emval_new_object, Ma: __emval_run_destructors, l: __emval_set_property, d: __emval_take_value, Fa: __emval_typeof, P: __mmap_js, Q: __munmap_js, A: __setitimer_js, i: _abort, Ha: addToLoadedFiles, Ga: downloadJS, C: _emscripten_check_blocking_allowed, F: _emscripten_date_now, pa: _emscripten_exit_with_live_runtime, L: _emscripten_force_exit, Z: _emscripten_get_heap_max, f: _emscripten_get_now, _: _emscripten_num_logical_cores, W: _emscripten_resize_heap, wa: _environ_get, xa: _environ_sizes_get, s: _exit, x: _fd_close, D: _fd_fdstat_get, N: _fd_pread, M: _fd_pwrite, ua: _fd_read, R: _fd_seek, y: _fd_write, a: wasmMemory || Module["wasmMemory"], ta: _proc_exit, V: _strftime_l };
+            var wasmImports = { Na: __asyncjs__fetch_asset, ia: ___call_sighandler, e: ___cxa_throw, oa: ___emscripten_init_main_thread_js, G: ___emscripten_thread_cleanup, ka: ___pthread_create_js, L: ___syscall_chmod, ya: ___syscall_faccessat, U: ___syscall_fadvise64, ua: ___syscall_fchmod, M: ___syscall_fcntl64, ta: ___syscall_fstat64, pa: ___syscall_getcwd, ha: ___syscall_getdents64, Ba: ___syscall_ioctl, qa: ___syscall_lstat64, ma: ___syscall_mkdirat, ra: ___syscall_newfstatat, J: ___syscall_openat, ga: ___syscall_readlinkat, fa: ___syscall_renameat, sa: ___syscall_stat64, ba: ___syscall_unlinkat, Y: __embind_register_bigint, Fa: __embind_register_bool, i: __embind_register_class, q: __embind_register_class_class_function, w: __embind_register_class_class_property, l: __embind_register_class_constructor, g: __embind_register_class_function, f: __embind_register_class_property, Ea: __embind_register_emval, Q: __embind_register_enum, x: __embind_register_enum_value, O: __embind_register_float, Ia: __embind_register_function, u: __embind_register_integer, o: __embind_register_memory_view, v: __embind_register_smart_ptr, N: __embind_register_std_string, E: __embind_register_std_wstring, Ga: __embind_register_void, xa: __emscripten_get_now_is_monotonic, ca: __emscripten_notify_mailbox_postmessage, la: __emscripten_receive_on_main_thread_js, ja: __emscripten_runtime_keepalive_clear, na: __emscripten_thread_mailbox_await, wa: __emscripten_thread_set_strongref, m: __emval_as, _: __emval_as_int64, Z: __emval_as_uint64, C: __emval_call, s: __emval_call_method, c: __emval_decref, Ha: __emval_equals, P: __emval_get_global, t: __emval_get_method_caller, y: __emval_get_property, k: __emval_incref, Ja: __emval_instanceof, h: __emval_new_array, B: __emval_new_cstring, z: __emval_new_object, j: __emval_run_destructors, p: __emval_set_property, d: __emval_take_value, Ka: __emval_typeof, V: __mmap_js, W: __munmap_js, F: __setitimer_js, n: _abort, Ma: addToLoadedFiles, La: downloadJS, H: _emscripten_check_blocking_allowed, K: _emscripten_date_now, va: _emscripten_exit_with_live_runtime, R: _emscripten_force_exit, da: _emscripten_get_heap_max, b: _emscripten_get_now, ea: _emscripten_num_logical_cores, aa: _emscripten_resize_heap, Ca: _environ_get, Da: _environ_sizes_get, r: _exit, A: _fd_close, I: _fd_fdstat_get, T: _fd_pread, S: _fd_pwrite, Aa: _fd_read, X: _fd_seek, D: _fd_write, a: wasmMemory || Module["wasmMemory"], za: _proc_exit, $: _strftime_l };
             var wasmExports = createWasm();
             var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["Oa"])();
             var _pthread_self = Module["_pthread_self"] = () => (_pthread_self = Module["_pthread_self"] = wasmExports["Pa"])();
@@ -4041,22 +4037,22 @@ var getUsdModule = (() => {
             var stackRestore = a0 => (stackRestore = wasmExports["fb"])(a0);
             var stackAlloc = a0 => (stackAlloc = wasmExports["gb"])(a0);
             var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["hb"])(a0);
-            var dynCall_v = Module["dynCall_v"] = a0 => (dynCall_v = Module["dynCall_v"] = wasmExports["ib"])(a0);
+            var dynCall_ii = Module["dynCall_ii"] = (a0, a1) => (dynCall_ii = Module["dynCall_ii"] = wasmExports["ib"])(a0, a1);
             var dynCall_vi = Module["dynCall_vi"] = (a0, a1) => (dynCall_vi = Module["dynCall_vi"] = wasmExports["jb"])(a0, a1);
-            var dynCall_ii = Module["dynCall_ii"] = (a0, a1) => (dynCall_ii = Module["dynCall_ii"] = wasmExports["kb"])(a0, a1);
-            var dynCall_iii = Module["dynCall_iii"] = (a0, a1, a2) => (dynCall_iii = Module["dynCall_iii"] = wasmExports["lb"])(a0, a1, a2);
+            var dynCall_iii = Module["dynCall_iii"] = (a0, a1, a2) => (dynCall_iii = Module["dynCall_iii"] = wasmExports["kb"])(a0, a1, a2);
+            var dynCall_iiii = Module["dynCall_iiii"] = (a0, a1, a2, a3) => (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["lb"])(a0, a1, a2, a3);
             var dynCall_viii = Module["dynCall_viii"] = (a0, a1, a2, a3) => (dynCall_viii = Module["dynCall_viii"] = wasmExports["mb"])(a0, a1, a2, a3);
-            var dynCall_iiii = Module["dynCall_iiii"] = (a0, a1, a2, a3) => (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["nb"])(a0, a1, a2, a3);
-            var dynCall_vid = Module["dynCall_vid"] = (a0, a1, a2) => (dynCall_vid = Module["dynCall_vid"] = wasmExports["ob"])(a0, a1, a2);
-            var dynCall_di = Module["dynCall_di"] = (a0, a1) => (dynCall_di = Module["dynCall_di"] = wasmExports["pb"])(a0, a1);
-            var dynCall_i = Module["dynCall_i"] = a0 => (dynCall_i = Module["dynCall_i"] = wasmExports["qb"])(a0);
-            var dynCall_vii = Module["dynCall_vii"] = (a0, a1, a2) => (dynCall_vii = Module["dynCall_vii"] = wasmExports["rb"])(a0, a1, a2);
-            var dynCall_viiii = Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) => (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["sb"])(a0, a1, a2, a3, a4);
-            var dynCall_viid = Module["dynCall_viid"] = (a0, a1, a2, a3) => (dynCall_viid = Module["dynCall_viid"] = wasmExports["tb"])(a0, a1, a2, a3);
-            var dynCall_dii = Module["dynCall_dii"] = (a0, a1, a2) => (dynCall_dii = Module["dynCall_dii"] = wasmExports["ub"])(a0, a1, a2);
+            var dynCall_vii = Module["dynCall_vii"] = (a0, a1, a2) => (dynCall_vii = Module["dynCall_vii"] = wasmExports["nb"])(a0, a1, a2);
+            var dynCall_viiii = Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) => (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["ob"])(a0, a1, a2, a3, a4);
+            var dynCall_vid = Module["dynCall_vid"] = (a0, a1, a2) => (dynCall_vid = Module["dynCall_vid"] = wasmExports["pb"])(a0, a1, a2);
+            var dynCall_viid = Module["dynCall_viid"] = (a0, a1, a2, a3) => (dynCall_viid = Module["dynCall_viid"] = wasmExports["qb"])(a0, a1, a2, a3);
+            var dynCall_di = Module["dynCall_di"] = (a0, a1) => (dynCall_di = Module["dynCall_di"] = wasmExports["rb"])(a0, a1);
+            var dynCall_dii = Module["dynCall_dii"] = (a0, a1, a2) => (dynCall_dii = Module["dynCall_dii"] = wasmExports["sb"])(a0, a1, a2);
+            var dynCall_i = Module["dynCall_i"] = a0 => (dynCall_i = Module["dynCall_i"] = wasmExports["tb"])(a0);
+            var dynCall_viiid = Module["dynCall_viiid"] = (a0, a1, a2, a3, a4) => (dynCall_viiid = Module["dynCall_viiid"] = wasmExports["ub"])(a0, a1, a2, a3, a4);
             var dynCall_iiiii = Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) => (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["vb"])(a0, a1, a2, a3, a4);
-            var dynCall_viiid = Module["dynCall_viiid"] = (a0, a1, a2, a3, a4) => (dynCall_viiid = Module["dynCall_viiid"] = wasmExports["wb"])(a0, a1, a2, a3, a4);
-            var dynCall_iiiid = Module["dynCall_iiiid"] = (a0, a1, a2, a3, a4) => (dynCall_iiiid = Module["dynCall_iiiid"] = wasmExports["xb"])(a0, a1, a2, a3, a4);
+            var dynCall_iiiid = Module["dynCall_iiiid"] = (a0, a1, a2, a3, a4) => (dynCall_iiiid = Module["dynCall_iiiid"] = wasmExports["wb"])(a0, a1, a2, a3, a4);
+            var dynCall_v = Module["dynCall_v"] = a0 => (dynCall_v = Module["dynCall_v"] = wasmExports["xb"])(a0);
             var dynCall_viiiii = Module["dynCall_viiiii"] = (a0, a1, a2, a3, a4, a5) => (dynCall_viiiii = Module["dynCall_viiiii"] = wasmExports["yb"])(a0, a1, a2, a3, a4, a5);
             var dynCall_diii = Module["dynCall_diii"] = (a0, a1, a2, a3) => (dynCall_diii = Module["dynCall_diii"] = wasmExports["zb"])(a0, a1, a2, a3);
             var dynCall_iiid = Module["dynCall_iiid"] = (a0, a1, a2, a3) => (dynCall_iiid = Module["dynCall_iiid"] = wasmExports["Ab"])(a0, a1, a2, a3);
@@ -4109,8 +4105,8 @@ var getUsdModule = (() => {
             var _asyncify_stop_unwind = () => (_asyncify_stop_unwind = wasmExports["tc"])();
             var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["uc"])(a0);
             var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["vc"])();
-            var ___start_em_js = Module["___start_em_js"] = 3802460;
-            var ___stop_em_js = Module["___stop_em_js"] = 3803675;
+            var ___start_em_js = Module["___start_em_js"] = 3800972;
+            var ___stop_em_js = Module["___stop_em_js"] = 3802187;
 
             function applySignatureConversions(wasmExports) {
                 wasmExports = Object.assign({}, wasmExports);
