@@ -20,6 +20,7 @@ fastify.register(require('@fastify/static'), {
 fastify.listen({port: process.env.PORT || 3003}, function(err, address) {
   if (err) {
     fastify.log.error(err);
+    console.error("Error starting server on port 3003", err);
     process.exit(1);
   }
   console.log(`Your app is listening on ${address}`);
