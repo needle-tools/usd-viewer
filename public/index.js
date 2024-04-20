@@ -4,6 +4,10 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
+export function init(options = {
+  hdrPath: 'environments/neutral.hdr'
+}) {
+
 // wait for document
 document.addEventListener("DOMContentLoaded", function() {
 let scene;
@@ -57,6 +61,7 @@ function updateUrl() {
   window.history.pushState({}, filename, currentUrl);
 }
 
+messageLog.textContent = "Initializing...";
 const initPromise = init();
 
 console.log("Loading USD Module...");
@@ -296,13 +301,17 @@ async function init() {
   const envMapPromise = new Promise(resolve => {
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
             pmremGenerator.compileCubemapShader();
-    new RGBELoader().load('environments/neutral.hdr', (texture) => {
+            
+    new RGBELoader().load(options.hdrPath, (texture) => {
       const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
 
       texture.mapping = THREE.EquirectangularReflectionMapping;
       texture.needsUpdate = true;
       window.envMap = hdrRenderTarget.texture;
       resolve();
+    }, undefined, (err) => {
+        console.error('An error occurred loading the HDR environment map.', err);
+        resolve();
     });
   });
 
@@ -706,3 +715,4 @@ function dragOverHandler(ev) {
   ev.preventDefault();
 }
 });
+};
