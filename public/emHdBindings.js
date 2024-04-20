@@ -2,7 +2,13 @@ var getUsdModule = (() => {
     var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
     if (typeof __filename !== 'undefined') _scriptDir = _scriptDir || __filename;
     return (
-        function(moduleArg = {}) {
+        function(moduleArg = {
+            // module overrides can be supplied here
+            locateFile: (path, prefix) => {
+              if (!prefix) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
+              return prefix + path; 
+            }
+        }) {
 
             function GROWABLE_HEAP_I8() { if (wasmMemory.buffer != HEAP8.buffer) { updateMemoryViews() } return HEAP8 }
 
