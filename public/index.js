@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, VSMShadowMap, PMREMGenerator, EquirectangularReflectionMapping } from 'three';
 import { RenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -195,9 +195,9 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
 
 // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
 function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  const box = new THREE.Box3();
+  const size = new Vector3();
+  const center = new Vector3();
+  const box = new Box3();
   
   box.makeEmpty();
   for(const object of selection) {
@@ -255,24 +255,24 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
 }
 
 async function init() {
-  const camera = window.camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
+  const camera = window.camera = new PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
   camera.position.z = params.get('cameraZ') || 7;
   camera.position.y = params.get('cameraY') || 7;
   camera.position.x = params.get('cameraX') || 0;
 
-  const scene = window.scene = new THREE.Scene();
-  // scene.background = new THREE.Color(0xffffff);
+  const scene = window.scene = new Scene();
+  // scene.background = new Color(0xffffff);
   
 
   /*
-  scene.add( new THREE.AmbientLight( 0x111111 ) );
+  scene.add( new AmbientLight( 0x111111 ) );
   */
-  const usdRoot = window.usdRoot = new THREE.Group();
+  const usdRoot = window.usdRoot = new Group();
   usdRoot.name = "USD Root";
   scene.add(usdRoot);
 
   /*
-  let pointLight = new THREE.PointLight( 0xff8888 );
+  let pointLight = new PointLight( 0xff8888 );
   pointLight.position.set( -30, 20, 220 );
   pointLight.castShadow = true;
   pointLight.shadow.camera.near = 8;
@@ -286,26 +286,26 @@ async function init() {
   scene.add( pointLight );
   */
 
-  const renderer = window.renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+  const renderer = window.renderer = new WebGLRenderer( { antialias: true, alpha: true } );
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  // renderer.toneMapping = THREE.AgXToneMapping;
+  renderer.outputColorSpace = SRGBColorSpace;
+  // renderer.toneMapping = AgXToneMapping;
   // renderer.toneMappingExposure = 1;
-  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMapping = NeutralToneMapping;
   console.log("tonemapping", renderer.toneMapping)
   renderer.shadowMap.enabled = false;
-  renderer.shadowMap.type = THREE.VSMShadowMap;
+  renderer.shadowMap.type = VSMShadowMap;
   renderer.setClearColor( 0x000000, 0 ); // the default
 
   const envMapPromise = new Promise(resolve => {
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const pmremGenerator = new PMREMGenerator(renderer);
             pmremGenerator.compileCubemapShader();
             
     new RGBELoader().load(options.hdrPath, (texture) => {
       const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
 
-      texture.mapping = THREE.EquirectangularReflectionMapping;
+      texture.mapping = EquirectangularReflectionMapping;
       texture.needsUpdate = true;
       window.envMap = hdrRenderTarget.texture;
       resolve();

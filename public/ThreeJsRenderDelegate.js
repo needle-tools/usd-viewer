@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, ImageUtils } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
@@ -14,7 +14,7 @@ class TextureRegistry {
     this.basename = basename;
     this.allPaths = allPaths;
     this.textures = [];
-    this.loader = new THREE.TextureLoader();
+    this.loader = new TextureLoader();
     this.tgaLoader = new TGALoader();
     this.exrLoader = new EXRLoader();
 
@@ -128,7 +128,7 @@ class TextureRegistry {
 
 class HydraMesh {
   constructor(id, hydraInterface) {
-    this._geometry = new THREE.BufferGeometry();
+    this._geometry = new BufferGeometry();
     this._id = id;
     this._interface = hydraInterface;
     this._points = undefined;
@@ -138,13 +138,13 @@ class HydraMesh {
     this._indices = undefined; 
     this._materials = [];
 
-    let material = new THREE.MeshPhysicalMaterial( {
-      side: THREE.DoubleSide,
-      color: new THREE.Color(0xB4B4B4),
+    let material = new MeshPhysicalMaterial( {
+      side: DoubleSide,
+      color: new Color(0xB4B4B4),
       envMap: window.envMap,
     } );
     this._materials.push(material);
-    this._mesh = new THREE.Mesh( this._geometry, material );
+    this._mesh = new Mesh( this._geometry, material );
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
 
@@ -171,7 +171,7 @@ class HydraMesh {
           values.push(attribute[dimension * index + j]);
         }
       }
-      this._geometry.setAttribute( attributeName, new THREE.Float32BufferAttribute( values, dimension ) );
+      this._geometry.setAttribute( attributeName, new Float32BufferAttribute( values, dimension ) );
     }
   }
 
@@ -214,7 +214,7 @@ class HydraMesh {
   setNormals(data, interpolation) {
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
-      this._geometry.setAttribute('normal', new THREE.Float32BufferAttribute(data, 3));
+      this._geometry.setAttribute('normal', new Float32BufferAttribute(data, 3));
     } else if (interpolation === 'vertex') {
       // We have per-vertex UVs, so we need to sort them accordingly
       this._normals = data.slice(0);
@@ -244,7 +244,7 @@ class HydraMesh {
       }
     }
 
-    this._mesh = new THREE.Mesh( this._geometry, this._materials);
+    this._mesh = new Mesh( this._geometry, this._materials);
     window.usdRoot.add(this._mesh);
   }
 
@@ -260,13 +260,13 @@ class HydraMesh {
     this._colors = null;
 
     if (interpolation === 'constant') {
-      this._mesh.material.color = new THREE.Color().fromArray(data);
+      this._mesh.material.color = new Color().fromArray(data);
     } else if (interpolation === 'vertex') {
       // Per-vertex buffer attribute
       this._mesh.material.vertexColors = true;
       if (wasDefaultMaterial) {
         // Reset the pink debugging color
-        this._mesh.material.color = new THREE.Color(0xffffff);
+        this._mesh.material.color = new Color(0xffffff);
       }
       this._colors = data.slice(0);
       this.updateOrder(this._colors, 'color');
@@ -287,7 +287,7 @@ class HydraMesh {
 
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
-      this._geometry.setAttribute('uv', new THREE.Float32BufferAttribute(data, dimension));
+      this._geometry.setAttribute('uv', new Float32BufferAttribute(data, dimension));
     } else if (interpolation === 'vertex') {
       // We have per-vertex UVs, so we need to sort them accordingly
       this._uvs = data.slice(0);
@@ -373,9 +373,9 @@ class HydraMaterial {
   };
 
   static usdPreviewToColorSpaceMap = {
-    'diffuseColor': THREE.SRGBColorSpace,
-    'emissiveColor': THREE.SRGBColorSpace,
-    'opacity': THREE.SRGBColorSpace,
+    'diffuseColor': SRGBColorSpace,
+    'emissiveColor': SRGBColorSpace,
+    'opacity': SRGBColorSpace,
   };
 
   static channelMap = {
@@ -383,11 +383,11 @@ class HydraMaterial {
     // We could write code to combine multiple 8bit texture files into different channels of one RGB texture where it
     // makes sense, but that would complicate this loader a lot. Most Three.js loaders don't seem to do it either.
     // Instead, we simply provide the 8bit image as an RGBA texture, even though this might be less efficient.
-    'r': THREE.RGBAFormat,
-    'g': THREE.RGBAFormat,
-    'b': THREE.RGBAFormat,
-    'rgb': THREE.RGBAFormat,
-    'rgba': THREE.RGBAFormat
+    'r': RGBAFormat,
+    'g': RGBAFormat,
+    'b': RGBAFormat,
+    'rgb': RGBAFormat,
+    'rgba': RGBAFormat
   };
 
   // Maps USD preview material property names to Three.js MeshPhysicalMaterial names
@@ -408,16 +408,16 @@ class HydraMaterial {
     this._nodes = {};
     this._interface = hydraInterface;
     if (!defaultMaterial) {
-      defaultMaterial = new THREE.MeshPhysicalMaterial({
-        side: THREE.DoubleSide,
-        color: new THREE.Color(0xff2997), // a bright pink color to indicate a missing material
+      defaultMaterial = new MeshPhysicalMaterial({
+        side: DoubleSide,
+        color: new Color(0xff2997), // a bright pink color to indicate a missing material
         envMap: window.envMap,
         name: 'DefaultMaterial',
       });
     }
     // proper color when materials are disabled
     if (disableMaterials)
-      defaultMaterial.color = new THREE.Color(0x999999);
+      defaultMaterial.color = new Color(0x999999);
 
     this._material = defaultMaterial;
 
@@ -431,7 +431,7 @@ class HydraMaterial {
 
   convertWrap(usdWrapMode) {
      if (usdWrapMode === undefined)
-        return THREE.RepeatWrapping;
+        return RepeatWrapping;
     
     const WRAPPINGS = {
 			'repeat': 1000, // RepeatWrapping
@@ -442,7 +442,7 @@ class HydraMaterial {
     if (WRAPPINGS[usdWrapMode])
       return WRAPPINGS[usdWrapMode];
     
-    return THREE.RepeatWrapping;
+    return RepeatWrapping;
   }
   
   assignTexture(mainMaterial, parameterName) {
@@ -481,7 +481,7 @@ class HydraMaterial {
             // NOTE that this only works if diffuse maps are always set before opacity maps, so the order of
             // 'assingTexture' calls for a material matters.
             if (nodeIn.file === mainMaterial.diffuseColor?.nodeIn?.file && channel === 'a') {
-              this._material.map.format = THREE.RGBAFormat;
+              this._material.map.format = RGBAFormat;
             } else {
               // TODO: Extract the alpha channel into a new RGB texture.
               console.warn("Separate alpha channel is currently not supported.", nodeIn.file, mainMaterial.diffuseColor?.nodeIn?.file, channel);
@@ -497,7 +497,7 @@ class HydraMaterial {
           } else if (materialParameterMapName === 'roughnessMap') {
             this._material.roughness = 1.0;
           } else if (materialParameterMapName === 'emissiveMap') {
-            this._material.emissive = new THREE.Color(0xffffff);
+            this._material.emissive = new Color(0xffffff);
           } else if (!HydraMaterial.channelMap[channel]) {
             console.warn(`Unsupported texture channel '${channel}'!`);
             resolve();
@@ -523,7 +523,7 @@ class HydraMaterial {
             targetSwizzle = channel + channel + channel + channel;
           }
 
-          clonedTexture.colorSpace = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || THREE.LinearSRGBColorSpace;
+          clonedTexture.colorSpace = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
           
           // console.log("Cloned texture", clonedTexture, "swizzled with", targetSwizzle);
           // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
@@ -545,8 +545,8 @@ class HydraMaterial {
             // (which is also not perfect but close)
             
             const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
-            const offset = uvData.translation ? new THREE.Vector2(uvData.translation[0], uvData.translation[1]) : new THREE.Vector2(0,0);
-            const repeat = uvData.scale ? new THREE.Vector2(uvData.scale[0], uvData.scale[1]) : new THREE.Vector2(1,1);
+            const offset = uvData.translation ? new Vector2(uvData.translation[0], uvData.translation[1]) : new Vector2(0,0);
+            const repeat = uvData.scale ? new Vector2(uvData.scale[0], uvData.scale[1]) : new Vector2(1,1);
             
             const xRotationOffset = Math.sin( rotation );
             const yRotationOffset = Math.cos( rotation );
@@ -686,7 +686,7 @@ class HydraMaterial {
 				height: image.height
 			};
 		} else {
-			console.warn( 'THREE.ImageUtils.sRGBToLinear(): Unsupported image type. No color space conversion applied.' );
+			console.warn( 'ImageUtils.sRGBToLinear(): Unsupported image type. No color space conversion applied.' );
 			return image;
 		}
 	}
@@ -700,7 +700,7 @@ class HydraMaterial {
     if (mainMaterial[parameterName] !== undefined && !mainMaterial[parameterName].nodeIn) {
       // console.log(`Assigning property ${parameterName}: ${mainMaterial[parameterName]}`);
       if (Array.isArray(mainMaterial[parameterName])) {
-        this._material[materialParameterName] = new THREE.Color().fromArray(mainMaterial[parameterName]);
+        this._material[materialParameterName] = new Color().fromArray(mainMaterial[parameterName]);
       } else {
         this._material[materialParameterName] = mainMaterial[parameterName];
         if (materialParameterName === 'opacity' && mainMaterial[parameterName] < 1.0) {
@@ -741,8 +741,8 @@ class HydraMaterial {
     // TODO: Ideally, we don't recreate the material on every update.
     // Creating a new one requires to also update any meshes that reference it. So we're relying on the C++ side to
     // call this before also calling `setMaterial` on the affected meshes.
-    this._material = new THREE.MeshPhysicalMaterial({});
-    this._material.side = THREE.DoubleSide;
+    this._material = new MeshPhysicalMaterial({});
+    this._material.side = DoubleSide;
     // split _id
     let _name = this._id;
     let lastSlash = _name.lastIndexOf('/');
