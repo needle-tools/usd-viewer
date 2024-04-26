@@ -93,6 +93,9 @@
     try {
       Promise.all([getUsdModule(), initPromise]).then(async ([Usd]) => {
         window.Usd = Usd;
+        console.log("USD: ", Usd)
+        
+
         messageLog.textContent = "Loading done";
         animate();
         if (filename) {
@@ -154,16 +157,17 @@
       evt.preventDefault();
     });
     
-    const loadedFiles = [];
+    self.loadedFiles = [];
     function clearStage() {
-      console.log("Clearing stage.", [currentRootFileName, ...loadedFiles])
+      console.log("Clearing stage.", [currentRootFileName, ...self.loadedFiles])
 
       window.usdRoot.clear();
 
-      for (const file of loadedFiles) {
+      for (const file of self.loadedFiles) {
+        console.log("unloading file: ", file)
         Usd.FS_unlink(file, true);
       }
-      loadedFiles.length = 0;
+      self.loadedFiles.length = 0;
 
       if (currentRootFileName !== undefined) {
         Usd.FS_unlink(currentRootFileName, true);
@@ -178,7 +182,7 @@
 
       // should be loaded last
       if (!isRootFile) return;
-      const renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
+      const renderInterface = window.renderInterface = new RenderDelegateInterface(path, self.loadedFiles)
       let driver = new Usd.HdWebSyncDriver(renderInterface, path);
       if (driver instanceof Promise) {
         driver = await driver;
