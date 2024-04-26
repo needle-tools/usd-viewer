@@ -3996,6 +3996,8 @@ var getUsdModule = (() => {
             Module["FS_createDataFile"] = FS.createDataFile;
             Module["FS_createPreloadedFile"] = FS.createPreloadedFile;
             Module["FS_unlink"] = FS.unlink;
+            Module["FS_readdir"] = FS.readdir;
+            Module["FS_analyzePath"] = FS.analyzePath;
             Module["FS_createLazyFile"] = FS.createLazyFile;
             Module["FS_createDevice"] = FS.createDevice;
             embind_init_charCodes();

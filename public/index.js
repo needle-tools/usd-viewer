@@ -191,6 +191,36 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   } catch(e) {
     console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
   }
+
+  // TODO show file hierarchy in sidebar
+  // better: object has "content" that contains child files, no multiple
+  // calls to analyzePath necessary
+  // TODO USDZ is resolved internally in Usd, if we want to make that useful
+  // we need to unpack on the fly so that the directory can be traversed
+  // OR we traverse the USD data directly, but that means we can't edit stuff.
+  // So when content in a USDZ is changed > update the USDZ file and then reload
+  // This might be recursive (USDZ in USDZ in USDZ)
+  const root = {};
+  function addPath(root, path) {
+    const files = Usd.FS_readdir(path);
+    for (const file of files) {
+      // skip self and parent
+      if (file === "." || file === "..") continue;
+      const newPath = path + file + "/";
+      const data = Usd.FS_analyzePath(path + file + "/");
+      if (data.object.node_ops.readdir) {
+        // default directories we're not interested in
+        if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/") continue;
+        root[file] = {};
+        addPath(root[file], newPath);
+      }
+      else {
+        root[file] = data;
+      }
+    }
+  }
+  addPath(root, "/");
+  console.log("File system", root, Usd.FS_analyzePath("/"));
 }
 
 // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
