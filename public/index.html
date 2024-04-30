@@ -159,12 +159,9 @@
     
     self.loadedFiles = [];
     function clearStage() {
-      console.log("Clearing stage.", [currentRootFileName, ...self.loadedFiles])
-
       window.usdRoot.clear();
 
       for (const file of self.loadedFiles) {
-        console.log("unloading file: ", file)
         Usd.FS_unlink(file, true);
       }
       self.loadedFiles.length = 0;
