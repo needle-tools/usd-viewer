@@ -337,7 +337,7 @@ class HydraMesh {
   }
 
   skelDetected(id, primVarName) {
-    console.warn('UsdSkel detected. Skinned Meshes are not fully supported: ', primVarName, id);
+    //console.warn('UsdSkel detected. Skinned Meshes are not fully supported: ', primVarName, id);
   }
 
   updatePoints(points) {
