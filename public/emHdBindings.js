@@ -916,7 +916,7 @@ var getUsdModule = ((args) => {
       }
       what = "Aborted(" + what + ")";
       err(what);
-      ABORT = true;
+      // ABORT = true; // this does not allow anything to work after being set, however we're actually okay to try other assets so we shouldn't do this
       EXITSTATUS = 1;
       what += ". Build with -sASSERTIONS for more info.";
       var e = new WebAssembly.RuntimeError(what);
