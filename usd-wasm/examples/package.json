@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@needle-tools/usd": "file:..",
-    "test-wasm-usd": "^1.1.0",
+    "@types/three": "^0.165.0",
+    "three": "^0.164.1",
     "vite-plugin-top-level-await": "^1.4.1",
     "vite-plugin-wasm": "^3.3.0"
   }

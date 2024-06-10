@@ -10,9 +10,14 @@ const disableTextures = false;
 const disableMaterials = false;
 
 class TextureRegistry {
-  constructor(basename, allPaths) {
+  /**
+   * @param {string} basename 
+   * @param {import('..').threeJsRenderDelegateConfig} config
+   */
+  constructor(basename, config) {
     this.basename = basename;
-    this.allPaths = allPaths;
+    this.config = config;
+    this.allPaths = config.paths;
     this.textures = [];
     this.loader = new TextureLoader();
     this.tgaLoader = new TGALoader();
@@ -66,19 +71,19 @@ class TextureRegistry {
       // throw new Error('Unknown filetype');
     }
 
-    window.driver.getFile(resourcePath, async (loadedFile) => {
+    this.config.driver().getFile(resourcePath, async (loadedFile) => {
       let loader = this.loader;
       if (filetype === 'image/tga')
         loader = this.tgaLoader;
       else if (filetype === 'image/x-exr')
         loader = this.exrLoader;
-      
+
       const baseUrl = this.baseUrl;
       function loadFromFile(_loadedFile) {
         let url = undefined;
-        if (debugTextures) console.log("window.driver.getFile",resourcePath, " => ", _loadedFile);
+        if (debugTextures) console.log("window.driver.getFile", resourcePath, " => ", _loadedFile);
         if (_loadedFile) {
-          let blob = new Blob([_loadedFile.slice(0)], {type: filetype});
+          let blob = new Blob([_loadedFile.slice(0)], { type: filetype });
           url = URL.createObjectURL(blob);
         } else {
           if (baseUrl)
@@ -91,23 +96,23 @@ class TextureRegistry {
         loader.load(
           // resource URL
           url,
-  
+
           // onLoad callback
           (texture) => {
             texture.name = resourcePath;
             textureResolve(texture);
           },
-  
+
           // onProgress callback currently not used
           undefined,
-  
+
           // onError callback
           (err) => {
             textureReject(err);
           }
         );
       }
-      
+
       if (!loadedFile) {
         // if the file is not part of the filesystem, we can still try to fetch it from the network
         if (baseUrl) {
@@ -127,6 +132,10 @@ class TextureRegistry {
 }
 
 class HydraMesh {
+  /**
+   * @param {string} id
+   * @param {ThreeRenderDelegateInterface} hydraInterface
+   */
   constructor(id, hydraInterface) {
     this._geometry = new BufferGeometry();
     this._id = id;
@@ -135,16 +144,16 @@ class HydraMesh {
     this._normals = undefined;
     this._colors = undefined;
     this._uvs = undefined;
-    this._indices = undefined; 
+    this._indices = undefined;
     this._materials = [];
 
-    let material = new MeshPhysicalMaterial( {
+    let material = new MeshPhysicalMaterial({
       side: DoubleSide,
       color: new Color(0xB4B4B4),
-      envMap: window.envMap,
-    } );
+      envMap: hydraInterface.config.envMap,
+    });
     this._materials.push(material);
-    this._mesh = new Mesh( this._geometry, material );
+    this._mesh = new Mesh(this._geometry, material);
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
 
@@ -157,8 +166,8 @@ class HydraMesh {
     this._mesh.name = _name;
 
     // console.log("Creating HydraMesh: " + id + " -> " + _name);
-    
-    window.usdRoot.add(this._mesh); // FIXME
+
+    hydraInterface.config.usdRoot.add(this._mesh); // FIXME
   }
 
   updateOrder(attribute, attributeName, dimension = 3) {
@@ -171,14 +180,14 @@ class HydraMesh {
           values.push(attribute[dimension * index + j]);
         }
       }
-      this._geometry.setAttribute( attributeName, new Float32BufferAttribute( values, dimension ) );
+      this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
     }
   }
 
   updateIndices(indices) {
     if (debugMeshes) console.log("updateIndices", indices);
     this._indices = [];
-    for (let i = 0; i< indices.length; i++) {
+    for (let i = 0; i < indices.length; i++) {
       this._indices.push(indices[i]);
     }
     //this._geometry.setIndex( indicesArray );
@@ -193,6 +202,10 @@ class HydraMesh {
     }
   }
 
+  /**
+   * Sets the transform of the mesh.
+   * @param {Array} matrix - The 4x4 matrix to set on the mesh.
+   */
   setTransform(matrix) {
     this._mesh.matrix.set(...matrix);
     this._mesh.matrix.transpose();
@@ -236,7 +249,7 @@ class HydraMesh {
   setGeomSubsetMaterial(sections) {
     //console.log("setting subset material: ", this._id, sections)
 
-    for(let i = 0; i < sections.length; i++){
+    for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       if (this._interface.materials[section.materialId]) {
         this._materials.push(this._interface.materials[section.materialId]._material);
@@ -244,8 +257,8 @@ class HydraMesh {
       }
     }
 
-    this._mesh = new Mesh( this._geometry, this._materials);
-    window.usdRoot.add(this._mesh);
+    this._mesh = new Mesh(this._geometry, this._materials);
+    this._interface.config.usdRoot.add(this._mesh);
   }
 
   setDisplayColor(data, interpolation) {
@@ -313,7 +326,7 @@ class HydraMesh {
       name = 'uv';
     }
 
-    switch(name) {
+    switch (name) {
       case 'displayColor':
         this.setDisplayColor(data, interpolation);
         break;
@@ -327,7 +340,7 @@ class HydraMesh {
         this.setUV(data, dimension, interpolation);
         break;
       case "normals":
-        this.setNormals(data, interpolation); 
+        this.setNormals(data, interpolation);
         break;
       default:
         if (warningMessagesToCount.has(name)) {
@@ -407,7 +420,7 @@ class HydraMaterial {
       defaultMaterial = new MeshPhysicalMaterial({
         side: DoubleSide,
         color: new Color(0xff2997), // a bright pink color to indicate a missing material
-        envMap: window.envMap,
+        // envMap: window.envMap,
         name: 'DefaultMaterial',
       });
     }
@@ -426,21 +439,21 @@ class HydraMaterial {
   }
 
   convertWrap(usdWrapMode) {
-     if (usdWrapMode === undefined)
-        return RepeatWrapping;
-    
+    if (usdWrapMode === undefined)
+      return RepeatWrapping;
+
     const WRAPPINGS = {
-			'repeat': 1000, // RepeatWrapping
-			'clamp': 1001, // ClampToEdgeWrapping
-			'mirror': 1002 // MirroredRepeatWrapping
-		};
-    
+      'repeat': 1000, // RepeatWrapping
+      'clamp': 1001, // ClampToEdgeWrapping
+      'mirror': 1002 // MirroredRepeatWrapping
+    };
+
     if (WRAPPINGS[usdWrapMode])
       return WRAPPINGS[usdWrapMode];
-    
+
     return RepeatWrapping;
   }
-  
+
   assignTexture(mainMaterial, parameterName) {
     return new Promise((resolve, reject) => {
       const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
@@ -484,7 +497,7 @@ class HydraMaterial {
             }
             if (!this._material.alphaClip)
               this._material.transparent = true;
-            
+
             this._material.needsUpdate = true;
             resolve();
             return;
@@ -520,12 +533,11 @@ class HydraMaterial {
           }
 
           clonedTexture.colorSpace = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
-          
+
           // console.log("Cloned texture", clonedTexture, "swizzled with", targetSwizzle);
           // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
           // if (materialParameterToTargetChannel[materialParameterMapName] && channel != materialParameterToTargetChannel[materialParameterMapName])
-          if (targetSwizzle != 'rgba')
-          {
+          if (targetSwizzle != 'rgba') {
             clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, targetSwizzle);
           }
           // clonedTexture.image = HydraMaterial._swizzleImageChannels(clonedTexture.image, channel, 'g')
@@ -535,17 +547,17 @@ class HydraMaterial {
           if (nodeIn.st && nodeIn.st.nodeIn) {
             const uvData = nodeIn.st.nodeIn;
             // console.log("Tiling data", uvData);
-            
+
             // TODO this is messed up but works for scale and translation, not really for rotation.
             // Refer to https://github.com/mrdoob/three.js/blob/e5426b0514a1347d7aafca69aa34117503c1be88/examples/jsm/exporters/USDZExporter.js#L461
             // (which is also not perfect but close)
-            
+
             const rotation = uvData.rotation ? (uvData.rotation / 180 * Math.PI) : 0;
-            const offset = uvData.translation ? new Vector2(uvData.translation[0], uvData.translation[1]) : new Vector2(0,0);
-            const repeat = uvData.scale ? new Vector2(uvData.scale[0], uvData.scale[1]) : new Vector2(1,1);
-            
-            const xRotationOffset = Math.sin( rotation );
-            const yRotationOffset = Math.cos( rotation );
+            const offset = uvData.translation ? new Vector2(uvData.translation[0], uvData.translation[1]) : new Vector2(0, 0);
+            const repeat = uvData.scale ? new Vector2(uvData.scale[0], uvData.scale[1]) : new Vector2(1, 1);
+
+            const xRotationOffset = Math.sin(rotation);
+            const yRotationOffset = Math.cos(rotation);
             offset.y = offset.y - (1 - yRotationOffset) * repeat.y;
             offset.x = offset.x - xRotationOffset * repeat.x;
             // offset.y = 1 - offset.y - repeat.y;
@@ -557,12 +569,12 @@ class HydraMaterial {
             if (uvData.rotation)
             clonedTexture.rotation = uvData.rotation / 180 * Math.PI;   
             */
-            
+
             clonedTexture.repeat.set(repeat.x, repeat.y);
             clonedTexture.offset.set(offset.x, offset.y);
             clonedTexture.rotation = rotation;
           }
-          
+
           // TODO use nodeIn.wrapS and wrapT and map to THREE
           clonedTexture.wrapS = this.convertWrap(nodeIn.wrapS);
           clonedTexture.wrapT = this.convertWrap(nodeIn.wrapT);
@@ -587,12 +599,12 @@ class HydraMaterial {
   }
 
   // from https://github.com/mrdoob/three.js/blob/dev/src/math/ColorManagement.js
-  static SRGBToLinear( c ) {
-    return ( c < 0.04045 ) ? c * 0.0773993808 : Math.pow( c * 0.9478672986 + 0.0521327014, 2.4 );
+  static SRGBToLinear(c) {
+    return (c < 0.04045) ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4);
   }
-  
-  static LinearToSRGB( c ) {
-    return ( c < 0.0031308 ) ? c * 12.92 : 1.055 * ( Math.pow( c, 0.41666 ) ) - 0.055;
+
+  static LinearToSRGB(c) {
+    return (c < 0.0031308) ? c * 12.92 : 1.055 * (Math.pow(c, 0.41666)) - 0.055;
   }
 
   /**
@@ -601,24 +613,24 @@ class HydraMaterial {
    * @param {string} swizzle For example, "rgga". Must have max. 4 components. Can contain 0 and 1, e.g. "rgba1" is valid.
    * @returns three.js image
    */
-  static _swizzleImageChannels( image, swizzle ) {
-		if ( ( typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement ) ||
-			( typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement ) ||
-			( typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap ) ) {
+  static _swizzleImageChannels(image, swizzle) {
+    if ((typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement) ||
+      (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) ||
+      (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap)) {
 
-			const canvas = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' );
+      const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
 
-			canvas.width = image.width;
-			canvas.height = image.height;
+      canvas.width = image.width;
+      canvas.height = image.height;
 
-			const context = canvas.getContext( '2d' );
-			context.drawImage( image, 0, 0, image.width, image.height );
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, image.width, image.height);
 
-			const imageData = context.getImageData( 0, 0, image.width, image.height );
-			const data = imageData.data;
-      
+      const imageData = context.getImageData(0, 0, image.width, image.height);
+      const data = imageData.data;
+
       // console.log(data);
-      
+
       const swizzleToIndex = {
         'r': 0,
         'g': 1,
@@ -632,17 +644,17 @@ class HydraMaterial {
         '1': 5, // set to 1
         '-': -1, // passthrough
       };
-      const arrayAccessBySwizzle = [4,4,4,4]; // empty value if nothing defined in the swizzle pattern
+      const arrayAccessBySwizzle = [4, 4, 4, 4]; // empty value if nothing defined in the swizzle pattern
       for (let i = 0; i < swizzle.length; i++) {
         arrayAccessBySwizzle[i] = swizzleToIndex[swizzle[i]];
       }
 
       const dataEntry = data.slice(0);
-			for ( let i = 0; i < data.length; i += 4 ) {
+      for (let i = 0; i < data.length; i += 4) {
         dataEntry[0] = data[i];
-        dataEntry[1] = data[i+1];
-        dataEntry[2] = data[i+2];
-        dataEntry[3] = data[i+3];
+        dataEntry[1] = data[i + 1];
+        dataEntry[2] = data[i + 2];
+        dataEntry[3] = data[i + 3];
         dataEntry[4] = 0; // empty value
         dataEntry[5] = 1;
 
@@ -652,40 +664,40 @@ class HydraMaterial {
         const aAccess = arrayAccessBySwizzle[3];
 
         if (rAccess !== -1)
-				  data[ i ] = dataEntry[rAccess];
+          data[i] = dataEntry[rAccess];
         if (gAccess !== -1)
-          data[ i + 1 ] = dataEntry[gAccess];
+          data[i + 1] = dataEntry[gAccess];
         if (bAccess !== -1)
-          data[ i + 2 ] = dataEntry[bAccess];
+          data[i + 2] = dataEntry[bAccess];
         if (aAccess !== -1)
-          data[ i + 3 ] = dataEntry[aAccess];
-			}
+          data[i + 3] = dataEntry[aAccess];
+      }
 
-			context.putImageData( imageData, 0, 0 );
-			return canvas;
+      context.putImageData(imageData, 0, 0);
+      return canvas;
 
-		} else if ( image.data ) {
-			const data = image.data.slice( 0 );
+    } else if (image.data) {
+      const data = image.data.slice(0);
 
-			for ( let i = 0; i < data.length; i ++ ) {
-				if ( data instanceof Uint8Array || data instanceof Uint8ClampedArray ) {
-					data[ i ] = Math.floor( this.SRGBToLinear( data[ i ] / 255 ) * 255 );
-				} else {
-					// assuming float
-					data[ i ] = this.SRGBToLinear( data[ i ] );
-				}
-			}
+      for (let i = 0; i < data.length; i++) {
+        if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+          data[i] = Math.floor(this.SRGBToLinear(data[i] / 255) * 255);
+        } else {
+          // assuming float
+          data[i] = this.SRGBToLinear(data[i]);
+        }
+      }
 
-			return {
-				data: data,
-				width: image.width,
-				height: image.height
-			};
-		} else {
-			console.warn( 'ImageUtils.sRGBToLinear(): Unsupported image type. No color space conversion applied.' );
-			return image;
-		}
-	}
+      return {
+        data: data,
+        width: image.width,
+        height: image.height
+      };
+    } else {
+      console.warn('ImageUtils.sRGBToLinear(): Unsupported image type. No color space conversion applied.');
+      return image;
+    }
+  }
 
   assignProperty(mainMaterial, parameterName) {
     const materialParameterName = HydraMaterial.usdPreviewToMeshPhysicalMap[parameterName];
@@ -767,15 +779,13 @@ class HydraMaterial {
       await Promise.all(texturePromises);
 
       // Need to sanitize metallic/roughness/occlusion maps - if we want to export glTF they need to be identical right now
-      if (haveRoughnessMap && !haveMetalnessMap)
-      {
+      if (haveRoughnessMap && !haveMetalnessMap) {
         if (debugMaterials) console.log(this._material.roughnessMap, this._material);
         this._material.metalnessMap = this._material.roughnessMap;
         if (this._material.metalnessMap) this._material.metalnessMap.needsUpdate = true;
         else console.error("Something went wrong with the texture promise; haveRoughnessMap is true but no roughnessMap was loaded.");
       }
-      else if (haveMetalnessMap && !haveRoughnessMap)
-      {
+      else if (haveMetalnessMap && !haveRoughnessMap) {
         this._material.roughnessMap = this._material.metalnessMap;
         if (this._material.roughnessMap) this._material.roughnessMap.needsUpdate = true;
         else console.error("Something went wrong with the texture promise; haveMetalnessMap is true but no metalnessMap was loaded.");
@@ -808,11 +818,16 @@ class SdfPath {
 }
 */
 
-export class RenderDelegateInterface {
+export class ThreeRenderDelegateInterface {
 
-  constructor(filename, allPaths) {
-    if (debugMaterials) console.log("RenderDelegateInterface", filename, allPaths);
-    this.registry = new TextureRegistry(filename, allPaths);
+  /**
+   * @param {string} filename
+   * @param {import('..').threeJsRenderDelegateConfig} config
+   */
+  constructor(filename, config) {
+    this.config = config;
+    if (debugMaterials) console.log("RenderDelegateInterface", filename, config);
+    this.registry = new TextureRegistry(filename, config);
     this.materials = {};
     this.meshes = {};
   }
@@ -852,8 +867,8 @@ export class RenderDelegateInterface {
 
   CommitResources() {
     for (const id in this.meshes) {
-        const hydraMesh = this.meshes[id]
-        hydraMesh.commit();
+      const hydraMesh = this.meshes[id]
+      hydraMesh.commit();
     }
   }
 }
