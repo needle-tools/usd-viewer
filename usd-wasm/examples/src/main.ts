@@ -18,7 +18,8 @@ getUsdModule().then(async (USD: USD) => {
   const scene = new Scene();
   scene.environment = envmap;
 
-  const { update } = await createThreeHydra({
+  const { update, dispose } = await createThreeHydra({
+    debug: true,
     USD,
     usdz: filepath,
     scene,
@@ -30,7 +31,7 @@ getUsdModule().then(async (USD: USD) => {
     renderer,
     scene: scene,
     onRender: (dt) => {
-      // update(dt);
+      update(dt);
     }
   });
 
