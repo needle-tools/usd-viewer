@@ -50,23 +50,28 @@ NOTE: Origins for these instructions can be found [here](https://github.com/auto
     1. Download and Install [emscripten](https://emscripten.org) from [HERE](https://emscripten.org/docs/getting_started/downloads.html).
     2. MacOS
         1. Download and install the latest SDK tools.
-            1. `./emsdk install 3.1.47`
+            1. `./emsdk install 3.1.55`
         2. Make the specific SDK "active" for the current user. (writes .emscripten file)
-            1. `./emsdk activate 3.1.47`
+            1. `./emsdk activate 3.1.55`
         3. Activate PATH and other environment variables in the current terminal
             1. `source ./emsdk_env.sh`
       3. Windows
           1. Download and install the latest SDK tools.
-              1. `emsdk install 3.1.47`
+              1. `emsdk install 3.1.55`
           2. Make the specific SDK for the current user. (writes .emscripten file)
-              1. `emsdk activate 3.1.47`
+              1. `emsdk activate 3.1.55`
+  2. Setup CMAKE
+      1. Install
+      2. Open CMAKE, open "Tools/How to install for Command Line Use"
+      3. Copy the command there and run in the same terminal, e.g.
+         `PATH="/Applications/CMake.app/Contents/bin":"$PATH"`
   2. Pull [this branch](https://github.com/autodesk-forks/USD/tree/adsk/feature/webgpu) from Autodesk's USD fork
       1. `git clone --recursive https://git.autodesk.com/autodesk-forks/usd/tree/adsk/feature/webgpu` 
   3. Build USD-wasm
       1. Go into the root of usd source repo, if the folder name is "usd_repo"
           1. `cd usd_repo`
       2. Build USD with the --emscripten flag, for example "../build_dir" is your local build folder
-          2. `python3 ./build_scripts/build_usd.py --emscripten ../build_dir`
+          2. `python3 ./build_scripts/build_usd.py --build-target wasm ../build_dir`
       3. This will put the resulting files in ../build_dir/bin
           1. `emHdBindings.js`
           2. `emHdBindings.wasm`
