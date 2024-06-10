@@ -239,8 +239,14 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
 
   if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
       Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
-    console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", object, size);
-    controls.update();
+    console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", selection, size);
+    if (controls) 
+      controls.update();
+    return;
+  }
+
+  if (!controls) {
+    console.warn("No camera controls object found, something went wrong.");
     return;
   }
 

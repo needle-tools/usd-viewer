@@ -54,7 +54,7 @@ class TextureRegistry {
     } else if (lowercaseFilename.indexOf('.jpeg') >= lowercaseFilename.length - 5) {
       filetype = 'image/jpeg';
     } else if (lowercaseFilename.indexOf('.exr') >= lowercaseFilename.length - 4) {
-      console.warn("EXR textures are not fully supported yet", filename);
+      console.warn("EXR textures are not fully supported yet", resourcePath);
       // using EXRLoader explicitly
       filetype = 'image/x-exr';
     } else if (lowercaseFilename.indexOf('.tga') >= lowercaseFilename.length - 4) {
