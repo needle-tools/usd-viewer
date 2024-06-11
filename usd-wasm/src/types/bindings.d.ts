@@ -44,6 +44,15 @@ declare type HdWebSyncDriver = {
     isAliasOf(): boolean,
 }
 
+
+
+export type GetUsdModuleOptions = {
+    mainScriptUrlOrBlob?: string,
+    wasmBinary?: Buffer,
+    locateFile?: (path: string) => string,
+    getPreloadedPackage?: (file: string, size: number) => ArrayBuffer,
+}
+
 /**
  * Loads the USD Module.
  * @example
@@ -51,6 +60,6 @@ declare type HdWebSyncDriver = {
  * getUsdModule({ mainScriptUrlOrBlob: "/emHdBindings.js" }).then(USD => { ... })
  * ```
  */
-export function getUsdModule(opts?: { mainScriptUrlOrBlob?: string }): Promise<USD>;
+export function getUsdModule(opts?: GetUsdModuleOptions): Promise<USD>;
 
 export type USDRoot = {}

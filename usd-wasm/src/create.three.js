@@ -5,12 +5,19 @@ import { threeJsRenderDelegate } from "./hydra/index.js";
  * @param {{USD:import("./types").USD, filepath:string, buffer?:ArrayBuffer, parent?:string,}} opts
  */
 async function createFile(opts) {
-    const filepath = opts.filepath;
+    if (typeof opts.filepath !== "string") throw new Error("Filepath must be a string");
+
+    let filepath = /** @type {string & { replaceAll:Function }} */ (opts.filepath);
+
     let arrayBuffer = opts.buffer;
     if (!arrayBuffer) {
         const blob = await fetch(filepath);
         arrayBuffer = await blob.arrayBuffer();
     }
+
+    // ensure that file paths are not using slashes
+    filepath = filepath.replaceAll(/\\/g, "/").replaceAll("/", "_");
+
 
     // Put a simple USDZ file into the virtual file system so USD can access it
     // Create a file in the virtual file system

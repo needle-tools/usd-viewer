@@ -34,8 +34,13 @@ export async function getUsdModule(opts) {
         mainScriptUrlOrBlob: "./emHdBindings.js",
         // wasmBinary: wasm,
         // locateFile: (file) => {
+        //     if (opts?.locateFile) {
+        //         return opts.locateFile(file);
+        //     }
+        //     return file;
         //     console.log(file)
-        //     return "http://localhost:5174/@fs/C:/git/usd-viewer/usd-wasm/src/bindings/" + file;
+        //     // return "http://localhost:5174/@fs/C:/git/usd-viewer/usd-wasm/src/bindings/" + file;
+        //     return "https://localhost:5173/" + file;
         // },
         // getPreloadedPackage(name, size) {
         //     console.log("PRELOAD", name, size, data)

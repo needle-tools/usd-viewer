@@ -1,5 +1,19 @@
 import { Plugin } from "vite";
 
 
-
-export declare function viteUSD(): Array<Plugin>;
+/**
+ * Enable USD WASM support for vite based applications.
+ * @example sveltekit
+ * ```ts
+ * import { needleUSD } from '@needle-tools/usd';
+ * export default defineConfig(async ({ command }) => {
+ *     return {
+ *        plugins: [
+ *           ...needleUSD(),
+ *           sveltekit(),
+ *       ],
+ *    }
+ * });
+ * ```
+ */
+export declare function needleUSD(): Array<Plugin>;
