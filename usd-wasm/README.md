@@ -14,12 +14,7 @@ See full example in [examples](./examples/src/main.ts)
 
 ```js
 // Load the USD module
-const usd = await getUsdModule({
-    // optionally resolve paths to the emHdBindings
-    locateFile: (path) => {
-        return `${PUBLIC_BASE_URL}/${path}`;
-    },
-});
+const usd = await getUsdModule();
 // Load a USD file to be rendered by threejs
 const handle = await createThreeHydra({
     USD: usd,
