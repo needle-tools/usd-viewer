@@ -46,6 +46,8 @@ Loading and rendering are currently intermingled in `public/index.html`.
 
 NOTE: Origins for these instructions can be found [here](https://github.com/autodesk-forks/USD/blob/adsk/feature/webgpu/pxr/usdImaging/bin/usdviewweb/README.md)
 
+#### Getting Setup
+
 1. Setup emscripten if it's not already setup.
     1. Download and Install [emscripten](https://emscripten.org) from [HERE](https://emscripten.org/docs/getting_started/downloads.html).
     2. MacOS
@@ -66,18 +68,117 @@ NOTE: Origins for these instructions can be found [here](https://github.com/auto
       3. Copy the command there and run in the same terminal, e.g.
          `PATH="/Applications/CMake.app/Contents/bin":"$PATH"`
   2. Pull [this branch](https://github.com/autodesk-forks/USD/tree/adsk/feature/webgpu) from Autodesk's USD fork
-      1. `git clone --recursive https://git.autodesk.com/autodesk-forks/usd/tree/adsk/feature/webgpu` 
-  3. Build USD-wasm
-      1. Go into the root of usd source repo, if the folder name is "usd_repo"
-          1. `cd usd_repo`
-      2. Build USD with the --emscripten flag, for example "../build_dir" is your local build folder
-          2. `python3 ./build_scripts/build_usd.py --build-target wasm ../build_dir`
-      3. This will put the resulting files in ../build_dir/bin
-          1. `emHdBindings.js`
-          2. `emHdBindings.wasm`
-          3. `emHdBindings.worker.js`
-          4. `emHdBindings.data`
-      4. Note: It's possible the build will fail due to comments in `pxr/base/arch/hints.h`, removing all comments from line 1-26 allowed the build to complete successfully
+      1. `git clone --recursive https://git.autodesk.com/autodesk-forks/usd/tree/adsk/feature/webgpu`
+
+#### Building
+
+##### Release
+
+1. Go into the root of usd source repo, if the folder name is "usd_repo"
+    1. `cd usd_repo`
+2. Build USD with the --emscripten flag, for example "../build_dir" is your local build folder
+    2. `python3 ./build_scripts/build_usd.py --build-target wasm ../build_dir`
+3. This will put the resulting files in ../build_dir/bin
+    1. `emHdBindings.js`
+    2. `emHdBindings.wasm`
+    3. `emHdBindings.worker.js`
+    4. `emHdBindings.data`
+    4. Note: It's possible the build will fail due to comments in `pxr/base/arch/hints.h`, removing all comments from line 1-26 allowed the build to complete successfully
+4. Run `wasm-opt -Oz -o "../build_dir/bin/emHdBindings.wasm" "../build_dir/bin/emHdBindings.wasm" --enable-bulk-memory --enable-threads` to shrink the wasm file more.
+5. Patch emHdBindings.js to enable the following support, unable to currently do these things as part of the normal build process
+    1. Support for arguments
+        - `patch emHdBindings.js < patches/arguments_1.patch` 
+        - `patch emHdBindings.js < patches/arguments_2.patch` 
+            - THIS PATCH DOES NOT WORK
+            - Copy the following lines:
+            ```
+            return function (
+                moduleArg = {
+                // module overrides can be supplied here
+                locateFile: (path, prefix) => {
+                    if (!prefix)
+                    prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
+                    return prefix + path;
+                },
+                ...args,
+                },
+            ) {
+            ```
+            And replace this line:
+            -  `return function (moduleArg = {}) {`
+    2. Disable ABORT so that one bad file doesn't corrupt the entire session
+        - `patch emHdBindings.js < patches/abort.patch` 
+    3. Add file system functions to the module
+        - `patch emHdBindings.js < patches/fileSystem.patch` 
+            - THIS PATCH DOES NOT WORK
+            - Add these lines 
+            ```
+            Module["FS_readdir"] = FS.readdir;
+            Module["FS_analyzePath"] = FS.analyzePath;
+            ```
+            right after 
+            - `Module["PThread"] = PThread;`
+
+##### Debug
+1. Install [ C/C++ DevTools Support (DWARF)](https://chromewebstore.google.com/detail/cc++-devtools-support-dwa/pdcpmagijalfljmkmjngeonclgbbannb)
+2. Update https://github.com/needle-tools/OpenUSD/blob/needle/feature/wasm-improvements/pxr/usdImaging/hdEmscripten/CMakeLists.txt#L89, instead of `-Oz` use `-O3 -g`
+3. Go into the root of usd source repo, if the folder name is "usd_repo"
+    1. `cd usd_repo`
+4. Build USD with the --emscripten flag, for example "../build_dir" is your local build folder
+    2. `python3 ./build_scripts/build_usd.py --build-target wasm --build-variant debug ../build_dir`
+5. This will put the resulting files in ../build_dir/bin
+    1. `emHdBindings.js`
+    2. `emHdBindings.wasm`
+    3. `emHdBindings.worker.js`
+    4. `emHdBindings.data`
+    5. Note: It's possible the build will fail due to comments in `pxr/base/arch/hints.h`, removing all comments from line 1-26 allowed the build to complete successfully
+6. Patch emHdBindings.js to enable the following support, unable to currently do these things as part of the normal build process
+    1. Support for arguments
+        - `patch emHdBindings.js < arguments_1.patch` 
+        - `patch emHdBindings.js < arguments_2.patch` 
+            - THIS PATCH DOES NOT WORK
+            - Copy the following lines:
+            ```
+            return function (
+                moduleArg = {
+                // module overrides can be supplied here
+                locateFile: (path, prefix) => {
+                    if (!prefix)
+                    prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
+                    return prefix + path;
+                },
+                ...args,
+                },
+            ) {
+            ```
+            And replace this line:
+            -  `return function (moduleArg = {}) {`
+    2. Disable ABORT so that one bad file doesn't corrupt the entire session
+        - `patch emHdBindings.js < abort.patch` 
+    3. Add file system functions to the module
+        - `patch emHdBindings.js < fileSystem.patch` 
+            - THIS PATCH DOES NOT WORK
+            - Add these lines 
+            ```
+            Module["FS_readdir"] = FS.readdir;
+            Module["FS_analyzePath"] = FS.analyzePath;
+            ```
+            right after 
+            - `Module["PThread"] = PThread;`
+7. Run `npm start`
+8. Go to http://localhost:3003 (or wherever the app is running)
+9. Open up Chrome Dev Tools
+10. Go to Sources -> (vertical ellipsis) -> Group by Authored/Deployed
+11. Under Authored, you can go through to the pxr files to set breakpoints in the c++ code.
+
+##### Build Script
+There is a build script [here](https://github.com/needle-tools/OpenUSD/blob/needle/feature/wasm-improvements/buildAndMove.sh) which tries to make building easier. Set the mode, build directory and destination directory to deal with the file movement.
+
+Usage: `./buildAndMove.sh --mode release --build-dir ../build-wasm --destination-dir /Users/andrewbeers/git/needle/usd-viewer/public`
+
+NOTE: this does not support patching yet as patching doesn't completely work yet
+NOTE: this does not update CMakeLists.txt for debug mode automatically
+
 
 ## Origin
 

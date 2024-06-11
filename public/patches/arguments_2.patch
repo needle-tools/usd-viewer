@@ -1,0 +1,22 @@
+diff --git a/public/emHdBindings.js b/public/emHdBindings.js
+--- a/public/emHdBindings.js
++++ b/public/emHdBindings.js
+@@ -5,7 +5,15 @@
+       : undefined;
+   if (typeof __filename !== "undefined") _scriptDir = _scriptDir || __filename;
+-  return function (moduleArg = {}) {
+-    // Support for growable heap + pthreads, where the buffer may change, so JS views
+-    // must be updated.
++  return function (
++    moduleArg = {
++      // module overrides can be supplied here
++      locateFile: (path, prefix) => {
++        if (!prefix)
++          prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
++        return prefix + path;
++      },
++      ...args,
++    },
++  ) {
+     function GROWABLE_HEAP_I8() {
+       if (wasmMemory.buffer != HEAP8.buffer) {

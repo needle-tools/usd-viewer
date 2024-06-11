@@ -1,0 +1,8 @@
+diff --git a/public/emHdBindings.js b/public/emHdBindings.js
+--- a/public/emHdBindings.js
++++ b/public/emHdBindings.js
+@@ -1,3 +0,3 @@
+-var getUsdModule = (() => {
++var getUsdModule = ((args) => {
+   var _scriptDir =
+     typeof document !== "undefined" && document.currentScript
