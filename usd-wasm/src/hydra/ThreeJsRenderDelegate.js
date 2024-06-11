@@ -150,7 +150,7 @@ class HydraMesh {
     let material = new MeshPhysicalMaterial({
       side: DoubleSide,
       color: new Color(0xB4B4B4),
-      envMap: hydraInterface.config.envMap,
+      // envMap: hydraInterface.config.envMap,
     });
     this._materials.push(material);
     this._mesh = new Mesh(this._geometry, material);
@@ -791,19 +791,13 @@ class HydraMaterial {
         else console.error("Something went wrong with the texture promise; haveMetalnessMap is true but no metalnessMap was loaded.");
       }
       else if (haveMetalnessMap && haveRoughnessMap) {
-        // need to merge textures
-        // TODO
-        console.warn("TODO separate metalness and roughness textures, need to be merged");
+        console.warn("TODO: [Three USD] separate metalness and roughness textures need to be merged");
       }
     }
 
     // Assign material properties
     for (let key in HydraMaterial.usdPreviewToMeshPhysicalMap) {
       this.assignProperty(mainMaterialNode, key);
-    }
-
-    if (window.envMap) {
-      this._material.envMap = window.envMap;
     }
 
     if (debugMaterials) console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
