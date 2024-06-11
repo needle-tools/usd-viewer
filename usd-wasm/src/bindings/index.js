@@ -29,6 +29,14 @@ export async function getUsdModule(opts) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis");
     }
 
+
+    // HACK for worker import: \"Cannot use import statement outside a module\""
+    // https://github.com/vitejs/vite/issues/6979
+
+    // @ts-ignore
+    const isProd = import.meta.env.PROD;
+
+
     /**
      * We use a async import here because otherwise sveltekit vite complains about unknown file extensions (e.g. .wasm)
      */
@@ -37,15 +45,17 @@ export async function getUsdModule(opts) {
         import(`./emHdBindings.js?url`),
         /** @ts-ignore */
         import(`./emHdBindings.data?url`),
+        // https://v3.vitejs.dev/guide/features.html#web-workers
+        // https://github.com/vitejs/vite/issues/6979
         /** @ts-ignore */
         import(`./emHdBindings.worker.js?worker&url`),
         /** @ts-ignore */
+        import(`./emHdBindings.worker.js?url`),
+        /** @ts-ignore */
         import(`./emHdBindings.wasm?url`),
     ]);
-    const [bindings, data, worker, wasm] = bindingsPromise;
-
-    // const module = await import(`./emHdBindings.js?url`)
-    // console.log("EMHDBINDINGS", module);
+    const [bindings, data, workerProd, workerDev, wasm] = bindingsPromise;
+    const worker = isProd ? workerProd : workerDev;
 
 
     // const wasm = await fetch(wasmUrl).then(r => r.arrayBuffer());
