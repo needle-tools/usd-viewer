@@ -60,14 +60,19 @@ export async function getUsdModule(opts) {
             }
             return file;
         },
-        // getPreloadedPackage(name, size) {
-        //     // const res = opts?.getPreloadedPackage?.(name, size);
-        //     // if (res) return res;
+        getPreloadedPackage(name, size) {
+            const userResult = opts?.getPreloadedPackage?.(name, size);
+            if (userResult) return userResult;
 
-        //     // if (name === "emHdBindings.data") {
-        //     //     return data;
-        //     // }
-        //     return null;
-        // },
+            // For debugging if the data file isnt loaded or the size might be wrong
+            // Make sure to clear the vite cache. See https://linear.app/needle/issue/NE-4851#comment-2a9538e3
+            // if (name.includes("emHdBindings.data")) {
+            //     if (data.byteLength !== size) {
+            //         throw new Error(`emHdBindings.data size mismatch: expected ${size}, got ${data.byteLength}\n${dataUrl}`);
+            //     }
+            //     return data;
+            // }
+            return null;
+        },
     });
 }
