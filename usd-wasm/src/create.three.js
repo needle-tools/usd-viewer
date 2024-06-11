@@ -1,4 +1,4 @@
-import { threeJsRenderDelegate } from "./hydra";
+import { threeJsRenderDelegate } from "./hydra/index.js";
 
 
 /**

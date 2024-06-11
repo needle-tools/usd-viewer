@@ -1,6 +1,6 @@
-import { getUsdModule as _getUsdModule } from "./emHdBindings";
+import { getUsdModule as _getUsdModule } from "./emHdBindings.js";
 
-import base64 from "base64-js";
+// import base64 from "base64-js";
 
 // See https://github.com/dimforge/rapier.js/blob/master/rapier-compat/src3d/init.ts#L11
 // @ts-ignore
