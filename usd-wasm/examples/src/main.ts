@@ -4,7 +4,9 @@ import { loadEnvMap, run } from './three';
 import { Scene, WebGLRenderer } from 'three';
 
 
-getUsdModule().then(async (USD: USD) => {
+getUsdModule({
+  debug: true
+}).then(async (USD: USD) => {
 
   const filepath = "test.usdz";
 

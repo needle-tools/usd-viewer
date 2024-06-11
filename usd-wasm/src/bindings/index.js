@@ -38,7 +38,7 @@ export async function getUsdModule(opts) {
         /** @ts-ignore */
         import(`./emHdBindings.data?url`),
         /** @ts-ignore */
-        import(`./emHdBindings.worker.js?url`),
+        import(`./emHdBindings.worker.js?worker&url`),
         /** @ts-ignore */
         import(`./emHdBindings.wasm?url`),
     ]);
@@ -58,23 +58,39 @@ export async function getUsdModule(opts) {
         },
         ...opts,
         locateFile: (file) => {
+            if (opts?.debug === true) console.warn("LOCATE FILE:", file)
+
             const userResult = opts?.locateFile?.(file);
             if (userResult) {
                 return userResult;
             }
-            if (opts?.debug === true) console.warn("LOCATE FILE:", file)
+
+            /** resolved filepath */
+            let res = null;
+
             if (file.includes("emHdBindings.data")) {
-                return data.default;
+                res = data.default;
             }
-            if (file.includes("emHdBindings.wasm")) {
-                return wasm.default;
-                // return wasmUrl;
+            else if (file.includes("emHdBindings.wasm")) {
+                res = wasm.default;
             }
-            if (file.includes("emHdBindings.worker.js")) {
-                return worker.default;
-                // return workerUrl;
+            else if (file.includes("emHdBindings.worker.js")) {
+                res = worker.default;
             }
-            return file;
+
+            // if (url?.startsWith("data:text/javascript;base64")) {
+            //     // we're client side and Buffer and atob are not available
+            //     // so we need to convert the base64 to a blob
+            //     const base64 = url.split(",")[1];
+            //     const binary = atob(base64);
+            //     const bytes = new Uint8Array(binary.length);
+            //     for (let i = 0; i < binary.length; i++) {
+            //         bytes[i] = binary.charCodeAt(i);
+            //     }
+
+            // }
+
+            return res ?? file;
         },
         getPreloadedPackage(name, size) {
             const userResult = opts?.getPreloadedPackage?.(name, size);
