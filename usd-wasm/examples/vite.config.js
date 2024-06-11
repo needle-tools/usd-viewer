@@ -3,13 +3,13 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 
 export default defineConfig({
-    plugins: [
-        viteStaticCopy({
-            targets: [
-                { src: '../src/bindings/*', dest: 'public' },
-            ]
-        }),
-    ],
+    // plugins: [
+    //     viteStaticCopy({
+    //         targets: [
+    //             { src: '../src/bindings/*', dest: 'public' },
+    //         ]
+    //     }),
+    // ],
     // enable COEP etc
     server: {
         headers: {

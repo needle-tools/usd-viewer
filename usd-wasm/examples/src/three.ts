@@ -1,4 +1,4 @@
-import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, Object3D, DirectionalLight, Clock, PMREMGenerator, EquirectangularReflectionMapping, Texture } from 'three';
+import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, DirectionalLight, Clock, PMREMGenerator, Texture } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
@@ -36,7 +36,6 @@ export function run(config: {
     // renderer.toneMapping = AgXToneMapping;
     // renderer.toneMappingExposure = 1;
     renderer.toneMapping = NeutralToneMapping;
-    console.log("tonemapping", renderer.toneMapping)
     renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = VSMShadowMap;
     renderer.setClearColor(0x000000, 1); // the default

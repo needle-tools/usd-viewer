@@ -15,4 +15,4 @@ function GROWABLE_HEAP_I8(){if(wasmMemory.buffer!=HEAP8.buffer){updateMemoryView
 })();
 
 
-export { getUsdModule }
+globalThis["NEEDLE:USD:GET"] = getUsdModule;

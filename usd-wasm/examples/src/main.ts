@@ -1,12 +1,10 @@
 
-import { getUsdModule, createThreeHydra, threeJsRenderDelegate, threeJsRenderDelegateConfig, USD, HdWebSyncDriver } from '@needle-tools/usd';
+import { getUsdModule, createThreeHydra, USD } from '@needle-tools/usd';
 import { loadEnvMap, run } from './three';
-import { Group, Scene, WebGLRenderer } from 'three';
+import { Scene, WebGLRenderer } from 'three';
 
 
 getUsdModule().then(async (USD: USD) => {
-
-  console.log("USD", USD)
 
   const filepath = "test.usdz";
 
@@ -18,7 +16,7 @@ getUsdModule().then(async (USD: USD) => {
   const scene = new Scene();
   scene.environment = envmap;
 
-  const { update, dispose } = await createThreeHydra({
+  const { update } = await createThreeHydra({
     debug: true,
     USD,
     usdz: filepath,
@@ -26,6 +24,8 @@ getUsdModule().then(async (USD: USD) => {
   })
 
   console.log(scene.children)
+
+  // setTimeout(()=>dispose(), 2000);
 
   run({
     renderer,
