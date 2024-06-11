@@ -47,6 +47,7 @@ declare type HdWebSyncDriver = {
 
 
 export type GetUsdModuleOptions = {
+    debug?: boolean,
     mainScriptUrlOrBlob?: string,
     wasmBinary?: ArrayBufferLike,
     locateFile?: (path: string) => string,

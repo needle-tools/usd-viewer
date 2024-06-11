@@ -1,20 +1,18 @@
 import "./emHdBindings.js";
 
-// import base64 from "base64-js";
-
 // See https://github.com/dimforge/rapier.js/blob/master/rapier-compat/src3d/init.ts#L11
 
 // @ts-ignore
-import mainScripUrl from "./emHdBindings.js?url";
+// import mainScripUrl from "./emHdBindings.js?url";
 
-// @ts-ignore
-import wasmUrl from "./emHdBindings.wasm?url";
+// // @ts-ignore
+// import wasmUrl from "./emHdBindings.wasm?url";
 
-// @ts-ignore
-import workerUrl from "./emHdBindings.worker.js?url";
+// // @ts-ignore
+// import workerUrl from "./emHdBindings.worker.js?url";
 
-// @ts-ignore
-import dataUrl from "./emHdBindings.data?url";
+// // @ts-ignore
+// import dataUrl from "./emHdBindings.data?url";
 
 
 /**
@@ -31,6 +29,21 @@ export async function getUsdModule(opts) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis");
     }
 
+    /**
+     * We use a async import here because otherwise sveltekit vite complains about unknown file extensions (e.g. .wasm)
+     */
+    const bindingsPromise = await Promise.all([
+        /** @ts-ignore */
+        import(`./emHdBindings.js?url`),
+        /** @ts-ignore */
+        import(`./emHdBindings.data?url`),
+        /** @ts-ignore */
+        import(`./emHdBindings.worker.js?url`),
+        /** @ts-ignore */
+        import(`./emHdBindings.wasm?url`),
+    ]);
+    const [bindings, data, worker, wasm] = bindingsPromise;
+
     // const module = await import(`./emHdBindings.js?url`)
     // console.log("EMHDBINDINGS", module);
 
@@ -39,7 +52,7 @@ export async function getUsdModule(opts) {
     // const data = await fetch(dataUrl).then(r => r.arrayBuffer());
 
     return getUsdModuleFn({
-        mainScriptUrlOrBlob: mainScripUrl,// "./emHdBindings.js",
+        mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
         setStatus: (status) => {
             console.warn("STATUS", status);
         },
@@ -49,14 +62,17 @@ export async function getUsdModule(opts) {
             if (userResult) {
                 return userResult;
             }
+            if (opts?.debug === true) console.warn("LOCATE FILE:", file)
+            if (file.includes("emHdBindings.data")) {
+                return data.default;
+            }
             if (file.includes("emHdBindings.wasm")) {
-                return wasmUrl;
+                return wasm.default;
+                // return wasmUrl;
             }
             if (file.includes("emHdBindings.worker.js")) {
-                return workerUrl;
-            }
-            if (file.includes("emHdBindings.data")) {
-                return dataUrl;
+                return worker.default;
+                // return workerUrl;
             }
             return file;
         },
