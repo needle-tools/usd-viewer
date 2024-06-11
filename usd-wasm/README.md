@@ -1,29 +1,57 @@
 # Needle USD
 
+USD wasm runtime and three.js hydra delegate
+
+## Install
+`npm install @needle-tools/usd`
+
+
+
 ## Usage
 
-### Install
-`npm install test-wasm-usd`
+
+See full example in [examples](./examples/src/main.ts)
+
+```js
+// Load the USD module
+const usd = await getUsdModule({
+    // optionally resolve paths to the emHdBindings
+    locateFile: (path) => {
+        return `${PUBLIC_BASE_URL}/${path}`;
+    },
+});
+// Load a USD file to be rendered by threejs
+const handle = await createThreeHydra({
+    USD: usd,
+    scene: ctx.scene,
+    usdz: "http://localhost:8081/v1/public/89aa693/89aa693/ImageTrackingNeedleSample.usdz",
+})
+// Call handle.update(dt) in your threejs update loop 
+```
+
+
+
+## Low Level
 
 ### Import
-```
-import getUsdModule from 'test-wasm-usd/src/emHdBindings.js';
+```js
+import { getUsdModule } from '@needle-tools/usd';
 ```
 
 ### Load the Module
 
-```
+```js
 getUsdModule({
   // We need to override where the initial module is loaded from, 
   // since after bundling we can't rely on paths anymore
   mainScriptUrlOrBlob: "/emHdBindings.js",
-}).then(async (Usd: any) => {
+}).then(async (Usd: USD) => {
     // use Usd here
 });
 ```
 
 ### Load a file into the virtual file system
-```
+```js
 const blob = await fetch("test.usdz");
 const arrayBuffer = await blob.arrayBuffer();
 // Create a file in the virtual file system
@@ -32,7 +60,7 @@ Usd.FS_createDataFile("", "test.usdz", new Uint8Array(arrayBuffer), true, true, 
 
 ### Load file into USD
 
-```
+```js
 let driver = new Usd.HdWebSyncDriver(delegate, "test.usdz");
 if (driver instanceof Promise) driver = await driver;
 
