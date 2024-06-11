@@ -51,6 +51,7 @@ export type GetUsdModuleOptions = {
     wasmBinary?: ArrayBufferLike,
     locateFile?: (path: string) => string,
     getPreloadedPackage?: (file: string, size: number) => ArrayBuffer | null,
+    setStatus?: (status: string) => void,
 }
 
 /**

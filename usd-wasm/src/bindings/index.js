@@ -40,6 +40,9 @@ export async function getUsdModule(opts) {
 
     return getUsdModuleFn({
         mainScriptUrlOrBlob: mainScripUrl,// "./emHdBindings.js",
+        setStatus: (status) => {
+            console.warn("STATUS", status);
+        },
         ...opts,
         locateFile: (file) => {
             const userResult = opts?.locateFile?.(file);
