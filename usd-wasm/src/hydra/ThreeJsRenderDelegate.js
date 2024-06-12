@@ -1,4 +1,4 @@
-import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, ImageUtils } from 'three';
+import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, ImageUtils, Material } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
@@ -365,6 +365,8 @@ class HydraMesh {
 }
 
 let warningMessagesToCount = new Map();
+
+/** @type {MeshPhysicalMaterial} */
 let defaultMaterial;
 
 class HydraMaterial {
@@ -428,6 +430,7 @@ class HydraMaterial {
     if (disableMaterials)
       defaultMaterial.color = new Color(0x999999);
 
+    /** @type {MeshPhysicalMaterial} */
     this._material = defaultMaterial;
 
     if (debugMaterials) console.log("Hydra Material", this)
