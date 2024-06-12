@@ -454,6 +454,9 @@ class HydraMaterial {
     return RepeatWrapping;
   }
 
+  /**
+   * @return {Promise<void>}
+   */
   assignTexture(mainMaterial, parameterName) {
     return new Promise((resolve, reject) => {
       const materialParameterMapName = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
@@ -772,6 +775,7 @@ class HydraMaterial {
     }
 
     if (!disableTextures) {
+      /** @type {Array<Promise<any>>} */
       const texturePromises = [];
       for (let key in HydraMaterial.usdPreviewToMeshPhysicalTextureMap) {
         texturePromises.push(this.assignTexture(mainMaterialNode, key));
