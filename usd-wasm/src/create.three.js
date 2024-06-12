@@ -7,7 +7,7 @@ import { threeJsRenderDelegate } from "./hydra/index.js";
 async function createFile(opts) {
     if (typeof opts.filepath !== "string") throw new Error("Filepath must be a string");
 
-    let filepath = /** @type {string & { replaceAll:Function }} */ (opts.filepath);
+    let filepath = /** @type {string} */ (opts.filepath);
 
     let arrayBuffer = opts.buffer;
     if (!arrayBuffer) {
@@ -16,12 +16,20 @@ async function createFile(opts) {
     }
 
     // ensure that file paths are not using slashes
+    /** @ts-ignore */
     filepath = filepath.replaceAll(/\\/g, "/").replaceAll("/", "_");
 
+    // TODO: we need a way to pass in the mime type (or determine it from the header of the file)
+    // ensure that file paths are ending with .usdz
+    if (!filepath.endsWith(".usdz")) {
+        console.warn("Assuming .usdz");
+        filepath += ".usdz";
+    }
 
     // Put a simple USDZ file into the virtual file system so USD can access it
     // Create a file in the virtual file system
     opts.USD.FS_createDataFile("", filepath, new Uint8Array(arrayBuffer), true, true, true);
+    return filepath;
 }
 
 
@@ -33,16 +41,19 @@ async function createFile(opts) {
 export async function createThreeHydra(config) {
     const debug = config.debug || false;
 
+    config.USD.debug = debug;
+
     if (debug) console.log("USD", config.USD);
 
-    const { usdz: filepath, buffer, USD } = config;
+    await config.USD.ready.catch(console.error);
 
-    await createFile({
+    const { usdz, buffer, USD } = config;
+
+    const file = await createFile({
         USD,
-        filepath,
+        filepath: usdz,
         buffer
     });
-
 
     /**
      * @type {null | import(".").HdWebSyncDriver | Promise<import(".").HdWebSyncDriver>}
@@ -58,25 +69,26 @@ export async function createThreeHydra(config) {
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
 
-    const renderInterface = new threeJsRenderDelegate(filepath, delegateConfig);
+    const renderInterface = new threeJsRenderDelegate(file, delegateConfig);
 
-    driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, filepath);
+    driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, file);
     if (driverOrPromise instanceof Promise) {
         driverOrPromise = await driverOrPromise;
     }
 
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
 
-    if (debug) console.log(driver);
+    if (debug) console.log("DRIVER", driver);
 
-    /**
-     * Draw at least once
-     */
+    let stage = driver.GetStage();
+
+    /** Draw once */
     driver.Draw();
 
 
-    const stage = driver.GetStage();
     let time = 0;
+
+    if (debug) console.log("STAGE", stage);
 
     return {
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
@@ -103,7 +115,7 @@ export async function createThreeHydra(config) {
         dispose: () => {
             if (debug) console.warn("Disposing Three Hydra");
             driverOrPromise = null;
-            config.USD.FS_unlink(filepath);
+            config.USD.FS_unlink(file);
             driver.delete();
             if (debug) console.warn("Disposed Three Hydra");
         },

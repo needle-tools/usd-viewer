@@ -18,6 +18,11 @@ declare type USD = {
     HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
     flushPendingDeletes: () => void,
     ready: Promise<any>,
+    debug: boolean;
+    calledRun: boolean;
+    stderr: any;
+    stdin: any;
+    stdout: any;
 };
 
 declare type USDStage = {
