@@ -3,18 +3,28 @@ const path = require('path')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
 // Otherwise we wouldn't need a server at all.
+
+function setHeaders(res, path, stat) {
+
+  const needsHeaders = path.replaceAll("\\", '/').includes('/emHd') || path.endsWith('index.html');
+  if (!needsHeaders) return;
+
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+}
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'usd-wasm/src'),
+  prefix: '/usd',
+  setHeaders,
+});
+
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
   prefix: '/',
-  setHeaders: function(res, path, stat) {
-
-    const needsHeaders = path.replaceAll("\\", '/').includes('/emHd') || path.endsWith('index.html');
-    if (!needsHeaders) return;
-    
-    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
-  },
+  setHeaders,
+  decorateReply: false,
 })
 
 fastify.listen({port: process.env.PORT || 3003}, function(err, address) {

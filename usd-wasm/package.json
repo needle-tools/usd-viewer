@@ -1,0 +1,32 @@
+{
+  "name": "@needle-tools/usd",
+  "version": "0.0.1-alpha",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "module",
+  "scripts": {},
+  "keywords": [
+    "usd",
+    "openusd"
+  ],
+  "homepage": "https://needle.tools",
+  "author": {
+    "name": "Needle",
+    "email": "hi@needle.tools",
+    "url": "https://needle.tools/"
+  },
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/needle-tools/usd-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/needle-tools/usd-viewer/issues"
+  },
+  "peerDependencies": {
+    "three": "^0.164.1"
+  },
+  "devDependencies": {
+    "vite": "^5.2.13"
+  }
+}
