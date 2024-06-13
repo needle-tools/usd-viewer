@@ -56,10 +56,7 @@ export async function getUsdModule(opts) {
     ]);
     const [bindings, data, workerProd, workerDev, wasm] = bindingsPromise;
     const worker = isProd ? workerProd : workerDev;
-
-
-    // const wasm = await fetch(wasmUrl).then(r => r.arrayBuffer());
-    // const data = await fetch(dataUrl).then(r => r.arrayBuffer());
+    const preloaded_data = await fetch(data.default + "?test").then(r => r.arrayBuffer());
 
     return getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
@@ -108,12 +105,12 @@ export async function getUsdModule(opts) {
 
             // For debugging if the data file isnt loaded or the size might be wrong
             // Make sure to clear the vite cache. See https://linear.app/needle/issue/NE-4851#comment-2a9538e3
-            // if (name.includes("emHdBindings.data")) {
-            //     if (data.byteLength !== size) {
-            //         throw new Error(`emHdBindings.data size mismatch: expected ${size}, got ${data.byteLength}\n${dataUrl}`);
-            //     }
-            //     return data;
-            // }
+            if (name.includes("emHdBindings.data")) {
+                if (preloaded_data.byteLength !== size) {
+                    throw new Error(`emHdBindings.data size mismatch: expected ${size} but got ${preloaded_data.byteLength}\n${data.default}`);
+                }
+                return data;
+            }
             return null;
         },
     });
