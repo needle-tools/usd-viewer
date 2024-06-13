@@ -56,7 +56,7 @@ export async function getUsdModule(opts) {
     ]);
     const [bindings, data, workerProd, workerDev, wasm] = bindingsPromise;
     const worker = isProd ? workerProd : workerDev;
-    const preloaded_data = await fetch(data.default + "?test").then(r => r.arrayBuffer());
+    const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
 
     return getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
@@ -109,7 +109,6 @@ export async function getUsdModule(opts) {
                 if (preloaded_data.byteLength !== size) {
                     throw new Error(`emHdBindings.data size mismatch: expected ${size} but got ${preloaded_data.byteLength}\n${data.default}`);
                 }
-                return data;
             }
             return null;
         },
