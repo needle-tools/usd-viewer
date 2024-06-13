@@ -34,7 +34,7 @@ export async function getUsdModule(opts) {
     // https://github.com/vitejs/vite/issues/6979
 
     // @ts-ignore
-    const isProd = import.meta.env.PROD;
+    const isProd = import.meta.env?.PROD ?? true;
 
 
     /**

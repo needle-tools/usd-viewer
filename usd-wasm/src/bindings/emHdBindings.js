@@ -7,7 +7,7 @@ var getUsdModule = ((args) => {
   return function (moduleArg = {
     // module overrides can be supplied here
     locateFile: (path, prefix) => {
-      if (!prefix) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
+      if (!prefix && _scriptDir) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
       return prefix + path; 
     },
     ...args
