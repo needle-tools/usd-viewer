@@ -7,6 +7,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
 export function init(options = {
+  base: "",
   hdrPath: 'environments/neutral.hdr'
 }) {
 
@@ -71,7 +72,10 @@ messageLog.textContent = "Loading USD Module – this can take a moment...";
 updateUrl();
 try {
   Promise.all([getUsdModule({
-
+    mainScriptUrlOrBlob: "./emHdBindings.js",
+    locateFile: (file) => {
+      return options.base + file;
+    },
   }), initPromise]).then(async ([Usd]) => {
     window.Usd = Usd;
     messageLog.textContent = "Loading done";
