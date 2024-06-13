@@ -26,7 +26,7 @@ export async function getUsdModule(opts) {
     const getUsdModuleFn = globalThis["NEEDLE:USD:GET"];
 
     if (!getUsdModuleFn) {
-        throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \" + emHdBindings.js + \" to expose this function in the globalThis object");
+        throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
     }
 
 
