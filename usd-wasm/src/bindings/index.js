@@ -61,7 +61,7 @@ export async function getUsdModule(opts) {
     return getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
         setStatus: (status) => {
-            console.log("USD STATUS", status);
+            console.debug("🧊 USD STATUS", status);
         },
         ...opts,
         locateFile: (file) => {
