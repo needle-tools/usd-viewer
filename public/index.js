@@ -1,8 +1,10 @@
 import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, VSMShadowMap, PMREMGenerator, EquirectangularReflectionMapping } from 'three';
-import { RenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
+import { ThreeRenderDelegateInterface } from "./ThreeJsRenderDelegate.js"
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
 export function init(options = {
   hdrPath: 'environments/neutral.hdr'
@@ -68,7 +70,9 @@ console.log("Loading USD Module...");
 messageLog.textContent = "Loading USD Module – this can take a moment...";
 updateUrl();
 try {
-  Promise.all([getUsdModule(), initPromise]).then(async ([Usd]) => {
+  Promise.all([getUsdModule({
+
+  }), initPromise]).then(async ([Usd]) => {
     window.Usd = Usd;
     messageLog.textContent = "Loading done";
     animate();
@@ -159,8 +163,16 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
 
   // should be loaded last
   if (!isRootFile) return;
-  const renderInterface = window.renderInterface = new RenderDelegateInterface(path, loadedFiles)
-  let driver = new Usd.HdWebSyncDriver(renderInterface, path);
+  let driver = null;
+  const delegateConfig = {
+    usdRoot: window.usdRoot,
+    paths: new Array(),
+    driver: () => (driver),
+  };
+
+  const renderInterface = window.renderInterface = new ThreeRenderDelegateInterface(path, delegateConfig);
+  driver = new Usd.HdWebSyncDriver(renderInterface, path);
+
   if (driver instanceof Promise) {
     driver = await driver;
   }
@@ -337,7 +349,7 @@ async function init() {
 
       texture.mapping = EquirectangularReflectionMapping;
       texture.needsUpdate = true;
-      window.envMap = hdrRenderTarget.texture;
+      scene.environment = hdrRenderTarget.texture;
       resolve();
     }, undefined, (err) => {
         console.error('An error occurred loading the HDR environment map.', err);
