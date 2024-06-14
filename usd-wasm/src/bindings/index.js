@@ -1,24 +1,20 @@
 import "./emHdBindings.js";
 
-// See https://github.com/dimforge/rapier.js/blob/master/rapier-compat/src3d/init.ts#L11
-
-// @ts-ignore
-// import mainScripUrl from "./emHdBindings.js?url";
-
-// // @ts-ignore
-// import wasmUrl from "./emHdBindings.wasm?url";
-
-// // @ts-ignore
-// import workerUrl from "./emHdBindings.worker.js?url";
-
-// // @ts-ignore
-// import dataUrl from "./emHdBindings.data?url";
+/**
+ * @type {Promise<import("..").USD> | null}
+ */
+let usd_module_promise = null;
 
 
 /**
  * @param {undefined | import("..").GetUsdModuleOptions} opts
  */
 export async function getUsdModule(opts) {
+
+    if (usd_module_promise) {
+        return usd_module_promise;
+    }
+
 
     /**
      * @type {import("..").getUsdModule}
@@ -58,7 +54,7 @@ export async function getUsdModule(opts) {
     const worker = isProd ? workerProd : workerDev;
     const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
 
-    return getUsdModuleFn({
+    return usd_module_promise = getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
         setStatus: (status) => {
             console.debug("🧊 USD STATUS", status);
