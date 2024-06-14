@@ -1,4 +1,5 @@
 import { threeJsRenderDelegate } from "./hydra/index.js";
+import { tryDetermineFileFormat } from "./utils.js";
 
 
 /**
@@ -15,15 +16,23 @@ async function createFile(opts) {
         arrayBuffer = await blob.arrayBuffer();
     }
 
+
     // ensure that file paths are not using slashes
     /** @ts-ignore */
     filepath = filepath.replaceAll(/\\/g, "/").replaceAll("/", "_");
 
-    // TODO: we need a way to pass in the mime type (or determine it from the header of the file)
-    // ensure that file paths are ending with .usdz
-    if (!filepath.endsWith(".usdz")) {
-        console.warn("Assuming .usdz");
-        filepath += ".usdz";
+    const format = tryDetermineFileFormat(arrayBuffer);
+    const ext = filepath.split(".").pop();
+    if (ext !== "usdz" && ext !== "usd" && ext !== "usda") {
+        if (format === "usdz" || format === "usd" || format === "usda") {
+            filepath += "." + format;
+        } else {
+            console.warn("Unknown file format - assuming .usdz");
+            filepath += ".usdz";
+        }
+    }
+    else if (format !== ext) {
+        console.warn("File extension does not match file format", { ext, format });
     }
 
     // Put a simple USDZ file into the virtual file system so USD can access it
