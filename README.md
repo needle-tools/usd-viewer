@@ -16,8 +16,6 @@ There are two main parts:
 - Up axis is only supported for the root file (and very hacky).  
 - Variants are loaded but can't be switched.  
 - The viewer uses SharedArrayBuffers, which have strict header and origin requirements and are not supported on all platforms. 
-- Texture paths currently can't be resolved correctly for nested USDZ files. One level is fine.
-    - Fixing this would require adjustments to the WASM bindings.
 
 ### Limitations
 
@@ -25,6 +23,8 @@ There are two main parts:
 - Point instancing isn't supported.  
 - MaterialX isn't supported.  
 - LightsAPI isn't supported.
+- Texture paths currently can't be resolved correctly for nested USDZ files. One level is fine.
+    - Fixing this would require adjustments to the WASM bindings.
 
 ## Contribute
 
