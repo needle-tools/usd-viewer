@@ -1,10 +1,17 @@
-var getUsdModule = (() => {
+var getUsdModule = ((args) => {
   var _scriptDir =
     typeof document !== "undefined" && document.currentScript
       ? document.currentScript.src
       : undefined;
   if (typeof __filename !== "undefined") _scriptDir = _scriptDir || __filename;
-  return function (moduleArg = {}) {
+  return function (moduleArg = {
+    // module overrides can be supplied here
+    locateFile: (path, prefix) => {
+      if (!prefix && _scriptDir) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
+      return prefix + path;
+    },
+    ...args
+}) {
     // Support for growable heap + pthreads, where the buffer may change, so JS views
     // must be updated.
     function GROWABLE_HEAP_I8() {
@@ -999,7 +1006,7 @@ var getUsdModule = (() => {
       }
       what = "Aborted(" + what + ")";
       err(what);
-      ABORT = true;
+      // ABORT = true; // this does not allow anything to work after being set, however we're actually okay to try other assets so we shouldn't do this
       EXITSTATUS = 1;
       what += ". Build with -sASSERTIONS for more info.";
       /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
@@ -12942,6 +12949,10 @@ var getUsdModule = (() => {
 
     Module["PThread"] = PThread;
 
+    Module["FS_readdir"] = FS.readdir;
+
+    Module["FS_analyzePath"] = FS.analyzePath;
+
     var calledRun;
 
     dependenciesFulfilled = function runCaller() {
@@ -13003,3 +13014,5 @@ if (typeof exports === "object" && typeof module === "object")
   module.exports = getUsdModule;
 else if (typeof define === "function" && define["amd"])
   define([], () => getUsdModule);
+
+globalThis["NEEDLE:USD:GET"] = getUsdModule;
