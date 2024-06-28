@@ -8,7 +8,7 @@ var getUsdModule = ((args) => {
     // module overrides can be supplied here
     locateFile: (path, prefix) => {
       if (!prefix && _scriptDir) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
-      return prefix + path; 
+      return prefix + path;
     },
     ...args
 }) {
@@ -10163,8 +10163,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3895468);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3896792);
+    var ___start_em_js = (Module["___start_em_js"] = 3890876);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3892200);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {
