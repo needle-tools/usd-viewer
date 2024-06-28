@@ -4,7 +4,7 @@ A USD viewer on the web.
 [Open USD Viewer](https://usd-viewer.glitch.me/)  
 
 There are two main parts:  
-- [USD WASM bindings by Autodesk](https://autodesk-forks.github.io/USD/usd_for_web_demos/)
+- [USD WASM bindings by Autodesk](https://github.com/needle-tools/OpenUSD/tree/needle/feature/wasm-improvements)
 - A [Three.js](https://threejs.org/) Hydra Delegate for rendering, originally by Autodesk and improved by hybridherbst
 
 ## Info and Known Issues
@@ -19,13 +19,10 @@ There are two main parts:
 
 ### Limitations
 
-- Skinned meshes aren't supported. 
 - Vertex colors aren't supported. 
 - Point instancing isn't supported.  
 - MaterialX isn't supported.  
-- LightsAPI isn't supported.  
-- Texture paths currently can't be resolved correctly for nested USDZ files. One level is fine.
-    - Fixing this would require adjustments to the WASM bindings.
+- LightsAPI isn't supported.
 
 ## Contribute
 
@@ -87,37 +84,14 @@ NOTE: Origins for these instructions can be found [here](https://github.com/auto
 4. Run `wasm-opt -Oz -o "../build_dir/bin/emHdBindings.wasm" "../build_dir/bin/emHdBindings.wasm" --enable-bulk-memory --enable-threads` to shrink the wasm file more.
 5. Patch emHdBindings.js to enable the following support, unable to currently do these things as part of the normal build process
     1. Support for arguments
-        - `patch emHdBindings.js < patches/arguments_1.patch` 
-        - `patch emHdBindings.js < patches/arguments_2.patch` 
-            - THIS PATCH DOES NOT WORK
-            - Copy the following lines:
-            ```
-            return function (
-                moduleArg = {
-                // module overrides can be supplied here
-                locateFile: (path, prefix) => {
-                    if (!prefix)
-                    prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
-                    return prefix + path;
-                },
-                ...args,
-                },
-            ) {
-            ```
-            And replace this line:
-            -  `return function (moduleArg = {}) {`
+        - `patch emHdBindings.js < arguments_1.patch` 
+        - `patch emHdBindings.js -R < arguments_2.patch` 
     2. Disable ABORT so that one bad file doesn't corrupt the entire session
-        - `patch emHdBindings.js < patches/abort.patch` 
+        - `patch emHdBindings.js < abort.patch` 
     3. Add file system functions to the module
-        - `patch emHdBindings.js < patches/fileSystem.patch` 
-            - THIS PATCH DOES NOT WORK
-            - Add these lines 
-            ```
-            Module["FS_readdir"] = FS.readdir;
-            Module["FS_analyzePath"] = FS.analyzePath;
-            ```
-            right after 
-            - `Module["PThread"] = PThread;`
+        - `patch emHdBindings.js -R < fileSystem.patch` 
+    4. Include global export
+        - `echo -e '\nglobalThis["NEEDLE:USD:GET"] = getUsdModule;' >> "emHdBindings.js"`
 
 ##### Debug
 1. Install [ C/C++ DevTools Support (DWARF)](https://chromewebstore.google.com/detail/cc++-devtools-support-dwa/pdcpmagijalfljmkmjngeonclgbbannb)
@@ -135,36 +109,13 @@ NOTE: Origins for these instructions can be found [here](https://github.com/auto
 6. Patch emHdBindings.js to enable the following support, unable to currently do these things as part of the normal build process
     1. Support for arguments
         - `patch emHdBindings.js < arguments_1.patch` 
-        - `patch emHdBindings.js < arguments_2.patch` 
-            - THIS PATCH DOES NOT WORK
-            - Copy the following lines:
-            ```
-            return function (
-                moduleArg = {
-                // module overrides can be supplied here
-                locateFile: (path, prefix) => {
-                    if (!prefix)
-                    prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
-                    return prefix + path;
-                },
-                ...args,
-                },
-            ) {
-            ```
-            And replace this line:
-            -  `return function (moduleArg = {}) {`
+        - `patch emHdBindings.js -R < arguments_2.patch` 
     2. Disable ABORT so that one bad file doesn't corrupt the entire session
         - `patch emHdBindings.js < abort.patch` 
     3. Add file system functions to the module
-        - `patch emHdBindings.js < fileSystem.patch` 
-            - THIS PATCH DOES NOT WORK
-            - Add these lines 
-            ```
-            Module["FS_readdir"] = FS.readdir;
-            Module["FS_analyzePath"] = FS.analyzePath;
-            ```
-            right after 
-            - `Module["PThread"] = PThread;`
+        - `patch emHdBindings.js -R < fileSystem.patch` 
+    4. Include global export
+        - `echo -e '\nglobalThis["NEEDLE:USD:GET"] = getUsdModule;' >> "emHdBindings.js"`
 7. Run `npm start`
 8. Go to http://localhost:3003 (or wherever the app is running)
 9. Open up Chrome Dev Tools
@@ -172,13 +123,9 @@ NOTE: Origins for these instructions can be found [here](https://github.com/auto
 11. Under Authored, you can go through to the pxr files to set breakpoints in the c++ code.
 
 ##### Build Script
-There is a build script [here](https://github.com/needle-tools/OpenUSD/blob/needle/feature/wasm-improvements/buildAndMove.sh) which tries to make building easier. Set the mode, build directory and destination directory to deal with the file movement.
+There is a build script [here](https://github.com/needle-tools/OpenUSD/blob/needle/feature/wasm-improvements/buildAndMove.sh) which tries to make building easier. Set the mode, build directory and destination directory to deal with the file movement. This does not update CMakeLists.txt for debug mode automatically. Follow step 2 above to configure this.
 
-Usage: `./buildAndMove.sh --mode release --build-dir ../build-wasm --destination-dir /Users/andrewbeers/git/needle/usd-viewer/public`
-
-NOTE: this does not support patching yet as patching doesn't completely work yet
-NOTE: this does not update CMakeLists.txt for debug mode automatically
-
+Usage: `./buildAndMove.sh --mode release --build-dir ../build-wasm --destination-dir /Users/andrewbeers/git/needle/usd-viewer/usd-wasm/src/bindings --patch-dir /Users/andrewbeers/git/needle/OpenUSD/pxr/usdImaging/hdEmscripten/patches`
 
 ## Origin
 
