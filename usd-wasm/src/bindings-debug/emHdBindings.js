@@ -1426,7 +1426,11 @@ var getUsdModule = ((args) => {
       var endPtr = idx;
       while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
       if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
-        return UTF8Decoder.decode(heapOrArray.slice(idx, endPtr));
+        return UTF8Decoder.decode(
+          heapOrArray.buffer instanceof SharedArrayBuffer
+            ? heapOrArray.slice(idx, endPtr)
+            : heapOrArray.subarray(idx, endPtr),
+        );
       }
       var str = "";
       while (idx < endPtr) {
@@ -5707,9 +5711,19 @@ var getUsdModule = ((args) => {
         : f.call(null, ptr);
     };
 
+    var wasmTableMirror = [];
+
     var wasmTable;
 
-    var getWasmTableEntry = (funcPtr) => wasmTable.get(funcPtr);
+    var getWasmTableEntry = (funcPtr) => {
+      var func = wasmTableMirror[funcPtr];
+      if (!func) {
+        if (funcPtr >= wasmTableMirror.length)
+          wasmTableMirror.length = funcPtr + 1;
+        wasmTableMirror[funcPtr] = func = wasmTable.get(funcPtr);
+      }
+      return func;
+    };
 
     /** @param {Object=} args */ var dynCall = (sig, ptr, args) => {
       var rtn = dynCallLegacy(sig, ptr, args);
@@ -8883,6 +8897,7 @@ var getUsdModule = ((args) => {
       /** @export */ fd_read: _fd_read,
       /** @export */ fd_seek: _fd_seek,
       /** @export */ fd_write: _fd_write,
+      /** @export */ invoke_d: invoke_d,
       /** @export */ invoke_dddd: invoke_dddd,
       /** @export */ invoke_ddiiiii: invoke_ddiiiii,
       /** @export */ invoke_di: invoke_di,
@@ -8891,6 +8906,7 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_dif: invoke_dif,
       /** @export */ invoke_dii: invoke_dii,
       /** @export */ invoke_diii: invoke_diii,
+      /** @export */ invoke_diiiii: invoke_diiiii,
       /** @export */ invoke_dj: invoke_dj,
       /** @export */ invoke_fi: invoke_fi,
       /** @export */ invoke_fid: invoke_fid,
@@ -8903,15 +8919,12 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_idddiii: invoke_idddiii,
       /** @export */ invoke_iddii: invoke_iddii,
       /** @export */ invoke_iddiii: invoke_iddiii,
-      /** @export */ invoke_idi: invoke_idi,
       /** @export */ invoke_idii: invoke_idii,
       /** @export */ invoke_idiiiiii: invoke_idiiiiii,
       /** @export */ invoke_idiiiiiii: invoke_idiiiiiii,
-      /** @export */ invoke_ifii: invoke_ifii,
       /** @export */ invoke_ii: invoke_ii,
       /** @export */ invoke_iid: invoke_iid,
       /** @export */ invoke_iidd: invoke_iidd,
-      /** @export */ invoke_iiddddddiiii: invoke_iiddddddiiii,
       /** @export */ invoke_iidi: invoke_iidi,
       /** @export */ invoke_iidii: invoke_iidii,
       /** @export */ invoke_iidiii: invoke_iidiii,
@@ -8919,10 +8932,8 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_iidiiiii: invoke_iidiiiii,
       /** @export */ invoke_iif: invoke_iif,
       /** @export */ invoke_iiffi: invoke_iiffi,
-      /** @export */ invoke_iifi: invoke_iifi,
       /** @export */ invoke_iii: invoke_iii,
       /** @export */ invoke_iiid: invoke_iiid,
-      /** @export */ invoke_iiidd: invoke_iiidd,
       /** @export */ invoke_iiidddii: invoke_iiidddii,
       /** @export */ invoke_iiiddi: invoke_iiiddi,
       /** @export */ invoke_iiiddii: invoke_iiiddii,
@@ -8930,7 +8941,6 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_iiidii: invoke_iiidii,
       /** @export */ invoke_iiidiiidiiiidiif: invoke_iiidiiidiiiidiif,
       /** @export */ invoke_iiidiiiii: invoke_iiidiiiii,
-      /** @export */ invoke_iiiff: invoke_iiiff,
       /** @export */ invoke_iiifi: invoke_iiifi,
       /** @export */ invoke_iiii: invoke_iiii,
       /** @export */ invoke_iiiid: invoke_iiiid,
@@ -8957,42 +8967,42 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_iiiiiiiiiiiiii: invoke_iiiiiiiiiiiiii,
       /** @export */ invoke_iiiiiiiiiiiiiiiiiiii: invoke_iiiiiiiiiiiiiiiiiiii,
       /** @export */ invoke_iiiiij: invoke_iiiiij,
-      /** @export */ invoke_iiiij: invoke_iiiij,
-      /** @export */ invoke_iiiijii: invoke_iiiijii,
       /** @export */ invoke_iiiijjii: invoke_iiiijjii,
       /** @export */ invoke_iiijj: invoke_iiijj,
-      /** @export */ invoke_iiijji: invoke_iiijji,
       /** @export */ invoke_iij: invoke_iij,
+      /** @export */ invoke_ij: invoke_ij,
       /** @export */ invoke_j: invoke_j,
       /** @export */ invoke_ji: invoke_ji,
       /** @export */ invoke_jii: invoke_jii,
       /** @export */ invoke_jiii: invoke_jiii,
       /** @export */ invoke_jiiii: invoke_jiiii,
+      /** @export */ invoke_jiiij: invoke_jiiij,
       /** @export */ invoke_jiij: invoke_jiij,
+      /** @export */ invoke_jjiii: invoke_jjiii,
       /** @export */ invoke_v: invoke_v,
       /** @export */ invoke_vd: invoke_vd,
       /** @export */ invoke_vdiii: invoke_vdiii,
+      /** @export */ invoke_vfffi: invoke_vfffi,
       /** @export */ invoke_vfiiii: invoke_vfiiii,
       /** @export */ invoke_vi: invoke_vi,
       /** @export */ invoke_vid: invoke_vid,
-      /** @export */ invoke_vidddi: invoke_vidddi,
       /** @export */ invoke_viddi: invoke_viddi,
-      /** @export */ invoke_vidi: invoke_vidi,
       /** @export */ invoke_vidii: invoke_vidii,
       /** @export */ invoke_vidiii: invoke_vidiii,
       /** @export */ invoke_vidiiii: invoke_vidiiii,
       /** @export */ invoke_vif: invoke_vif,
+      /** @export */ invoke_viffffi: invoke_viffffi,
+      /** @export */ invoke_vifffi: invoke_vifffi,
       /** @export */ invoke_vifii: invoke_vifii,
       /** @export */ invoke_vii: invoke_vii,
       /** @export */ invoke_viid: invoke_viid,
-      /** @export */ invoke_viiddddi: invoke_viiddddi,
-      /** @export */ invoke_viiddi: invoke_viiddi,
       /** @export */ invoke_viidi: invoke_viidi,
       /** @export */ invoke_viidii: invoke_viidii,
       /** @export */ invoke_viif: invoke_viif,
+      /** @export */ invoke_viiffffi: invoke_viiffffi,
+      /** @export */ invoke_viiffi: invoke_viiffi,
       /** @export */ invoke_viii: invoke_viii,
       /** @export */ invoke_viiid: invoke_viiid,
-      /** @export */ invoke_viiiddddi: invoke_viiiddddi,
       /** @export */ invoke_viiidi: invoke_viiidi,
       /** @export */ invoke_viiidii: invoke_viiidii,
       /** @export */ invoke_viiidiiiii: invoke_viiidiiiii,
@@ -9010,17 +9020,19 @@ var getUsdModule = ((args) => {
       /** @export */ invoke_viiiiiiii: invoke_viiiiiiii,
       /** @export */ invoke_viiiiiiiii: invoke_viiiiiiiii,
       /** @export */ invoke_viiiiiiiiii: invoke_viiiiiiiiii,
+      /** @export */ invoke_viiiiiiiiiiii: invoke_viiiiiiiiiiii,
       /** @export */ invoke_viiiiiiiiiiiii: invoke_viiiiiiiiiiiii,
       /** @export */ invoke_viiiiiiiiiiiiiii: invoke_viiiiiiiiiiiiiii,
       /** @export */ invoke_viiiijii: invoke_viiiijii,
-      /** @export */ invoke_viiijii: invoke_viiijii,
-      /** @export */ invoke_viiijjii: invoke_viiijjii,
       /** @export */ invoke_viij: invoke_viij,
       /** @export */ invoke_viiji: invoke_viiji,
       /** @export */ invoke_vij: invoke_vij,
       /** @export */ invoke_viji: invoke_viji,
       /** @export */ invoke_vijii: invoke_vijii,
+      /** @export */ invoke_vijiiiii: invoke_vijiiiii,
       /** @export */ invoke_vijji: invoke_vijji,
+      /** @export */ invoke_vjiii: invoke_vjiii,
+      /** @export */ invoke_vjiiii: invoke_vjiiii,
       /** @export */ llvm_eh_typeid_for: _llvm_eh_typeid_for,
       /** @export */ memory: wasmMemory || Module["wasmMemory"],
       /** @export */ proc_exit: _proc_exit,
@@ -9141,6 +9153,18 @@ var getUsdModule = ((args) => {
         a2,
       ));
 
+    var dynCall_viiii = (Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["dynCall_viiii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+      ));
+
+    var dynCall_vi = (Module["dynCall_vi"] = (a0, a1) =>
+      (dynCall_vi = Module["dynCall_vi"] = wasmExports["dynCall_vi"])(a0, a1));
+
     var dynCall_iiii = (Module["dynCall_iiii"] = (a0, a1, a2, a3) =>
       (dynCall_iiii = Module["dynCall_iiii"] = wasmExports["dynCall_iiii"])(
         a0,
@@ -9148,9 +9172,6 @@ var getUsdModule = ((args) => {
         a2,
         a3,
       ));
-
-    var dynCall_vi = (Module["dynCall_vi"] = (a0, a1) =>
-      (dynCall_vi = Module["dynCall_vi"] = wasmExports["dynCall_vi"])(a0, a1));
 
     var dynCall_ii = (Module["dynCall_ii"] = (a0, a1) =>
       (dynCall_ii = Module["dynCall_ii"] = wasmExports["dynCall_ii"])(a0, a1));
@@ -9173,9 +9194,6 @@ var getUsdModule = ((args) => {
       (dynCall_viiiii = Module["dynCall_viiiii"] =
         wasmExports["dynCall_viiiii"])(a0, a1, a2, a3, a4, a5));
 
-    var dynCall_v = (Module["dynCall_v"] = (a0) =>
-      (dynCall_v = Module["dynCall_v"] = wasmExports["dynCall_v"])(a0));
-
     var dynCall_viii = (Module["dynCall_viii"] = (a0, a1, a2, a3) =>
       (dynCall_viii = Module["dynCall_viii"] = wasmExports["dynCall_viii"])(
         a0,
@@ -9191,27 +9209,6 @@ var getUsdModule = ((args) => {
         a2,
       ));
 
-    var dynCall_di = (Module["dynCall_di"] = (a0, a1) =>
-      (dynCall_di = Module["dynCall_di"] = wasmExports["dynCall_di"])(a0, a1));
-
-    var dynCall_iiiii = (Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["dynCall_iiiii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
-
-    var dynCall_viiii = (Module["dynCall_viiii"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_viiii = Module["dynCall_viiii"] = wasmExports["dynCall_viiii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
-
     var dynCall_viid = (Module["dynCall_viid"] = (a0, a1, a2, a3) =>
       (dynCall_viid = Module["dynCall_viid"] = wasmExports["dynCall_viid"])(
         a0,
@@ -9220,11 +9217,26 @@ var getUsdModule = ((args) => {
         a3,
       ));
 
+    var dynCall_di = (Module["dynCall_di"] = (a0, a1) =>
+      (dynCall_di = Module["dynCall_di"] = wasmExports["dynCall_di"])(a0, a1));
+
     var dynCall_dii = (Module["dynCall_dii"] = (a0, a1, a2) =>
       (dynCall_dii = Module["dynCall_dii"] = wasmExports["dynCall_dii"])(
         a0,
         a1,
         a2,
+      ));
+
+    var dynCall_v = (Module["dynCall_v"] = (a0) =>
+      (dynCall_v = Module["dynCall_v"] = wasmExports["dynCall_v"])(a0));
+
+    var dynCall_iiiii = (Module["dynCall_iiiii"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_iiiii = Module["dynCall_iiiii"] = wasmExports["dynCall_iiiii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
       ));
 
     var dynCall_viiid = (Module["dynCall_viiid"] = (a0, a1, a2, a3, a4) =>
@@ -9270,6 +9282,10 @@ var getUsdModule = ((args) => {
       (dynCall_viiiiii = Module["dynCall_viiiiii"] =
         wasmExports["dynCall_viiiiii"])(a0, a1, a2, a3, a4, a5, a6));
 
+    var dynCall_diiiii = (Module["dynCall_diiiii"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_diiiii = Module["dynCall_diiiii"] =
+        wasmExports["dynCall_diiiii"])(a0, a1, a2, a3, a4, a5));
+
     var dynCall_iiiiiii = (Module["dynCall_iiiiiii"] = (
       a0,
       a1,
@@ -9290,8 +9306,8 @@ var getUsdModule = ((args) => {
         a3,
       ));
 
-    var dynCall_j = (Module["dynCall_j"] = (a0) =>
-      (dynCall_j = Module["dynCall_j"] = wasmExports["dynCall_j"])(a0));
+    var dynCall_d = (Module["dynCall_d"] = (a0) =>
+      (dynCall_d = Module["dynCall_d"] = wasmExports["dynCall_d"])(a0));
 
     var dynCall_iiid = (Module["dynCall_iiid"] = (a0, a1, a2, a3) =>
       (dynCall_iiid = Module["dynCall_iiid"] = wasmExports["dynCall_iiid"])(
@@ -9304,6 +9320,20 @@ var getUsdModule = ((args) => {
     var dynCall_iiiiid = (Module["dynCall_iiiiid"] = (a0, a1, a2, a3, a4, a5) =>
       (dynCall_iiiiid = Module["dynCall_iiiiid"] =
         wasmExports["dynCall_iiiiid"])(a0, a1, a2, a3, a4, a5));
+
+    var dynCall_iiiiiiiii = (Module["dynCall_iiiiiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+      a8,
+    ) =>
+      (dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] =
+        wasmExports["dynCall_iiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
 
     var dynCall_vd = (Module["dynCall_vd"] = (a0, a1) =>
       (dynCall_vd = Module["dynCall_vd"] = wasmExports["dynCall_vd"])(a0, a1));
@@ -9358,20 +9388,6 @@ var getUsdModule = ((args) => {
       (dynCall_iidiii = Module["dynCall_iidiii"] =
         wasmExports["dynCall_iidiii"])(a0, a1, a2, a3, a4, a5));
 
-    var dynCall_iiiiiiiii = (Module["dynCall_iiiiiiiii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-    ) =>
-      (dynCall_iiiiiiiii = Module["dynCall_iiiiiiiii"] =
-        wasmExports["dynCall_iiiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
-
     var dynCall_iiiiiiiiii = (Module["dynCall_iiiiiiiiii"] = (
       a0,
       a1,
@@ -9424,12 +9440,18 @@ var getUsdModule = ((args) => {
         a4,
       ));
 
-    var dynCall_fii = (Module["dynCall_fii"] = (a0, a1, a2) =>
-      (dynCall_fii = Module["dynCall_fii"] = wasmExports["dynCall_fii"])(
-        a0,
-        a1,
-        a2,
-      ));
+    var dynCall_viiiiiii = (Module["dynCall_viiiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+    ) =>
+      (dynCall_viiiiiii = Module["dynCall_viiiiiii"] =
+        wasmExports["dynCall_viiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7));
 
     var dynCall_viif = (Module["dynCall_viif"] = (a0, a1, a2, a3) =>
       (dynCall_viif = Module["dynCall_viif"] = wasmExports["dynCall_viif"])(
@@ -9469,18 +9491,14 @@ var getUsdModule = ((args) => {
         a2,
       ));
 
-    var dynCall_viiiiiii = (Module["dynCall_viiiiiii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-    ) =>
-      (dynCall_viiiiiii = Module["dynCall_viiiiiii"] =
-        wasmExports["dynCall_viiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7));
+    var dynCall_viiif = (Module["dynCall_viiif"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_viiif = Module["dynCall_viiif"] = wasmExports["dynCall_viiif"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+      ));
 
     var dynCall_viiiiiiii = (Module["dynCall_viiiiiiii"] = (
       a0,
@@ -9495,15 +9513,6 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_viiiiiiii = Module["dynCall_viiiiiiii"] =
         wasmExports["dynCall_viiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
-
-    var dynCall_iidii = (Module["dynCall_iidii"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_iidii = Module["dynCall_iidii"] = wasmExports["dynCall_iidii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
 
     var dynCall_viiidiiiii = (Module["dynCall_viiidiiiii"] = (
       a0,
@@ -9623,29 +9632,7 @@ var getUsdModule = ((args) => {
       (dynCall_viiiiidi = Module["dynCall_viiiiidi"] =
         wasmExports["dynCall_viiiiidi"])(a0, a1, a2, a3, a4, a5, a6, a7));
 
-    var dynCall_viiiddddi = (Module["dynCall_viiiddddi"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-    ) =>
-      (dynCall_viiiddddi = Module["dynCall_viiiddddi"] =
-        wasmExports["dynCall_viiiddddi"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
-
-    var dynCall_viiddi = (Module["dynCall_viiddi"] = (a0, a1, a2, a3, a4, a5) =>
-      (dynCall_viiddi = Module["dynCall_viiddi"] =
-        wasmExports["dynCall_viiddi"])(a0, a1, a2, a3, a4, a5));
-
-    var dynCall_vidddi = (Module["dynCall_vidddi"] = (a0, a1, a2, a3, a4, a5) =>
-      (dynCall_vidddi = Module["dynCall_vidddi"] =
-        wasmExports["dynCall_vidddi"])(a0, a1, a2, a3, a4, a5));
-
-    var dynCall_viiddddi = (Module["dynCall_viiddddi"] = (
+    var dynCall_viiffffi = (Module["dynCall_viiffffi"] = (
       a0,
       a1,
       a2,
@@ -9655,8 +9642,33 @@ var getUsdModule = ((args) => {
       a6,
       a7,
     ) =>
-      (dynCall_viiddddi = Module["dynCall_viiddddi"] =
-        wasmExports["dynCall_viiddddi"])(a0, a1, a2, a3, a4, a5, a6, a7));
+      (dynCall_viiffffi = Module["dynCall_viiffffi"] =
+        wasmExports["dynCall_viiffffi"])(a0, a1, a2, a3, a4, a5, a6, a7));
+
+    var dynCall_vifffi = (Module["dynCall_vifffi"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_vifffi = Module["dynCall_vifffi"] =
+        wasmExports["dynCall_vifffi"])(a0, a1, a2, a3, a4, a5));
+
+    var dynCall_vfffi = (Module["dynCall_vfffi"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_vfffi = Module["dynCall_vfffi"] = wasmExports["dynCall_vfffi"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+      ));
+
+    var dynCall_viffffi = (Module["dynCall_viffffi"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+    ) =>
+      (dynCall_viffffi = Module["dynCall_viffffi"] =
+        wasmExports["dynCall_viffffi"])(a0, a1, a2, a3, a4, a5, a6));
 
     var dynCall_fid = (Module["dynCall_fid"] = (a0, a1, a2) =>
       (dynCall_fid = Module["dynCall_fid"] = wasmExports["dynCall_fid"])(
@@ -9676,13 +9688,6 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_iiiiiid = Module["dynCall_iiiiiid"] =
         wasmExports["dynCall_iiiiiid"])(a0, a1, a2, a3, a4, a5, a6));
-
-    var dynCall_vif = (Module["dynCall_vif"] = (a0, a1, a2) =>
-      (dynCall_vif = Module["dynCall_vif"] = wasmExports["dynCall_vif"])(
-        a0,
-        a1,
-        a2,
-      ));
 
     var dynCall_viiidi = (Module["dynCall_viiidi"] = (a0, a1, a2, a3, a4, a5) =>
       (dynCall_viiidi = Module["dynCall_viiidi"] =
@@ -9710,6 +9715,10 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_viiiiiiid = Module["dynCall_viiiiiiid"] =
         wasmExports["dynCall_viiiiiiid"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
+
+    var dynCall_viiffi = (Module["dynCall_viiffi"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_viiffi = Module["dynCall_viiffi"] =
+        wasmExports["dynCall_viiffi"])(a0, a1, a2, a3, a4, a5));
 
     var dynCall_jiij = (Module["dynCall_jiij"] = (a0, a1, a2, a3, a4) =>
       (dynCall_jiij = Module["dynCall_jiij"] = wasmExports["dynCall_jiij"])(
@@ -9755,6 +9764,13 @@ var getUsdModule = ((args) => {
         a12,
       ));
 
+    var dynCall_vif = (Module["dynCall_vif"] = (a0, a1, a2) =>
+      (dynCall_vif = Module["dynCall_vif"] = wasmExports["dynCall_vif"])(
+        a0,
+        a1,
+        a2,
+      ));
+
     var dynCall_jif = (Module["dynCall_jif"] = (a0, a1, a2) =>
       (dynCall_jif = Module["dynCall_jif"] = wasmExports["dynCall_jif"])(
         a0,
@@ -9775,12 +9791,13 @@ var getUsdModule = ((args) => {
       (dynCall_vfiiii = Module["dynCall_vfiiii"] =
         wasmExports["dynCall_vfiiii"])(a0, a1, a2, a3, a4, a5));
 
-    var dynCall_ifii = (Module["dynCall_ifii"] = (a0, a1, a2, a3) =>
-      (dynCall_ifii = Module["dynCall_ifii"] = wasmExports["dynCall_ifii"])(
+    var dynCall_vidii = (Module["dynCall_vidii"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_vidii = Module["dynCall_vidii"] = wasmExports["dynCall_vidii"])(
         a0,
         a1,
         a2,
         a3,
+        a4,
       ));
 
     var dynCall_jiiijji = (Module["dynCall_jiiijji"] = (
@@ -9796,15 +9813,6 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_jiiijji = Module["dynCall_jiiijji"] =
         wasmExports["dynCall_jiiijji"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
-
-    var dynCall_viiif = (Module["dynCall_viiif"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_viiif = Module["dynCall_viiif"] = wasmExports["dynCall_viiif"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
 
     var dynCall_iiiiiiiiiiiiiiiiiiii = (Module["dynCall_iiiiiiiiiiiiiiiiiiii"] =
       (
@@ -9853,7 +9861,7 @@ var getUsdModule = ((args) => {
           a19,
         ));
 
-    var dynCall_viiiiiiiiii = (Module["dynCall_viiiiiiiiii"] = (
+    var dynCall_viiiiiiiiiiii = (Module["dynCall_viiiiiiiiiiii"] = (
       a0,
       a1,
       a2,
@@ -9865,9 +9873,11 @@ var getUsdModule = ((args) => {
       a8,
       a9,
       a10,
+      a11,
+      a12,
     ) =>
-      (dynCall_viiiiiiiiii = Module["dynCall_viiiiiiiiii"] =
-        wasmExports["dynCall_viiiiiiiiii"])(
+      (dynCall_viiiiiiiiiiii = Module["dynCall_viiiiiiiiiiii"] =
+        wasmExports["dynCall_viiiiiiiiiiii"])(
         a0,
         a1,
         a2,
@@ -9879,6 +9889,8 @@ var getUsdModule = ((args) => {
         a8,
         a9,
         a10,
+        a11,
+        a12,
       ));
 
     var dynCall_viiiiiiiii = (Module["dynCall_viiiiiiiii"] = (
@@ -9988,6 +10000,34 @@ var getUsdModule = ((args) => {
         a5,
       ));
 
+    var dynCall_viiiiiiiiii = (Module["dynCall_viiiiiiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+      a8,
+      a9,
+      a10,
+    ) =>
+      (dynCall_viiiiiiiiii = Module["dynCall_viiiiiiiiii"] =
+        wasmExports["dynCall_viiiiiiiiii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+        a5,
+        a6,
+        a7,
+        a8,
+        a9,
+        a10,
+      ));
+
     var dynCall_iiiiiiiiiiiiii = (Module["dynCall_iiiiiiiiiiiiii"] = (
       a0,
       a1,
@@ -10020,36 +10060,6 @@ var getUsdModule = ((args) => {
         a11,
         a12,
         a13,
-      ));
-
-    var dynCall_iiddddddiiii = (Module["dynCall_iiddddddiiii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-      a9,
-      a10,
-      a11,
-    ) =>
-      (dynCall_iiddddddiiii = Module["dynCall_iiddddddiiii"] =
-        wasmExports["dynCall_iiddddddiiii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-        a10,
-        a11,
       ));
 
     var dynCall_iidiiiii = (Module["dynCall_iidiiiii"] = (
@@ -10100,13 +10110,6 @@ var getUsdModule = ((args) => {
         a1,
         a2,
         a3,
-      ));
-
-    var dynCall_idi = (Module["dynCall_idi"] = (a0, a1, a2) =>
-      (dynCall_idi = Module["dynCall_idi"] = wasmExports["dynCall_idi"])(
-        a0,
-        a1,
-        a2,
       ));
 
     var dynCall_fiiid = (Module["dynCall_fiiid"] = (a0, a1, a2, a3, a4) =>
@@ -10280,15 +10283,6 @@ var getUsdModule = ((args) => {
       (dynCall_iiiddi = Module["dynCall_iiiddi"] =
         wasmExports["dynCall_iiiddi"])(a0, a1, a2, a3, a4, a5));
 
-    var dynCall_iiidd = (Module["dynCall_iiidd"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_iiidd = Module["dynCall_iiidd"] = wasmExports["dynCall_iiidd"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
-
     var dynCall_iiiif = (Module["dynCall_iiiif"] = (a0, a1, a2, a3, a4) =>
       (dynCall_iiiif = Module["dynCall_iiiif"] = wasmExports["dynCall_iiiif"])(
         a0,
@@ -10297,9 +10291,6 @@ var getUsdModule = ((args) => {
         a3,
         a4,
       ));
-
-    var dynCall_fi = (Module["dynCall_fi"] = (a0, a1) =>
-      (dynCall_fi = Module["dynCall_fi"] = wasmExports["dynCall_fi"])(a0, a1));
 
     var dynCall_did = (Module["dynCall_did"] = (a0, a1, a2) =>
       (dynCall_did = Module["dynCall_did"] = wasmExports["dynCall_did"])(
@@ -10324,6 +10315,15 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_iiidddii = Module["dynCall_iiidddii"] =
         wasmExports["dynCall_iiidddii"])(a0, a1, a2, a3, a4, a5, a6, a7));
+
+    var dynCall_iidii = (Module["dynCall_iidii"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_iidii = Module["dynCall_iidii"] = wasmExports["dynCall_iidii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+      ));
 
     var dynCall_didii = (Module["dynCall_didii"] = (a0, a1, a2, a3, a4) =>
       (dynCall_didii = Module["dynCall_didii"] = wasmExports["dynCall_didii"])(
@@ -10370,15 +10370,6 @@ var getUsdModule = ((args) => {
         a3,
       ));
 
-    var dynCall_viij = (Module["dynCall_viij"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_viij = Module["dynCall_viij"] = wasmExports["dynCall_viij"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
-
     var dynCall_viji = (Module["dynCall_viji"] = (a0, a1, a2, a3, a4) =>
       (dynCall_viji = Module["dynCall_viji"] = wasmExports["dynCall_viji"])(
         a0,
@@ -10388,8 +10379,27 @@ var getUsdModule = ((args) => {
         a4,
       ));
 
+    var dynCall_viij = (Module["dynCall_viij"] = (a0, a1, a2, a3, a4) =>
+      (dynCall_viij = Module["dynCall_viij"] = wasmExports["dynCall_viij"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+      ));
+
     var dynCall_vijii = (Module["dynCall_vijii"] = (a0, a1, a2, a3, a4, a5) =>
       (dynCall_vijii = Module["dynCall_vijii"] = wasmExports["dynCall_vijii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+        a5,
+      ));
+
+    var dynCall_jiiij = (Module["dynCall_jiiij"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_jiiij = Module["dynCall_jiiij"] = wasmExports["dynCall_jiiij"])(
         a0,
         a1,
         a2,
@@ -10415,27 +10425,6 @@ var getUsdModule = ((args) => {
         a4,
         a5,
         a6,
-      ));
-
-    var dynCall_iiijji = (Module["dynCall_iiijji"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-    ) =>
-      (dynCall_iiijji = Module["dynCall_iiijji"] =
-        wasmExports["dynCall_iiijji"])(a0, a1, a2, a3, a4, a5, a6, a7));
-
-    var dynCall_vij = (Module["dynCall_vij"] = (a0, a1, a2, a3) =>
-      (dynCall_vij = Module["dynCall_vij"] = wasmExports["dynCall_vij"])(
-        a0,
-        a1,
-        a2,
-        a3,
       ));
 
     var dynCall_vijji = (Module["dynCall_vijji"] = (
@@ -10487,14 +10476,32 @@ var getUsdModule = ((args) => {
       (dynCall_iiiiddd = Module["dynCall_iiiiddd"] =
         wasmExports["dynCall_iiiiddd"])(a0, a1, a2, a3, a4, a5, a6));
 
-    var dynCall_vidii = (Module["dynCall_vidii"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_vidii = Module["dynCall_vidii"] = wasmExports["dynCall_vidii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-      ));
+    var dynCall_idiiiiii = (Module["dynCall_idiiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+    ) =>
+      (dynCall_idiiiiii = Module["dynCall_idiiiiii"] =
+        wasmExports["dynCall_idiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7));
+
+    var dynCall_idiiiiiii = (Module["dynCall_idiiiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+      a8,
+    ) =>
+      (dynCall_idiiiiiii = Module["dynCall_idiiiiiii"] =
+        wasmExports["dynCall_idiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
 
     var dynCall_vidiiii = (Module["dynCall_vidiiii"] = (
       a0,
@@ -10527,33 +10534,6 @@ var getUsdModule = ((args) => {
         a3,
         a4,
       ));
-
-    var dynCall_idiiiiii = (Module["dynCall_idiiiiii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-    ) =>
-      (dynCall_idiiiiii = Module["dynCall_idiiiiii"] =
-        wasmExports["dynCall_idiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7));
-
-    var dynCall_idiiiiiii = (Module["dynCall_idiiiiiii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-    ) =>
-      (dynCall_idiiiiiii = Module["dynCall_idiiiiiii"] =
-        wasmExports["dynCall_idiiiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
 
     var dynCall_iiiidiiii = (Module["dynCall_iiiidiiii"] = (
       a0,
@@ -10599,14 +10579,46 @@ var getUsdModule = ((args) => {
         a11,
       ));
 
-    var dynCall_iiiff = (Module["dynCall_iiiff"] = (a0, a1, a2, a3, a4) =>
-      (dynCall_iiiff = Module["dynCall_iiiff"] = wasmExports["dynCall_iiiff"])(
+    var dynCall_vjiiii = (Module["dynCall_vjiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+    ) =>
+      (dynCall_vjiiii = Module["dynCall_vjiiii"] =
+        wasmExports["dynCall_vjiiii"])(a0, a1, a2, a3, a4, a5, a6));
+
+    var dynCall_ij = (Module["dynCall_ij"] = (a0, a1, a2) =>
+      (dynCall_ij = Module["dynCall_ij"] = wasmExports["dynCall_ij"])(
+        a0,
+        a1,
+        a2,
+      ));
+
+    var dynCall_vij = (Module["dynCall_vij"] = (a0, a1, a2, a3) =>
+      (dynCall_vij = Module["dynCall_vij"] = wasmExports["dynCall_vij"])(
         a0,
         a1,
         a2,
         a3,
-        a4,
       ));
+
+    var dynCall_vijiiiii = (Module["dynCall_vijiiiii"] = (
+      a0,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+      a8,
+    ) =>
+      (dynCall_vijiiiii = Module["dynCall_vijiiiii"] =
+        wasmExports["dynCall_vijiiiii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
 
     var dynCall_viiiiiiiiiii = (Module["dynCall_viiiiiiiiiii"] = (
       a0,
@@ -10646,12 +10658,14 @@ var getUsdModule = ((args) => {
         a3,
       ));
 
-    var dynCall_vidi = (Module["dynCall_vidi"] = (a0, a1, a2, a3) =>
-      (dynCall_vidi = Module["dynCall_vidi"] = wasmExports["dynCall_vidi"])(
+    var dynCall_fi = (Module["dynCall_fi"] = (a0, a1) =>
+      (dynCall_fi = Module["dynCall_fi"] = wasmExports["dynCall_fi"])(a0, a1));
+
+    var dynCall_fii = (Module["dynCall_fii"] = (a0, a1, a2) =>
+      (dynCall_fii = Module["dynCall_fii"] = wasmExports["dynCall_fii"])(
         a0,
         a1,
         a2,
-        a3,
       ));
 
     var dynCall_viiiiiiiiiiiii = (Module["dynCall_viiiiiiiiiiiii"] = (
@@ -10720,6 +10734,16 @@ var getUsdModule = ((args) => {
       (dynCall_viidii = Module["dynCall_viidii"] =
         wasmExports["dynCall_viidii"])(a0, a1, a2, a3, a4, a5));
 
+    var dynCall_vjiii = (Module["dynCall_vjiii"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_vjiii = Module["dynCall_vjiii"] = wasmExports["dynCall_vjiii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+        a5,
+      ));
+
     var dynCall_viiiijii = (Module["dynCall_viiiijii"] = (
       a0,
       a1,
@@ -10733,32 +10757,6 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_viiiijii = Module["dynCall_viiiijii"] =
         wasmExports["dynCall_viiiijii"])(a0, a1, a2, a3, a4, a5, a6, a7, a8));
-
-    var dynCall_viiijjii = (Module["dynCall_viiijjii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-      a9,
-    ) =>
-      (dynCall_viiijjii = Module["dynCall_viiijjii"] =
-        wasmExports["dynCall_viiijjii"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-      ));
 
     var dynCall_iiiijjii = (Module["dynCall_iiiijjii"] = (
       a0,
@@ -10786,31 +10784,18 @@ var getUsdModule = ((args) => {
         a9,
       ));
 
-    var dynCall_viiijii = (Module["dynCall_viiijii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-    ) =>
-      (dynCall_viiijii = Module["dynCall_viiijii"] =
-        wasmExports["dynCall_viiijii"])(a0, a1, a2, a3, a4, a5, a6, a7));
+    var dynCall_jjiii = (Module["dynCall_jjiii"] = (a0, a1, a2, a3, a4, a5) =>
+      (dynCall_jjiii = Module["dynCall_jjiii"] = wasmExports["dynCall_jjiii"])(
+        a0,
+        a1,
+        a2,
+        a3,
+        a4,
+        a5,
+      ));
 
-    var dynCall_iiiijii = (Module["dynCall_iiiijii"] = (
-      a0,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-    ) =>
-      (dynCall_iiiijii = Module["dynCall_iiiijii"] =
-        wasmExports["dynCall_iiiijii"])(a0, a1, a2, a3, a4, a5, a6, a7));
+    var dynCall_j = (Module["dynCall_j"] = (a0) =>
+      (dynCall_j = Module["dynCall_j"] = wasmExports["dynCall_j"])(a0));
 
     var dynCall_ddiiiii = (Module["dynCall_ddiiiii"] = (
       a0,
@@ -10823,24 +10808,6 @@ var getUsdModule = ((args) => {
     ) =>
       (dynCall_ddiiiii = Module["dynCall_ddiiiii"] =
         wasmExports["dynCall_ddiiiii"])(a0, a1, a2, a3, a4, a5, a6));
-
-    var dynCall_iifi = (Module["dynCall_iifi"] = (a0, a1, a2, a3) =>
-      (dynCall_iifi = Module["dynCall_iifi"] = wasmExports["dynCall_iifi"])(
-        a0,
-        a1,
-        a2,
-        a3,
-      ));
-
-    var dynCall_iiiij = (Module["dynCall_iiiij"] = (a0, a1, a2, a3, a4, a5) =>
-      (dynCall_iiiij = Module["dynCall_iiiij"] = wasmExports["dynCall_iiiij"])(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-      ));
 
     var dynCall_jiji = (Module["dynCall_jiji"] = (a0, a1, a2, a3, a4) =>
       (dynCall_jiji = Module["dynCall_jiji"] = wasmExports["dynCall_jiji"])(
@@ -10974,9 +10941,9 @@ var getUsdModule = ((args) => {
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
 
-    var ___start_em_js = (Module["___start_em_js"] = 3947564);
+    var ___start_em_js = (Module["___start_em_js"] = 3906828);
 
-    var ___stop_em_js = (Module["___stop_em_js"] = 3948888);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3908152);
 
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
@@ -10989,10 +10956,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiii(index, a1, a2, a3) {
+    function invoke_viiii(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        return dynCall_iiii(index, a1, a2, a3);
+        dynCall_viiii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11004,6 +10971,17 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_vi(index, a1);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_iiii(index, a1, a2, a3) {
+      var sp = stackSave();
+      try {
+        return dynCall_iiii(index, a1, a2, a3);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11066,32 +11044,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiiii(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiiii(index, a1, a2, a3, a4);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
     function invoke_viii(index, a1, a2, a3) {
       var sp = stackSave();
       try {
         dynCall_viii(index, a1, a2, a3);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_viiii(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        dynCall_viiii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11110,10 +11066,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_vid(index, a1, a2) {
+    function invoke_iiiii(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        dynCall_vid(index, a1, a2);
+        return dynCall_iiiii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11136,6 +11092,17 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_viiiiii(index, a1, a2, a3, a4, a5, a6);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_diiiii(index, a1, a2, a3, a4, a5) {
+      var sp = stackSave();
+      try {
+        return dynCall_diiiii(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11187,6 +11154,17 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_d(index) {
+      var sp = stackSave();
+      try {
+        return dynCall_d(index);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_viid(index, a1, a2, a3) {
       var sp = stackSave();
       try {
@@ -11202,6 +11180,45 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_viidi(index, a1, a2, a3, a4);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_viiiiiiiiiiii(
+      index,
+      a1,
+      a2,
+      a3,
+      a4,
+      a5,
+      a6,
+      a7,
+      a8,
+      a9,
+      a10,
+      a11,
+      a12,
+    ) {
+      var sp = stackSave();
+      try {
+        dynCall_viiiiiiiiiiii(
+          index,
+          a1,
+          a2,
+          a3,
+          a4,
+          a5,
+          a6,
+          a7,
+          a8,
+          a9,
+          a10,
+          a11,
+          a12,
+        );
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11231,10 +11248,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_di(index, a1) {
+    function invoke_vid(index, a1, a2) {
       var sp = stackSave();
       try {
-        return dynCall_di(index, a1);
+        dynCall_vid(index, a1, a2);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11242,10 +11259,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iid(index, a1, a2) {
+    function invoke_di(index, a1) {
       var sp = stackSave();
       try {
-        return dynCall_iid(index, a1, a2);
+        return dynCall_di(index, a1);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11323,6 +11340,28 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_viiid(index, a1, a2, a3, a4) {
+      var sp = stackSave();
+      try {
+        dynCall_viiid(index, a1, a2, a3, a4);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_iid(index, a1, a2) {
+      var sp = stackSave();
+      try {
+        return dynCall_iid(index, a1, a2);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_iif(index, a1, a2) {
       var sp = stackSave();
       try {
@@ -11338,28 +11377,6 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         return dynCall_iidiii(index, a1, a2, a3, a4, a5);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_viiid(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        dynCall_viiid(index, a1, a2, a3, a4);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_iiiid(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiiid(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11400,21 +11417,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_fii(index, a1, a2) {
+    function invoke_iiiid(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        return dynCall_fii(index, a1, a2);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_iiffi(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiffi(index, a1, a2, a3, a4);
+        return dynCall_iiiid(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11433,6 +11439,17 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_iiffi(index, a1, a2, a3, a4) {
+      var sp = stackSave();
+      try {
+        return dynCall_iiffi(index, a1, a2, a3, a4);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_diii(index, a1, a2, a3) {
       var sp = stackSave();
       try {
@@ -11444,32 +11461,21 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_viiif(index, a1, a2, a3, a4) {
+      var sp = stackSave();
+      try {
+        dynCall_viiif(index, a1, a2, a3, a4);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_viiiiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8) {
       var sp = stackSave();
       try {
         dynCall_viiiiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_iidii(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        return dynCall_iidii(index, a1, a2, a3, a4);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_dif(index, a1, a2) {
-      var sp = stackSave();
-      try {
-        return dynCall_dif(index, a1, a2);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11565,10 +11571,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_vidi(index, a1, a2, a3) {
+    function invoke_viiffffi(index, a1, a2, a3, a4, a5, a6, a7) {
       var sp = stackSave();
       try {
-        dynCall_vidi(index, a1, a2, a3);
+        dynCall_viiffffi(index, a1, a2, a3, a4, a5, a6, a7);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11576,10 +11582,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_viiiddddi(index, a1, a2, a3, a4, a5, a6, a7, a8) {
+    function invoke_vifffi(index, a1, a2, a3, a4, a5) {
       var sp = stackSave();
       try {
-        dynCall_viiiddddi(index, a1, a2, a3, a4, a5, a6, a7, a8);
+        dynCall_vifffi(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11587,10 +11593,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_viiddi(index, a1, a2, a3, a4, a5) {
+    function invoke_vfffi(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        dynCall_viiddi(index, a1, a2, a3, a4, a5);
+        dynCall_vfffi(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11598,21 +11604,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_vidddi(index, a1, a2, a3, a4, a5) {
+    function invoke_viffffi(index, a1, a2, a3, a4, a5, a6) {
       var sp = stackSave();
       try {
-        dynCall_vidddi(index, a1, a2, a3, a4, a5);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_viiddddi(index, a1, a2, a3, a4, a5, a6, a7) {
-      var sp = stackSave();
-      try {
-        dynCall_viiddddi(index, a1, a2, a3, a4, a5, a6, a7);
+        dynCall_viffffi(index, a1, a2, a3, a4, a5, a6);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11642,10 +11637,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_vif(index, a1, a2) {
+    function invoke_dif(index, a1, a2) {
       var sp = stackSave();
       try {
-        dynCall_vif(index, a1, a2);
+        return dynCall_dif(index, a1, a2);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11668,6 +11663,17 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_viiiiiiid(index, a1, a2, a3, a4, a5, a6, a7, a8);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_viiffi(index, a1, a2, a3, a4, a5) {
+      var sp = stackSave();
+      try {
+        dynCall_viiffi(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11714,6 +11720,17 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_vif(index, a1, a2) {
+      var sp = stackSave();
+      try {
+        dynCall_vif(index, a1, a2);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_fif(index, a1, a2) {
       var sp = stackSave();
       try {
@@ -11747,10 +11764,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_ifii(index, a1, a2, a3) {
+    function invoke_vidii(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        return dynCall_ifii(index, a1, a2, a3);
+        dynCall_vidii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11830,17 +11847,6 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_viiiiiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8, a9);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_viiif(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        dynCall_viiif(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -11992,43 +11998,6 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiddddddiiii(
-      index,
-      a1,
-      a2,
-      a3,
-      a4,
-      a5,
-      a6,
-      a7,
-      a8,
-      a9,
-      a10,
-      a11,
-    ) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiddddddiiii(
-          index,
-          a1,
-          a2,
-          a3,
-          a4,
-          a5,
-          a6,
-          a7,
-          a8,
-          a9,
-          a10,
-          a11,
-        );
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
     function invoke_iidiiiii(index, a1, a2, a3, a4, a5, a6, a7) {
       var sp = stackSave();
       try {
@@ -12099,17 +12068,6 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         return dynCall_idii(index, a1, a2, a3);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_idi(index, a1, a2) {
-      var sp = stackSave();
-      try {
-        return dynCall_idi(index, a1, a2);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12285,17 +12243,6 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiidd(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiidd(index, a1, a2, a3, a4);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
     function invoke_did(index, a1, a2) {
       var sp = stackSave();
       try {
@@ -12318,10 +12265,32 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_iiiiddd(index, a1, a2, a3, a4, a5, a6) {
+      var sp = stackSave();
+      try {
+        return dynCall_iiiiddd(index, a1, a2, a3, a4, a5, a6);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_iiidddii(index, a1, a2, a3, a4, a5, a6, a7) {
       var sp = stackSave();
       try {
         return dynCall_iiidddii(index, a1, a2, a3, a4, a5, a6, a7);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_iidii(index, a1, a2, a3, a4) {
+      var sp = stackSave();
+      try {
+        return dynCall_iidii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12379,28 +12348,6 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         return dynCall_iidd(index, a1, a2, a3);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_iiiiddd(index, a1, a2, a3, a4, a5, a6) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiiiddd(index, a1, a2, a3, a4, a5, a6);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_vidii(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        dynCall_vidii(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12511,10 +12458,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiiff(index, a1, a2, a3, a4) {
+    function invoke_fii(index, a1, a2) {
       var sp = stackSave();
       try {
-        return dynCall_iiiff(index, a1, a2, a3, a4);
+        return dynCall_fii(index, a1, a2);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12620,21 +12567,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iifi(index, a1, a2, a3) {
+    function invoke_viji(index, a1, a2, a3, a4) {
       var sp = stackSave();
       try {
-        return dynCall_iifi(index, a1, a2, a3);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_j(index) {
-      var sp = stackSave();
-      try {
-        return dynCall_j(index);
+        dynCall_viji(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12664,6 +12600,17 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_vij(index, a1, a2, a3) {
+      var sp = stackSave();
+      try {
+        dynCall_vij(index, a1, a2, a3);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_ji(index, a1) {
       var sp = stackSave();
       try {
@@ -12679,17 +12626,6 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_viij(index, a1, a2, a3, a4);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_viji(index, a1, a2, a3, a4) {
-      var sp = stackSave();
-      try {
-        dynCall_viji(index, a1, a2, a3, a4);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12719,28 +12655,6 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiijji(index, a1, a2, a3, a4, a5, a6, a7) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiijji(index, a1, a2, a3, a4, a5, a6, a7);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_vij(index, a1, a2, a3) {
-      var sp = stackSave();
-      try {
-        dynCall_vij(index, a1, a2, a3);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
     function invoke_jii(index, a1, a2) {
       var sp = stackSave();
       try {
@@ -12756,6 +12670,17 @@ var getUsdModule = ((args) => {
       var sp = stackSave();
       try {
         dynCall_vijji(index, a1, a2, a3, a4, a5, a6);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_jiiij(index, a1, a2, a3, a4, a5) {
+      var sp = stackSave();
+      try {
+        return dynCall_jiiij(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12785,10 +12710,54 @@ var getUsdModule = ((args) => {
       }
     }
 
+    function invoke_vjiiii(index, a1, a2, a3, a4, a5, a6) {
+      var sp = stackSave();
+      try {
+        dynCall_vjiiii(index, a1, a2, a3, a4, a5, a6);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_ij(index, a1, a2) {
+      var sp = stackSave();
+      try {
+        return dynCall_ij(index, a1, a2);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_vijiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8) {
+      var sp = stackSave();
+      try {
+        dynCall_vijiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
     function invoke_iij(index, a1, a2, a3) {
       var sp = stackSave();
       try {
         return dynCall_iij(index, a1, a2, a3);
+      } catch (e) {
+        stackRestore(sp);
+        if (e !== e + 0) throw e;
+        _setThrew(1, 0);
+      }
+    }
+
+    function invoke_vjiii(index, a1, a2, a3, a4, a5) {
+      var sp = stackSave();
+      try {
+        dynCall_vjiii(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12807,17 +12776,6 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_viiijjii(index, a1, a2, a3, a4, a5, a6, a7, a8, a9) {
-      var sp = stackSave();
-      try {
-        dynCall_viiijjii(index, a1, a2, a3, a4, a5, a6, a7, a8, a9);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
     function invoke_iiiijjii(index, a1, a2, a3, a4, a5, a6, a7, a8, a9) {
       var sp = stackSave();
       try {
@@ -12829,10 +12787,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_viiijii(index, a1, a2, a3, a4, a5, a6, a7) {
+    function invoke_jjiii(index, a1, a2, a3, a4, a5) {
       var sp = stackSave();
       try {
-        dynCall_viiijii(index, a1, a2, a3, a4, a5, a6, a7);
+        return dynCall_jjiii(index, a1, a2, a3, a4, a5);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
@@ -12840,21 +12798,10 @@ var getUsdModule = ((args) => {
       }
     }
 
-    function invoke_iiiijii(index, a1, a2, a3, a4, a5, a6, a7) {
+    function invoke_j(index) {
       var sp = stackSave();
       try {
-        return dynCall_iiiijii(index, a1, a2, a3, a4, a5, a6, a7);
-      } catch (e) {
-        stackRestore(sp);
-        if (e !== e + 0) throw e;
-        _setThrew(1, 0);
-      }
-    }
-
-    function invoke_iiiij(index, a1, a2, a3, a4, a5) {
-      var sp = stackSave();
-      try {
-        return dynCall_iiiij(index, a1, a2, a3, a4, a5);
+        return dynCall_j(index);
       } catch (e) {
         stackRestore(sp);
         if (e !== e + 0) throw e;
