@@ -480,6 +480,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
       reader.onerror = reject;
     });
     reader.onload = function(event) {
+      clearStage();
       let fileName = file.name;
       let directory = "/";
       if (fullPath !== undefined) {
@@ -489,6 +490,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
       }
       Usd.FS_createPath("", directory, true, true);
       Usd.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+      currentRootFileName = fileName;
       loadUsdFile(directory, fileName, fullPath, isRootFile);
     };
     reader.readAsArrayBuffer(file);
