@@ -194,6 +194,10 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
     endTimeCode = stage.GetEndTimeCode();
     timeout = 1000 / stage.GetTimeCodesPerSecond();
   }
+
+  // if up axis is z, rotate, otherwise make sure rotation is 0, in case we rotated in the past and need to undo it
+  window.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
+
   fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
   console.log("Loading done. Scene: ", window.usdRoot);
   ready = true;
