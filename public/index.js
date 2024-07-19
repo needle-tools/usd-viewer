@@ -91,7 +91,7 @@ try {
 
       clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-      loadUsdFile(undefined, filename, urlPath, true);
+      await loadUsdFile(undefined, filename, urlPath, true);
     }
   });
 }
@@ -245,8 +245,44 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
 
   fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
   console.log("Loading done. Scene: ", window.usdRoot);
-  ready = true;
 
+  const defaultPrimName = window.usdStage.GetRootLayer().GetDefaultPrim();
+  document.getElementById('defaultPrim').textContent = defaultPrimName;
+
+  const defaultPrim = window.usdStage.GetPrimAtPath("/" + defaultPrimName);
+
+  const variantSets = defaultPrim.GetVariantSets();
+  const topVariantSet = variantSets.get(0);
+
+  const variantInfo = document.getElementById('variantInfo');
+  if (topVariantSet) {
+    variantInfo.classList.remove('hidden');
+    document.getElementById('variantSet').textContent = topVariantSet;
+
+    const variantOptionsSelect = document.getElementById('variantOptions');
+    variantOptionsSelect.innerHTML = '';
+
+    const variantOptions = defaultPrim.GetVariantSetOptions(topVariantSet);
+    for(let i = 0; i < variantOptions.size(); i++) {
+      const option = document.createElement('option');
+      option.value = variantOptions.get(i);
+      option.textContent = variantOptions.get(i);
+      variantOptionsSelect.appendChild(option);
+    }
+
+    variantOptionsSelect.value = defaultPrim.GetVariantSelection(topVariantSet);
+
+    variantOptionsSelect.addEventListener('change', async function () {
+      window.usdRoot.clear();
+      const selectedVariant = this.value;
+      await defaultPrim.SetVariant(topVariantSet, selectedVariant);
+    });
+  }
+  else {
+    variantInfo.classList.add('hidden');
+  }
+
+  ready = true;
   try {
     console.log("Currently Exposed API", {
       "Stage": Object.getPrototypeOf(stage),
@@ -446,7 +482,7 @@ async function init() {
         const parts = filename.split('/');
         filename = parts[parts.length - 1];
         const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-        loadUsdFile(undefined, filename, urlPath, true);
+        await loadUsdFile(undefined, filename, urlPath, true);
       }
     });
   }
@@ -477,8 +513,8 @@ async function animate() {
   const time = secs * (1000 / timeout) % endTimeCode;
   if (window.driver && window.driver.SetTime && window.driver.Draw && ready) {
     window.driver.SetTime(time);
-    window.driver.Draw();
-    render();
+    await window.driver.Draw();
+    await render();
   }
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
 }
@@ -489,10 +525,10 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
-function render() {
+async function render() {
   const time = Date.now() * 0.001;
   if (window.renderer.render && window.scene){
-    window.renderer.render( window.scene, window.camera );
+    await window.renderer.render( window.scene, window.camera );
   }
 }
 
