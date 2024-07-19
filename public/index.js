@@ -241,6 +241,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
   console.log("Loading done. Scene: ", window.usdRoot);
 
+
   const defaultPrimName = window.usdStage.GetRootLayer().GetDefaultPrim();
   document.getElementById('defaultPrim').textContent = defaultPrimName;
 
@@ -277,6 +278,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
     variantInfo.classList.add('hidden');
   }
 
+  fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+  console.log("Loading done. Scene: ", window.usdRoot);
   ready = true;
   try {
     console.log("Currently Exposed API", {
