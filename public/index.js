@@ -143,21 +143,61 @@ if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
   evt.preventDefault();
 });
 
-const loadedFiles = [];
+function getAllLoadedFiles(){
+  const filePaths = [];
+
+  getAllLoadedFilePaths("/", filePaths);
+
+  return filePaths;
+}
+
+function getAllLoadedFilePaths(currentPath, paths) {
+  const files = Usd.FS_readdir(currentPath);
+  for (const file of files) {
+    // skip self and parent
+    if (file === "." || file === "..") continue;
+    const newPath = currentPath + file + "/";
+    const data = Usd.FS_analyzePath(currentPath + file + "/");
+    if (data.object.node_ops.readdir) {
+      // default directories we're not interested in
+      if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/" || newPath== "/tmp/" || newPath== "/usd/") continue;
+      getAllLoadedFilePaths(newPath, paths);
+    }
+    else {
+      paths.push(data.path);
+    }
+  }
+}
+
 function clearStage() {
-  console.log("Clearing stage.", [currentRootFileName, ...loadedFiles])
 
-  window.usdRoot.clear();
+  var allFilePaths = getAllLoadedFiles();
+  console.log("Clearing stage.", allFilePaths)
 
-  for (const file of loadedFiles) {
+  for (const file of allFilePaths) {
     Usd.FS_unlink(file, true);
   }
-  loadedFiles.length = 0;
 
-  if (currentRootFileName !== undefined) {
-    Usd.FS_unlink(currentRootFileName, true);
-    currentRootFileName = undefined;
-  }
+  window.usdRoot.clear();
+}
+
+function addPath(root, path) {
+    const files = Usd.FS_readdir(path);
+    for (const file of files) {
+      // skip self and parent
+      if (file === "." || file === "..") continue;
+      const newPath = path + file + "/";
+      const data = Usd.FS_analyzePath(path + file + "/");
+      if (data.object.node_ops.readdir) {
+        // default directories we're not interested in
+        if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/" || newPath== "/tmp/" || newPath== "/usd/") continue;
+        root[file] = {};
+        addPath(root[file], newPath);
+      }
+      else {
+        root[file] = data;
+      }
+    }
 }
 
 async function loadUsdFile(directory, filename, path, isRootFile = true) {
@@ -217,24 +257,6 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   // So when content in a USDZ is changed > update the USDZ file and then reload
   // This might be recursive (USDZ in USDZ in USDZ)
   const root = {};
-  function addPath(root, path) {
-    const files = Usd.FS_readdir(path);
-    for (const file of files) {
-      // skip self and parent
-      if (file === "." || file === "..") continue;
-      const newPath = path + file + "/";
-      const data = Usd.FS_analyzePath(path + file + "/");
-      if (data.object.node_ops.readdir) {
-        // default directories we're not interested in
-        if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/") continue;
-        root[file] = {};
-        addPath(root[file], newPath);
-      }
-      else {
-        root[file] = data;
-      }
-    }
-  }
   addPath(root, "/");
   console.log("File system", root, Usd.FS_analyzePath("/"));
 }
@@ -489,6 +511,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
       }
       Usd.FS_createPath("", directory, true, true);
       Usd.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+
       loadUsdFile(directory, fileName, fullPath, isRootFile);
     };
     reader.readAsArrayBuffer(file);
