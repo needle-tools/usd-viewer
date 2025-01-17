@@ -29,6 +29,7 @@ declare type USDStage = {
     GetStartTimeCode(): number,
     GetEndTimeCode(): number,
     GetTimeCodesPerSecond(): number,
+    GetUpAxis(): number,
 }
 
 declare type HdWebSyncDriver = {

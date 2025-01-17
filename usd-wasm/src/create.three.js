@@ -94,6 +94,8 @@ export async function createThreeHydra(config) {
     /** Draw once */
     driver.Draw();
 
+    /** Support for Y and Z up-axis in the root USD file */
+    delegateConfig.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
 
     let time = 0;
 
