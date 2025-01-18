@@ -39,5 +39,9 @@ export declare type createThreeHydraReturnType = {
     dispose: () => void,
 }
 
+export declare class USDLoadingManager {
+    static setURLModifier(callback: (url: string) => string): void;
+    static urlModifier: (url: string) => string;
+}
 
 export function createThreeHydra(config: createThreeHydraConfig): Promise<createThreeHydraReturnType>

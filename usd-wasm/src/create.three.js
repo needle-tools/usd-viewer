@@ -40,6 +40,12 @@ async function createFile(opts) {
     return filepath;
 }
 
+export class USDLoadingManager {
+    static urlModifier = null;
+    static setURLModifier(urlModifier) {
+        USDLoadingManager.urlModifier = urlModifier;
+    }
+}
 
 /**
  * Set up a Three.js Hydra render delegate.
