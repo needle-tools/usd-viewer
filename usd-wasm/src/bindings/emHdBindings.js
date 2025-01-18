@@ -10,7 +10,8 @@ var getUsdModule = ((args) => {
       if (!prefix && _scriptDir) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
       return prefix + path;
     },
-    ...args
+    ...args,
+    setURLModifier: args?.setURLModifier,
 }) {
     function GROWABLE_HEAP_I8() {
       if (wasmMemory.buffer != HEAP8.buffer) {
@@ -1032,17 +1033,50 @@ var getUsdModule = ((args) => {
     function __asyncjs__fetch_asset(route, dataPtr) {
       return Asyncify.handleAsync(async () => {
         const routeString = UTF8ToString(route);
-        const absoluteUrl = new URL(routeString);
+        let absoluteUrl = routeString;
+
+        if (typeof Module["setURLModifier"] === "function") {
+          console.log("found modifier, running it", Module["setURLModifier"]);
+          absoluteUrl = Module["setURLModifier"](absoluteUrl);
+        }
+
         try {
-          const response = await fetch(absoluteUrl);
-          if (!response.ok)
+          if (!absoluteUrl.startsWith("blob:") && !absoluteUrl.startsWith("data:")) {
+            absoluteUrl = new URL(absoluteUrl).toString();
+          }
+        } catch (e) {
+          console.error("Couldn't determine fetch URL", e, routeString, absoluteUrl);
+          Module.HEAP32[dataPtr >> 2] = 0;
+          Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+          return;
+        }
+        console.log("fetching asset", absoluteUrl);
+        try {
+          const buffer = await fetch(absoluteUrl) // , { signal: AbortSignal.timeout(1000)}
+            .then(r => r.arrayBuffer())
+            .catch(e => {
+              return;
+            });
+
+          if (!buffer) {
+            console.error("Error fetching asset – couldn't fetch and convert to arrayBuffer", absoluteUrl);
+            Module.HEAP32[dataPtr >> 2] = 0;
+            Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+          }
+          
+          /*if (!response.ok)
             throw new Error("Fetch failed: " + response.statusText);
+          console.log("fetch successful", response);
           const buffer = await response.arrayBuffer();
+          */
+         console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
+          console.log("fetch complete, returning", ptr, length);
           GROWABLE_HEAP_U8().set(new Uint8Array(buffer), ptr >>> 0);
           Module.HEAP32[dataPtr >> 2] = ptr;
           Module.HEAP32[(dataPtr >> 2) + 1] = length;
+          console.log("fetch complete", ptr, length);
         } catch (err) {
           console.error("Error in fetch_asset: ", err);
           Module.HEAP32[dataPtr >> 2] = 0;
@@ -10166,8 +10200,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3892124);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3893448);
+    var ___start_em_js = (Module["___start_em_js"] = 3888412);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3889736);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {
