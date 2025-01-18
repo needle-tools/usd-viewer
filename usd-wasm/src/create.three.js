@@ -64,6 +64,19 @@ export async function createThreeHydra(config) {
         buffer
     });
 
+
+    if (Array.isArray(config.files)) {
+        for (const file of config.files) {
+            console.log("Loading file", file);
+            
+            await createFile({
+                USD,
+                filepath: file.path,
+                buffer: await file.arrayBuffer()
+            });
+        }
+    }
+
     /**
      * @type {null | import(".").HdWebSyncDriver | Promise<import(".").HdWebSyncDriver>}
      */

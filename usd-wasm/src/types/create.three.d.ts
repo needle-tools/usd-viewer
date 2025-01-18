@@ -28,6 +28,10 @@ export declare type createThreeHydraConfig = {
 
     scene: Scene,
 
+    /**
+     * Files to be loaded into the virtual file system, usually dependencies of the root file
+     */
+    files?: Array<File & { path: string }>,
 }
 
 export declare type createThreeHydraReturnType = {
