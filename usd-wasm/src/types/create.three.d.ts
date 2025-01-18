@@ -18,20 +18,19 @@ export declare type createThreeHydraConfig = {
     USD: USD,
 
     /**
-     * path to the usdz file
-     */
-    usdz: string,
-    /**
      * Optional buffer of the usdz file
      */
     buffer?: ArrayBuffer,
 
+    url?: string,
+
     scene: Scene,
 
     /**
-     * Files to be loaded into the virtual file system, usually dependencies of the root file
+     * Files to be loaded into the virtual file system.
+     * The first file will be loaded as the root file, others will be loaded as dependencies.
      */
-    files?: Array<File & { path: string }>,
+    files: Array<File & { path: string }>,
 }
 
 export declare type createThreeHydraReturnType = {

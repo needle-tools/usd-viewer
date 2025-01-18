@@ -16,7 +16,6 @@ async function createFile(opts) {
         arrayBuffer = await blob.arrayBuffer();
     }
 
-
     // ensure that file paths are not using slashes
     /** @ts-ignore */
     filepath = filepath.replaceAll(/\\/g, "/").replaceAll("/", "_");
@@ -56,26 +55,56 @@ export async function createThreeHydra(config) {
 
     await config.USD.ready.catch(console.error);
 
-    const { usdz, buffer, USD } = config;
+    const { buffer, USD } = config;
 
-    const file = await createFile({
-        USD,
-        filepath: usdz,
-        buffer
-    });
+    // Some common directory is needed so that we don't get clashes with root-level files
+    // and directories in the virtual file system
+    const needleDirectory = "needle/";
 
-
+    // We're loading all provided files into the virtual file system.
+    // Potentially, we could also resolve dropped files on the fly and load them only when needed,
+    // but this requires HTTPAssetResolver changes
     if (Array.isArray(config.files)) {
         for (const file of config.files) {
-            console.log("Loading file", file);
             
-            await createFile({
-                USD,
-                filepath: file.path,
-                buffer: await file.arrayBuffer()
-            });
+            let fileName = file.name;
+            let directory = "/";
+            if (file.path) {
+                const parts = file.path.split('/');
+                if (parts.length > 1) {
+                    fileName = parts.pop() || fileName;
+                    directory = file.path.substring(0, file.path.length - fileName.length);
+                }
+            }
+
+            USD.FS_createPath("", needleDirectory + directory, true, true);
+            USD.FS_createDataFile(needleDirectory + directory, fileName, new Uint8Array(await file.arrayBuffer()), true, true, true);
         }
     }
+
+    // Which file we actually load as root file depends:
+    // - when an array of files is provided, we use the first one;
+    // - when a URL is provided, we use that;
+    // - when a blob is provided, we create a file from that blob and sanitize the filename.
+    let file = "";
+    if (config.files.length) {
+        file = needleDirectory + config.files[0].path;
+    }
+    else if (config.url) {
+        if (config.url.startsWith("blob")) {
+            file = await createFile({
+                USD,
+                filepath: config.url,
+                buffer
+            });
+        }
+        else {
+            file = config.url;
+        }
+    }
+
+    // For debugging purposes, we can log the virtual file system
+    // console.log("File", file, "Filesystem", USD.FS_analyzePath("/"));
 
     /**
      * @type {null | import(".").HdWebSyncDriver | Promise<import(".").HdWebSyncDriver>}
@@ -139,7 +168,39 @@ export async function createThreeHydra(config) {
         dispose: () => {
             if (debug) console.warn("Disposing Three Hydra");
             driverOrPromise = null;
-            config.USD.FS_unlink(file);
+
+            // Unlink all generated files and folders in the virtual file system.
+            const unlinkedFiles = new Set();
+            function unlinkFiles(dir, path) {
+                for (const fileName of Object.keys(dir.contents)) {
+                    const file = dir.contents[fileName];
+                    if (file.isFolder) {
+                        unlinkFiles(file, path + fileName + "/");
+                    }
+                    const fullPath = path + fileName;
+                    if (file.isFolder) {
+                        // console.log("unlinking folder", fullPath);
+                        config.USD.FS_rmdir(path + fileName);
+                    }
+                    else {
+                        // console.log("unlinking", fullPath);
+                        unlinkedFiles.add(fullPath);
+                        config.USD.FS_unlink(fullPath);
+                    }
+                }
+            }
+
+            function rmRootDir(rootDir) {
+                const allFiles = config.USD.FS_analyzePath(rootDir).object;
+                if (allFiles)
+                    unlinkFiles(allFiles, rootDir);
+            }
+
+            rmRootDir(needleDirectory);
+            rmRootDir("1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
+            
+            if (!unlinkedFiles.has(file))
+                config.USD.FS_unlink(file);
             driver.delete();
             if (debug) console.warn("Disposed Three Hydra");
         },
