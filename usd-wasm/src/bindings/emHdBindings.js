@@ -1052,11 +1052,18 @@ var getUsdModule = ((args) => {
         }
         console.log("fetching asset", absoluteUrl);
         try {
-          const buffer = await fetch(absoluteUrl, { signal: AbortSignal.timeout(1000)})
+          const buffer = await fetch(absoluteUrl) // , { signal: AbortSignal.timeout(1000)}
             .then(r => r.arrayBuffer())
             .catch(e => {
-             console.error("Error fetching asset", e);
+              return;
             });
+
+          if (!buffer) {
+            console.error("Error fetching asset – couldn't fetch and convert to arrayBuffer", absoluteUrl);
+            Module.HEAP32[dataPtr >> 2] = 0;
+            Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+          }
+          
           /*if (!response.ok)
             throw new Error("Fetch failed: " + response.statusText);
           console.log("fetch successful", response);
