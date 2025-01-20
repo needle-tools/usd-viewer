@@ -59,7 +59,7 @@ export async function createThreeHydra(config) {
 
     // Some common directory is needed so that we don't get clashes with root-level files
     // and directories in the virtual file system
-    const needleDirectory = "needle/";
+    const directoryForFiles = "needle/";
 
     // We're loading all provided files into the virtual file system.
     // Potentially, we could also resolve dropped files on the fly and load them only when needed,
@@ -77,34 +77,43 @@ export async function createThreeHydra(config) {
                 }
             }
 
-            USD.FS_createPath("", needleDirectory + directory, true, true);
-            USD.FS_createDataFile(needleDirectory + directory, fileName, new Uint8Array(await file.arrayBuffer()), true, true, true);
+            USD.FS_createPath("", directoryForFiles + directory, true, true);
+            USD.FS_createDataFile(directoryForFiles + directory, fileName, new Uint8Array(await file.arrayBuffer()), true, true, true);
         }
     }
+
+    // Capabilities of the loader.
+    // This depends on the HttpAssetResolver implementation and the virtual file system.
+    const allowFetchWebUrls = true;
+    const allowFetchLocalFiles = false;
 
     // Which file we actually load as root file depends:
     // - when an array of files is provided, we use the first one;
     // - when a URL is provided, we use that;
     // - when a blob is provided, we create a file from that blob and sanitize the filename.
     let file = "";
-    if (config.files.length) {
-        file = needleDirectory + config.files[0].path;
+    if (config.files?.length) {
+        file = directoryForFiles + config.files[0].path;
     }
     else if (config.url) {
-        if (config.url.startsWith("blob")) {
-            file = await createFile({
-                USD,
-                filepath: config.url,
-                buffer
-            });
+        const isBlob = config.url.startsWith("blob");
+        const isWebUrl = config.url.startsWith("http");
+        if (isBlob) {
+            file = await createFile({USD, filepath: config.url, buffer });
+        }
+        else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
+            file = config.url;
         }
         else {
-            file = config.url;
+            file = await createFile({USD, filepath: config.url, buffer });
         }
     }
 
-    // For debugging purposes, we can log the virtual file system
-    // console.log("File", file, "Filesystem", USD.FS_analyzePath("/"));
+    // Log the virtual file system, composed of a hierarchy of FSNode objects
+    if (debug) {
+        console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
+        console.log("MAIN FILE", file);
+    }
 
     /**
      * @type {null | import(".").HdWebSyncDriver | Promise<import(".").HdWebSyncDriver>}
@@ -121,6 +130,8 @@ export async function createThreeHydra(config) {
     };
 
     const renderInterface = new threeJsRenderDelegate(file, delegateConfig);
+
+    if (debug) console.log("RENDER INTERFACE", renderInterface);
 
     driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, file);
     if (driverOrPromise instanceof Promise) {
@@ -196,7 +207,7 @@ export async function createThreeHydra(config) {
                     unlinkFiles(allFiles, rootDir);
             }
 
-            rmRootDir(needleDirectory);
+            rmRootDir(directoryForFiles);
             rmRootDir("1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
             
             if (!unlinkedFiles.has(file))
