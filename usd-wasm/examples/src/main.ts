@@ -5,12 +5,17 @@ import { Object3D, Scene, WebGLRenderer } from 'three';
 
 
 getUsdModule({
-  debug: true
+  debug: true,
+  setURLModifier: (url: string) => {
+    console.log(url);
+    // return "./gingerbread/house/" + url;
+    return url;
+  }
 }).then(async (USD: USD) => {
 
   // const url = "test.usdz"; // local file
-  const url = "./gingerbread/GingerbreadHouse.usda";
-  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
+  // const url = "./gingerbread/house/GingerBreadHouse.usdc";
+  const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
   
   // using a file/buffer
   /* 

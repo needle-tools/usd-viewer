@@ -1,0 +1,35 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Mira Ly Herbst, Binh Minh Herbst, Felix Herbst, 2025"
+    }
+    defaultPrim = "Scenery"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Scenery"
+{
+    def "GingerBreadHouse" (
+        prepend references = @house/GingerBreadHouse.usdc@
+        displayName = "Gingerbread House"
+    )
+    {
+        quatf xformOp:orient = (0.5092794, 0, 0, -0.8606013)
+        float3 xformOp:scale = (1, 0.99999994, 0.9999998)
+        float3 xformOp:translate = (0.04039519, -0.0057177544, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "Snowman" (
+        prepend references = @snowman/Snowman.usdc@
+        displayName = "Snowman"
+    )
+    {
+        quatf xformOp:orient = (0.8868096, 0, 0, -0.46213505)
+        float3 xformOp:scale = (0.99999994, 0.99999994, 0.9999998)
+        float3 xformOp:translate = (-0.03819806, -0.0054023676, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+}
+
