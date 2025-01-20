@@ -8,8 +8,15 @@ getUsdModule({
   debug: true
 }).then(async (USD: USD) => {
 
-  const filepath = "test.usdz";
-
+  const url = "test.usdz"; // local file
+  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
+  
+  // using a file/buffer
+  /* 
+  const buffer = await fetch(url).then(response => response.arrayBuffer());
+  const file = new File([buffer], url, { type: "model/usd" });
+  file.path = url; // used to determine the directory structure
+  */
 
   const renderer = new WebGLRenderer({ antialias: true, alpha: true });
   const envmapUrl = "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/studio_small_09_1k.exr";
@@ -21,7 +28,9 @@ getUsdModule({
   const { update } = await createThreeHydra({
     debug: true,
     USD,
-    usdz: filepath,
+    url: url,
+    // files: [file],
+    // @ts-ignore – three types don't match for some reason
     scene,
   })
 
