@@ -68,6 +68,18 @@ function handleMessage(e) {
           postMessage({ cmd: "callHandler", handler: handler, args: args });
         };
       }
+      Module["urlCallbackFromWorker"] = async (...args) => {
+        postMessage({ cmd: "callHandlerAsync", handler: "urlCallback", args: args });
+        const promise = new Promise((resolve) => {
+          self.onmessage = (e) => {
+            if (e.data.cmd === "callHandlerAsyncResult" && e.data.handler === "urlCallback") {
+              self.onmessage = handleMessage;
+              resolve(e.data.result);
+            }
+          }
+        });
+        return await promise;
+      }
       Module["wasmMemory"] = e.data.wasmMemory;
       Module["buffer"] = Module["wasmMemory"].buffer;
       Module["ENVIRONMENT_IS_PTHREAD"] = true;

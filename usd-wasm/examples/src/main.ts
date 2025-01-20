@@ -8,12 +8,10 @@ getUsdModule({
   debug: true,
   setURLModifier: (url: string) => {
 
-    if (url.startsWith("/http"))
-      // remove the first slash
-      url = url.slice(1);
-
-    if (url.includes("http:/"))
-      url = url.replace("http:/", "http://");
+    // This is just for testing – this code already runs inside emHdBindings.js
+    if (url.startsWith("/http")) url = url.slice(1);
+    if (url.includes("http:/")) url = url.replace("http:/", "http://");
+    if (url.includes("https:/")) url = url.replace("https:/", "https://");
 
     console.log(url);
 

@@ -707,6 +707,10 @@ async function handleFilesystemEntries(entries) {
     return 0;
   });
 
+  console.log("All files", allFiles);
+
+  return;
+
   // load all files into memory
   for (const file of allFiles) {
     if (debugFileHandling) console.log("loading file ", file)

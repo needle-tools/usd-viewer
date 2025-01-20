@@ -68,6 +68,15 @@ var getUsdModule = ((args) => {
       readyPromiseResolve = resolve;
       readyPromiseReject = reject;
     });
+    Module["urlCallback"] = async (...args) => {
+      if (Module["setURLModifier"]) {
+        const url = await Module["setURLModifier"](...args);
+        return url;
+      }
+      else {
+        return undefined;
+      }
+    };
     if (!Module.expectedDataFileDownloads) {
       Module.expectedDataFileDownloads = 0;
     }
@@ -1032,71 +1041,106 @@ var getUsdModule = ((args) => {
     var tempDouble;
     var tempI64;
     function __asyncjs__fetch_asset(route, dataPtr) {
+
       return Asyncify.handleAsync(async () => {
         const routeString = UTF8ToString(route);
+        const verbose = false;
         let absoluteUrl = routeString;
-      
-        console.log("MODULE", Module.ENVIRONMENT_IS_PTHREAD, Module);
 
-        if (typeof Module["setURLModifier"] === "function") {
-          const prev = absoluteUrl;
-          const callback = Module["setURLModifier"];
-          console.log("callback", callback);
-          absoluteUrl = callback(absoluteUrl);
-          console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["setURLModifier"]);
-        }
-        else {
-          console.log("no URL modifier found", Module["setURLModifier"]);
-        }
+        // Sanitization: we need to turn the prim path back into a URL.
+        // The only thing that gets lost is the second colon.
+        // Additionally, things like query parameters aren't supported,
+        // since USD doesn't understand the filetype then.
+        if (absoluteUrl.startsWith("/http")) absoluteUrl = absoluteUrl.slice(1);
+        if (absoluteUrl.includes("http:/")) absoluteUrl = absoluteUrl.replace("http:/", "http://");
+        if (absoluteUrl.includes("https:/")) absoluteUrl = absoluteUrl.replace("https:/", "https://");
+        
+        /** @type {ArrayBuffer | null} */
+        let buffer = null;
 
-        try {
-          if (!absoluteUrl.startsWith("blob:") && !absoluteUrl.startsWith("data:")) {
-            // not sure when we need to do this?
-            // absoluteUrl = new URL(absoluteUrl).toString();
+        // From a worker thread, we call back to the main thread to get a chance to modify what we're doing
+        // to get the asset into memory.
+        // What is returned from fetch_asset becomes put on disk.
+        // We could get it from a dropped file (and can transfer the FileSystemFileHandle to the worker)
+        // or from a blob URL (which will then be fetched inside the worker).
+        if (ENVIRONMENT_IS_PTHREAD) {
+          if (verbose) console.log("we're in a thread, calling urlCallback", absoluteUrl);
+          let result;
+          try {
+            result = await Module["urlCallbackFromWorker"](absoluteUrl);
           }
-        } catch (e) {
-          console.error("Couldn't determine fetch URL", e, routeString, absoluteUrl);
-          Module.HEAP32[dataPtr >> 2] = 0;
-          Module.HEAP32[(dataPtr >> 2) + 1] = 0;
-          return;
-        }
-        console.log("fetching asset", absoluteUrl);
-        try {
-          let buffer = await fetch(absoluteUrl) // , { signal: AbortSignal.timeout(1000)}
-            .then(r => {
-              console.log(r.status + " " + r.statusText); 
-              return r.arrayBuffer() 
-            })
-            .catch(e => {
-              return;
-            });
-
-          if (!buffer || buffer.byteLength === 0) {
-            console.error("Error fetching asset – couldn't fetch", absoluteUrl);
-            /*
-            // TODO not sure why we can't just return here,
-            // potentially there's missing error correction on the C++ side to 
-            // check the return type...
-            // We just want to continue execution and not crash
+          catch(e) {
+            console.error("Error in thread callback for", absoluteUrl, "error:", e);
+          }
+          if (verbose) console.log("got result inside worker", result);
+          // check what we got. if it's a handle, we can resolve it;
+          // if it's a buffer, we can stop here and don't need to fetch anymore;
+          try {
+            if (result instanceof FileSystemFileHandle) {
+              buffer = await (await result.getFile()).arrayBuffer();
+            }
+            else if (result instanceof ArrayBuffer) {
+              buffer = result;
+            }
+            else if (typeof result === "string") {
+              absoluteUrl = result;
+            }
+          }
+          catch(e) {
+            console.error("Error after main thread callback in fetch_asset for", absoluteUrl, result, "error:", e);
             Module.HEAP32[dataPtr >> 2] = 0;
             Module.HEAP32[(dataPtr >> 2) + 1] = 0;
             return;
-            */
+          }
+          // if it's a URL, we still need to fetch it below.
+        }
+        // From the main thread, we can directly call the URL modifier.
+        else if (typeof Module["setURLModifier"] === "function") {
+          const prev = absoluteUrl;
+          const callback = Module["setURLModifier"];
+          if (verbose) console.log("callback", callback);
+          absoluteUrl = callback(absoluteUrl);
+          if (verbose) console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["setURLModifier"]);
+        }
+        else {
+          // console.log("no URL modifier found", Module["setURLModifier"]);
+        }
+
+        if (verbose) console.log("fetching asset", absoluteUrl);
+        try {
+          if (buffer === null) {
+            buffer = await fetch(absoluteUrl)
+              .then(r => {
+                console.log(r.status + " " + r.statusText); 
+                return r.arrayBuffer() 
+              })
+              .catch(e => {
+                return null;
+              });
+          }
+          if (!buffer || buffer.byteLength === 0) {
+            console.error("Error fetching asset – couldn't fetch", absoluteUrl);
+            
+            /// TODO not sure why we can't just return here,
+            /// potentially there's missing error correction on the C++ side to 
+            /// check the return type...
+            /// We just want to continue execution and not crash
+            // Module.HEAP32[dataPtr >> 2] = 0;
+            // Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+            // return;
+
             // Workaround for the issue mentioned above
             buffer = new ArrayBuffer(1);
           }
           
-          console.log("after awaiting buffer", buffer);
+          if (verbose) console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
-          /* // useful for debugging to see what response we actually get
-          const fileReader = new FileReader();
-          fileReader.onload = function() {
-            console.log("fileReader.onload", fileReader.result);
-          };
-          fileReader.readAsText(new Blob([buffer]));
-          */
-          console.log("fetch complete for ", absoluteUrl, " ->", length, "bytes");
+          /// useful for debugging to see what response we actually get
+          // const fileReader = new FileReader();
+          // fileReader.onload = function() { console.log("fileReader.onload", fileReader.result); };
+          // fileReader.readAsText(new Blob([buffer]));
+          if (verbose) console.log("fetch complete for ", absoluteUrl, " ->", length, "bytes");
           GROWABLE_HEAP_U8().set(new Uint8Array(buffer), ptr >>> 0);
           Module.HEAP32[dataPtr >> 2] = ptr;
           Module.HEAP32[(dataPtr >> 2) + 1] = length;
@@ -1164,6 +1208,7 @@ var getUsdModule = ((args) => {
       return address;
     };
     var spawnThread = (threadParams) => {
+      // console.log("Spawning thread", threadParams);
       var worker = PThread.getNewWorker();
       if (!worker) {
         return 6;
@@ -3658,6 +3703,7 @@ var getUsdModule = ((args) => {
         }
       },
       initMainThread() {
+        // If we set this to 0, there's only one thread, and no back-and-forth with the worker; but lower performance and non-parallel fetches.
         var pthreadPoolSize = 10;
         while (pthreadPoolSize--) {
           PThread.allocateUnusedWorker();
@@ -3740,6 +3786,21 @@ var getUsdModule = ((args) => {
               worker.postMessage(d);
             } else if (cmd === "callHandler") {
               Module[d["handler"]](...d["args"]);
+            } else if (cmd === "callHandlerAsync") {
+              // Idea: async trampline to the main thread and back
+              // this way we could, if needed, get data from the filesystem API and pass it to the worker.
+              // The handles can actually be transferred over:
+              // https://developer.mozilla.org/en-US/docs/Web/API/File_System_API
+              console.log("calling async handler", "callHandlerAsync", d, d["args"]);
+              Module[d["handler"]](...d["args"]).then((r) => {
+                console.log("async handler done, result: ", r);
+                worker.postMessage({
+                  cmd: "callHandlerAsyncResult",
+                  handler: d["handler"],
+                  id: d["id"],
+                  result: r,
+                });
+              });
             } else if (cmd) {
               err(`worker sent an unknown command ${cmd}`);
             }
@@ -10225,8 +10286,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3888412);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3889736);
+    var ___start_em_js = (Module["___start_em_js"] = 3888460);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3889784);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {

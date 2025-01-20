@@ -63,3 +63,9 @@ if (driver instanceof Promise) driver = await driver;
 // which will then call into the delegate to create and update the scene graph.
 driver.Draw();
 ```
+
+## Useful References
+
+Uses Asyncify to handle async calls in emscripten.
+> A synchronous call in C that waits for an asynchronous operation in JS to complete.
+https://emscripten.org/docs/porting/asyncify.html
