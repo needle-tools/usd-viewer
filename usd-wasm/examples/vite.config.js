@@ -11,6 +11,7 @@ export default defineConfig({
     //     }),
     // ],
     // enable COEP etc
+    appType: 'mpa',
     server: {
         headers: {
             'Cross-Origin-Embedder-Policy': 'require-corp',
