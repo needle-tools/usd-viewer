@@ -141,12 +141,16 @@ export async function createThreeHydra(config) {
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
 
     if (debug) console.log("DRIVER", driver);
-
-    let stage = driver.GetStage();
-
+    
     /** Draw once */
     driver.Draw();
 
+    let stage = driver.GetStage();
+    if (stage instanceof Promise) {
+        stage = await stage;
+        stage = driver.GetStage();
+    }
+    
     /** Support for Y and Z up-axis in the root USD file */
     delegateConfig.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
 
