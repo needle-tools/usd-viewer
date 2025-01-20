@@ -91,7 +91,7 @@ export async function createThreeHydra(config) {
     // Capabilities of the loader.
     // This depends on the HttpAssetResolver implementation and the virtual file system.
     const allowFetchWebUrls = true;
-    const allowFetchLocalFiles = false;
+    const allowFetchLocalFiles = true;
 
     // Which file we actually load as root file depends:
     // - when an array of files is provided, we use the first one;
@@ -162,8 +162,11 @@ export async function createThreeHydra(config) {
 
     let time = 0;
 
-    if (debug) console.log("STAGE", stage);
-
+    if (debug) {
+        console.log("STAGE", stage);
+        console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
+    }
+        
     return {
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
         update: (dt) => {
