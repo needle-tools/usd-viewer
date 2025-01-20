@@ -62,6 +62,7 @@ var getUsdModule = ((args) => {
       return HEAPF64;
     }
     var Module = moduleArg;
+    console.warn("GETTING USD MODULE FN", Module["setURLModifier"], Module["ENVIRONMENT_IS_PTHREAD"]);
     var readyPromiseResolve, readyPromiseReject;
     Module["ready"] = new Promise((resolve, reject) => {
       readyPromiseResolve = resolve;
@@ -1034,11 +1035,18 @@ var getUsdModule = ((args) => {
       return Asyncify.handleAsync(async () => {
         const routeString = UTF8ToString(route);
         let absoluteUrl = routeString;
+      
+        console.log("MODULE", Module.ENVIRONMENT_IS_PTHREAD, Module);
 
         if (typeof Module["setURLModifier"] === "function") {
           const prev = absoluteUrl;
-          absoluteUrl = Module["setURLModifier"](absoluteUrl);
-          console.log("found modifier, URL is now", absoluteUrl, "was", prev);
+          const callback = Module["setURLModifier"];
+          console.log("callback", callback);
+          absoluteUrl = callback(absoluteUrl);
+          console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["setURLModifier"]);
+        }
+        else {
+          console.log("no URL modifier found", Module["setURLModifier"]);
         }
 
         try {
