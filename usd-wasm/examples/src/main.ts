@@ -1,14 +1,15 @@
 
 import { getUsdModule, createThreeHydra, USD } from '@needle-tools/usd';
 import { loadEnvMap, run } from './three';
-import { Scene, WebGLRenderer } from 'three';
+import { Object3D, Scene, WebGLRenderer } from 'three';
 
 
 getUsdModule({
   debug: true
 }).then(async (USD: USD) => {
 
-  const url = "test.usdz"; // local file
+  // const url = "test.usdz"; // local file
+  const url = "./gingerbread/GingerbreadHouse.usda";
   // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
   
   // using a file/buffer
@@ -25,16 +26,18 @@ getUsdModule({
   const scene = new Scene();
   scene.environment = envmap;
 
+  const usdContent = new Object3D();
+  scene.add(usdContent);
   const { update } = await createThreeHydra({
     debug: true,
     USD,
     url: url,
     // files: [file],
     // @ts-ignore – three types don't match for some reason
-    scene,
+    scene: usdContent,
   })
 
-  console.log(scene.children)
+  console.log(scene.children);
 
   // setTimeout(()=>dispose(), 2000);
 
