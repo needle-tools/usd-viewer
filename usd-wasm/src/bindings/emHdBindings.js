@@ -1036,13 +1036,15 @@ var getUsdModule = ((args) => {
         let absoluteUrl = routeString;
 
         if (typeof Module["setURLModifier"] === "function") {
-          console.log("found modifier, running it", Module["setURLModifier"]);
+          const prev = absoluteUrl;
           absoluteUrl = Module["setURLModifier"](absoluteUrl);
+          console.log("found modifier, URL is now", absoluteUrl, "was", prev);
         }
 
         try {
           if (!absoluteUrl.startsWith("blob:") && !absoluteUrl.startsWith("data:")) {
-            absoluteUrl = new URL(absoluteUrl).toString();
+            // not sure when we need to do this?
+            // absoluteUrl = new URL(absoluteUrl).toString();
           }
         } catch (e) {
           console.error("Couldn't determine fetch URL", e, routeString, absoluteUrl);
@@ -1052,35 +1054,50 @@ var getUsdModule = ((args) => {
         }
         console.log("fetching asset", absoluteUrl);
         try {
-          const buffer = await fetch(absoluteUrl) // , { signal: AbortSignal.timeout(1000)}
-            .then(r => r.arrayBuffer())
+          let buffer = await fetch(absoluteUrl) // , { signal: AbortSignal.timeout(1000)}
+            .then(r => {
+              console.log(r.status + " " + r.statusText); 
+              return r.arrayBuffer() 
+            })
             .catch(e => {
               return;
             });
 
-          if (!buffer) {
-            console.error("Error fetching asset – couldn't fetch and convert to arrayBuffer", absoluteUrl);
+          if (!buffer || buffer.byteLength === 0) {
+            console.error("Error fetching asset – couldn't fetch", absoluteUrl);
+            /*
+            // TODO not sure why we can't just return here,
+            // potentially there's missing error correction on the C++ side to 
+            // check the return type...
+            // We just want to continue execution and not crash
             Module.HEAP32[dataPtr >> 2] = 0;
             Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+            return;
+            */
+            // Workaround for the issue mentioned above
+            buffer = new ArrayBuffer(1);
           }
           
-          /*if (!response.ok)
-            throw new Error("Fetch failed: " + response.statusText);
-          console.log("fetch successful", response);
-          const buffer = await response.arrayBuffer();
-          */
-         console.log("after awaiting buffer", buffer);
+          console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
-          console.log("fetch complete, returning", ptr, length);
+          /* // useful for debugging to see what response we actually get
+          const fileReader = new FileReader();
+          fileReader.onload = function() {
+            console.log("fileReader.onload", fileReader.result);
+          };
+          fileReader.readAsText(new Blob([buffer]));
+          */
+          console.log("fetch complete for ", absoluteUrl, " ->", length, "bytes");
           GROWABLE_HEAP_U8().set(new Uint8Array(buffer), ptr >>> 0);
           Module.HEAP32[dataPtr >> 2] = ptr;
           Module.HEAP32[(dataPtr >> 2) + 1] = length;
-          console.log("fetch complete", ptr, length);
+          return;
         } catch (err) {
-          console.error("Error in fetch_asset: ", err);
+          console.error("Error in fetch_asset for", absoluteUrl, err);
           Module.HEAP32[dataPtr >> 2] = 0;
           Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+          return;
         }
       });
     }
