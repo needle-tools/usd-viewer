@@ -7,15 +7,31 @@ import { Object3D, Scene, WebGLRenderer } from 'three';
 getUsdModule({
   debug: true,
   setURLModifier: (url: string) => {
+
+    if (url.startsWith("/http"))
+      // remove the first slash
+      url = url.slice(1);
+
+    if (url.includes("http:/"))
+      url = url.replace("http:/", "http://");
+
     console.log(url);
+
     // return "./gingerbread/house/" + url;
     return url;
   }
 }).then(async (USD: USD) => {
 
   // const url = "test.usdz"; // local file
-  // const url = "./gingerbread/house/GingerBreadHouse.usdc";
-  const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
+  // const url = "/gingerbread/house/GingerBreadHouse.usdc";
+  // const url = "/gingerbread/GingerbreadHouse.usda";
+  const url = "/HttpReferences.usda";
+  // ... all the URLs
+  // --> put them all into the virtual file system
+  // --> load the first one (assume which one that actually is)
+
+  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
+  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc"; // remote file
   
   // using a file/buffer
   /* 
