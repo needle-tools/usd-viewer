@@ -1044,6 +1044,10 @@ var getUsdModule = ((args) => {
         if (absoluteUrl.includes("http:/")) absoluteUrl = absoluteUrl.replace("http:/", "http://");
         if (absoluteUrl.includes("https:/")) absoluteUrl = absoluteUrl.replace("https:/", "https://");
         
+        /** @typedef {string | FileSystemFileHandle | FileSystemFileEntry | ArrayBuffer | File | Blob} Result */
+        /** @type {Result | null} */
+        let callbackResult = null;
+
         /** @type {ArrayBuffer | null} */
         let buffer = null;
 
@@ -1064,24 +1068,8 @@ var getUsdModule = ((args) => {
           if (verbose) console.log("got result inside worker", result);
           // check what we got. if it's a handle, we can resolve it;
           // if it's a buffer, we can stop here and don't need to fetch anymore;
-          try {
-            if (result instanceof FileSystemFileHandle) {
-              buffer = await (await result.getFile()).arrayBuffer();
-            }
-            else if (result instanceof ArrayBuffer) {
-              buffer = result;
-            }
-            else if (typeof result === "string") {
-              absoluteUrl = result;
-            }
-          }
-          catch(e) {
-            console.error("Error after main thread callback in fetch_asset for", absoluteUrl, result, "error:", e);
-            Module.HEAP32[dataPtr >> 2] = 0;
-            Module.HEAP32[(dataPtr >> 2) + 1] = 0;
-            return;
-          }
           // if it's a URL, we still need to fetch it below.
+          callbackResult = result;
         }
         // From the main thread, we can directly call the URL modifier.
         else if (typeof Module["urlModifier"] === "function") {
@@ -1090,25 +1078,80 @@ var getUsdModule = ((args) => {
           if (verbose) console.log("callback", callback);
           let result = callback(absoluteUrl);
           if (result instanceof Promise) result = await result;
-          absoluteUrl = result;
-          if (verbose) console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["urlModifier"]);
+
+          callbackResult = result;
+          if (verbose) console.log("found modifier, URL is now", callbackResult, "was", prev, "modifier now", Module["urlModifier"]);
         }
         else {
-          // console.log("no URL modifier found", Module["urlModifier"]);
+          if (verbose) console.log("no URL modifier found", Module["urlModifier"]);
+        }
+
+        // Resolve asset. we could have received a number of different things from the callback.
+        // All of these types are transferable to the worker thread.
+        // Even better would be to transfer a FileSystemFileHandle directly, because
+        // then even getting the file from the file system would be done in the worker.
+        try {
+          if (callbackResult && typeof callbackResult === "object") {
+            // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle
+            if ("getFile" in callbackResult) {
+              buffer = await (await callbackResult.getFile()).arrayBuffer();
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileEntry
+            else if ("file" in callbackResult) {
+              buffer = await new Promise((resolve, reject) => {
+                callbackResult.file(x => {
+                  const reader = new FileReader();
+                  // @ts-ignore
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = reject;
+                  reader.readAsArrayBuffer(x);
+                }, reject);
+              });
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/File
+            else if (callbackResult instanceof File) {
+              buffer = await callbackResult.arrayBuffer();
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/Blob
+            else if (callbackResult instanceof Blob) {
+              buffer = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                // @ts-ignore
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(callbackResult);
+              });
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/ArrayBuffer
+            else if (callbackResult instanceof ArrayBuffer) {
+              buffer = callbackResult;
+            }
+          }
+          // regular URL
+          else if (typeof callbackResult === "string") {
+            absoluteUrl = callbackResult;
+          }
+        }
+        catch(e) {
+          console.error("Error after main thread callback in fetch_asset for", absoluteUrl, "error:", e);
+          Module.HEAP32[dataPtr >> 2] = 0;
+          Module.HEAP32[(dataPtr >> 2) + 1] = 0;
+          return;
         }
 
         if (verbose) console.log("fetching asset", absoluteUrl);
         try {
+          // If we don't already have a buffer, we assume we need to fetch it from the absoluteUrl.
+          // Otherwise, we can skip this step.
           if (buffer === null) {
             buffer = await fetch(absoluteUrl)
               .then(r => {
-                console.log(r.status + " " + r.statusText); 
+                if (verbose) console.log(r.status + " " + r.statusText); 
                 return r.arrayBuffer() 
               })
-              .catch(e => {
-                return null;
-              });
+              .catch(e => null);
           }
+
           if (!buffer || buffer.byteLength === 0) {
             console.error("Error fetching asset – couldn't fetch", absoluteUrl);
             
@@ -1127,10 +1170,12 @@ var getUsdModule = ((args) => {
           if (verbose) console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
+          
           /// useful for debugging to see what response we actually get
           // const fileReader = new FileReader();
           // fileReader.onload = function() { console.log("fileReader.onload", fileReader.result); };
           // fileReader.readAsText(new Blob([buffer]));
+
           if (verbose) console.log("fetch complete for ", absoluteUrl, " ->", length, "bytes");
           GROWABLE_HEAP_U8().set(new Uint8Array(buffer), ptr >>> 0);
           Module.HEAP32[dataPtr >> 2] = ptr;
