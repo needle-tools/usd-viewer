@@ -53,8 +53,6 @@ declare type HdWebSyncDriver = {
     isAliasOf(): boolean,
 }
 
-
-
 export type GetUsdModuleOptions = {
     debug?: boolean,
     mainScriptUrlOrBlob?: string,
@@ -62,6 +60,13 @@ export type GetUsdModuleOptions = {
     locateFile?: (path: string) => string,
     getPreloadedPackage?: (file: string, size: number) => ArrayBuffer | null,
     setStatus?: (status: string) => void,
+    /** Returns a transferable object that can be resolved to an ArrayBuffer, 
+     *  or an URL that can be fetched to get an ArrayBuffer.
+    */
+    urlModifier?: (url: string) => 
+        Promise<
+            ArrayBuffer | File | FileSystemFileHandle | FileSystemFileEntry | string
+        > | ArrayBuffer | File | FileSystemFileHandle | FileSystemFileEntry | string,
 }
 
 /**
