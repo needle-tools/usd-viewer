@@ -43,6 +43,31 @@ getUsdModule({
   }
 }).then(async (USD: USD) => {
 
+  const testUrls = [
+    "/test.usdz",
+    "/gingerbread/house/GingerBreadHouse.usdc",
+    "/gingerbread/GingerbreadHouse.usda",
+    "/HttpReferences.usda",
+    "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda",
+    "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc",
+  ];
+
+  const div = document.createElement("div");
+  div.style.position = "absolute";
+  div.style.top = "0";
+  div.style.left = "0";
+  div.style.padding = "10px";
+  div.style.backgroundColor = "rgba(0,0,0,0.5)";
+  div.style.color = "white";
+  div.style.zIndex = "1000";
+  for (const url of testUrls) {
+    const button = document.createElement("button");
+    button.innerText = url;
+    button.onclick = () => loadFile(url);
+    div.appendChild(button);
+  }
+  document.body.appendChild(div);
+
   // const url = "test.usdz"; // local file
   // const url = "/gingerbread/house/GingerBreadHouse.usdc";
   // const url = "/gingerbread/GingerbreadHouse.usda";
@@ -83,7 +108,7 @@ getUsdModule({
     })
     */
 
-  loadFile(url);
+  // loadFile(url);
 
   run({
     renderer,

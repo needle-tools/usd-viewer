@@ -191,7 +191,6 @@ export async function createThreeHydra(config) {
          */
         dispose: () => {
             if (debug) console.warn("Disposing Three Hydra");
-            driverOrPromise = null;
 
             // Unlink all generated files and folders in the virtual file system.
             const unlinkedFiles = new Set();
@@ -203,13 +202,23 @@ export async function createThreeHydra(config) {
                     }
                     const fullPath = path + fileName;
                     if (file.isFolder) {
-                        // console.log("unlinking folder", fullPath);
-                        config.USD.FS_rmdir(path + fileName);
+                        if (debug) console.log("unlinking folder", fullPath);
+                        try {
+                            config.USD.FS_rmdir(path + fileName);
+                        }
+                        catch (e) {
+                            console.error("Error unlinking folder", fullPath, e);
+                        }
                     }
                     else {
-                        // console.log("unlinking", fullPath);
+                        if (debug) console.log("unlinking", fullPath);
                         unlinkedFiles.add(fullPath);
-                        config.USD.FS_unlink(fullPath);
+                        try {
+                            config.USD.FS_unlink(fullPath);
+                        }
+                        catch (e) {
+                            console.error("Error unlinking", fullPath, e);
+                        }
                     }
                 }
             }
@@ -220,12 +229,24 @@ export async function createThreeHydra(config) {
                     unlinkFiles(allFiles, rootDir);
             }
 
-            rmRootDir(directoryForFiles);
-            rmRootDir("1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
+            rmRootDir("/" + directoryForFiles);
+            rmRootDir("/1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
             
-            if (!unlinkedFiles.has(file))
-                config.USD.FS_unlink(file);
+            if (!unlinkedFiles.has(file)) {
+                if (debug) console.warn("Unlinking main file", file);
+                let fileToUnlink = file;
+                if (fileToUnlink.startsWith("http"))
+                    fileToUnlink = "/" + fileToUnlink.replace("://", ":/");
+                try {
+                    config.USD.FS_unlink(fileToUnlink);
+                } catch (e) {
+                    console.error("Error unlinking main file", fileToUnlink, e);
+                }
+            }
+
             driver.delete();
+            driverOrPromise = null;
+
             if (debug) console.warn("Disposed Three Hydra");
         },
     }
