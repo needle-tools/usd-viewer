@@ -1,4 +1,4 @@
-import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, ImageUtils, Material } from 'three';
+import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
@@ -10,12 +10,10 @@ const disableTextures = false;
 const disableMaterials = false;
 
 class TextureRegistry {
-  /**
-   * @param {string} basename 
+  /** 
    * @param {import('..').threeJsRenderDelegateConfig} config
    */
-  constructor(basename, config) {
-    this.basename = basename;
+  constructor(config) {
     this.config = config;
     this.allPaths = config.paths;
     this.textures = [];
@@ -47,7 +45,7 @@ class TextureRegistry {
     });
 
     if (!resourcePath) {
-      return Promise.reject(new Error('Empty resource path for file: ' + resourcePath + ' at ' + this.basename));
+      return Promise.reject(new Error('Empty resource path for file: ' + resourcePath));
     }
 
     let filetype = undefined;
@@ -204,7 +202,7 @@ class HydraMesh {
 
   /**
    * Sets the transform of the mesh.
-   * @param {Array} matrix - The 4x4 matrix to set on the mesh.
+   * @param {Iterable<number>} matrix - The 4x4 matrix to set on the mesh.
    */
   setTransform(matrix) {
     this._mesh.matrix.set(...matrix);
@@ -822,13 +820,12 @@ class SdfPath {
 export class ThreeRenderDelegateInterface {
 
   /**
-   * @param {string} filename
    * @param {import('..').threeJsRenderDelegateConfig} config
    */
-  constructor(filename, config) {
+  constructor(config) {
     this.config = config;
-    if (debugMaterials) console.log("RenderDelegateInterface", filename, config);
-    this.registry = new TextureRegistry(filename, config);
+    if (debugMaterials) console.log("RenderDelegateInterface", config);
+    this.registry = new TextureRegistry(config);
     this.materials = {};
     this.meshes = {};
   }

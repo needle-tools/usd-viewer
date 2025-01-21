@@ -135,7 +135,7 @@ export async function createThreeHydra(config) {
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
 
-    const renderInterface = new threeJsRenderDelegate(file, delegateConfig);
+    const renderInterface = new threeJsRenderDelegate(delegateConfig);
 
     if (debug) console.log("RENDER INTERFACE", renderInterface);
 
