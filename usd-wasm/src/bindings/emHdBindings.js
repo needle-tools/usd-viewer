@@ -11,7 +11,7 @@ var getUsdModule = ((args) => {
       return prefix + path;
     },
     ...args,
-    setURLModifier: args?.setURLModifier,
+    urlModifier: args?.urlModifier,
 }) {
     function GROWABLE_HEAP_I8() {
       if (wasmMemory.buffer != HEAP8.buffer) {
@@ -62,21 +62,11 @@ var getUsdModule = ((args) => {
       return HEAPF64;
     }
     var Module = moduleArg;
-    console.warn("GETTING USD MODULE FN", Module["setURLModifier"], Module["ENVIRONMENT_IS_PTHREAD"]);
     var readyPromiseResolve, readyPromiseReject;
     Module["ready"] = new Promise((resolve, reject) => {
       readyPromiseResolve = resolve;
       readyPromiseReject = reject;
     });
-    Module["urlCallback"] = async (...args) => {
-      if (Module["setURLModifier"]) {
-        const url = await Module["setURLModifier"](...args);
-        return url;
-      }
-      else {
-        return undefined;
-      }
-    };
     if (!Module.expectedDataFileDownloads) {
       Module.expectedDataFileDownloads = 0;
     }
@@ -1041,7 +1031,6 @@ var getUsdModule = ((args) => {
     var tempDouble;
     var tempI64;
     function __asyncjs__fetch_asset(route, dataPtr) {
-
       return Asyncify.handleAsync(async () => {
         const routeString = UTF8ToString(route);
         const verbose = false;
@@ -1095,15 +1084,17 @@ var getUsdModule = ((args) => {
           // if it's a URL, we still need to fetch it below.
         }
         // From the main thread, we can directly call the URL modifier.
-        else if (typeof Module["setURLModifier"] === "function") {
+        else if (typeof Module["urlModifier"] === "function") {
           const prev = absoluteUrl;
-          const callback = Module["setURLModifier"];
+          const callback = Module["urlModifier"];
           if (verbose) console.log("callback", callback);
-          absoluteUrl = callback(absoluteUrl);
-          if (verbose) console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["setURLModifier"]);
+          let result = callback(absoluteUrl);
+          if (result instanceof Promise) result = await result;
+          absoluteUrl = result;
+          if (verbose) console.log("found modifier, URL is now", absoluteUrl, "was", prev, "modifier now", Module["urlModifier"]);
         }
         else {
-          // console.log("no URL modifier found", Module["setURLModifier"]);
+          // console.log("no URL modifier found", Module["urlModifier"]);
         }
 
         if (verbose) console.log("fetching asset", absoluteUrl);
@@ -1208,7 +1199,6 @@ var getUsdModule = ((args) => {
       return address;
     };
     var spawnThread = (threadParams) => {
-      // console.log("Spawning thread", threadParams);
       var worker = PThread.getNewWorker();
       if (!worker) {
         return 6;
@@ -3703,7 +3693,9 @@ var getUsdModule = ((args) => {
         }
       },
       initMainThread() {
-        // If we set this to 0, there's only one thread, and no back-and-forth with the worker; but lower performance and non-parallel fetches.
+        // If we set this to 0, there's only one thread, and no back-and-forth
+        // with the worker; but lower performance and non-parallel fetches.
+        // This value can also be adjusted at build time by setting PTHREAD_POOL_SIZE in the Makefile.
         var pthreadPoolSize = 10;
         while (pthreadPoolSize--) {
           PThread.allocateUnusedWorker();
@@ -3787,20 +3779,19 @@ var getUsdModule = ((args) => {
             } else if (cmd === "callHandler") {
               Module[d["handler"]](...d["args"]);
             } else if (cmd === "callHandlerAsync") {
-              // Idea: async trampline to the main thread and back
-              // this way we could, if needed, get data from the filesystem API and pass it to the worker.
-              // The handles can actually be transferred over:
-              // https://developer.mozilla.org/en-US/docs/Web/API/File_System_API
-              console.log("calling async handler", "callHandlerAsync", d, d["args"]);
-              Module[d["handler"]](...d["args"]).then((r) => {
-                console.log("async handler done, result: ", r);
-                worker.postMessage({
-                  cmd: "callHandlerAsyncResult",
-                  handler: d["handler"],
-                  id: d["id"],
-                  result: r,
-                });
-              });
+              // Async trampoline to the main thread and back.
+              // The worker waits for the postMessage response from the main thread.
+              // We can shovel transferable objects from the main thread to the worker this way,
+              // for example file system handles (https://developer.mozilla.org/en-US/docs/Web/API/File_System_API)
+              let result = Module[d["handler"]](...d["args"]);
+              if (result instanceof Promise) {
+                result.then(r => {
+                  worker.postMessage({ cmd: "callHandlerAsyncResult", handler: d["handler"], id: d["id"], result: r });
+                })
+              }
+              else {
+                worker.postMessage({ cmd: "callHandlerAsyncResult", handler: d["handler"], id: d["id"], result });
+              }
             } else if (cmd) {
               err(`worker sent an unknown command ${cmd}`);
             }

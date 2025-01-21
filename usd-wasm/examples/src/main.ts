@@ -6,7 +6,7 @@ import { Object3D, Scene, WebGLRenderer } from 'three';
 
 getUsdModule({
   debug: true,
-  setURLModifier: (url: string) => {
+  urlModifier: (url: string) => {
 
     // This is just for testing – this code already runs inside emHdBindings.js
     if (url.startsWith("/http")) url = url.slice(1);

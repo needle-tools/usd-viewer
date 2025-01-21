@@ -69,10 +69,10 @@ function handleMessage(e) {
         };
       }
       Module["urlCallbackFromWorker"] = async (...args) => {
-        postMessage({ cmd: "callHandlerAsync", handler: "urlCallback", args: args });
+        postMessage({ cmd: "callHandlerAsync", handler: "urlModifier", args: args });
         const promise = new Promise((resolve) => {
           self.onmessage = (e) => {
-            if (e.data.cmd === "callHandlerAsyncResult" && e.data.handler === "urlCallback") {
+            if (e.data.cmd === "callHandlerAsyncResult" && e.data.handler === "urlModifier") {
               self.onmessage = handleMessage;
               resolve(e.data.result);
             }
