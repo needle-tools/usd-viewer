@@ -1,19 +1,42 @@
 
-import { getUsdModule, createThreeHydra, USD } from '@needle-tools/usd';
+import { getUsdModule, createThreeHydra, USD, createThreeHydraReturnType } from '@needle-tools/usd';
 import { loadEnvMap, run } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 
+import { allDroppedFiles } from './fileHandling';
+
+let hydraDelegate: createThreeHydraReturnType | null;
+let scene: Scene;
+let usdContent: Object3D;
+let usd: USD;
 
 getUsdModule({
   debug: true,
-  urlModifier: (url: string) => {
-
+  urlModifier: async (url: string) => {
     // This is just for testing – this code already runs inside emHdBindings.js
     if (url.startsWith("/http")) url = url.slice(1);
     if (url.includes("http:/")) url = url.replace("http:/", "http://");
     if (url.includes("https:/")) url = url.replace("https:/", "https://");
 
     console.log(url);
+
+    // check if we find this URL in the dropped files
+    if (allDroppedFiles) {
+      const found = allDroppedFiles.find(f => f.fullPath == url);
+
+      if (found) {
+        console.log("found file, returning handle", url, found);
+        if ("file" in found) {
+          return await new Promise((resolve, reject) => found.file(resolve, reject));
+        }
+        else if ("getFile" in found) {
+          return await found.getFile();
+        }
+      }
+      else {
+        console.warn("File not found", url, allDroppedFiles);
+      }
+    }
 
     // return "./gingerbread/house/" + url;
     return url;
@@ -42,30 +65,60 @@ getUsdModule({
   const envmapUrl = "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/studio_small_09_1k.exr";
   const envmap = await loadEnvMap(envmapUrl, renderer);
 
-  const scene = new Scene();
+  scene = new Scene();
   scene.environment = envmap;
 
-  const usdContent = new Object3D();
-  scene.add(usdContent);
-  const { update } = await createThreeHydra({
-    debug: true,
-    USD,
-    url: url,
-    // files: [file],
-    // @ts-ignore – three types don't match for some reason
-    scene: usdContent,
-  })
+  usd = USD;
 
-  console.log(scene.children);
+  /*
+    usdContent = new Object3D();
+    scene.add(usdContent);
+    hydraDelegate = await createThreeHydra({
+      debug: true,
+      USD,
+      url: url,
+      // files: [file],
+      // @ts-ignore
+      scene: usdContent,
+    })
+    */
 
-  // setTimeout(()=>dispose(), 2000);
+  loadFile(url);
 
   run({
     renderer,
     scene: scene,
     onRender: (dt) => {
-      update(dt);
+      hydraDelegate?.update(dt);
     }
   });
-
 })
+
+async function loadFile(url: string) {
+
+  if (hydraDelegate)
+    hydraDelegate.dispose();
+  hydraDelegate = null;
+
+  if (usdContent) {
+    scene.remove(usdContent);
+    // TODO dispose as well
+  }
+
+  usdContent = new Object3D();
+  scene.add(usdContent);
+
+  const delegate = await createThreeHydra({
+    debug: true,
+    USD: usd,
+    url: url,
+    // @ts-ignore
+    scene: usdContent,
+  })
+
+  hydraDelegate = delegate;
+
+  console.log("Scene content", usdContent);
+}
+
+window.loadFile = loadFile;
