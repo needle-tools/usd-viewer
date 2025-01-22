@@ -1,4 +1,4 @@
-import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, DirectionalLight, Clock, PMREMGenerator, Texture } from 'three';
+import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, DirectionalLight, Clock, PMREMGenerator, Texture, Vector3, Box3, Object3D } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
@@ -49,11 +49,10 @@ export function run(config: {
 
     document.body.appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
+
     // controls.enableDamping = true;
     // controls.dampingFactor = 0.2;
     controls.update();
-
-
 
     const gridhelper = new GridHelper(100, 100);
     scene.add(gridhelper);
@@ -71,4 +70,71 @@ export function run(config: {
     }
 
     window.requestAnimationFrame(render);
+
+    return {
+        fitCamera: () => {
+            setTimeout(() => {
+                const toRemove = [ gridhelper, ];
+                const parents = toRemove.map(x => x.parent);
+                toRemove.forEach(x => scene.remove(x));
+
+                fitCameraToSelection(camera, controls, scene.children);
+                
+                toRemove.forEach((x, i) => parents[i]!.add(x));
+            }, 1000);
+        },
+    }
 }
+
+// from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
+function fitCameraToSelection(camera: PerspectiveCamera, controls: OrbitControls, selection: Object3D[], fitOffset = 1.5) {
+    const size = new Vector3();
+    const center = new Vector3();
+    const box = new Box3();
+    
+    box.makeEmpty();
+    for(const object of selection) {
+      box.expandByObject(object);
+    }
+  
+    box.getSize(size);
+    box.getCenter(center );
+  
+    if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
+        Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
+      console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", selection, size);
+      if (controls) 
+        controls.update();
+      return;
+    }
+  
+    if (!controls) {
+      console.warn("No camera controls object found, something went wrong.");
+      return;
+    }
+  
+    const maxSize = Math.max(size.x, size.y, size.z);
+    const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
+    const fitWidthDistance = fitHeightDistance / camera.aspect;
+    const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+  
+    if (distance == 0) {
+      console.warn("Fit Camera failed: distance is 0, some objects may not have any mesh data.");
+      return;
+    }
+  
+    const direction = controls.target.clone()
+      .sub(camera.position)
+      .normalize()
+      .multiplyScalar(distance);
+  
+    controls.maxDistance = distance * 10;
+    controls.target.copy(center);
+  
+    camera.near = distance / 100;
+    camera.far = distance * 100;
+    camera.updateProjectionMatrix();
+  
+    camera.position.copy(controls.target).sub(direction);
+    controls.update();
+  }

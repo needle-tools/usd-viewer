@@ -9,6 +9,7 @@ let hydraDelegate: createThreeHydraReturnType | null;
 let scene: Scene;
 let usdContent: Object3D;
 let usd: USD;
+let app: { fitCamera: () => void };
 
 getUsdModule({
   debug: true,
@@ -110,7 +111,7 @@ getUsdModule({
 
   // loadFile(url);
 
-  run({
+  app = run({
     renderer,
     scene: scene,
     onRender: (dt) => {
@@ -144,6 +145,7 @@ async function loadFile(url: string) {
   hydraDelegate = delegate;
 
   console.log("Scene content", usdContent);
+  app.fitCamera();
 }
 
 window.loadFile = loadFile;
