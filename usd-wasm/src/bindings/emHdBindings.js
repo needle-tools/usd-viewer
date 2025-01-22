@@ -10299,8 +10299,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3888108);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3892153);
+    var ___start_em_js = (Module["___start_em_js"] = 3888140);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3892185);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {
