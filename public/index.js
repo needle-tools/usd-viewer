@@ -13,8 +13,10 @@ export function init(options = {
 
 // wait for document
 document.addEventListener("DOMContentLoaded", function() {
+
 let scene;
 let defaultTexture;
+let USD;
 
 const debugFileHandling = false;
 
@@ -27,14 +29,16 @@ let currentDisplayFilename = "";
 
 function setFilenameText(__filename) {
   var _filename = __filename.split('/').pop().split('#')[0].split('?')[0];
+  /** @type {HTMLElement | null} */
   const _el = document.querySelector(".filename");
   if (_el) _el.innerText = _filename;
   currentDisplayFilename = _filename;
 }
   
 if (filename) {
+  /** @type {HTMLElement | null} */
   const el = document.querySelector("#container");
-  el.classList.add("have-custom-file");
+  if (el) el.classList.add("have-custom-file");
   // get filename from URL
   setFilenameText(filename);
 }  
@@ -55,6 +59,7 @@ function updateUrl() {
   if (indexOfQuery >= 0)
     url = url.substring(0, indexOfQuery);
 
+  /** @type {HTMLLinkElement | null} */
   const quickLookLink = document.querySelector("a#quick-look-link");
   if (quickLookLink) quickLookLink.href = url;
   
@@ -64,11 +69,11 @@ function updateUrl() {
   window.history.pushState({}, filename, currentUrl);
 }
 
-messageLog.textContent = "Initializing...";
+if (messageLog) messageLog.textContent = "Initializing...";
 const initPromise = init();
 
 console.log("Loading USD Module...");
-messageLog.textContent = "Loading USD Module – this can take a moment...";
+if (messageLog) messageLog.textContent = "Loading USD Module – this can take a moment...";
 updateUrl();
 try {
   Promise.all([getUsdModule({
@@ -77,12 +82,12 @@ try {
       return "/usd/bindings/" + file;
     },
   }), initPromise]).then(async ([Usd]) => {
-    window.Usd = Usd;
-    messageLog.textContent = "Loading done";
+    USD = Usd;
+    if (messageLog) messageLog.textContent = "Loading done";
     animate();
     if (filename) {
       console.log("Loading File...");
-      messageLog.textContent = "Loading File " + filename;
+      if (messageLog) messageLog.textContent = "Loading File " + filename;
 
       clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
@@ -94,12 +99,12 @@ catch (error) {
   if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
     let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
     console.log(error, err);
-    messageLog.textContent = err;
+    if (messageLog) messageLog.textContent = err;
   }
   else {
     let err = "Your current browser doesn't support USD-for-web. Error during initialization: " + error;
     console.log(err);
-    messageLog.textContent = err;
+    if (messageLog) messageLog.textContent = err;
   }
 }
 
@@ -124,7 +129,7 @@ if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
     a.href = url;
     let filename = currentDisplayFilename;
     // strip extension, strip path
-    filename = filename.split('/').pop().split('.')[0].split('?')[0];
+    filename = filename.split('/').pop()?.split('.')[0].split('?')[0] || "export";
     a.download = filename + ".glb";
     a.click();
     URL.revokeObjectURL(url);
@@ -152,12 +157,12 @@ function getAllLoadedFiles(){
 }
 
 function getAllLoadedFilePaths(currentPath, paths) {
-  const files = Usd.FS_readdir(currentPath);
+  const files = USD.FS_readdir(currentPath);
   for (const file of files) {
     // skip self and parent
     if (file === "." || file === "..") continue;
     const newPath = currentPath + file + "/";
-    const data = Usd.FS_analyzePath(currentPath + file + "/");
+    const data = USD.FS_analyzePath(currentPath + file + "/");
     if (data.object.node_ops.readdir) {
       // default directories we're not interested in
       if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/" || newPath== "/tmp/" || newPath== "/usd/") continue;
@@ -175,19 +180,19 @@ function clearStage() {
   console.log("Clearing stage.", allFilePaths)
 
   for (const file of allFilePaths) {
-    Usd.FS_unlink(file, true);
+    USD.FS_unlink(file, true);
   }
 
   window.usdRoot.clear();
 }
 
 function addPath(root, path) {
-    const files = Usd.FS_readdir(path);
+    const files = USD.FS_readdir(path);
     for (const file of files) {
       // skip self and parent
       if (file === "." || file === "..") continue;
       const newPath = path + file + "/";
-      const data = Usd.FS_analyzePath(path + file + "/");
+      const data = USD.FS_analyzePath(path + file + "/");
       if (data.object.node_ops.readdir) {
         // default directories we're not interested in
         if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/" || newPath== "/tmp/" || newPath== "/usd/") continue;
@@ -215,8 +220,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
     driver: () => (driver),
 };
 
-  const renderInterface = window.renderInterface = new ThreeRenderDelegateInterface(path, delegateConfig);
-  driver = new Usd.HdWebSyncDriver(renderInterface, path);
+  const renderInterface = window.renderInterface = new ThreeRenderDelegateInterface(delegateConfig);
+  driver = new USD.HdWebSyncDriver(renderInterface, path);
   if (driver instanceof Promise) {
     driver = await driver;
   }
@@ -262,7 +267,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   // This might be recursive (USDZ in USDZ in USDZ)
   const root = {};
   addPath(root, "/");
-  console.log("File system", root, Usd.FS_analyzePath("/"));
+  console.log("File system", root, USD.FS_analyzePath("/"));
 }
 
 // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
