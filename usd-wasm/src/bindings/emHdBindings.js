@@ -1036,7 +1036,7 @@ var getUsdModule = ((args) => {
     function __asyncjs__fetch_asset(route, dataPtr) {
       return Asyncify.handleAsync(async () => {
         const routeString = UTF8ToString(route);
-        const verbose = false;
+        const verbose = true;
         let absoluteUrl = routeString;
         if (absoluteUrl.startsWith("/http")) absoluteUrl = absoluteUrl.slice(1);
         if (absoluteUrl.includes("http:/"))
@@ -3796,7 +3796,7 @@ var getUsdModule = ((args) => {
               // The worker waits for the postMessage response from the main thread.
               // We can shovel transferable objects from the main thread to the worker this way,
               // for example file system handles (https://developer.mozilla.org/en-US/docs/Web/API/File_System_API)
-              let result = Module[d["handler"]](...d["args"]);
+              let result = Module[d["handler"]]?.(...d["args"]);
               if (result instanceof Promise) {
                 result.then((r) => {
                   worker.postMessage({
