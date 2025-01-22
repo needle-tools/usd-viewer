@@ -21,8 +21,8 @@ getUsdModule({
 
     console.log(url);
 
-    // check if we find this URL in the dropped files
-    if (allDroppedFiles) {
+    // Check if we find this URL in the dropped files, if there are any
+    if (allDroppedFiles && allDroppedFiles.length > 0) {
       const found = allDroppedFiles.find(f => f.fullPath == url);
 
       if (found) {

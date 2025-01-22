@@ -1038,29 +1038,13 @@ var getUsdModule = ((args) => {
         const routeString = UTF8ToString(route);
         const verbose = false;
         let absoluteUrl = routeString;
-
-        // Sanitization: we need to turn the prim path back into a URL.
-        // The only thing that gets lost is the second colon.
-        // Additionally, things like query parameters aren't supported,
-        // since USD doesn't understand the filetype then.
         if (absoluteUrl.startsWith("/http")) absoluteUrl = absoluteUrl.slice(1);
         if (absoluteUrl.includes("http:/"))
           absoluteUrl = absoluteUrl.replace("http:/", "http://");
         if (absoluteUrl.includes("https:/"))
           absoluteUrl = absoluteUrl.replace("https:/", "https://");
-
-        /** @typedef {string | FileSystemFileHandle | FileSystemFileEntry | ArrayBuffer | File | Blob} Result */
-        /** @type {Result | null} */
         let callbackResult = null;
-
-        /** @type {ArrayBuffer | null} */
         let buffer = null;
-
-        // From a worker thread, we call back to the main thread to get a chance to modify what we're doing
-        // to get the asset into memory.
-        // What is returned from fetch_asset becomes put on disk.
-        // We could get it from a dropped file (and can transfer the FileSystemFileHandle to the worker)
-        // or from a blob URL (which will then be fetched inside the worker).
         if (ENVIRONMENT_IS_PTHREAD) {
           if (verbose)
             console.log("we're in a thread, calling urlCallback", absoluteUrl);
@@ -1076,19 +1060,13 @@ var getUsdModule = ((args) => {
             );
           }
           if (verbose) console.log("got result inside worker", result);
-          // check what we got. if it's a handle, we can resolve it;
-          // if it's a buffer, we can stop here and don't need to fetch anymore;
-          // if it's a URL, we still need to fetch it below.
           callbackResult = result;
-        }
-        // From the main thread, we can directly call the URL modifier.
-        else if (typeof Module["urlModifier"] === "function") {
+        } else if (typeof Module["urlModifier"] === "function") {
           const prev = absoluteUrl;
           const callback = Module["urlModifier"];
           if (verbose) console.log("callback", callback);
           let result = callback(absoluteUrl);
           if (result instanceof Promise) result = await result;
-
           callbackResult = result;
           if (verbose)
             console.log(
@@ -1103,50 +1081,32 @@ var getUsdModule = ((args) => {
           if (verbose)
             console.log("no URL modifier found", Module["urlModifier"]);
         }
-
-        // Resolve asset. we could have received a number of different things from the callback.
-        // All of these types are transferable to the worker thread.
-        // Even better would be to transfer a FileSystemFileHandle directly, because
-        // then even getting the file from the file system would be done in the worker.
         try {
           if (callbackResult && typeof callbackResult === "object") {
-            // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle
             if ("getFile" in callbackResult) {
               buffer = await (await callbackResult.getFile()).arrayBuffer();
-            }
-            // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileEntry
-            else if ("file" in callbackResult) {
+            } else if ("file" in callbackResult) {
               buffer = await new Promise((resolve, reject) => {
                 callbackResult.file((x) => {
                   const reader = new FileReader();
-                  // @ts-ignore
                   reader.onload = () => resolve(reader.result);
                   reader.onerror = reject;
                   reader.readAsArrayBuffer(x);
                 }, reject);
               });
-            }
-            // https://developer.mozilla.org/en-US/docs/Web/API/File
-            else if (callbackResult instanceof File) {
+            } else if (callbackResult instanceof File) {
               buffer = await callbackResult.arrayBuffer();
-            }
-            // https://developer.mozilla.org/en-US/docs/Web/API/Blob
-            else if (callbackResult instanceof Blob) {
+            } else if (callbackResult instanceof Blob) {
               buffer = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                // @ts-ignore
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(callbackResult);
               });
-            }
-            // https://developer.mozilla.org/en-US/docs/Web/API/ArrayBuffer
-            else if (callbackResult instanceof ArrayBuffer) {
+            } else if (callbackResult instanceof ArrayBuffer) {
               buffer = callbackResult;
             }
-          }
-          // regular URL
-          else if (typeof callbackResult === "string") {
+          } else if (typeof callbackResult === "string") {
             absoluteUrl = callbackResult;
           }
         } catch (e) {
@@ -1160,11 +1120,8 @@ var getUsdModule = ((args) => {
           Module.HEAP32[(dataPtr >> 2) + 1] = 0;
           return;
         }
-
         if (verbose) console.log("fetching asset", absoluteUrl);
         try {
-          // If we don't already have a buffer, we assume we need to fetch it from the absoluteUrl.
-          // Otherwise, we can skip this step.
           if (buffer === null) {
             buffer = await fetch(absoluteUrl)
               .then((r) => {
@@ -1173,31 +1130,13 @@ var getUsdModule = ((args) => {
               })
               .catch((e) => null);
           }
-
           if (!buffer || buffer.byteLength === 0) {
             console.error("Error fetching asset – couldn't fetch", absoluteUrl);
-
-            /// TODO not sure why we can't just return here,
-            /// potentially there's missing error correction on the C++ side to
-            /// check the return type...
-            /// We just want to continue execution and not crash
-            // Module.HEAP32[dataPtr >> 2] = 0;
-            // Module.HEAP32[(dataPtr >> 2) + 1] = 0;
-            // return;
-
-            // Workaround for the issue mentioned above
             buffer = new ArrayBuffer(1);
           }
-
           if (verbose) console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
-
-          /// useful for debugging to see what response we actually get
-          // const fileReader = new FileReader();
-          // fileReader.onload = function() { console.log("fileReader.onload", fileReader.result); };
-          // fileReader.readAsText(new Blob([buffer]));
-
           if (verbose)
             console.log(
               "fetch complete for ",
@@ -10360,8 +10299,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3888460);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3889784);
+    var ___start_em_js = (Module["___start_em_js"] = 3888108);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3892153);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {
