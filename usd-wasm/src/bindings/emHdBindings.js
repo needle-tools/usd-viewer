@@ -1050,7 +1050,8 @@ var getUsdModule = ((args) => {
             console.log("we're in a thread, calling urlCallback", absoluteUrl);
           let result;
           try {
-            result = await Module["urlCallbackFromWorker"](absoluteUrl);
+            // TODO: this freezes the worker sometimes, some issue with back-and-forth messaging
+            // result = await Module["urlCallbackFromWorker"](absoluteUrl);
           } catch (e) {
             console.error(
               "Error in thread callback for",

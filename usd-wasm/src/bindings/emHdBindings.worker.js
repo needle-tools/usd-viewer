@@ -75,15 +75,17 @@ function handleMessage(e) {
           args: args,
         });
         const promise = new Promise((resolve) => {
-          self.onmessage = (e) => {
+          let handler;
+          handler = (e) => {
             if (
               e.data.cmd === "callHandlerAsyncResult" &&
               e.data.handler === "urlModifier"
             ) {
-              self.onmessage = handleMessage;
+              self.removeEventListener("message", handler);
               resolve(e.data.result);
             }
           };
+          self.addEventListener("message", handler);
         });
         return await promise;
       };
@@ -124,7 +126,10 @@ function handleMessage(e) {
       if (initializedJS) {
         Module["checkMailbox"]();
       }
-    } else if (e.data.cmd) {
+    } else if (e.data.cmd === "callHandlerAsyncResult") {
+      // ignore, there is an extra handler for this
+    }
+    else if (e.data.cmd) {
       err(`worker.js received unknown command ${e.data.cmd}`);
       err(e.data);
     }
