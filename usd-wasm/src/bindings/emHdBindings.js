@@ -4,15 +4,18 @@ var getUsdModule = ((args) => {
       ? document.currentScript.src
       : undefined;
   if (typeof __filename !== "undefined") _scriptDir = _scriptDir || __filename;
-  return function (moduleArg = {
-    // module overrides can be supplied here
-    locateFile: (path, prefix) => {
-      if (!prefix && _scriptDir) prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf('/') + 1);
-      return prefix + path;
+  return function (
+    moduleArg = {
+      // module overrides can be supplied here
+      locateFile: (path, prefix) => {
+        if (!prefix && _scriptDir)
+          prefix = _scriptDir.substr(0, _scriptDir.lastIndexOf("/") + 1);
+        return prefix + path;
+      },
+      ...args,
+      urlModifier: args?.urlModifier,
     },
-    ...args,
-    urlModifier: args?.urlModifier,
-}) {
+  ) {
     function GROWABLE_HEAP_I8() {
       if (wasmMemory.buffer != HEAP8.buffer) {
         updateMemoryViews();
@@ -1041,9 +1044,11 @@ var getUsdModule = ((args) => {
         // Additionally, things like query parameters aren't supported,
         // since USD doesn't understand the filetype then.
         if (absoluteUrl.startsWith("/http")) absoluteUrl = absoluteUrl.slice(1);
-        if (absoluteUrl.includes("http:/")) absoluteUrl = absoluteUrl.replace("http:/", "http://");
-        if (absoluteUrl.includes("https:/")) absoluteUrl = absoluteUrl.replace("https:/", "https://");
-        
+        if (absoluteUrl.includes("http:/"))
+          absoluteUrl = absoluteUrl.replace("http:/", "http://");
+        if (absoluteUrl.includes("https:/"))
+          absoluteUrl = absoluteUrl.replace("https:/", "https://");
+
         /** @typedef {string | FileSystemFileHandle | FileSystemFileEntry | ArrayBuffer | File | Blob} Result */
         /** @type {Result | null} */
         let callbackResult = null;
@@ -1057,13 +1062,18 @@ var getUsdModule = ((args) => {
         // We could get it from a dropped file (and can transfer the FileSystemFileHandle to the worker)
         // or from a blob URL (which will then be fetched inside the worker).
         if (ENVIRONMENT_IS_PTHREAD) {
-          if (verbose) console.log("we're in a thread, calling urlCallback", absoluteUrl);
+          if (verbose)
+            console.log("we're in a thread, calling urlCallback", absoluteUrl);
           let result;
           try {
             result = await Module["urlCallbackFromWorker"](absoluteUrl);
-          }
-          catch(e) {
-            console.error("Error in thread callback for", absoluteUrl, "error:", e);
+          } catch (e) {
+            console.error(
+              "Error in thread callback for",
+              absoluteUrl,
+              "error:",
+              e,
+            );
           }
           if (verbose) console.log("got result inside worker", result);
           // check what we got. if it's a handle, we can resolve it;
@@ -1080,10 +1090,18 @@ var getUsdModule = ((args) => {
           if (result instanceof Promise) result = await result;
 
           callbackResult = result;
-          if (verbose) console.log("found modifier, URL is now", callbackResult, "was", prev, "modifier now", Module["urlModifier"]);
-        }
-        else {
-          if (verbose) console.log("no URL modifier found", Module["urlModifier"]);
+          if (verbose)
+            console.log(
+              "found modifier, URL is now",
+              callbackResult,
+              "was",
+              prev,
+              "modifier now",
+              Module["urlModifier"],
+            );
+        } else {
+          if (verbose)
+            console.log("no URL modifier found", Module["urlModifier"]);
         }
 
         // Resolve asset. we could have received a number of different things from the callback.
@@ -1099,7 +1117,7 @@ var getUsdModule = ((args) => {
             // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileEntry
             else if ("file" in callbackResult) {
               buffer = await new Promise((resolve, reject) => {
-                callbackResult.file(x => {
+                callbackResult.file((x) => {
                   const reader = new FileReader();
                   // @ts-ignore
                   reader.onload = () => resolve(reader.result);
@@ -1131,9 +1149,13 @@ var getUsdModule = ((args) => {
           else if (typeof callbackResult === "string") {
             absoluteUrl = callbackResult;
           }
-        }
-        catch(e) {
-          console.error("Error after main thread callback in fetch_asset for", absoluteUrl, "error:", e);
+        } catch (e) {
+          console.error(
+            "Error after main thread callback in fetch_asset for",
+            absoluteUrl,
+            "error:",
+            e,
+          );
           Module.HEAP32[dataPtr >> 2] = 0;
           Module.HEAP32[(dataPtr >> 2) + 1] = 0;
           return;
@@ -1145,18 +1167,18 @@ var getUsdModule = ((args) => {
           // Otherwise, we can skip this step.
           if (buffer === null) {
             buffer = await fetch(absoluteUrl)
-              .then(r => {
-                if (verbose) console.log(r.status + " " + r.statusText); 
-                return r.arrayBuffer() 
+              .then((r) => {
+                if (verbose) console.log(r.status + " " + r.statusText);
+                return r.arrayBuffer();
               })
-              .catch(e => null);
+              .catch((e) => null);
           }
 
           if (!buffer || buffer.byteLength === 0) {
             console.error("Error fetching asset – couldn't fetch", absoluteUrl);
-            
+
             /// TODO not sure why we can't just return here,
-            /// potentially there's missing error correction on the C++ side to 
+            /// potentially there's missing error correction on the C++ side to
             /// check the return type...
             /// We just want to continue execution and not crash
             // Module.HEAP32[dataPtr >> 2] = 0;
@@ -1166,17 +1188,24 @@ var getUsdModule = ((args) => {
             // Workaround for the issue mentioned above
             buffer = new ArrayBuffer(1);
           }
-          
+
           if (verbose) console.log("after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
-          
+
           /// useful for debugging to see what response we actually get
           // const fileReader = new FileReader();
           // fileReader.onload = function() { console.log("fileReader.onload", fileReader.result); };
           // fileReader.readAsText(new Blob([buffer]));
 
-          if (verbose) console.log("fetch complete for ", absoluteUrl, " ->", length, "bytes");
+          if (verbose)
+            console.log(
+              "fetch complete for ",
+              absoluteUrl,
+              " ->",
+              length,
+              "bytes",
+            );
           GROWABLE_HEAP_U8().set(new Uint8Array(buffer), ptr >>> 0);
           Module.HEAP32[dataPtr >> 2] = ptr;
           Module.HEAP32[(dataPtr >> 2) + 1] = length;
@@ -3830,12 +3859,21 @@ var getUsdModule = ((args) => {
               // for example file system handles (https://developer.mozilla.org/en-US/docs/Web/API/File_System_API)
               let result = Module[d["handler"]](...d["args"]);
               if (result instanceof Promise) {
-                result.then(r => {
-                  worker.postMessage({ cmd: "callHandlerAsyncResult", handler: d["handler"], id: d["id"], result: r });
-                })
-              }
-              else {
-                worker.postMessage({ cmd: "callHandlerAsyncResult", handler: d["handler"], id: d["id"], result });
+                result.then((r) => {
+                  worker.postMessage({
+                    cmd: "callHandlerAsyncResult",
+                    handler: d["handler"],
+                    id: d["id"],
+                    result: r,
+                  });
+                });
+              } else {
+                worker.postMessage({
+                  cmd: "callHandlerAsyncResult",
+                  handler: d["handler"],
+                  id: d["id"],
+                  result,
+                });
               }
             } else if (cmd) {
               err(`worker sent an unknown command ${cmd}`);
@@ -12118,8 +12156,8 @@ var getUsdModule = ((args) => {
     Module["FS_createDataFile"] = FS.createDataFile;
     Module["FS_unlink"] = FS.unlink;
     Module["PThread"] = PThread;
-    Module["FS_readdir"]=FS.readdir;
-    Module["FS_analyzePath"]=FS.analyzePath;
+    Module["FS_readdir"] = FS.readdir;
+    Module["FS_analyzePath"] = FS.analyzePath;
     var calledRun;
     dependenciesFulfilled = function runCaller() {
       if (!calledRun) run();
