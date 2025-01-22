@@ -81,7 +81,7 @@ export function run(config: {
                 fitCameraToSelection(camera, controls, scene.children);
                 
                 toRemove.forEach((x, i) => parents[i]!.add(x));
-            }, 1000);
+            }, 0);
         },
     }
 }

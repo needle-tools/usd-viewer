@@ -14,10 +14,13 @@ let app: { fitCamera: () => void };
 getUsdModule({
   debug: true,
   urlModifier: async (url: string) => {
-    // This is just for testing – this code already runs inside emHdBindings.js
-    if (url.startsWith("/http")) url = url.slice(1);
-    if (url.includes("http:/")) url = url.replace("http:/", "http://");
-    if (url.includes("https:/")) url = url.replace("https:/", "https://");
+    // Resolve GitHub-specific URLs
+    // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
+    // to the raw version https://raw.githubusercontent.com/usd-wg/assets/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
+    if (url.startsWith("https://github.com")) {
+      url = url.replace("github.com", "raw.githubusercontent.com");
+      url = url.replace("/blob/", "/");
+    }
 
     console.log(url);
 
@@ -45,29 +48,39 @@ getUsdModule({
 }).then(async (USD: USD) => {
 
   const testUrls = [
-    "/test.usdz",
-    "/gingerbread/house/GingerBreadHouse.usdc",
-    "/gingerbread/GingerbreadHouse.usda",
-    "/HttpReferences.usda",
-    "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda",
-    "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc",
+    { label: "USDZ Cube", url: "/test.usdz" },
+    { label: "Gingerbread House USDC", url: "/gingerbread/house/GingerBreadHouse.usdc" },
+    { label: "Gingerbread House USDA", url: "/gingerbread/GingerbreadHouse.usda", },
+    { label: "USDA file with HTTPS references", url: "/HttpReferences.usda" },
+    { label: "Gingerbread House from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda" },
+    { label: "Gingerbread House Subasset from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc" },
+    { label: "USD Kitchen from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz" },
+    { label: "Car with Variants", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda" },
+    { label: "Carbon Frame Bike USDZ", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz" },
+    { label: "Carbon Frame Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
+    { label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
+    { label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
   ];
 
   const div = document.createElement("div");
-  div.style.position = "absolute";
-  div.style.top = "0";
-  div.style.left = "0";
-  div.style.padding = "10px";
-  div.style.backgroundColor = "rgba(0,0,0,0.5)";
-  div.style.color = "white";
-  div.style.zIndex = "1000";
+  div.className = "test-buttons";
+  
   for (const url of testUrls) {
     const button = document.createElement("button");
-    button.innerText = url;
-    button.onclick = () => loadFile(url);
+    button.innerText = url.label;
+    button.onclick = () => loadFile(url.url);
     div.appendChild(button);
   }
+
   document.body.appendChild(div);
+
+  const div2 = document.createElement("div");
+  div2.className = "options";
+  const frameButton = document.createElement("button");
+  frameButton.innerText = "Fit Camera";
+  frameButton.onclick = () => app.fitCamera();
+  div2.appendChild(frameButton);
+  div.appendChild(div2);
 
   // const url = "test.usdz"; // local file
   // const url = "/gingerbread/house/GingerBreadHouse.usdc";
@@ -93,6 +106,9 @@ getUsdModule({
 
   scene = new Scene();
   scene.environment = envmap;
+  scene.background = envmap;
+  scene.backgroundBlurriness = 0.8;
+  scene.backgroundIntensity = 0.2;
 
   usd = USD;
 
