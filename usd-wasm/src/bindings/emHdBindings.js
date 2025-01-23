@@ -74,6 +74,54 @@ var getUsdModule = ((args) => {
       Module.expectedDataFileDownloads = 0;
     }
     Module.expectedDataFileDownloads++;
+    Module["urlCallbackFromWorker"] = async (...args) => {
+      const uniqueMessageId = Math.random().toString(36);
+      console.log("urlCallbackFromWorker", args, uniqueMessageId);
+      const promise = new Promise((resolve) => {
+        let handler;
+        handler = (e) => {
+          console.log("worker handler received message", e);
+          if (
+            e.data.cmd === "callHandlerAsyncResult" &&
+            e.data.handler === "urlModifier" &&
+            e.data.uniqueMessageId === uniqueMessageId
+          ) {
+            self.removeEventListener("message", handler);
+            resolve(e.data.result);
+          }
+          else {
+            console.log("worker handler received message but its not ours", e.data);
+          }
+        };
+        self.addEventListener("message", handler);
+      })
+      .catch(e => {
+        console.log("abort promise caught", e);
+      })
+      .finally(() => {
+        console.log("promise in worker is done");
+      });
+      postMessage({
+        cmd: "callHandlerAsync",
+        handler: "urlModifier",
+        threadId: self.pthread_ptr,
+        args: {...args, uniqueMessageId },
+      });
+      console.log("worker is done sending message, awaiting response", args, uniqueMessageId, Module["_pthread_self"]());
+      console.log("promise: ", promise);
+      let timeout;
+      const abort = new Promise((resolve) => {
+        timeout = setTimeout(() => {
+          console.warn("urlCallbackFromWorker timed out", args, uniqueMessageId);
+          resolve(undefined);
+        }, 100);
+      })
+      // TODO this should not be needed since "race" should resolve with the first promise that resolves or rejects
+      await abort;
+      const result = Promise.race([abort, promise]);
+      clearTimeout(timeout);
+      return result;
+    };
     (function () {
       if (Module["ENVIRONMENT_IS_PTHREAD"] || Module["$ww"]) return;
       var loadPackage = function (metadata) {
@@ -1051,7 +1099,7 @@ var getUsdModule = ((args) => {
           let result;
           try {
             // TODO: this freezes the worker sometimes, some issue with back-and-forth messaging
-            // result = await Module["urlCallbackFromWorker"](absoluteUrl);
+            result = await Module["urlCallbackFromWorker"](absoluteUrl);
           } catch (e) {
             console.error(
               "Error in thread callback for",
@@ -3757,6 +3805,7 @@ var getUsdModule = ((args) => {
       loadWasmModuleToWorker: (worker) =>
         new Promise((onFinishedLoading) => {
           worker.onmessage = (e) => {
+            console.log("worker.onmessage", e.data);
             var d = e["data"];
             var cmd = d["cmd"];
             if (d["targetThread"] && d["targetThread"] != _pthread_self()) {
@@ -3797,23 +3846,26 @@ var getUsdModule = ((args) => {
               // The worker waits for the postMessage response from the main thread.
               // We can shovel transferable objects from the main thread to the worker this way,
               // for example file system handles (https://developer.mozilla.org/en-US/docs/Web/API/File_System_API)
-              let result = Module[d["handler"]]?.(...d["args"]);
+              const args = d["args"];
+              const targetWorker = PThread.pthreads[d["threadId"]];
+              console.log("callHandlerAsync", d["handler"], args, targetWorker);
+              let result = Module[d["handler"]]?.(...args);
+              const payload = {
+                ...args,
+                cmd: "callHandlerAsyncResult",
+                handler: d["handler"],
+                id: d["id"]
+              }
               if (result instanceof Promise) {
                 result.then((r) => {
-                  worker.postMessage({
-                    cmd: "callHandlerAsyncResult",
-                    handler: d["handler"],
-                    id: d["id"],
-                    result: r,
-                  });
+                  payload.result = r;
+                  console.log("callHandlerAsync result send back", payload);
+                  targetWorker.postMessage(payload);
                 });
               } else {
-                worker.postMessage({
-                  cmd: "callHandlerAsyncResult",
-                  handler: d["handler"],
-                  id: d["id"],
-                  result,
-                });
+                payload.result = result;
+                console.log("callHandlerAsync result send back immediate", payload);
+                targetWorker.postMessage(payload);
               }
             } else if (cmd) {
               err(`worker sent an unknown command ${cmd}`);

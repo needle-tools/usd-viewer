@@ -54,6 +54,7 @@ function handleMessage(e) {
     if (e.data.cmd === "load") {
       let messageQueue = [];
       self.onmessage = (e) => messageQueue.push(e);
+      self.addEventListener("message", e => console.log("worker received message", e));
       self.startWorker = (instance) => {
         Module = instance;
         postMessage({ cmd: "loaded" });
@@ -68,27 +69,6 @@ function handleMessage(e) {
           postMessage({ cmd: "callHandler", handler: handler, args: args });
         };
       }
-      Module["urlCallbackFromWorker"] = async (...args) => {
-        postMessage({
-          cmd: "callHandlerAsync",
-          handler: "urlModifier",
-          args: args,
-        });
-        const promise = new Promise((resolve) => {
-          let handler;
-          handler = (e) => {
-            if (
-              e.data.cmd === "callHandlerAsyncResult" &&
-              e.data.handler === "urlModifier"
-            ) {
-              self.removeEventListener("message", handler);
-              resolve(e.data.result);
-            }
-          };
-          self.addEventListener("message", handler);
-        });
-        return await promise;
-      };
       Module["wasmMemory"] = e.data.wasmMemory;
       Module["buffer"] = Module["wasmMemory"].buffer;
       Module["ENVIRONMENT_IS_PTHREAD"] = true;
@@ -126,9 +106,7 @@ function handleMessage(e) {
       if (initializedJS) {
         Module["checkMailbox"]();
       }
-    } else if (e.data.cmd === "callHandlerAsyncResult") {
-      // ignore, there is an extra handler for this
-    }
+    } 
     else if (e.data.cmd) {
       err(`worker.js received unknown command ${e.data.cmd}`);
       err(e.data);
