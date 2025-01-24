@@ -74,13 +74,32 @@ var getUsdModule = ((args) => {
       Module.expectedDataFileDownloads = 0;
     }
     Module.expectedDataFileDownloads++;
-    Module["urlCallbackFromWorker"] = async (...args) => {
+    Module["urlCallbackFromWorker"] = (...args) => {
+      const verbose = false;
       const uniqueMessageId = Math.random().toString(36);
-      console.log("urlCallbackFromWorker", args, uniqueMessageId);
+      
+      let file = args[0];
+      if (typeof file === "string") file = file.split("/").pop();
+      file = "\x1B[1;92m" + file + "\x1B[0m";
+      
+      if (verbose) console.log(file, "urlCallbackFromWorker", args, uniqueMessageId);
+      let success = false;
+
+      const abort = new Promise((resolve) => {
+        setTimeout(() => {
+          if (success) {
+            resolve(undefined);
+            return;
+          }
+          if (verbose) console.warn(file, "urlCallbackFromWorker timed out", args, uniqueMessageId);
+          resolve(undefined);
+        }, 10);
+      })
+
       const promise = new Promise((resolve) => {
         let handler;
         handler = (e) => {
-          console.log("worker handler received message", e);
+          if (verbose) console.log(file, "worker handler received message", e);
           if (
             e.data.cmd === "callHandlerAsyncResult" &&
             e.data.handler === "urlModifier" &&
@@ -90,37 +109,21 @@ var getUsdModule = ((args) => {
             resolve(e.data.result);
           }
           else {
-            console.log("worker handler received message but its not ours", e.data);
+            if (verbose) console.log(file, "worker handler received message but its not ours", e.data);
           }
         };
         self.addEventListener("message", handler);
-      })
-      .catch(e => {
-        console.log("abort promise caught", e);
-      })
-      .finally(() => {
-        console.log("promise in worker is done");
       });
+
       postMessage({
         cmd: "callHandlerAsync",
         handler: "urlModifier",
-        threadId: self.pthread_ptr,
         args: {...args, uniqueMessageId },
       });
-      console.log("worker is done sending message, awaiting response", args, uniqueMessageId, Module["_pthread_self"]());
-      console.log("promise: ", promise);
-      let timeout;
-      const abort = new Promise((resolve) => {
-        timeout = setTimeout(() => {
-          console.warn("urlCallbackFromWorker timed out", args, uniqueMessageId);
-          resolve(undefined);
-        }, 100);
-      })
-      // TODO this should not be needed since "race" should resolve with the first promise that resolves or rejects
-      await abort;
-      const result = Promise.race([abort, promise]);
-      clearTimeout(timeout);
-      return result;
+
+      if (verbose) console.log(file, "worker is done sending message, awaiting response", args, uniqueMessageId, Module["_pthread_self"](), PThread.pthreads);
+
+      return Promise.race([promise, abort]);
     };
     (function () {
       if (Module["ENVIRONMENT_IS_PTHREAD"] || Module["$ww"]) return;
@@ -1083,8 +1086,8 @@ var getUsdModule = ((args) => {
     var tempI64;
     function __asyncjs__fetch_asset(route, dataPtr) {
       return Asyncify.handleAsync(async () => {
+        const verbose = false;
         const routeString = UTF8ToString(route);
-        const verbose = true;
         let absoluteUrl = routeString;
         if (absoluteUrl.startsWith("/http")) absoluteUrl = absoluteUrl.slice(1);
         if (absoluteUrl.includes("http:/"))
@@ -1093,32 +1096,36 @@ var getUsdModule = ((args) => {
           absoluteUrl = absoluteUrl.replace("https:/", "https://");
         let callbackResult = null;
         let buffer = null;
+        let file = absoluteUrl.split("/").pop();
+        file = "\x1B[1;92m" + file + "\x1B[0m";
+
         if (ENVIRONMENT_IS_PTHREAD) {
           if (verbose)
-            console.log("we're in a thread, calling urlCallback", absoluteUrl);
+            console.log(file, "we're in a thread, calling urlCallback", absoluteUrl);
           let result;
           try {
             // TODO: this freezes the worker sometimes, some issue with back-and-forth messaging
             result = await Module["urlCallbackFromWorker"](absoluteUrl);
           } catch (e) {
             console.error(
-              "Error in thread callback for",
+              file, "Error in thread callback for",
               absoluteUrl,
               "error:",
               e,
             );
           }
-          if (verbose) console.log("got result inside worker", result);
+          if (verbose) console.log(file, "got result inside worker", result);
           callbackResult = result;
         } else if (typeof Module["urlModifier"] === "function") {
           const prev = absoluteUrl;
           const callback = Module["urlModifier"];
-          if (verbose) console.log("callback", callback);
+          if (verbose) console.log(file, "callback", callback);
           let result = callback(absoluteUrl);
           if (result instanceof Promise) result = await result;
           callbackResult = result;
           if (verbose)
             console.log(
+              file,
               "found modifier, URL is now",
               callbackResult,
               "was",
@@ -1127,8 +1134,7 @@ var getUsdModule = ((args) => {
               Module["urlModifier"],
             );
         } else {
-          if (verbose)
-            console.log("no URL modifier found", Module["urlModifier"]);
+          // if (verbose) console.log(file, "no URL modifier found", Module["urlModifier"]);
         }
         try {
           if (callbackResult && typeof callbackResult === "object") {
@@ -1169,25 +1175,26 @@ var getUsdModule = ((args) => {
           Module.HEAP32[(dataPtr >> 2) + 1] = 0;
           return;
         }
-        if (verbose) console.log("fetching asset", absoluteUrl);
+        // if (verbose) console.log(file, "fetching asset", absoluteUrl);
         try {
           if (buffer === null) {
             buffer = await fetch(absoluteUrl)
               .then((r) => {
-                if (verbose) console.log(r.status + " " + r.statusText);
+                // if (verbose) console.log(r.status + " " + r.statusText);
                 return r.arrayBuffer();
               })
               .catch((e) => null);
           }
           if (!buffer || buffer.byteLength === 0) {
-            console.error("Error fetching asset – couldn't fetch", absoluteUrl);
+            console.error(file, "Error fetching asset – couldn't fetch", absoluteUrl);
             buffer = new ArrayBuffer(1);
           }
-          if (verbose) console.log("after awaiting buffer", buffer);
+          // if (verbose) console.log(file, "after awaiting buffer", buffer);
           const length = buffer.byteLength;
           const ptr = _malloc(length);
           if (verbose)
             console.log(
+              file,
               "fetch complete for ",
               absoluteUrl,
               " ->",
@@ -3804,8 +3811,16 @@ var getUsdModule = ((args) => {
       },
       loadWasmModuleToWorker: (worker) =>
         new Promise((onFinishedLoading) => {
+          const verbose = false;
           worker.onmessage = (e) => {
-            console.log("worker.onmessage", e.data);
+            if (verbose && e.data.args) {
+              let file = e.data.args[0];
+              if (typeof file === "string") {
+                file = file.split("/").pop();
+                file = "\x1B[1;93m" + file + "\x1B[0m";
+                console.log(file, "worker.onmessage", e.data);
+              } 
+            }
             var d = e["data"];
             var cmd = d["cmd"];
             if (d["targetThread"] && d["targetThread"] != _pthread_self()) {
@@ -3847,9 +3862,10 @@ var getUsdModule = ((args) => {
               // We can shovel transferable objects from the main thread to the worker this way,
               // for example file system handles (https://developer.mozilla.org/en-US/docs/Web/API/File_System_API)
               const args = d["args"];
-              const targetWorker = PThread.pthreads[d["threadId"]];
-              console.log("callHandlerAsync", d["handler"], args, targetWorker);
-              let result = Module[d["handler"]]?.(...args);
+              if (verbose) console.log("callHandlerAsync", d["handler"], args);
+              let result = undefined;
+              const func = Module[d["handler"]];
+              if (func instanceof Function) result = func(...args);
               const payload = {
                 ...args,
                 cmd: "callHandlerAsyncResult",
@@ -3859,13 +3875,13 @@ var getUsdModule = ((args) => {
               if (result instanceof Promise) {
                 result.then((r) => {
                   payload.result = r;
-                  console.log("callHandlerAsync result send back", payload);
-                  targetWorker.postMessage(payload);
+                  if (verbose) console.log("callHandlerAsync result send back", payload);
+                  worker.postMessage(payload);
                 });
               } else {
                 payload.result = result;
-                console.log("callHandlerAsync result send back immediate", payload);
-                targetWorker.postMessage(payload);
+                if (verbose) console.log("callHandlerAsync result send back immediate", payload);
+                worker.postMessage(payload);
               }
             } else if (cmd) {
               err(`worker sent an unknown command ${cmd}`);

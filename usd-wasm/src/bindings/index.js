@@ -61,7 +61,7 @@ export async function getUsdModule(opts) {
         },
         ...opts,
         locateFile: (file) => {
-            if (opts?.debug === true) console.warn("LOCATE FILE:", file)
+            // if (opts?.debug === true) console.warn("LOCATE FILE:", file)
 
             const userResult = opts?.locateFile?.(file);
             if (userResult) {

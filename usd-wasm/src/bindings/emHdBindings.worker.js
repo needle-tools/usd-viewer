@@ -54,7 +54,7 @@ function handleMessage(e) {
     if (e.data.cmd === "load") {
       let messageQueue = [];
       self.onmessage = (e) => messageQueue.push(e);
-      self.addEventListener("message", e => console.log("worker received message", e));
+      // self.addEventListener("message", e => console.log("\x1B[1;mworker received message: " + e.data.cmd + "\x1B[0m"));
       self.startWorker = (instance) => {
         Module = instance;
         postMessage({ cmd: "loaded" });
@@ -107,6 +107,9 @@ function handleMessage(e) {
         Module["checkMailbox"]();
       }
     } 
+    else if (e.data.cmd === "callHandlerAsyncResult") {
+      // ignore, handled elsewhere
+    }
     else if (e.data.cmd) {
       err(`worker.js received unknown command ${e.data.cmd}`);
       err(e.data);
