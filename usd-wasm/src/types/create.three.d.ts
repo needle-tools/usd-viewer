@@ -24,7 +24,7 @@ export declare type createThreeHydraConfig = {
 
     url?: string,
 
-    scene: Scene,
+    scene: Object3D,
 
     /**
      * Files to be loaded into the virtual file system.
