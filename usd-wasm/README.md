@@ -11,6 +11,24 @@ For commercial use please contact hi@needle.tools
 
 ## Usage
 
+### Needle Engine
+
+```ts
+import { get } from "svelte/store";
+import { activeFiles } from "..";
+import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
+
+export function addUsdPlugin() {
+    return addPluginForNeedleEngine({
+        // USD files to load (first file must be the main file)
+        getFiles: () => { return get(activeFiles) as Array<File & { path: string }> }
+    })
+}
+```
+
+
+### Other
+
 
 See full example in [examples](./examples/src/main.ts)
 
