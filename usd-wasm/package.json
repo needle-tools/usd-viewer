@@ -10,10 +10,12 @@
       "require": "./src/index.cjs"
     }
   },
-  "scripts": {},
   "keywords": [
+    "needle",
     "usd",
-    "openusd"
+    "openusd",
+    "threejs",
+    "webgl"
   ],
   "homepage": "https://needle.tools",
   "author": {
@@ -21,7 +23,6 @@
     "email": "hi@needle.tools",
     "url": "https://needle.tools/"
   },
-  "license": "ISC",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/needle-tools/usd-viewer.git"
@@ -31,10 +32,14 @@
   },
   "peerDependencies": {
     "three": "^0.164.1",
-    "@needle-tools/engine": "^4.5.0-alpha.4"
+    "@needle-tools/engine": ">= 4.5.0-alpha.4"
   },
   "devDependencies": {
     "vite": "^5.2.13",
     "@types/three": "^0.164.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

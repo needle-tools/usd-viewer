@@ -24,6 +24,7 @@ function onAddNeedlePlugin(opts) {
              */
             this.handle = null;
             this.root = new Object3D();
+            console.debug("Create root", this.root);
         }
 
         update() {
@@ -96,6 +97,8 @@ function onAddNeedlePlugin(opts) {
                 files: files,
             });
             this.comp.handle = handle;
+
+            console.debug("Loaded", this.comp);
 
             onProgress?.(new ProgressEvent("load", { lengthComputable: true, loaded: 1, total: 1 }));
 
