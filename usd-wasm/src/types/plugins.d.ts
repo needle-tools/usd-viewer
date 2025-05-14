@@ -6,4 +6,4 @@ export type PluginContext = {
 }
 
 
-export declare function addPluginForNeedleEngine(options: PluginContext): Promise<void>;
+export declare function addPluginForNeedleEngine(options: PluginContext): Promise<(() => void)>;
