@@ -56,10 +56,22 @@ export async function getUsdModule(opts) {
 
     return usd_module_promise = getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
-        setStatus: (status) => {
-            console.debug("🧊 USD STATUS", status);
-        },
         ...opts,
+        setStatus: (status) => {
+            // TODO: would be nice to have a progress event
+            // for now we parse the log 'Downloading data... (219516/849069)'
+            if (opts?.onDownloadProgress && status.includes("Downloading data...")) {
+                const start = status.indexOf("(");
+                const end = status.indexOf("/");
+                const start2 = status.indexOf("/", end);
+                const end2 = status.indexOf(")", start2);
+                const startNum = parseInt(status.substring(start + 1, end));
+                const endNum = parseInt(status.substring(end + 1, end2));
+                opts.onDownloadProgress(startNum, endNum);
+            }
+            if (opts?.setStatus) opts.setStatus(status);
+            else console.debug("🧊 USD STATUS", status);
+        },
         locateFile: (file) => {
             // if (opts?.debug === true) console.warn("LOCATE FILE:", file)
 

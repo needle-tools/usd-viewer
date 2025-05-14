@@ -60,10 +60,11 @@ export type GetUsdModuleOptions = {
     locateFile?: (path: string) => string,
     getPreloadedPackage?: (file: string, size: number) => ArrayBuffer | null,
     setStatus?: (status: string) => void,
+    onDownloadProgress?: (downloaded: number, total: number) => void,
     /** Returns a transferable object that can be resolved to an ArrayBuffer, 
      *  or an URL that can be fetched to get an ArrayBuffer.
     */
-    urlModifier?: (url: string) => 
+    urlModifier?: (url: string) =>
         Promise<
             ArrayBuffer | File | FileSystemFileHandle | FileSystemFileEntry | string
         > | ArrayBuffer | File | FileSystemFileHandle | FileSystemFileEntry | string,
