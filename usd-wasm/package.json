@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/usd",
-  "version": "0.0.1-alpha",
+  "version": "0.0.1-alpha.1",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
@@ -8,6 +8,10 @@
     ".": {
       "import": "./src/index.js",
       "require": "./src/index.cjs"
+    },
+    "./plugins": {
+      "import": "./src/plugins/index.js",
+      "require": "./src/plugins/index.cjs"
     }
   },
   "keywords": [

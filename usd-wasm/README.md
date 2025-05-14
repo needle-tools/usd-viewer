@@ -1,6 +1,8 @@
 # Needle USD
 
-USD wasm runtime and three.js hydra delegate
+USD wasm runtime and three.js hydra delegate.   
+Developed & maintained by [Needle](https://needle.tools)  
+For commercial use please contact hi@needle.tools
 
 ## Install
 `npm install @needle-tools/usd`
@@ -69,3 +71,13 @@ driver.Draw();
 Uses Asyncify to handle async calls in emscripten.
 > A synchronous call in C that waits for an asynchronous operation in JS to complete.
 https://emscripten.org/docs/porting/asyncify.html
+
+
+# Contact ✒️
+<b>[🌵 Needle](https://needle.tools)</b> • 
+[Github](https://github.com/needle-tools) • 
+[Twitter](https://twitter.com/NeedleTools) • 
+[Discord](https://discord.needle.tools) • 
+[Forum](https://forum.needle.tools) • 
+[Youtube](https://www.youtube.com/@needle-tools)
+

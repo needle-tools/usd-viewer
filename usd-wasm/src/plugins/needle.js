@@ -1,22 +1,23 @@
 import { Loader, Object3D } from "three";
 import { createThreeHydra, getUsdModule } from "../index.js";
-import { addComponent, Behaviour, NeedleEngineModelLoader } from "@needle-tools/engine";
-
 
 
 /** @type {import("../types").addPluginForNeedleEngine} */
 export async function addPluginForNeedleEngine(options) {
-    console.debug("🐉 Adding USDZ plugin to Needle Engine");
-    return onAddNeedlePlugin(options)
+    if (options.debug) console.debug("🐉 Adding USDZ plugin to Needle Engine");
+    return import("@needle-tools/engine").then(module => {
+        return onAddNeedlePlugin(module, options);
+    })
 }
 
 
 /**
+ * @param {typeof import("@needle-tools/engine")} NEEDLE
  * @param {import("../types").PluginContext} opts
  */
-function onAddNeedlePlugin(opts) {
+function onAddNeedlePlugin(NEEDLE, opts) {
 
-    class NeedleUSDZHHandler extends Behaviour {
+    class NeedleUSDZHHandler extends NEEDLE.Behaviour {
         constructor() {
             super();
             /**
@@ -24,7 +25,6 @@ function onAddNeedlePlugin(opts) {
              */
             this.handle = null;
             this.root = new Object3D();
-            console.debug("Create root", this.root);
         }
 
         update() {
@@ -81,7 +81,7 @@ function onAddNeedlePlugin(opts) {
                 debug
                 // setURLModifier: USDLoadingManager.urlModifier,
             }).then(res => {
-                console.debug("🐉 USD HYDRA IS READY");
+                if (debug) console.debug("🐉 USD HYDRA IS READY");
                 return res;
             })
             const usd = await NeedleUSDZLoader.usdModule;
@@ -98,7 +98,7 @@ function onAddNeedlePlugin(opts) {
             });
             this.comp.handle = handle;
 
-            console.debug("Loaded", this.comp);
+            if (debug) console.debug("Loaded", this.comp);
 
             onProgress?.(new ProgressEvent("load", { lengthComputable: true, loaded: 1, total: 1 }));
 
@@ -115,7 +115,7 @@ function onAddNeedlePlugin(opts) {
 
 
 
-    const removeFiletype = NeedleEngineModelLoader.onDetermineModelMimetype(cb => {
+    const removeFiletype = NEEDLE.NeedleEngineModelLoader.onDetermineModelMimetype(cb => {
 
         if (cb.contentType === "application/vnd.usd") {
             return "model/vnd.usd";
@@ -135,11 +135,11 @@ function onAddNeedlePlugin(opts) {
     });
 
     const handlers = new Array();
-    const removeCustomLoader = NeedleEngineModelLoader.onCreateCustomModelLoader(cb => {
+    const removeCustomLoader = NEEDLE.NeedleEngineModelLoader.onCreateCustomModelLoader(cb => {
         if (cb.mimetype.startsWith("model/vnd.usd")) {
             const handler = new NeedleUSDZHHandler();
             handlers.push(handler);
-            addComponent(cb.context.scene, handler);
+            NEEDLE.addComponent(cb.context.scene, handler);
             return new NeedleUSDZLoader(handler);
         }
         return null;
