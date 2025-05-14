@@ -7,6 +7,7 @@ import { createThreeHydra, getUsdModule } from "../index.js";
 export async function addPluginForNeedleEngine(options) {
     return import("@needle-tools/engine")
         .then(NEEDLE => {
+            console.debug("🐉 Adding USDZ plugin to Needle Engine");
             onAddNeedlePlugin(NEEDLE, options)
         })
 }
@@ -40,27 +41,6 @@ function onAddNeedlePlugin(NEEDLE, opts) {
             }
         }
     }
-
-
-
-    const removeFiletype = NEEDLE.NeedleEngineModelLoader.onDetermineModelMimetype(cb => {
-
-        if (cb.contentType === "application/vnd.usd") {
-            return "model/vnd.usd";
-        }
-        const ext = cb.url.split('.').pop()?.toLowerCase();
-        switch (ext) {
-            case "usdz":
-                return "model/vnd.usdz+zip"
-            case "usda":
-                return "model/vnd.usda"
-            case "usdc":
-                return "model/vnd.usdc"
-            case "usd":
-                return "model/vnd.usd"
-        }
-        return null;
-    });
 
 
     /**
@@ -133,6 +113,27 @@ function onAddNeedlePlugin(NEEDLE, opts) {
 
 
 
+
+
+    const removeFiletype = NEEDLE.NeedleEngineModelLoader.onDetermineModelMimetype(cb => {
+
+        if (cb.contentType === "application/vnd.usd") {
+            return "model/vnd.usd";
+        }
+        const ext = cb.url.split('.').pop()?.toLowerCase();
+        switch (ext) {
+            case "usdz":
+                return "model/vnd.usdz+zip"
+            case "usda":
+                return "model/vnd.usda"
+            case "usdc":
+                return "model/vnd.usdc"
+            case "usd":
+                return "model/vnd.usd"
+        }
+        return null;
+    });
+
     const handlers = new Array();
     const removeCustomLoader = NEEDLE.NeedleEngineModelLoader.onCreateCustomModelLoader(cb => {
         if (cb.mimetype.startsWith("model/vnd.usd")) {
@@ -143,6 +144,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
         }
         return null;
     });
+
 
     return () => {
         removeFiletype();
