@@ -50,7 +50,7 @@ export class USDLoadingManager {
 /**
  * Set up a Three.js Hydra render delegate.
  * @param {import(".").createThreeHydraConfig} config
- * @returns {Promise<import(".").createThreeHydraReturnType>}
+ * @returns {Promise<import(".").NeedleThreeHydraHandle>}
  */
 export async function createThreeHydra(config) {
     const debug = config.debug || false;
@@ -72,7 +72,6 @@ export async function createThreeHydra(config) {
     // but this requires HTTPAssetResolver changes
     if (Array.isArray(config.files)) {
         for (const file of config.files) {
-            
             let fileName = file.name;
             let directory = "/";
             if (file.path) {
@@ -105,13 +104,13 @@ export async function createThreeHydra(config) {
         const isBlob = config.url.startsWith("blob");
         const isWebUrl = config.url.startsWith("http");
         if (isBlob) {
-            file = await createFile({USD, filepath: config.url, buffer });
+            file = await createFile({ USD, filepath: config.url, buffer });
         }
         else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
             file = config.url;
         }
         else {
-            file = await createFile({USD, filepath: config.url, buffer });
+            file = await createFile({ USD, filepath: config.url, buffer });
         }
     }
 
@@ -147,7 +146,7 @@ export async function createThreeHydra(config) {
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
 
     if (debug) console.log("DRIVER", driver);
-    
+
     /** Draw once */
     driver.Draw();
 
@@ -156,7 +155,7 @@ export async function createThreeHydra(config) {
         stage = await stage;
         stage = driver.GetStage();
     }
-    
+
     /** Support for Y and Z up-axis in the root USD file */
     delegateConfig.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
 
@@ -166,7 +165,7 @@ export async function createThreeHydra(config) {
         console.log("STAGE", stage);
         console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
     }
-        
+
     return {
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
         update: (dt) => {
@@ -231,7 +230,7 @@ export async function createThreeHydra(config) {
 
             rmRootDir("/" + directoryForFiles);
             rmRootDir("/1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
-            
+
             if (!unlinkedFiles.has(file)) {
                 if (debug) console.warn("Unlinking main file", file);
                 let fileToUnlink = file;

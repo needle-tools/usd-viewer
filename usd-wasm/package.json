@@ -4,6 +4,16 @@
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "require": "./src/index.cjs"
+    },
+    "./plugins": {
+      "import": "./src/plugins/index.js",
+      "require": "./src/plugins/index.cjs"
+    }
+  },
   "scripts": {},
   "keywords": [
     "usd",
@@ -26,7 +36,11 @@
   "peerDependencies": {
     "three": "^0.164.1"
   },
+  "optionalDependencies": {
+    "@needle-tools/engine": "^4.5.0-alpha.4"
+  },
   "devDependencies": {
-    "vite": "^5.2.13"
+    "vite": "^5.2.13",
+    "@types/three": "^0.164.1"
   }
 }
