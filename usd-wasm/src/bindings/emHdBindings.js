@@ -8133,7 +8133,7 @@ var getUsdModule = ((args) => {
       nb: ___cxa_get_exception_ptr,
       Ua: ___cxa_rethrow,
       Bc: ___cxa_rethrow_primary_exception,
-      y: ___cxa_throw,
+      z: ___cxa_throw,
       Cc: ___cxa_uncaught_exceptions,
       Rc: ___emscripten_init_main_thread_js,
       bb: ___emscripten_thread_cleanup,
@@ -8161,8 +8161,8 @@ var getUsdModule = ((args) => {
       H: __embind_register_class,
       da: __embind_register_class_class_function,
       wa: __embind_register_class_class_property,
-      N: __embind_register_class_constructor,
-      z: __embind_register_class_function,
+      M: __embind_register_class_constructor,
+      y: __embind_register_class_function,
       x: __embind_register_class_property,
       fd: __embind_register_emval,
       sb: __embind_register_enum,
@@ -8258,7 +8258,7 @@ var getUsdModule = ((args) => {
       aa: invoke_iidiii,
       vd: invoke_iidiiii,
       Za: invoke_iidiiiii,
-      M: invoke_iif,
+      N: invoke_iif,
       ta: invoke_iiffi,
       id: invoke_iifi,
       e: invoke_iii,
@@ -10368,8 +10368,8 @@ var getUsdModule = ((args) => {
       (_asyncify_start_rewind = wasmExports["Ug"])(a0);
     var _asyncify_stop_rewind = () =>
       (_asyncify_stop_rewind = wasmExports["Vg"])();
-    var ___start_em_js = (Module["___start_em_js"] = 3888140);
-    var ___stop_em_js = (Module["___stop_em_js"] = 3892185);
+    var ___start_em_js = (Module["___start_em_js"] = 3894380);
+    var ___stop_em_js = (Module["___stop_em_js"] = 3895704);
     function invoke_iii(index, a1, a2) {
       var sp = stackSave();
       try {
