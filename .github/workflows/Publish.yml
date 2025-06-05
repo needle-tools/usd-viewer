@@ -1,0 +1,29 @@
+name: Release
+on:
+  push:
+    branches:
+      - 'release/*'
+
+jobs:
+  run-release-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'  # Fetch all submodules recursively
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Publish to npm
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{github.ref_name}}" --version+tag --version+hash
