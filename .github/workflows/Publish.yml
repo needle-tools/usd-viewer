@@ -7,7 +7,7 @@ on:
 jobs:
   run-release-script:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     defaults:
       run:
         working-directory: .
@@ -26,4 +26,4 @@ jobs:
         run: npm install
         
       - name: Publish to npm
-        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{github.ref_name}}" --version+tag --version+hash
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{github.ref_name}}" --version+hash

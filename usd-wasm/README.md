@@ -9,9 +9,8 @@ For commercial use please contact hi@needle.tools
 
 
 
-## Usage
+## Use with Needle Engine
 
-### Needle Engine
 
 ```ts
 import { get } from "svelte/store";
@@ -27,7 +26,7 @@ export function addUsdPlugin() {
 ```
 
 
-### Other
+### Use with other three.js based viewers
 
 
 See full example in [examples](./examples/src/main.ts)
