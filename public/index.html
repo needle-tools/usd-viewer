@@ -47,19 +47,19 @@
       <div class="dropdown-content">
         <div class="dropdown-section">
           <h4>Test Models</h4>
-          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+          <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
           <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/spherebot2.usdz?v=1712012969693&cameraY=30&cameraZ=100">Spherebot2</a>
+          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
           <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/gearbox.usdz?v=1712012939566&cameraY=30&cameraZ=300">GearBox</a>
           <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/knife.usdz?v=1712012954472&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
-          <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
         </div>
         <div class="dropdown-section">
           <h4>USD Working Group Assets</h4>
-          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
           <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
-          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
           <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
           <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda">Vehicles</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
         </div>
         <div class="dropdown-section">
           <h4>More</h4>
@@ -92,19 +92,25 @@
       <div class="dialog-content">
         <p>This is a basic USD Viewer created and maintained by <a href="https://needle.tools">Needle</a>, based on Autodesk's USD WASM Fork. It allows you to view Universal Scene Description (USD) files directly in your browser.</p>
         <p>Drag and drop USDZ files to load them, or use the samples provided to explore different 3D models.</p>
-        <p>For more information or opening an issue, please visit the GitHub repo.</p>
+        <p>The actual USD runtime, compiled to WebAssembly, is used here, including all composition features.</p>
+        <p>We created this viewer while adding OpenUSD support to <a href="https://cloud.needle.tools">Needle Cloud</a>.</p>
+        <p>For more information or to open an issue, please visit the GitHub repo.</p>
         <div class="dialog-actions">
-          <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">View on GitHub</a>
-          <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">USD Documentation</a>
+          <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">View on Needle GitHub</a>
+          <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Learn more about Needle Cloud</a>
+          <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">Autodesk Fork</a>
         </div>
       </div>
     </div>
   </div>
   
   <div class="footer">
-    <p id="message-log">
-      Waiting for initialization to start...
-    </p>
+    <div class="footer-content">
+      <p id="message-log">
+        Waiting for initialization to start...
+      </p>
+      <button id="clear-log-btn" class="clear-log-button" title="Clear log">×</button>
+    </div>
     <!--
     <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" title="ARKit Glyph" style="max-width:100%; height:auto;"></a>
     -->
