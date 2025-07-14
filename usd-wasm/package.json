@@ -37,7 +37,7 @@
   },
   "peerDependencies": {
     "three": "^0.164.1",
-    "@needle-tools/engine": ">= 4.6.0-0"
+    "@needle-tools/engine": "4.x || ^4.6.0-0"
   },
   "devDependencies": {
     "vite": "^5.2.13",
