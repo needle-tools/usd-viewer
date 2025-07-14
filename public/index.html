@@ -36,12 +36,14 @@
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
-    <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
+      <a href="https://needle.tools" target="_blank" rel="noopener">
+        <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
+      </a>
     <a href="#" id="about-link">About <strong>USD Viewer</strong></a>
     <a class="file clear-button" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
     <div class="dropdown">
-      <button class="dropdown-button">Load Sample</button>
+      <button class="dropdown-button">Load Sample or drop file</button>
       <div class="dropdown-content">
         <div class="dropdown-section">
           <h4>Test Models</h4>
@@ -67,8 +69,7 @@
     </div>
     
     <a class="filename"></a>
-    <a id="export-gltf" class="export-button">Export as .glb</a></button>
-    <a href="https://github.com/needle-tools/usd-viewer" target="_blank">GitHub</a>
+    <a id="export-gltf" class="export-button">Export glTF</a></button>
       
     <br/>
 
@@ -79,9 +80,6 @@
     <br/>
   </div>
     
-    <p id="message-log">
-      Waiting for initialization to start...
-    </p>
   </div>
   
   <!-- About Dialog -->
@@ -92,10 +90,11 @@
         <button class="dialog-close" id="dialog-close-btn">&times;</button>
       </div>
       <div class="dialog-content">
-        <p>This is a simple USD Viewer based on Autodesk's USD WASM Fork. It allows you to view Universal Scene Description (USD) files directly in your browser.</p>
+        <p>This is a basic USD Viewer created and maintained by <a href="https://needle.tools">Needle</a>, based on Autodesk's USD WASM Fork. It allows you to view Universal Scene Description (USD) files directly in your browser.</p>
         <p>Drag and drop USDZ files to load them, or use the samples provided to explore different 3D models.</p>
-        <p>For more information about USD, visit the official documentation.</p>
+        <p>For more information or opening an issue, please visit the GitHub repo.</p>
         <div class="dialog-actions">
+          <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">View on GitHub</a>
           <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">USD Documentation</a>
         </div>
       </div>
@@ -103,6 +102,9 @@
   </div>
   
   <div class="footer">
+    <p id="message-log">
+      Waiting for initialization to start...
+    </p>
     <!--
     <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" title="ARKit Glyph" style="max-width:100%; height:auto;"></a>
     -->
