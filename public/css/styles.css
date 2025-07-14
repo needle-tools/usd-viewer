@@ -1,44 +1,53 @@
 :root {
-  --color-bg-0: rgb(255, 255, 255);
-  --color-bg-1: hsl(209, 36%, 86%);
-  --color-bg-2: hsl(224, 44%, 95%);
-  --color-theme-1: #000000;
-  --color-theme-2: #4075a6;
-  --color-text: rgba(23, 22, 22, 0.7);
+    --color-bg-0: rgb(255, 255, 255);
+    --color-bg-1: hsl(209, 36%, 86%);
+    --color-bg-2: hsl(224, 44%, 95%);
+    --color-theme-1: #000000;
+    --color-theme-2: #71a110;
+    --color-text: rgba(23, 22, 22, 0.7);
 }
 
 body {
-  margin:0;
-  padding:0;
-  font-family:sans-serif;
-  min-height: 100vh;
-  background-attachment: fixed;
-  background-color: var(--color-bg-1);
-  background-image: linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+    min-height: 100vh;
+    background-attachment: fixed;
+    background-color: var(--color-bg-1);
+    background-image: linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
 }
 
 .footer {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  margin-bottom:15px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    margin-bottom: 15px;
 }
 
 #message-log {
-  opacity:0.5;
-  font-size:0.75em;
-  color: white;
+    opacity: 0.5;
+    font-size: 0.75em;
+    color: white;
     margin-left: 14px;
     margin-top: 0;
-  font-style:italic;
+    font-style: italic;
     margin-bottom: 0;
     margin-top: 0;
 }
 
 #container {
-  background-color: var(--color-bg-0);
-  border-radius: 20px;
+    background-color: var(--color-bg-0);
+    border-radius: 20px;
     font-size: 0.9em;
+    min-height: 54px;
+    display: flex;
+
+    padding-left: 15px;
+    padding-right: 15px;
+    margin-top: 5px;
+
+    border-radius: 32px;
+    box-shadow: 0 2px 15px #02022b33;
 }
 
 #container .buttons {
@@ -48,34 +57,210 @@ body {
     flex-direction: row;
 }
 
-#container a {
-  color: var(--color-text);
-  text-decoration: none;
-  padding: 10px;
-  margin: 0 4px;
-  transition: color 0.2s linear;
+.needle-logo {
+    height: 32.5px;
+    margin-right: 10px;
+    opacity: 0.8;
 }
 
-#container a:hover {
-  color: var(--color-theme-1);
+/* Dropdown Styles */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-button {
+    background-color: transparent;
+    border: none;
+    color: var(--color-text);
+    padding: 10px;
+    margin: 0 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    transition: color 0.2s linear;
+}
+
+.dropdown-button:hover {
+    color: var(--color-theme-1);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--color-bg-0);
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 8px;
+    border: 1px solid var(--color-bg-1);
+    padding: 8px 0;
+    top: 100%;
+    left: 0;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-section {
+    padding: 4px 0;
+}
+
+.dropdown-section h4 {
+    margin: 8px 12px 4px 12px;
+    font-size: 0.85em;
+    color: var(--color-theme-2);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-bg-1);
+    padding-bottom: 4px;
+}
+
+.dropdown-content a {
+    color: var(--color-text);
+    padding: 6px 12px;
+    text-decoration: none;
+    display: block;
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.dropdown-content a:hover {
+    background-color: var(--color-bg-1);
+    color: var(--color-theme-1);
+}
+
+/* Dialog Styles */
+.dialog-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dialog {
+    background-color: var(--color-bg-0);
+    margin: 15% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px 24px;
+    border-bottom: 1px solid var(--color-bg-1);
+}
+
+.dialog-header h2 {
+    margin: 0;
+    color: var(--color-theme-1);
+    font-size: 1.4em;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--color-text);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.dialog-close:hover {
+    background-color: var(--color-bg-1);
+    color: var(--color-theme-1);
+}
+
+.dialog-content {
+    padding: 20px 24px 24px 24px;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+.dialog-content p {
+    margin: 0 0 16px 0;
+}
+
+.dialog-content p:last-child {
+    margin-bottom: 0;
+}
+
+.dialog-actions {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-bg-1);
+}
+
+.dialog-actions a {
+    color: var(--color-theme-2);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.dialog-actions a:hover {
+    text-decoration: underline;
+}
+
+#container a {
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 10px;
+    margin: 0 4px;
+    transition: color 0.2s linear;
+}
+
+#container a:hover, .dropdown-button:hover {
+    color: var(--color-theme-1);
+    text-decoration: underline;
 }
 
 #container a span {
-  font-size: 0.8em;
-  opacity: 0.8;
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 .have-custom-file a.file.hide {
-  display: none;
+    display: none;
+}
+
+/* Hide Clear button when no file is loaded */
+#container:not(.have-custom-file) .clear-button {
+    display: none;
+}
+
+/* Hide Export button when no file is loaded */
+#container:not(.have-custom-file) .export-button {
+    display: none;
+}
+
+/* Hide filename display when no file is loaded */
+#container:not(.have-custom-file) .filename {
+    display: none;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-      --color-bg-0: rgb(23, 22, 22);
-      --color-bg-1: hsl(209, 36%, 16%);
-      --color-bg-2: hsl(224, 44%, 5%);
-      --color-theme-1: #ffffff;
-      --color-theme-2: #4075a6;
-      --color-text: rgba(255, 255, 255, 0.7);
-  }
+    :root {
+        --color-bg-0: rgb(23, 22, 22);
+        --color-bg-1: hsl(209, 36%, 16%);
+        --color-bg-2: hsl(224, 44%, 5%);
+        --color-theme-1: #ffffff;
+        --color-theme-2: #4075a6;
+        --color-text: rgba(255, 255, 255, 0.7);
+    }
 }
