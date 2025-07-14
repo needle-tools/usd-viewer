@@ -79,6 +79,20 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
   
+  // Clear console log function
+  window.clearMessageLog = function() {
+    const messageLog = document.getElementById('message-log');
+    if (messageLog) {
+      messageLog.textContent = '';
+    }
+  }
+  
+  // Add clear button functionality
+  const clearLogBtn = document.getElementById('clear-log-btn');
+  if (clearLogBtn) {
+    clearLogBtn.addEventListener('click', window.clearMessageLog);
+  }
+  
   // Override console methods - only warnings and errors
   console.warn = function(...args) {
     originalConsole.warn.apply(console, args);
@@ -271,6 +285,11 @@ function clearStage() {
   }
 
   window.usdRoot.clear();
+  
+  // Clear console output when stage is cleared
+  if (window.clearMessageLog) {
+    window.clearMessageLog();
+  }
 }
 
 function addPath(root, path) {
@@ -628,6 +647,10 @@ function testAndLoadFile(file) {
   if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + ext);
   if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
     clearStage();
+    // Clear console output when loading a new file
+    if (window.clearMessageLog) {
+      window.clearMessageLog();
+    }
     loadFile(file);
   }
 }
