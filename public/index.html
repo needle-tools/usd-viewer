@@ -36,16 +36,38 @@
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
-    <a class="file" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
+    <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
+    <a href="#" id="about-link">About <strong>USD Viewer</strong></a>
+    <a class="file clear-button" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
-    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/spherebot2.usdz?v=1712012969693&cameraY=30&cameraZ=100">Spherebot2</a>
-    <!-- <button><a href="?file=spherebot2.usdz&cameraY=30&cameraZ=100">Spherebot2 (local)</a></button> -->
-    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/gearbox.usdz?v=1712012939566&cameraY=30&cameraZ=300">GearBox</a>
-    <a class="file hide" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/knife.usdz?v=1712012954472&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
+    <div class="dropdown">
+      <button class="dropdown-button">Load Sample</button>
+      <div class="dropdown-content">
+        <div class="dropdown-section">
+          <h4>Test Models</h4>
+          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/speeder.usdz?v=1712012977504&cameraX=20&cameraY=10&cameraZ=20">Speeder</a>
+          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/spherebot2.usdz?v=1712012969693&cameraY=30&cameraZ=100">Spherebot2</a>
+          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/gearbox.usdz?v=1712012939566&cameraY=30&cameraZ=300">GearBox</a>
+          <a class="file" href="?file=https://cdn.glitch.global/875126f0-13ba-4f4c-be84-8cf16c90f4b4/knife.usdz?v=1712012954472&cameraX=100&cameraY=50&cameraZ=200">Knife</a>
+          <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
+        </div>
+        <div class="dropdown-section">
+          <h4>USD Working Group Assets</h4>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+          <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda">Vehicles</a>
+        </div>
+        <div class="dropdown-section">
+          <h4>More</h4>
+          <a href="https://github.com/usd-wg/assets" target="_blank">Browse usd-wg/assets</a>
+        </div>
+      </div>
+    </div>
     
     <a class="filename"></a>
-    <a href="https://autodesk-forks.github.io/USD/" target="_blank">About</a>
+    <a id="export-gltf" class="export-button">Export as .glb</a></button>
     <a href="https://github.com/needle-tools/usd-viewer" target="_blank">GitHub</a>
       
     <br/>
@@ -54,25 +76,36 @@
     <button><a href="#" id="export-usdz">Export as USDZ</a></button>
     -->
 
-    <a id="export-gltf">Export as .glb</a></button>
     <br/>
-  </div>
-  <div class="buttons">
-    <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda">Vehicles</a>
-    <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
   </div>
     
     <p id="message-log">
       Waiting for initialization to start...
     </p>
   </div>
+  
+  <!-- About Dialog -->
+  <div id="about-dialog" class="dialog-overlay">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>About USD Viewer</h2>
+        <button class="dialog-close" id="dialog-close-btn">&times;</button>
+      </div>
+      <div class="dialog-content">
+        <p>This is a simple USD Viewer based on Autodesk's USD WASM Fork. It allows you to view Universal Scene Description (USD) files directly in your browser.</p>
+        <p>Drag and drop USDZ files to load them, or use the samples provided to explore different 3D models.</p>
+        <p>For more information about USD, visit the official documentation.</p>
+        <div class="dialog-actions">
+          <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">USD Documentation</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <div class="footer">
+    <!--
     <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" title="ARKit Glyph" style="max-width:100%; height:auto;"></a>
+    -->
   </div>
 </body>
 </html>
