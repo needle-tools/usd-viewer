@@ -7,6 +7,45 @@ import './usd/bindings/emHdBindings.js';
 
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
+// About dialog functionality - runs when module is loaded
+document.addEventListener("DOMContentLoaded", function() {
+  const aboutLink = document.getElementById('about-link');
+  const aboutDialog = document.getElementById('about-dialog');
+  const dialogCloseBtn = document.getElementById('dialog-close-btn');
+
+  function openAboutDialog() {
+    if (aboutDialog) {
+      aboutDialog.style.display = 'block';
+    }
+  }
+
+  function closeAboutDialog() {
+    if (aboutDialog) {
+      aboutDialog.style.display = 'none';
+    }
+  }
+
+  if (aboutLink) {
+    aboutLink.addEventListener('click', function(event) {
+      event.preventDefault();
+      openAboutDialog();
+    });
+  }
+
+  if (dialogCloseBtn) {
+    dialogCloseBtn.addEventListener('click', closeAboutDialog);
+  }
+
+  // Close dialog when clicking outside of it
+  if (aboutDialog) {
+    aboutDialog.addEventListener('click', function(event) {
+      if (event.target === aboutDialog) {
+        closeAboutDialog();
+      }
+    });
+  }
+});
+
 export function init(options = {
   hdrPath: 'environments/neutral.hdr'
 }) {
@@ -447,6 +486,11 @@ async function init() {
         filename = parts[parts.length - 1];
         const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
         loadUsdFile(undefined, filename, urlPath, true);
+      } else {
+        // Clear the URL when no file is selected (Clear button clicked)
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete("file");
+        window.history.pushState({}, "USD Viewer", currentUrl);
       }
     });
   }
