@@ -24,6 +24,11 @@ jobs:
           
       - name: Install dependencies
         run: npm install
-        
-      - name: Publish to npm
-        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{github.ref_name}}" --version+hash --create-tag "release/"
+                
+      - name: Publish to npm (stable branch)
+        if: startsWith(github.ref_name, 'release/stable')
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "stable" --create-tag "release/"
+
+      - name: Publish to npm (next and experimental branches)
+        if: ${{ !startsWith(github.ref_name, 'release/stable') }}
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{ github.ref_name }}" --version+tag --version+hash --create-tag "release/"
