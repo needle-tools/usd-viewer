@@ -44,6 +44,54 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     });
   }
+  
+  // Console output redirection to message log (warnings and errors only)
+  const messageLog = document.getElementById('message-log');
+  const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    info: console.info
+  };
+  
+  function addToMessageLog(message, type = 'log') {
+    if (messageLog) {
+      const timestamp = new Date().toLocaleTimeString();
+      const prefix = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : type === 'info' ? 'ℹ️' : '📝';
+      const logEntry = `[${timestamp}] ${prefix} ${message}`;
+      
+      // Add new message
+      const currentText = messageLog.textContent;
+      if (currentText === "Waiting for initialization to start...") {
+        messageLog.textContent = logEntry;
+      } else {
+        messageLog.textContent = currentText + '\n' + logEntry;
+      }
+      
+      // Auto-scroll to bottom
+      messageLog.scrollTop = messageLog.scrollHeight;
+      
+      // Keep only last 50 lines to prevent memory issues
+      const lines = messageLog.textContent.split('\n');
+      if (lines.length > 50) {
+        messageLog.textContent = lines.slice(-50).join('\n');
+      }
+    }
+  }
+  
+  // Override console methods - only warnings and errors
+  console.warn = function(...args) {
+    originalConsole.warn.apply(console, args);
+    addToMessageLog(args.join(' '), 'warn');
+  };
+  
+  console.error = function(...args) {
+    originalConsole.error.apply(console, args);
+    addToMessageLog(args.join(' '), 'error');
+  };
+  
+  // Keep original log and info methods unchanged
+  // console.log and console.info will only appear in browser dev console
 });
 
 export function init(options = {
@@ -122,7 +170,7 @@ try {
     },
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
-    if (messageLog) messageLog.textContent = "Loading done";
+    if (messageLog) messageLog.textContent = "Loading done. Drop a USD file and its dependencies to view it, or select a sample.";
     animate();
     if (filename) {
       console.log("Loading File...");
