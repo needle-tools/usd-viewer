@@ -36,8 +36,7 @@
     "url": "https://github.com/needle-tools/usd-viewer/issues"
   },
   "peerDependencies": {
-    "three": "^0.164.1",
-    "@needle-tools/engine": "4.x || ^4.6.0-0"
+    "three": ">=0.160.0"
   },
   "devDependencies": {
     "vite": "^5.2.13",
