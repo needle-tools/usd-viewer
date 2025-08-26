@@ -29,7 +29,7 @@ export function addUsdPlugin() {
 ### Use with other three.js based viewers
 
 
-See full example in [examples](./examples/src/main.ts)
+See full example in [examples](/usd-wasm/examples/src/main.ts)
 
 ```js
 // Load the USD module
