@@ -1,7 +1,7 @@
 # USD Viewer
 
 A USD viewer on the web.  
-[Open USD Viewer](https://usd-viewer.glitch.me/)  
+[Open USD Viewer](https://usd-viewer.needle.tools/)  
 
 There are two main parts:  
 - [USD WASM bindings by Autodesk](https://autodesk-forks.github.io/USD/usd_for_web_demos/)
@@ -30,7 +30,7 @@ There are two main parts:
 ## Contribute
 
 - [Report an issue](https://github.com/needle-tools/usd-viewer/issues)  
-- [Reach out](https://twitter.com/hybridherbst)
+- [Reach out](hi@needle.tools)
 
 ## Development
 
@@ -214,5 +214,4 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
 ## Credits
 
-By [@hybridherbst](https://twitter.com/hybridherbst)  
-🌵 [Needle](https://needle.tools) & [prefrontal cortex](https://prefrontalcortex.de)
+By [Needle](https://needle.tools) & [prefrontal cortex](https://prefrontalcortex.de)
