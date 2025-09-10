@@ -629,8 +629,8 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
         directory = fullPath.substring(0, fullPath.length - fileName.length);
         if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
       }
-      Usd.FS_createPath("", directory, true, true);
-      Usd.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+      USD.FS_createPath("", directory, true, true);
+      USD.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
 
       loadUsdFile(directory, fileName, fullPath, isRootFile);
     };
