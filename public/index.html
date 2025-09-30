@@ -56,16 +56,34 @@
 
     <a id="export-gltf">Export as .glb</a></button>
     <br/>
-  </div>
-  <div class="buttons">
-    <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
-    <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda">Vehicles</a>
-    <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
-  </div>
+    </div>
+    <div class="buttons">
+      <a href="https://github.com/usd-wg/assets">usd-wg/assets</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd">Teapot</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda">McUsd</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda">Bike .usda</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz">Bike .usdz</a>
+      <a class="file" href="?file=https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda">Vehicles</a>
+      <a class="file" href="?file=https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz">Kitchen Set</a>
+    </div>
+
+    <br/>
+
+    <div class="buttons hidden" id="variantInfo">
+      <a>
+        <label for="defaultPrim">Default Prim:</label>
+        <span id="defaultPrim"></span>
+      </a>
+      <a>
+        <label for="variantSet">Variant Set:</label>
+        <span id="variantSet"></span>
+      </a>
+      <a>
+        <label for="variantOptions">Active Variant:</label>
+        <select id="variantOptions"></select>
+      </a>
+    </div>
+
     
     <p id="message-log">
       Waiting for initialization to start...
