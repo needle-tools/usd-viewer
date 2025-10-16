@@ -4,33 +4,36 @@ A USD viewer on the web.
 [Open USD Viewer](https://usd-viewer.needle.tools/)  
 
 There are two main parts:  
-- [USD WASM bindings by Autodesk](https://autodesk-forks.github.io/USD/usd_for_web_demos/)
-- A [Three.js](https://threejs.org/) Hydra Delegate for rendering, originally by Autodesk and improved by hybridherbst
+- [USD WASM bindings for the OpenUSD project](https://github.com/PixarAnimationStudios/OpenUSD), which we improved to work better with three.js.
+- A [Three.js](https://threejs.org/) Hydra Delegate for rendering, maintained by Needle. Originally this work was started by Autodesk, but abandoned in favor of a new WebGPU approach that isn't three.js-compatible. We picked up and made it production-ready.
 
-## Info and Known Issues
+For commercial use of the source code, please contact [hi@needle.tools](mailto:hi@needle.tools).  
 
-- You can load USDZ files, folders, multiple files.  
+## Features
+
+- You can load USDZ files, folders, and multiple files. This allows loading nested compositions.  
   - Try the Kitchen Set from [here](https://openusd.org/release/dl_kitchen_set.html)
   - Try assets from [Asset Explorer](https://asset-explorer.needle.tools)
 - There is a heuristic to determine what the root file is - it's not perfect.  
-- Up axis is only supported for the root file (and very hacky).  
-- Variants are loaded but can't be switched.  
-- The viewer uses SharedArrayBuffers, which have strict header and origin requirements and are not supported on all platforms. 
+- Up axis is only supported for the root file. This is a USD limitation. 
+- Variants are loaded but can't be switched at the moment.
+- The viewer uses `SharedArrayBuffers`, which have strict header and origin requirements and are not supported on all platforms. Make sure your server is setting the correct COOP and COEP headers. 
 
 ### Limitations
 
-- Skinned meshes aren't supported. 
-- Vertex colors aren't supported. 
 - Point instancing isn't supported.  
 - MaterialX isn't supported.  
 - LightsAPI isn't supported.  
 - Texture paths currently can't be resolved correctly for nested USDZ files. One level is fine.
     - Fixing this would require adjustments to the WASM bindings.
+- Skinned meshes are processed in Hydra, and not in the three.js scene graph. From a three.js perspective, they are static meshes that update every frame.
+
+PRs are very welcome!
 
 ## Contribute
 
 - [Report an issue](https://github.com/needle-tools/usd-viewer/issues)  
-- [Reach out](hi@needle.tools)
+- [Reach out](mailto:hi@needle.tools)
 
 ## Development
 
@@ -179,14 +182,7 @@ Usage: `./buildAndMove.sh --mode release --build-dir ../build-wasm --destination
 NOTE: this does not support patching yet as patching doesn't completely work yet
 NOTE: this does not update CMakeLists.txt for debug mode automatically
 
-
-## Origin
-
-Based on [autodesk-forks.github.io/USD/usd_for_web_demos](https://autodesk-forks.github.io/USD/usd_for_web_demos/)  
-Code here: [github.com/autodesk-forks/USD/tree/gh-pages](https://github.com/autodesk-forks/USD/tree/gh-pages)
-This project: [github.com/needle-tools/usd-viewer](https://github.com/needle-tools/usd-viewer)
-
-## Improvements over the original viewer
+## Features
 
 - added drag-and-drop loading
 - dropping folders and multiple files is supported (experimental)
@@ -214,4 +210,8 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
 ## Credits
 
-By [Needle](https://needle.tools) & [prefrontal cortex](https://prefrontalcortex.de)
+By [Needle](https://needle.tools)
+
+Based on [autodesk-forks.github.io/USD/usd_for_web_demos](https://autodesk-forks.github.io/USD/usd_for_web_demos/)  
+Code here: [github.com/autodesk-forks/USD/tree/gh-pages](https://github.com/autodesk-forks/USD/tree/gh-pages)
+This project: [github.com/needle-tools/usd-viewer](https://github.com/needle-tools/usd-viewer)
