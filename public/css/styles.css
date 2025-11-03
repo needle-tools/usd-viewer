@@ -24,6 +24,10 @@ body {
   margin-bottom:15px;
 }
 
+.hidden {
+    display: none!important;
+}
+
 #message-log {
   opacity:0.5;
   font-size:0.75em;
