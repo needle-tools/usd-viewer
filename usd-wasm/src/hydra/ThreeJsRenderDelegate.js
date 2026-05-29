@@ -839,6 +839,15 @@ export class ThreeRenderDelegateInterface {
    */
   createRPrim(typeId, id, instancerId) {
     if (debugPrims) console.log('Creating RPrim: ', typeId, id, typeof id);
+    if (instancerId && !this._warnedInstancing) {
+      this._warnedInstancing = true;
+      console.warn(
+        '[usd-viewer] Scene-graph instancing detected (instancerId: ' + instancerId + ').\n' +
+        'Prototype meshes will render at the origin instead of their instanced positions.\n' +
+        'Pre-process the file with: python tools/bake_instances.py <input.usd>\n' +
+        'See: https://github.com/needle-tools/usd-viewer/issues'
+      );
+    }
     let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;
