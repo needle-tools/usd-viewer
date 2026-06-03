@@ -102,17 +102,45 @@ document.addEventListener("DOMContentLoaded", function() {
     if (clearLogBtn) clearLogBtn.disabled = isLoading && lockClear;
   };
 
+  // Centered "Loading <filename>" overlay shown while a file is loading.
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingOverlayFilename = document.getElementById('loading-overlay-filename');
+  window.showLoadingOverlay = function(name) {
+    if (!loadingOverlay) return;
+    const display = String(name || '').split('/').pop().split('#')[0].split('?')[0] || 'file';
+    if (loadingOverlayFilename) {
+      loadingOverlayFilename.textContent = display;
+      loadingOverlayFilename.title = display;
+    }
+    loadingOverlay.classList.add('visible');
+  };
+  window.hideLoadingOverlay = function() {
+    if (loadingOverlay) loadingOverlay.classList.remove('visible');
+  };
+
+  // Cancel genuinely stops loading: the USD WASM driver has no abort API, so the
+  // only reliable way to interrupt an in-flight load is to reload into the empty
+  // (no-file) state.
+  const loadingCancelBtn = document.getElementById('loading-cancel-btn');
+  if (loadingCancelBtn) {
+    loadingCancelBtn.addEventListener('click', function() {
+      window.location.href = '?file=';
+    });
+  }
+
   // Surface otherwise-silent errors (uncaught exceptions, unhandled promise
   // rejections from the un-awaited load calls) in the footer terminal log.
   window.addEventListener('error', function(event) {
     if (!event || !event.message) return; // ignore resource-load errors without a message
     addToMessageLog(event.message, 'error');
     window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   });
   window.addEventListener('unhandledrejection', function(event) {
     const reason = event && event.reason;
     addToMessageLog(reason && reason.stack ? reason.stack : String(reason), 'error');
     window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   });
 
   // Override console methods - only warnings and errors
@@ -145,6 +173,9 @@ const debugFileHandling = false;
 
 let params = (new URL(document.location)).searchParams;
 let name = params.get("name");
+
+// "?debug_menu_items" reveals menu items hidden by default (e.g. dead-link samples)
+if (params.has("debug_menu_items")) document.body.classList.add("show-debug-menu");
 
 let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
 let messageLog = document.querySelector("#message-log");
@@ -209,7 +240,7 @@ try {
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
     if (window.setViewerLoading) window.setViewerLoading(false);
-    if (messageLog) messageLog.textContent = "Loading done. Drop a USD file and its dependencies to view it, or select a sample.";
+    if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
     animate();
     if (filename) {
       console.log("Loading File...");
@@ -351,6 +382,12 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   // should be loaded last
   if (!isRootFile) return;
 
+  // A file is now loaded — hide the drop hint (covers drag-drop, which otherwise
+  // never sets this) and show the centered loading overlay.
+  const containerEl = document.querySelector("#container");
+  if (containerEl) containerEl.classList.add("have-custom-file");
+  if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
+
   let driver = null;
   const delegateConfig = {
     usdRoot: window.usdRoot,
@@ -366,6 +403,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   window.driver = driver;
   window.driver.Draw();
   if (window.setViewerLoading) window.setViewerLoading(false);
+  if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   messageLog.textContent = "";
 
   let stage = window.driver.GetStage();
@@ -691,6 +729,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
   }
   catch(ex) {
     if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     console.error("Error loading file " + (fileOrHandle && fileOrHandle.name ? fileOrHandle.name : "") + ": " + ex);
   }
 }

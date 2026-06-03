@@ -123,6 +123,15 @@ body {
     display: none;
 }
 
+/* Inline status icon inside the footer log (e.g. the "loading done" check) */
+.log-icon {
+    width: 13px;
+    height: 13px;
+    vertical-align: -2px;
+    margin-right: 6px;
+    color: var(--color-green);
+}
+
 /* Centered drop hint — visible while no model is loaded */
 #dropzone {
     position: fixed;
@@ -182,6 +191,93 @@ body.drag-active .dropzone-inner {
 
 body.drag-active .dropzone-title {
     color: var(--color-green-dark);
+}
+
+/* Centered loading overlay — one row: spinner, label, filename, sep, cancel */
+#loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    padding: 24px;
+    /* backdrop is click-through; only the pill captures clicks */
+    pointer-events: none;
+}
+
+#loading-overlay.visible {
+    display: flex;
+}
+
+.loading-overlay-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(90vw, 560px);
+    padding: 12px 12px 12px 18px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background-color: var(--color-surface);
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    pointer-events: auto;
+}
+
+.spinner-md {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+    border: 2.5px solid var(--border-subtle);
+    border-top-color: var(--color-green);
+    flex-shrink: 0;
+}
+
+.loading-overlay-word {
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.loading-overlay-filename {
+    color: var(--color-text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+    min-width: 0;
+}
+
+.loading-overlay-sep {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.loading-cancel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.loading-cancel-button:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.loading-cancel-button svg {
+    width: 15px;
+    height: 15px;
 }
 
 @keyframes spinner-rotate {
@@ -276,6 +372,15 @@ body.drag-active .dropzone-title {
 
 .dropdown-section {
     padding: 4px 0;
+}
+
+/* Items hidden unless the "?debug_menu_items" URL flag is set (e.g. dead links) */
+.debug-only {
+    display: none;
+}
+
+body.show-debug-menu .debug-only {
+    display: block;
 }
 
 .dropdown-section h4 {
