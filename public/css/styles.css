@@ -56,7 +56,7 @@ body {
 
 .footer-content {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
 }
 
@@ -88,7 +88,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 2px;
     transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
     flex-shrink: 0;
 }
@@ -112,7 +111,6 @@ body {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
-    margin-top: 3px;
     border: 2px solid rgba(255, 255, 255, 0.25);
     border-top-color: var(--color-green);
     border-radius: 50%;
@@ -141,7 +139,8 @@ body {
     justify-content: center;
     /* let drags/clicks fall through to the 3D canvas underneath */
     pointer-events: none;
-    z-index: 50;
+    /* sits above the canvas but below the toolbar + its menu popover */
+    z-index: 10;
     padding: 24px;
 }
 
@@ -200,7 +199,8 @@ body.drag-active .dropzone-title {
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 60;
+    /* above the drop hint, still below the toolbar + its menu popover */
+    z-index: 20;
     padding: 24px;
     /* backdrop is click-through; only the pill captures clicks */
     pointer-events: none;
@@ -299,6 +299,9 @@ body.drag-active .dropzone-title {
     /* Pill: fully rounded left/right ends */
     border-radius: 999px;
     box-shadow: 0 1px 4px rgba(26, 26, 26, 0.06);
+    /* stacking context above the drop hint (10) and loading overlay (20) so the
+       menu popover renders on top of both */
+    z-index: 30;
 }
 
 #container .buttons {
