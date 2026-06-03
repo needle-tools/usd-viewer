@@ -377,12 +377,18 @@ body.drag-active .dropzone-title {
     padding: 4px 0;
 }
 
-/* Items hidden unless the "?debug_menu_items" URL flag is set (e.g. dead links) */
+/* Items hidden unless the "?debug_menu_items" URL flag is set (e.g. dead links).
+   Selectors must out-specify ".dropdown-content a { display: block }" (0,1,1),
+   so they are scoped to ".dropdown-content a.debug-only" (0,2,1). */
 .debug-only {
     display: none;
 }
 
-body.show-debug-menu .debug-only {
+.dropdown-content a.debug-only {
+    display: none;
+}
+
+body.show-debug-menu .dropdown-content a.debug-only {
     display: block;
 }
 
