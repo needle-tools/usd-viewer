@@ -153,7 +153,7 @@ let currentDisplayFilename = "";
 function setFilenameText(__filename) {
   var _filename = __filename.split('/').pop().split('#')[0].split('?')[0];
   /** @type {HTMLElement | null} */
-  const _el = document.querySelector(".filename");
+  const _el = document.querySelector(".filename-text");
   if (_el) _el.innerText = _filename;
   currentDisplayFilename = _filename;
 }
@@ -547,6 +547,24 @@ async function init() {
   
   renderer.domElement.addEventListener("drop", dropHandler);
   renderer.domElement.addEventListener("dragover", dragOverHandler);
+
+  // Highlight the centered drop hint while a file is dragged over the window.
+  // Use an enter/leave depth counter so child elements don't cause flicker.
+  let dragDepth = 0;
+  const setDragActive = (active) => document.body.classList.toggle("drag-active", active);
+  window.addEventListener("dragenter", (ev) => {
+    if (!ev.dataTransfer || Array.from(ev.dataTransfer.types).indexOf("Files") === -1) return;
+    dragDepth++;
+    setDragActive(true);
+  });
+  window.addEventListener("dragleave", () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) setDragActive(false);
+  });
+  window.addEventListener("dragover", (ev) => ev.preventDefault());
+  const endDrag = () => { dragDepth = 0; setDragActive(false); };
+  window.addEventListener("drop", endDrag);
+  window.addEventListener("dragend", endDrag);
 
   // attach to link click handlers so that we don't have to reload the entire page
   const fileLoadingLinks = document.querySelectorAll("a.file");

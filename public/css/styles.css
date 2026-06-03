@@ -66,7 +66,7 @@ body {
     color: rgba(255, 255, 255, 0.85);
     margin: 0;
     font-family: var(--font-code);
-    max-height: 100px;
+    max-height: 40vh;
     overflow-y: auto;
     line-height: 1.4;
     flex: 1;
@@ -121,6 +121,67 @@ body {
 
 .spinner[hidden] {
     display: none;
+}
+
+/* Centered drop hint — visible while no model is loaded */
+#dropzone {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* let drags/clicks fall through to the 3D canvas underneath */
+    pointer-events: none;
+    z-index: 50;
+    padding: 24px;
+}
+
+/* hidden once a model is loaded (#container gains .have-custom-file) */
+#container.have-custom-file ~ #dropzone {
+    display: none;
+}
+
+.dropzone-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 36px 52px;
+    border: 2px dashed var(--border-strong);
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-muted);
+    text-align: center;
+    transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.dropzone-icon {
+    width: 52px;
+    height: 52px;
+    color: var(--color-text-muted);
+}
+
+.dropzone-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.dropzone-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* highlight while a file is dragged anywhere over the window */
+body.drag-active .dropzone-inner {
+    border-color: var(--color-green);
+    background-color: var(--color-info);
+    color: var(--color-green-dark);
+}
+
+body.drag-active .dropzone-title {
+    color: var(--color-green-dark);
 }
 
 @keyframes spinner-rotate {
@@ -196,7 +257,10 @@ body {
     display: none;
     position: absolute;
     background-color: var(--color-surface);
+    /* grow to fit the widest row (e.g. the "USD Working Group Assets" heading) */
+    width: max-content;
     min-width: 200px;
+    max-width: 360px;
     box-shadow: 0 8px 16px rgba(26, 26, 26, 0.12);
     z-index: 1;
     border-radius: 10px;
@@ -223,6 +287,7 @@ body {
     font-weight: 700;
     border-bottom: 1px solid var(--border-subtle);
     padding-bottom: 4px;
+    white-space: nowrap;
 }
 
 .dropdown-content a {
@@ -358,6 +423,23 @@ body {
 #container a span {
     font-size: 0.8em;
     color: var(--color-text-muted);
+}
+
+/* Inline SVG icons that sit left of a text label (filename, Export glTF) */
+.inline-icon {
+    width: 15px;
+    height: 15px;
+    vertical-align: -2px;
+    margin-right: 5px;
+    pointer-events: none;
+}
+
+/* Loaded filename is a label, not a link — no pointer, no hover underline */
+.filename {
+    color: var(--color-text-secondary);
+    padding: 8px 10px;
+    margin: 0 4px;
+    cursor: default;
 }
 
 /* The Needle logo link should not show the text-link underline on hover */
