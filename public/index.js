@@ -92,7 +92,29 @@ document.addEventListener("DOMContentLoaded", function() {
   if (clearLogBtn) {
     clearLogBtn.addEventListener('click', window.clearMessageLog);
   }
-  
+
+  // Loading-state helper: toggles the footer spinner. Pass { lockClear: true }
+  // while the USD module loads to disable the log "Clear" button so the loading
+  // messages stay put; file loads reuse the spinner but leave Clear enabled.
+  const loadingSpinner = document.getElementById('loading-spinner');
+  window.setViewerLoading = function(isLoading, { lockClear = false } = {}) {
+    if (loadingSpinner) loadingSpinner.hidden = !isLoading;
+    if (clearLogBtn) clearLogBtn.disabled = isLoading && lockClear;
+  };
+
+  // Surface otherwise-silent errors (uncaught exceptions, unhandled promise
+  // rejections from the un-awaited load calls) in the footer terminal log.
+  window.addEventListener('error', function(event) {
+    if (!event || !event.message) return; // ignore resource-load errors without a message
+    addToMessageLog(event.message, 'error');
+    window.setViewerLoading(false);
+  });
+  window.addEventListener('unhandledrejection', function(event) {
+    const reason = event && event.reason;
+    addToMessageLog(reason && reason.stack ? reason.stack : String(reason), 'error');
+    window.setViewerLoading(false);
+  });
+
   // Override console methods - only warnings and errors
   console.warn = function(...args) {
     originalConsole.warn.apply(console, args);
@@ -171,10 +193,12 @@ function updateUrl() {
 }
 
 if (messageLog) messageLog.textContent = "Initializing...";
+if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 const initPromise = init();
 
 console.log("Loading USD Module...");
 if (messageLog) messageLog.textContent = "Loading USD Module – this can take a moment...";
+if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 updateUrl();
 try {
   Promise.all([getUsdModule({
@@ -184,19 +208,27 @@ try {
     },
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
+    if (window.setViewerLoading) window.setViewerLoading(false);
     if (messageLog) messageLog.textContent = "Loading done. Drop a USD file and its dependencies to view it, or select a sample.";
     animate();
     if (filename) {
       console.log("Loading File...");
       if (messageLog) messageLog.textContent = "Loading File " + filename;
+      if (window.setViewerLoading) window.setViewerLoading(true);
 
       clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       loadUsdFile(undefined, filename, urlPath, true);
     }
+  }).catch((error) => {
+    // Async rejections aren't caught by the surrounding try/catch — surface them.
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    const err = "Failed to load the USD module: " + error;
+    console.error(err);
   });
 }
 catch (error) {
+  if (window.setViewerLoading) window.setViewerLoading(false);
   if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
     let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
     console.log(error, err);
@@ -333,6 +365,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   }
   window.driver = driver;
   window.driver.Draw();
+  if (window.setViewerLoading) window.setViewerLoading(false);
   messageLog.textContent = "";
 
   let stage = window.driver.GetStage();
@@ -547,6 +580,7 @@ async function init() {
       if (filename) {
         el.classList.add("have-custom-file");
         messageLog.textContent = "Downloading File " + filename + "...";
+        if (window.setViewerLoading) window.setViewerLoading(true);
         updateUrl();
         // get just the filename, no paths
         const parts = filename.split('/');
@@ -638,7 +672,8 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
     await loadingPromise;
   }
   catch(ex) {
-    console.warn("Error loading file", fileOrHandle, ex);
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    console.error("Error loading file " + (fileOrHandle && fileOrHandle.name ? fileOrHandle.name : "") + ": " + ex);
   }
 }
 

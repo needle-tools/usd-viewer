@@ -15,7 +15,11 @@
   <script defer data-domain="usd-viewer.needle.tools" src="https://analytics.needle.tools/js/script.file-downloads.outbound-links.js"></script>
   <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
 
-  
+  <!-- Needle brand typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800&display=swap">
+
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -36,14 +40,21 @@
   </script>
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
-      <a href="https://needle.tools" target="_blank" rel="noopener">
+      <a href="https://needle.tools" target="_blank" rel="noopener" class="needle-logo-link">
         <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
       </a>
-    <a href="#" id="about-link">About <strong>USD Viewer</strong></a>
+    <a href="#" id="about-link"><img src="usd-logo.png" alt="" class="usd-logo" />About <strong>USD&nbsp;Viewer</strong></a>
     <a class="file clear-button" href="?file=">Clear<br/><span>Drop USDZ to load</span></a>
     
     <div class="dropdown">
-      <button class="dropdown-button">Load Sample or drop file</button>
+      <button class="dropdown-button">
+        <svg class="btn-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/>
+          <path d="M3 7l9 4.5L21 7"/>
+          <path d="M12 11.5v10"/>
+        </svg>
+        Load Sample or drop file
+      </button>
       <div class="dropdown-content">
         <div class="dropdown-section">
           <h4>Test Models</h4>
@@ -106,10 +117,11 @@
   
   <div class="footer">
     <div class="footer-content">
+      <span id="loading-spinner" class="spinner notranslate" translate="no" aria-hidden="true" hidden></span>
       <p id="message-log">
         Waiting for initialization to start...
       </p>
-      <button id="clear-log-btn" class="clear-log-button" title="Clear log">×</button>
+      <button id="clear-log-btn" class="clear-log-button" title="Clear log" disabled>Clear</button>
     </div>
     <!--
     <a id="quick-look-link" rel="ar" href="#"><img width="128" height="128" src="ARKit_Glyph.svg" title="ARKit Glyph" style="max-width:100%; height:auto;"></a>

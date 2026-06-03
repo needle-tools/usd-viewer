@@ -1,20 +1,45 @@
 :root {
-    --color-bg-0: rgb(255, 255, 255);
-    --color-bg-1: hsl(209, 36%, 86%);
-    --color-bg-2: hsl(224, 44%, 95%);
-    --color-theme-1: #000000;
-    --color-theme-2: #71a110;
-    --color-text: rgba(23, 22, 22, 0.7);
+    /* Needle brand surfaces */
+    --color-page: #F0F4EF;          /* light green page stage */
+    --color-surface: #FFFFFF;       /* white working surfaces */
+    --color-info: #DBEBE1;          /* callout success */
+
+    /* Needle brand greens */
+    --color-green: #99CC33;
+    --color-green-dark: #74AF52;
+    --color-green-light: #D7DB0A;
+
+    /* Text */
+    --color-text: #1A1A1A;
+    --color-text-secondary: #4A4E4A;
+    --color-text-muted: #767A76;
+    --color-link: #826AED;
+
+    /* Borders */
+    --border-subtle: #D9E2D7;
+    --border-strong: #C6D0C4;
+    --border-focus: #826AED;
+
+    /* Backwards-compatible aliases used across the stylesheet */
+    --color-bg-0: var(--color-surface);
+    --color-bg-1: var(--color-page);
+    --color-bg-2: var(--color-info);
+    --color-theme-1: var(--color-text);
+    --color-theme-2: var(--color-green-dark);
+
+    --font-body: "Nunito Sans", system-ui, -apple-system, sans-serif;
+    --font-code: "Monaspace Neon", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 body {
     margin: 0;
     padding: 0;
-    font-family: sans-serif;
+    font-family: var(--font-body);
+    color: var(--color-text);
     min-height: 100vh;
     background-attachment: fixed;
-    background-color: var(--color-bg-1);
-    background-image: linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
+    /* Solid light-green stage — brand: no decorative gradients */
+    background-color: var(--color-page);
 }
 
 .footer {
@@ -22,9 +47,9 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: rgba(0, 0, 0, 0.8);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    /* Dark terminal bar — solid, no blur / glass */
+    background-color: #222125;
+    border-top: 1px solid #40393B;
     padding: 8px 15px;
     z-index: 100;
 }
@@ -36,55 +61,87 @@ body {
 }
 
 #message-log {
-    opacity: 0.9;
+    opacity: 1;
     font-size: 0.75em;
-    color: white;
+    color: rgba(255, 255, 255, 0.85);
     margin: 0;
-    font-family: monospace;
+    font-family: var(--font-code);
     max-height: 100px;
     overflow-y: auto;
-    line-height: 1.3;
+    line-height: 1.4;
     flex: 1;
     white-space: pre-wrap;
     word-wrap: break-word;
 }
 
 .clear-log-button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    width: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-body);
+    font-size: 0.75em;
+    font-weight: 600;
     height: 24px;
+    padding: 0 10px;
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
     margin-top: 2px;
-    transition: background-color 0.2s;
+    transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
     flex-shrink: 0;
 }
 
 .clear-log-button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.clear-log-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Loading spinner (footer terminal bar) */
+.spinner {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--color-green);
+    border-radius: 50%;
+    animation: spinner-rotate 0.7s linear infinite;
+}
+
+.spinner[hidden] {
+    display: none;
+}
+
+@keyframes spinner-rotate {
+    to { transform: rotate(360deg); }
 }
 
 #container {
-    background-color: var(--color-bg-0);
-    border-radius: 20px;
+    background-color: var(--color-surface);
     font-size: 0.9em;
-    min-height: 54px;
+    min-height: 44px;
     display: flex;
+    align-items: center;
 
-    padding-left: 15px;
-    padding-right: 15px;
+    padding-left: 16px;
+    padding-right: 16px;
     margin-top: 5px;
 
-    border-radius: 32px;
-    box-shadow: 0 2px 15px #02022b33;
+    border: 1px solid var(--border-subtle);
+    /* Pill: fully rounded left/right ends */
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(26, 26, 26, 0.06);
 }
 
 #container .buttons {
@@ -95,9 +152,12 @@ body {
 }
 
 .needle-logo {
-    height: 32.5px;
+    height: 26px;
     margin-right: 10px;
-    opacity: 0.8;
+    /* block removes the inline baseline gap so the logo sits centered */
+    display: block;
+    /* brand: logo must not be recolored or faded — keep full opacity */
+    opacity: 1;
 }
 
 /* Dropdown Styles */
@@ -109,28 +169,38 @@ body {
 .dropdown-button {
     background-color: transparent;
     border: none;
-    color: var(--color-text);
-    padding: 10px;
+    color: var(--color-text-secondary);
+    padding: 8px 10px;
     margin: 0 4px;
     cursor: pointer;
     font-family: inherit;
     font-size: inherit;
-    transition: color 0.2s linear;
+    transition: color 0.15s linear;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Inline icon inside the dropdown button */
+.dropdown-button .btn-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .dropdown-button:hover {
-    color: var(--color-theme-1);
+    color: var(--color-text);
 }
 
 .dropdown-content {
     display: none;
     position: absolute;
-    background-color: var(--color-bg-0);
+    background-color: var(--color-surface);
     min-width: 200px;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 16px rgba(26, 26, 26, 0.12);
     z-index: 1;
-    border-radius: 8px;
-    border: 1px solid var(--color-bg-1);
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
     padding: 8px 0;
     top: 100%;
     left: 0;
@@ -146,15 +216,17 @@ body {
 
 .dropdown-section h4 {
     margin: 8px 12px 4px 12px;
-    font-size: 0.85em;
-    color: var(--color-theme-2);
-    font-weight: 600;
-    border-bottom: 1px solid var(--color-bg-1);
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-subtle);
     padding-bottom: 4px;
 }
 
 .dropdown-content a {
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     padding: 6px 12px;
     text-decoration: none;
     display: block;
@@ -163,8 +235,8 @@ body {
 }
 
 .dropdown-content a:hover {
-    background-color: var(--color-bg-1);
-    color: var(--color-theme-1);
+    background-color: var(--color-info);
+    color: var(--color-text);
 }
 
 /* Dialog Styles */
@@ -176,17 +248,18 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(26, 26, 26, 0.4);
 }
 
 .dialog {
-    background-color: var(--color-bg-0);
-    margin: 80px     auto;
+    background-color: var(--color-surface);
+    margin: 80px auto;
     padding: 0;
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     width: 80%;
     max-width: 500px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
 }
 
 .dialog-header {
@@ -194,13 +267,14 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px 16px 24px;
-    border-bottom: 1px solid var(--color-bg-1);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .dialog-header h2 {
     margin: 0;
-    color: var(--color-theme-1);
+    color: var(--color-text);
     font-size: 1.4em;
+    font-weight: 800;
 }
 
 .dialog-close {
@@ -208,7 +282,7 @@ body {
     border: none;
     font-size: 24px;
     cursor: pointer;
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     padding: 0;
     width: 30px;
     height: 30px;
@@ -216,17 +290,17 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    transition: background-color 0.2s;
+    transition: background-color 0.15s;
 }
 
 .dialog-close:hover {
-    background-color: var(--color-bg-1);
-    color: var(--color-theme-1);
+    background-color: var(--color-info);
+    color: var(--color-text);
 }
 
 .dialog-content {
     padding: 20px 24px 24px 24px;
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     line-height: 1.5;
 }
 
@@ -238,19 +312,28 @@ body {
     margin-bottom: 0;
 }
 
+.dialog-content a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.dialog-content a:hover {
+    text-decoration: underline;
+}
+
 .dialog-actions {
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid var(--color-bg-1);
+    border-top: 1px solid var(--border-subtle);
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
 }
 
 .dialog-actions a {
-    color: var(--color-theme-2);
+    color: var(--color-link);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .dialog-actions a:hover {
@@ -259,22 +342,49 @@ body {
 }
 
 #container a {
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     text-decoration: none;
-    padding: 10px;
+    padding: 8px 10px;
     margin: 0 4px;
-    transition: color 0.2s linear;
+    transition: color 0.15s linear;
 }
 
 #container a:hover, .dropdown-button:hover {
-    color: var(--color-theme-1);
+    color: var(--color-text);
     text-decoration: underline;
     cursor: pointer;
 }
 
 #container a span {
     font-size: 0.8em;
-    opacity: 0.8;
+    color: var(--color-text-muted);
+}
+
+/* The Needle logo link should not show the text-link underline on hover */
+#container a.needle-logo-link,
+#container a.needle-logo-link:hover {
+    padding: 8px 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* About link: USD logo sits left of the label, vertically centered */
+.usd-logo {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+}
+
+/* Visible focus ring on every interactive element — brand accessibility */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .have-custom-file a.file.hide {
@@ -296,15 +406,23 @@ body {
     display: none;
 }
 
-/*
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-bg-0: rgb(23, 22, 22);
-        --color-bg-1: hsl(209, 36%, 16%);
-        --color-bg-2: hsl(224, 44%, 5%);
-        --color-theme-1: #ffffff;
-        --color-theme-2: #4075a6;
-        --color-text: rgba(255, 255, 255, 0.7);
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+    /* No spin — show a calm, evenly-coloured ring instead of a frozen arc */
+    .spinner {
+        border-color: var(--color-green);
+        opacity: 0.7;
     }
 }
-*/
+
+@media (prefers-contrast: more) {
+    #container,
+    .dropdown-content,
+    .dialog {
+        border-color: var(--border-strong);
+        box-shadow: none;
+    }
+}
