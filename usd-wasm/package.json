@@ -38,9 +38,15 @@
   "peerDependencies": {
     "three": ">=0.160.0"
   },
+  "scripts": {
+    "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
+    "test:three-matrix": "node scripts/run-three-matrix.mjs"
+  },
   "devDependencies": {
-    "vite": "^5.2.13",
-    "@types/three": "^0.164.1"
+    "@needle-tools/three-test-matrix": "^0.1.0",
+    "@playwright/test": "^1.60.0",
+    "@types/three": "^0.164.1",
+    "vite": "^5.2.13"
   },
   "publishConfig": {
     "access": "public",
