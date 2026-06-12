@@ -619,7 +619,8 @@ button:focus-visible {
     /* hidden state: nudged down + faded; .is-visible animates it in */
     opacity: 0;
     transform: translateY(12px);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    /* transition every animatable property change (fade/slide in + out) */
+    transition: all 0.25s ease;
     pointer-events: none;
 }
 
@@ -639,6 +640,10 @@ button:focus-visible {
     padding: 14px 38px 14px 16px;
     font-family: var(--font-body);
     line-height: 1.35;
+    /* ease the themed background/text change between rotated items
+       (solid backgrounds + text colour tween; CSS can't tween gradients,
+       which the card's opacity fade covers instead) */
+    transition: all 0.25s ease;
 }
 
 .whats-new-kicker {

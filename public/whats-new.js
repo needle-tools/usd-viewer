@@ -20,6 +20,10 @@ const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
 const DISMISSED_KEY = "needle-whats-new-dismissed";
 const DISMISS_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
 
+// Remembers the id of the item on screen, so the next page load can start on a
+// *different* one (variety across refreshes).
+const LAST_KEY = "needle-whats-new-last";
+
 // How long each item stays on screen before rotating to the next one.
 const ROTATE_INTERVAL_MS = 9000;
 
@@ -193,12 +197,49 @@ const KICKER_BY_KIND = {
   crosspromo: "From Needle",
 };
 
+// Pick which item to show first on this load. Weighted by priority (higher
+// priority = more likely), and — when there's more than one item — the item
+// shown on the previous load is excluded so a refresh lands on something else.
+function pickStartIndex(items) {
+  let lastId = null;
+  try {
+    lastId = localStorage.getItem(LAST_KEY);
+  } catch {
+    /* ignore */
+  }
+  const baseWeight = (it) => Math.max(0, Number(it.priority) || 0) + 1;
+  let weights = items.map((it) =>
+    items.length > 1 && it.id === lastId ? 0 : baseWeight(it)
+  );
+  let total = weights.reduce((a, b) => a + b, 0);
+  // If excluding the last item zeroed everything out, fall back to plain weights.
+  if (total <= 0) {
+    weights = items.map(baseWeight);
+    total = weights.reduce((a, b) => a + b, 0);
+  }
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r < 0) return i;
+  }
+  return items.length - 1;
+}
+
+function rememberShown(id) {
+  try {
+    localStorage.setItem(LAST_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+
 function start(initialItems, dom) {
   const { root, link, kicker, title, subtitle, cta, dots, dismiss } = dom;
 
   // Mutable copy — dismissing an item removes it from the live rotation.
   const items = [...initialItems];
-  let index = 0;
+  // Start on a priority-weighted random item (different from last refresh).
+  let index = pickStartIndex(items);
   let timer = null;
 
   // Rotation dots — one per item, only shown when there's more than one.
@@ -234,6 +275,9 @@ function start(initialItems, dom) {
     subtitle.hidden = !b.subtitle;
 
     dotEls.forEach((d, di) => d.classList.toggle("is-active", di === i));
+
+    // Remember what's on screen so the next refresh can start elsewhere.
+    rememberShown(item.id);
   }
 
   function show(i) {
@@ -305,7 +349,7 @@ function start(initialItems, dom) {
   // First paint.
   rebuildDots();
   root.hidden = false;
-  render(0);
+  render(index);
   // next frame so the slide/fade-in transition runs from the hidden state
   window.requestAnimationFrame(() => root.classList.add("is-visible"));
   startTimer();
