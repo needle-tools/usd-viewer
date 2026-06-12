@@ -12,7 +12,7 @@
     "fastify": "^4.22.0"
   },
   "engines": {
-    "node": ">16.x"
+    "node": "22.x"
   },
   "repository": {
     "url": "https://glitch.com/edit/#!/usd-viewer"
