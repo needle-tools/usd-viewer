@@ -27,12 +27,17 @@ fastify.register(require('@fastify/static'), {
   decorateReply: false,
 })
 
-fastify.listen({port: process.env.PORT || 3003, host: '0.0.0.0'}, function(err, address) {
+const port = process.env.PORT || 3003;
+
+fastify.listen({port, host: '0.0.0.0'}, function(err, address) {
   if (err) {
     fastify.log.error(err);
-    console.error("Error starting server on port 3003", err);
+    console.error(`Error starting server on port ${port}`, err);
     process.exit(1);
   }
-  console.log(`Your app is listening on ${address}`);
+  // We bind to 0.0.0.0 (all interfaces) so the server is reachable from other
+  // devices, but 0.0.0.0 isn't a browsable address — print a clickable
+  // localhost URL for local development instead.
+  console.log(`Your app is listening on http://localhost:${port}`);
   fastify.log.info(`server listening on ${address}`);
 });

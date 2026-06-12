@@ -602,6 +602,140 @@ button:focus-visible {
     display: none;
 }
 
+/* "What's New" banner — small, subtle, bottom-right announcement card that
+   rotates through items from the Needle marketer feed. Sits above the footer
+   terminal bar (z-index 100) but is small enough not to crowd the canvas. */
+.whats-new {
+    position: fixed;
+    right: 14px;
+    /* clear the footer terminal bar (single-line height + breathing room) */
+    bottom: 58px;
+    z-index: 110;
+    width: 300px;
+    max-width: calc(100vw - 28px);
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    overflow: hidden;
+    /* hidden state: nudged down + faded; .is-visible animates it in */
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+}
+
+.whats-new.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.whats-new-link {
+    display: block;
+    /* banner.css from the feed sets the background + readable text colour;
+       these are the layout defaults it themes on top of */
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 14px 38px 14px 16px;
+    font-family: var(--font-body);
+    line-height: 1.35;
+}
+
+.whats-new-kicker {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 3px;
+}
+
+.whats-new-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.whats-new-subtitle {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.whats-new-cta {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Dismiss (×) — small, lives in the top-right corner of the card */
+.whats-new-dismiss {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    /* inherit the banner's text colour, kept subtle until hover */
+    color: currentColor;
+    background: transparent;
+    opacity: 0.55;
+    cursor: pointer;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+
+.whats-new-dismiss:hover {
+    opacity: 1;
+    background: rgba(127, 127, 127, 0.18);
+}
+
+.whats-new-dismiss svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Rotation indicator dots */
+.whats-new-dots {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+    pointer-events: none;
+}
+
+.whats-new-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.whats-new-dot.is-active {
+    opacity: 0.85;
+}
+
+@media (max-width: 520px) {
+    .whats-new {
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         transition-duration: 0.01ms !important;
