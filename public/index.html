@@ -1,17 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>USD Viewer</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, user-scalable=no, viewport-fit=cover" />
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <meta name="twitter:card" content="summary"/>
-  <meta name="twitter:creator" content="https://autodesk-forks.github.io/USD/ and @hybridherbst"/>
+
+  <title>USD &amp; USDZ Viewer — View OpenUSD Files Online | Needle</title>
+  <meta name="description" content="Free online USD &amp; USDZ viewer by Needle. Drag &amp; drop OpenUSD files (.usd, .usdz, .usda, .usdc) to view them in your browser and export to glTF — powered by the real OpenUSD runtime compiled to WebAssembly." />
+  <meta name="author" content="Needle" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0b1320" />
   <link rel="canonical" href="https://usd-viewer.needle.tools/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Needle USD Viewer" />
   <meta property="og:url" content="https://usd-viewer.needle.tools/" />
-  <meta property="og:title" content="USD Viewer" />
-  <meta property="og:description" content="Simple USD Viewer based on Autodesk's USD WASM Fork" />
+  <meta property="og:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
+  <meta property="og:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by the real OpenUSD runtime compiled to WebAssembly." />
   <meta property="og:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
+  <meta property="og:image:alt" content="USD Viewer by Needle" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
+  <meta name="twitter:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by the real OpenUSD runtime compiled to WebAssembly." />
+  <meta name="twitter:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
+
+  <!-- Structured data: this is an in-browser web application -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "USD Viewer",
+    "url": "https://usd-viewer.needle.tools/",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Any (modern web browser)",
+    "browserRequirements": "Requires a browser with WebAssembly and SharedArrayBuffer support",
+    "description": "Free online viewer for OpenUSD files (.usd, .usdz, .usda, .usdc). View USD and USDZ models in the browser and export them to glTF, powered by the real OpenUSD runtime compiled to WebAssembly.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "creator": { "@type": "Organization", "name": "Needle", "url": "https://needle.tools" }
+  }
+  </script>
 
   <script defer data-domain="usd-viewer.needle.tools" src="https://analytics.needle.tools/js/script.file-downloads.outbound-links.js"></script>
   <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
@@ -41,6 +71,12 @@
   </script>
   <!-- Subtle rotating "What's New" banner (bottom-right), fed by the Needle marketer feed -->
   <script type="module" src="whats-new.js"></script>
+
+  <!-- Crawlable page heading. Visually hidden because the UI is a full-bleed 3D
+       canvas with its own chrome, but search engines and screen readers need a
+       real <h1>. -->
+  <h1 class="sr-only">USD &amp; USDZ Viewer — view and export OpenUSD files online</h1>
+
   <div id="container" style="position:absolute; margin:5px;">
     <div class="buttons">
       <a href="https://needle.tools" target="_blank" rel="noopener" class="needle-logo-link">
