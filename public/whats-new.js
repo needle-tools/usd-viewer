@@ -11,6 +11,8 @@
 // Frequency and dismissal are the consumer's responsibility (the API is
 // stateless on exposure), so this module owns rotation + dismissal.
 
+import { track, withUtm } from "./analytics.js";
+
 const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
 
 // Dismissal is per-item and time-limited: clicking × on a card hides only that
@@ -264,7 +266,9 @@ function start(initialItems, dom) {
     // Theme the card from the item's `colors` hints (ignoring the feed's
     // pre-baked banner.css); falls back to subtle USD blue when absent.
     link.style.cssText = themeFromColors(item.colors);
-    link.href = item.url || "#";
+    // Tag outbound marketer links with campaign attribution so the destination
+    // can credit the viewer. utm_content carries the specific item id.
+    link.href = item.url ? withUtm(item.url, { content: item.id }) : "#";
     if (!item.url) link.removeAttribute("target");
     else link.target = "_blank";
 
@@ -327,10 +331,17 @@ function start(initialItems, dom) {
     startTimer();
   }
 
-  // Click the card through — record an outbound event in Plausible if present.
+  // Click the card through — record the outbound click in Rybbit. (Rybbit also
+  // auto-tracks outbound links, but the explicit event carries the item id so
+  // clicks can be attributed to a specific marketer card.)
   link.addEventListener("click", () => {
-    if (typeof window.plausible === "function" && items[index]?.url) {
-      window.plausible("whats-new:click", { props: { id: items[index].id } });
+    const current = items[index];
+    if (current?.url) {
+      track("whats_new_click", {
+        id: current.id,
+        kind: current.kind,
+        url: current.url,
+      });
     }
   });
 

@@ -43,8 +43,22 @@
   }
   </script>
 
-  <script defer data-domain="usd-viewer.needle.tools" src="https://analytics.needle.tools/js/script.file-downloads.outbound-links.js"></script>
-  <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+  <!-- Privacy-friendly analytics (Rybbit). Outbound-link clicks are tracked
+       automatically; in-app clicks and caught USD errors are reported
+       explicitly via analytics.js.
+
+       Loaded from a same-origin path (/api/script.js) that server.js proxies to
+       analytics-2.needle.tools. This is required because index.html is served
+       with COEP: require-corp (for SharedArrayBuffer): under that policy the
+       browser blocks any cross-origin subresource lacking a CORP header, which
+       the Rybbit endpoint does not send. Proxying makes it same-origin. The
+       Rybbit script derives its API base from this src, so all of its calls
+       (/track, /identify, /site/tracking-config/...) stay same-origin too. -->
+  <script
+    src="/api/script.js"
+    data-site-id="6bc313ba3488"
+    defer
+  ></script>
 
   <!-- Needle brand typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

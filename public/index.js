@@ -3,6 +3,7 @@ import { ThreeRenderDelegateInterface } from "./usd/hydra/ThreeJsRenderDelegate.
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { track, trackError } from './analytics.js';
 import './usd/bindings/emHdBindings.js';
 
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
@@ -28,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
   if (aboutLink) {
     aboutLink.addEventListener('click', function(event) {
       event.preventDefault();
+      track('open_about');
       openAboutDialog();
     });
   }
@@ -256,6 +258,7 @@ try {
     if (window.setViewerLoading) window.setViewerLoading(false);
     const err = "Failed to load the USD module: " + error;
     console.error(err);
+    trackError('usd_module_init', error);
   });
 }
 catch (error) {
@@ -264,11 +267,13 @@ catch (error) {
     let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
     console.log(error, err);
     if (messageLog) messageLog.textContent = err;
+    trackError('unsupported_browser', error, { reason: 'SharedArrayBuffer' });
   }
   else {
     let err = "Your current browser doesn't support USD-for-web. Error during initialization: " + error;
     console.log(err);
     if (messageLog) messageLog.textContent = err;
+    trackError('init', error);
   }
 }
 
@@ -286,6 +291,7 @@ const gltfExportBtn = document.getElementById('export-gltf');
 if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
   const exporter = new GLTFExporter();
   console.log("EXPORTING GLTF", window.usdRoot);
+  track('export_gltf', { file: currentDisplayFilename || undefined });
   exporter.parse( window.usdRoot, function ( gltf ) {
     const blob = new Blob([gltf], {type: 'application/octet-stream'});
     const url = URL.createObjectURL(blob);
@@ -300,8 +306,9 @@ if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
   },
   function (error) {
     console.error(error);
+    trackError('export_gltf', error);
   },
-  { 
+  {
     binary: true,
     // not possible right now since USD controls animation bindings,
     // it's not a three.js clip
@@ -609,13 +616,21 @@ async function init() {
   for(let link of fileLoadingLinks) {
     link.addEventListener('click', async function(event) {
       event.preventDefault();
-      
+
       let params = new Map();
       try {
         params = (new URL(event.target.href)).searchParams;
       }
       catch {}
       filename = params.get("file");
+
+      // Distinguish loading a sample from clicking "Clear" (empty file).
+      if (filename) {
+        const label = (link.textContent || '').trim();
+        track('load_sample', { file: filename, label });
+      } else {
+        track('clear_model');
+      }
       
       if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
       if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
@@ -731,6 +746,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     console.error("Error loading file " + (fileOrHandle && fileOrHandle.name ? fileOrHandle.name : "") + ": " + ex);
+    trackError('load_file', ex, { file: fileOrHandle && fileOrHandle.name });
   }
 }
 
@@ -738,6 +754,7 @@ function testAndLoadFile(file) {
   let ext = file.name.split('.').pop();
   if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + ext);
   if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
+    track('load_file', { method: 'drop', ext });
     clearStage();
     // Clear console output when loading a new file
     if (window.clearMessageLog) {
