@@ -83,6 +83,14 @@
     import { init } from './index.js';
     init();
   </script>
+  <!-- Official Needle marketer engagement tracker. Exposes window.needleWhatsNew
+       (impression/hover/click); whats-new.js calls it imperatively because our
+       single rotating banner can't be followed by the script's DOM scan. Served
+       with Cross-Origin-Resource-Policy: cross-origin, so it loads under this
+       page's COEP: require-corp. Loaded before whats-new.js so the global is
+       ready early (whats-new.js also queues calls until it appears). -->
+  <script defer src="https://marketer.needle.tools/whatsnew.js"></script>
+
   <!-- Subtle rotating "What's New" banner (bottom-right), fed by the Needle marketer feed -->
   <script type="module" src="whats-new.js"></script>
 

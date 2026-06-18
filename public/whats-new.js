@@ -11,9 +11,76 @@
 // Frequency and dismissal are the consumer's responsibility (the API is
 // stateless on exposure), so this module owns rotation + dismissal.
 
-import { track, withUtm } from "./analytics.js";
+import { track } from "./analytics.js";
 
 const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
+
+// Engagement funnel (shown → hovered → clicked). Clicks are already counted by
+// the item's `url` (a /r/{id} tracked redirect we use as the CTA href), so we
+// only ever report impression + hover — never a click (that would double-count).
+//
+// We delegate to the marketer feed's official tracker (whatsnew.js, loaded via a
+// <script> tag in index.html), which exposes window.needleWhatsNew with an
+// imperative API for custom/rotating renderers like ours. We deliberately do NOT
+// hand-roll our own /e/{id} beacons (the tracker owns the COEP-safe transport
+// and per-session dedup). All we add is safety: the tracker loads async, so a
+// call can land before window.needleWhatsNew exists — we queue those and flush
+// once it appears, and console.debug anything unexpected.
+
+// Where the hint is shown — kept identical to the `surface` we query the feed
+// with so impression/click stats line up. hostname stays correct on
+// staging / preview domains too.
+const ENGAGE_SURFACE = location.hostname || "usd-viewer.needle.tools";
+
+// Calls made before the tracker script finished loading wait here.
+const pendingEngagement = [];
+let trackerPollArmed = false;
+
+// Drain the queue into window.needleWhatsNew. Returns false if it isn't ready.
+function flushEngagement() {
+  const api = window.needleWhatsNew;
+  if (!api) return false;
+  while (pendingEngagement.length) {
+    const { id, type } = pendingEngagement.shift();
+    try {
+      if (typeof api[type] === "function") {
+        api[type](id, { surface: ENGAGE_SURFACE });
+      } else {
+        console.debug(`[whats-new] tracker has no ${type}() method`, api);
+      }
+    } catch (err) {
+      console.debug(`[whats-new] needleWhatsNew.${type}() threw`, err);
+    }
+  }
+  return true;
+}
+
+// Report an impression / hover for `id`. Safe to call on every render tick — the
+// tracker dedups per id+type per session internally.
+function trackEngagement(id, type) {
+  if (!id) {
+    console.debug("[whats-new] engagement skipped — missing item id", { type });
+    return;
+  }
+  pendingEngagement.push({ id, type });
+  if (flushEngagement() || trackerPollArmed) return;
+
+  // Tracker not on window yet (async <script> still loading, or blocked). Poll
+  // briefly, then give up and report what was dropped — never block the banner.
+  trackerPollArmed = true;
+  let tries = 0;
+  const timer = window.setInterval(() => {
+    if (flushEngagement() || (tries += 1) >= 20) {
+      window.clearInterval(timer);
+      if (pendingEngagement.length) {
+        console.debug(
+          "[whats-new] engagement tracker (window.needleWhatsNew) never loaded — dropped",
+          pendingEngagement.splice(0).map((e) => `${e.type}:${e.id}`)
+        );
+      }
+    }
+  }, 250);
+}
 
 // Dismissal is per-item and time-limited: clicking × on a card hides only that
 // item, for 12 hours. We persist an { id: dismissedAtMs } map; an item is
@@ -266,11 +333,16 @@ function start(initialItems, dom) {
     // Theme the card from the item's `colors` hints (ignoring the feed's
     // pre-baked banner.css); falls back to subtle USD blue when absent.
     link.style.cssText = themeFromColors(item.colors);
-    // Tag outbound marketer links with campaign attribution so the destination
-    // can credit the viewer. utm_content carries the specific item id.
-    link.href = item.url ? withUtm(item.url, { content: item.id }) : "#";
+    // `item.url` is the marketer's /r/{id} tracked click-redirect — using it as
+    // the href is what counts the click, so we link it verbatim (no UTM rewrite;
+    // that would mangle the redirect). `targetUrl` is an untracked raw fallback
+    // we deliberately don't use in a browser.
+    link.href = item.url || "#";
     if (!item.url) link.removeAttribute("target");
     else link.target = "_blank";
+
+    // Count the impression for the item now on screen.
+    trackEngagement(item.id, "impression");
 
     kicker.textContent = KICKER_BY_KIND[item.kind] || "What's new";
     title.textContent = b.title || "";
@@ -351,11 +423,27 @@ function start(initialItems, dom) {
     dismissCurrent();
   });
 
-  // Pause rotation while the user is hovering / focused on the card.
-  root.addEventListener("mouseenter", stopTimer);
-  root.addEventListener("mouseleave", startTimer);
-  root.addEventListener("focusin", stopTimer);
-  root.addEventListener("focusout", startTimer);
+  // Pause rotation while the user is hovering / focused on the card, and record
+  // the hover — but only after a short dwell, so a quick pass-through over the
+  // bottom-right card doesn't count (mirrors the official tracker's 400ms gate).
+  let hoverTimer = null;
+  const onEngageStart = () => {
+    stopTimer();
+    const id = items[index]?.id;
+    if (!id) return;
+    hoverTimer = window.setTimeout(() => trackEngagement(id, "hover"), 400);
+  };
+  const onEngageEnd = () => {
+    startTimer();
+    if (hoverTimer) {
+      window.clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  };
+  root.addEventListener("mouseenter", onEngageStart);
+  root.addEventListener("mouseleave", onEngageEnd);
+  root.addEventListener("focusin", onEngageStart);
+  root.addEventListener("focusout", onEngageEnd);
 
   // First paint.
   rebuildDots();

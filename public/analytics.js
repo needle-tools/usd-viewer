@@ -38,31 +38,3 @@ export function trackError(context, error, props = {}) {
   const message = error && error.message ? error.message : String(error);
   track("viewer_error", { context, message: message.slice(0, 500), ...props });
 }
-
-/**
- * Append Needle campaign-attribution params to an outbound URL so the
- * destination's analytics can credit this viewer. Existing query params are
- * preserved; we never overwrite a utm_* value the link already carries.
- * Returns the original string unchanged if it isn't a valid absolute URL.
- * @param {string} rawUrl
- * @param {{ campaign?: string, content?: string }} [opts]
- */
-export function withUtm(rawUrl, opts = {}) {
-  try {
-    const url = new URL(rawUrl);
-    const defaults = {
-      utm_source: "usd-viewer",
-      utm_medium: "referral",
-      utm_campaign: opts.campaign || "whats-new",
-    };
-    for (const [key, value] of Object.entries(defaults)) {
-      if (value && !url.searchParams.has(key)) url.searchParams.set(key, value);
-    }
-    if (opts.content && !url.searchParams.has("utm_content")) {
-      url.searchParams.set("utm_content", opts.content);
-    }
-    return url.toString();
-  } catch {
-    return rawUrl;
-  }
-}
