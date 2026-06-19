@@ -183,6 +183,12 @@ let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386
 let messageLog = document.querySelector("#message-log");
 let currentDisplayFilename = "";
 
+// Lowercase file extension from a name or URL, with any query/hash stripped.
+// Used only for analytics — extensions are not sensitive (unlike names/paths).
+function extOf(name) {
+  return String(name || "").split("#")[0].split("?")[0].split(".").pop().toLowerCase();
+}
+
 function setFilenameText(__filename) {
   var _filename = __filename.split('/').pop().split('#')[0].split('?')[0];
   /** @type {HTMLElement | null} */
@@ -249,6 +255,12 @@ try {
       if (messageLog) messageLog.textContent = "Loading File " + filename;
       if (window.setViewerLoading) window.setViewerLoading(true);
 
+      // Privacy-safe: send only the file type and the source host — never the
+      // full URL, which can carry signed-link tokens or private asset ids.
+      let host = "";
+      try { host = new URL(filename).hostname; } catch { /* relative/odd URL */ }
+      track('load_url', { method: 'url', type: extOf(filename), host });
+
       clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       loadUsdFile(undefined, filename, urlPath, true);
@@ -289,34 +301,43 @@ if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
 
 const gltfExportBtn = document.getElementById('export-gltf');
 if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
+  evt.preventDefault();
   const exporter = new GLTFExporter();
   console.log("EXPORTING GLTF", window.usdRoot);
-  track('export_gltf', { file: currentDisplayFilename || undefined });
-  exporter.parse( window.usdRoot, function ( gltf ) {
-    const blob = new Blob([gltf], {type: 'application/octet-stream'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    let filename = currentDisplayFilename;
-    // strip extension, strip path
-    filename = filename.split('/').pop()?.split('.')[0].split('?')[0] || "export";
-    a.download = filename + ".glb";
-    a.click();
-    URL.revokeObjectURL(url);
-  },
-  function (error) {
-    console.error(error);
+  try {
+    exporter.parse( window.usdRoot, function ( gltf ) {
+      const blob = new Blob([gltf], {type: 'application/octet-stream'});
+      // Completed export: full source name + the exported glb size in bytes.
+      track('export_gltf', { file: currentDisplayFilename || undefined, bytes: blob.size });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      let filename = currentDisplayFilename;
+      // strip extension, strip path
+      filename = filename.split('/').pop()?.split('.')[0].split('?')[0] || "export";
+      a.download = filename + ".glb";
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    function (error) {
+      // Async export failure (GLTFExporter's error callback).
+      console.error(error);
+      trackError('export_gltf', error);
+    },
+    {
+      binary: true,
+      // not possible right now since USD controls animation bindings,
+      // it's not a three.js clip
+      animations: [
+        // window.usdRoot.animations[0]
+      ]
+    });
+  } catch (error) {
+    // parse() can also throw synchronously (before the error callback runs) —
+    // report that too so a failed export is never silent.
+    console.error("glTF export failed:", error);
     trackError('export_gltf', error);
-  },
-  {
-    binary: true,
-    // not possible right now since USD controls animation bindings,
-    // it's not a three.js clip
-    animations: [
-      // window.usdRoot.animations[0]
-    ]
-  });
-  evt.preventDefault();
+  }
 });
 
 function getAllLoadedFiles(){
@@ -626,6 +647,8 @@ async function init() {
 
       // Distinguish loading a sample from clicking "Clear" (empty file).
       if (filename) {
+        // Samples are our own curated dropdown links (not user content), so the
+        // full name/URL is safe and useful here — unlike user drops.
         const label = (link.textContent || '').trim();
         track('load_sample', { file: filename, label });
       } else {
@@ -746,7 +769,8 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     console.error("Error loading file " + (fileOrHandle && fileOrHandle.name ? fileOrHandle.name : "") + ": " + ex);
-    trackError('load_file', ex, { file: fileOrHandle && fileOrHandle.name });
+    // Drops are user content → aggregate posture: report the type, not the name.
+    trackError('load_file', ex, { type: extOf(fileOrHandle && fileOrHandle.name) });
   }
 }
 
@@ -754,7 +778,12 @@ function testAndLoadFile(file) {
   let ext = file.name.split('.').pop();
   if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + ext);
   if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
-    track('load_file', { method: 'drop', ext });
+    track('load_file', {
+      method: 'drop',
+      files: 1,
+      bytes: file.size,
+      types: extOf(file.name),
+    });
     clearStage();
     // Clear console output when loading a new file
     if (window.clearMessageLog) {
@@ -938,10 +967,22 @@ async function handleFilesystemEntries(entries) {
 
   console.log("All files", allFiles);
 
+  // Privacy-safe aggregate for analytics — total size, file count and the set
+  // of extensions only. Never names, paths or URLs (those are user content).
+  let droppedBytes = 0;
+  const droppedExts = new Set();
+  const tallyDropped = (resolved, name) => {
+    if (resolved && typeof resolved.size === "number") droppedBytes += resolved.size;
+    const e = extOf(name || (resolved && resolved.name));
+    if (e) droppedExts.add(e);
+  };
+
   // load all files into memory
   for (const file of allFiles) {
     if (debugFileHandling) console.log("loading file ", file)
-    await loadFile(await getFile(file), false, file.fullPath);
+    const resolved = await getFile(file);
+    tallyDropped(resolved, file.name);
+    await loadFile(resolved, false, file.fullPath);
   }
 
   // THEN load the root file if it's a supported format
@@ -950,8 +991,18 @@ async function handleFilesystemEntries(entries) {
     const isSupportedFormat = ['usd', 'usdz', 'usda', 'usdc'].includes(rootFile.name.split('.').pop());
     if (!isSupportedFormat)
       console.error("Not a supported file format: ", rootFile.name);
-    else
-     loadFile(await getFile(rootFile), true, rootFile.fullPath);
+    else {
+      const resolvedRoot = await getFile(rootFile);
+      tallyDropped(resolvedRoot, rootFile.name);
+      // One event per drop (not per nested file): aggregate size/count/types.
+      track('load_file', {
+        method: 'drop',
+        files: allFiles.length + 1, // non-root files + the root file
+        bytes: droppedBytes,
+        types: [...droppedExts].sort().join(','),
+      });
+      loadFile(resolvedRoot, true, rootFile.fullPath);
+    }
   }
 }
 
