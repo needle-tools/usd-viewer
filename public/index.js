@@ -314,9 +314,8 @@ if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
   alert("usdz");
 });
 
-const gltfExportBtn = document.getElementById('export-gltf');
-if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
-  evt.preventDefault();
+// In-browser glTF export (binary .glb) of the currently loaded scene.
+function doGltfExport() {
   const exporter = new GLTFExporter();
   console.log("EXPORTING GLTF", window.usdRoot);
   try {
@@ -353,7 +352,71 @@ if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
     console.error("glTF export failed:", error);
     trackError('export_gltf', error);
   }
+}
+
+// "Export glTF" opens a dialog that points users to Needle Cloud for a
+// production-ready conversion, while still offering the quick in-browser export.
+const gltfExportBtn = document.getElementById('export-gltf');
+const exportDialog = document.getElementById('export-dialog');
+const exportDialogCloseBtn = document.getElementById('export-dialog-close-btn');
+const exportDownloadDirectBtn = document.getElementById('export-download-direct');
+const exportCloudCta = document.getElementById('export-cloud-cta');
+
+// Did the user act (Cloud or download) this time? Lets us report closing the
+// dialog as a dismissal — opened the export prompt but chose neither.
+let exportDialogResolved = false;
+// First hover per open, per button — learns which CTA drew interest without
+// firing on every mouse pass.
+let exportHovered = {};
+
+function openExportDialog() {
+  exportDialogResolved = false;
+  exportHovered = {};
+  track('open_export_dialog', { file: currentDisplayFilename || undefined });
+  if (exportDialog) exportDialog.style.display = 'block';
+}
+
+function closeExportDialog(via) {
+  if (exportDialog) exportDialog.style.display = 'none';
+  if (!exportDialogResolved) {
+    // Opened the prompt, then closed it without choosing Cloud or downloading.
+    // `via` distinguishes the X button from clicking the backdrop.
+    track('export_dialog_dismissed', { via: via || 'unknown' });
+  }
+}
+
+function trackExportHover(button) {
+  if (exportHovered[button]) return;
+  exportHovered[button] = true;
+  track('export_hover', { button });
+}
+
+if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
+  evt.preventDefault();
+  openExportDialog();
 });
+if (exportDialogCloseBtn) exportDialogCloseBtn.addEventListener('click', () => closeExportDialog('close_button'));
+if (exportDialog) exportDialog.addEventListener('click', (event) => {
+  if (event.target === exportDialog) closeExportDialog('backdrop');
+});
+if (exportCloudCta) {
+  exportCloudCta.addEventListener('mouseenter', () => trackExportHover('cloud'));
+  exportCloudCta.addEventListener('click', () => {
+    // Opens Needle Cloud in a new tab (normal link); record the conversion + close.
+    exportDialogResolved = true;
+    track('export_cloud_cta', { file: currentDisplayFilename || undefined });
+    closeExportDialog('cloud');
+  });
+}
+if (exportDownloadDirectBtn) {
+  exportDownloadDirectBtn.addEventListener('mouseenter', () => trackExportHover('download'));
+  exportDownloadDirectBtn.addEventListener('click', () => {
+    exportDialogResolved = true;
+    track('export_download_direct', { file: currentDisplayFilename || undefined });
+    closeExportDialog('download');
+    doGltfExport();
+  });
+}
 
 function getAllLoadedFiles(){
   const filePaths = [];

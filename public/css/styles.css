@@ -560,6 +560,53 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     cursor: pointer;
 }
 
+/* Export dialog call-to-action: Needle Cloud primary, browser download secondary. */
+.dialog-cta {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Scoped under .dialog-cta to out-specify ".dialog-content a" (0,1,1), which
+   would otherwise paint the label link-purple on the green button. */
+.dialog-cta .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--color-green-dark);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 9px 18px;
+    border-radius: 999px;
+    transition: background-color 0.15s;
+}
+
+.dialog-cta .cta-primary:hover {
+    background-color: var(--color-text);
+    color: #fff;
+    text-decoration: none;
+}
+
+.cta-secondary {
+    background: none;
+    border: none;
+    padding: 9px 4px;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 1em;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.cta-secondary:hover {
+    color: var(--color-text);
+}
+
 /* Sample Library flyout — a second column of the dropdown mega-menu, revealed
    on the same hover as the link menu (no click, no separate popover). */
 .gallery-flyout {

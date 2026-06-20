@@ -232,6 +232,26 @@
     </div>
   </div>
 
+  <!-- Export glTF dialog. Opening "Export glTF" pitches Needle Cloud as the
+       primary path (compression, hosting, sharing) while still offering the
+       quick in-browser .glb download as a secondary action. -->
+  <div id="export-dialog" class="dialog-overlay">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>Export to glTF</h2>
+        <button class="dialog-close" id="export-dialog-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="dialog-content">
+        <p>This viewer can export a quick glTF right here in your browser — handy for a fast look in another tool.</p>
+        <p>For a <strong>production-ready</strong> result, upload your USD or USDZ model to <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Needle Cloud</a> instead: it compresses meshes and textures, optimizes the file, and gives you a hosted, shareable viewer link and embed.</p>
+        <div class="dialog-cta">
+          <a id="export-cloud-cta" class="cta-primary" href="https://cloud.needle.tools/?utm_source=usd-viewer&utm_medium=export-dialog" target="_blank" rel="noopener">Open Needle Cloud&nbsp;→</a>
+          <button id="export-download-direct" type="button" class="cta-secondary">Download .glb from browser</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="footer">
     <div class="footer-content">
       <span id="loading-spinner" class="spinner notranslate" translate="no" aria-hidden="true"></span>
