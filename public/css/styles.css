@@ -370,21 +370,36 @@ body.drag-active .dropzone-title {
     display: none;
     position: absolute;
     background-color: var(--color-surface);
-    /* grow to fit the widest row (e.g. the "USD Working Group Assets" heading) */
     width: max-content;
-    min-width: 200px;
-    max-width: 360px;
+    max-width: min(780px, 96vw);
     box-shadow: 0 8px 16px rgba(26, 26, 26, 0.12);
     z-index: 1;
     border-radius: 10px;
     border: 1px solid var(--border-subtle);
-    padding: 8px 0;
     top: 100%;
     left: 0;
+    /* clip the gallery flyout's square corners to the rounded panel */
+    overflow: hidden;
 }
 
+/* The menu is a two-column mega-menu: link list + Sample Library flyout. */
 .dropdown:hover .dropdown-content {
-    display: block;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Dismiss the menu after a sample is loaded, even though the cursor is still
+   over it. Cleared on mouseleave (see index.js) so the next hover reopens it.
+   Placed after the :hover rule so equal-specificity source order wins. */
+.dropdown.closed .dropdown-content {
+    display: none;
+}
+
+.dropdown-menu {
+    padding: 8px 0;
+    /* grow to fit the widest row (e.g. the "USD Working Group Assets" heading) */
+    min-width: 200px;
+    flex-shrink: 0;
 }
 
 .dropdown-section {
@@ -392,17 +407,17 @@ body.drag-active .dropzone-title {
 }
 
 /* Items hidden unless the "?debug_menu_items" URL flag is set (e.g. dead links).
-   Selectors must out-specify ".dropdown-content a { display: block }" (0,1,1),
-   so they are scoped to ".dropdown-content a.debug-only" (0,2,1). */
+   Selectors must out-specify ".dropdown-menu a { display: block }" (0,1,1),
+   so they are scoped to ".dropdown-menu a.debug-only" (0,2,1). */
 .debug-only {
     display: none;
 }
 
-.dropdown-content a.debug-only {
+.dropdown-menu a.debug-only {
     display: none;
 }
 
-body.show-debug-menu .dropdown-content a.debug-only {
+body.show-debug-menu .dropdown-menu a.debug-only {
     display: block;
 }
 
@@ -418,7 +433,7 @@ body.show-debug-menu .dropdown-content a.debug-only {
     white-space: nowrap;
 }
 
-.dropdown-content a {
+.dropdown-menu a {
     color: var(--color-text-secondary);
     padding: 6px 12px;
     text-decoration: none;
@@ -427,7 +442,7 @@ body.show-debug-menu .dropdown-content a.debug-only {
     font-size: 0.9em;
 }
 
-.dropdown-content a:hover {
+.dropdown-menu a:hover {
     background-color: var(--color-info);
     color: var(--color-text);
 }
@@ -532,6 +547,187 @@ body.show-debug-menu .dropdown-content a.debug-only {
 .dialog-actions a:hover {
     text-decoration: underline;
     cursor: pointer;
+}
+
+/* Sample Library flyout — a second column of the dropdown mega-menu, revealed
+   on the same hover as the link menu (no click, no separate popover). */
+.gallery-flyout {
+    display: flex;
+    flex-direction: column;
+    width: 380px;
+    max-width: 60vw;
+    border-left: 1px solid var(--border-subtle);
+    background-color: var(--color-page);
+    padding: 12px;
+    /* No max-height here — the grid inside is the scroll container and caps its
+       own height. Capping the flyout too would clip the grid's last rows. */
+}
+
+.gallery-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.gallery-panel-head h4 {
+    margin: 0;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Segmented converter toggle (three | blender | omniverse). */
+.converter-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.converter-toggle button {
+    background: var(--color-surface);
+    border: none;
+    border-left: 1px solid var(--border-subtle);
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 0.72em;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.converter-toggle button:first-child {
+    border-left: none;
+}
+
+.converter-toggle button:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.converter-toggle button.active {
+    background-color: var(--color-green-dark);
+    color: #fff;
+}
+
+.gallery-status {
+    font-size: 0.82em;
+    color: var(--color-text-muted);
+    margin: 0 0 8px 0;
+}
+
+.gallery-status.error {
+    color: #b3261e;
+}
+
+.gallery-status[hidden] {
+    display: none;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 2px;
+    /* Self-contained scroll container. A definite max-height here (viewport
+       units, not %) makes the grid scroll on its own — it does NOT depend on a
+       definite height propagating down the flex chain, which never resolves
+       because the dropdown is an absolutely-positioned hover popover. */
+    max-height: 60vh;
+    overflow-y: auto;
+    /* Size rows to content and pack from the top. Without these, the cards
+       (which use overflow:hidden, giving them an auto-minimum of 0) let the grid
+       stretch its rows to fill the fixed height — collapsing each thumbnail to a
+       ~3px strip instead of overflowing into the scroll area. */
+    grid-auto-rows: max-content;
+    align-content: start;
+}
+
+/* Each card is an "a.file" so it reuses the existing URL-load handler. The
+   "#container" prefix is needed to out-specify "#container a" (1,0,1), which
+   would otherwise force its own padding/margin onto these <a> cards. */
+#container .gallery-card {
+    display: block;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+#container .gallery-card:hover {
+    border-color: var(--color-green-dark);
+    box-shadow: 0 4px 14px rgba(26, 26, 26, 0.12);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+#container .gallery-card.active {
+    border-color: var(--color-green-dark);
+    box-shadow: 0 0 0 2px var(--color-green-dark);
+}
+
+/* Fixed-height thumbnail. A definite pixel height never collapses — unlike
+   aspect-ratio or the padding-top hack, both of which resolve to ~0 height
+   inside a grid/flex item and squash the image into a thin strip. */
+.gallery-thumb-wrap {
+    height: 116px;
+    background: var(--color-info);
+    overflow: hidden;
+}
+
+.gallery-thumb {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-card-body {
+    padding: 7px 9px 9px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* "#container" prefix beats "#container a span" (1,0,2) for the card labels. */
+#container .gallery-name {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+#container .gallery-meta {
+    font-size: 0.7em;
+    color: var(--color-text-muted);
+}
+
+/* Narrow screens: stack the gallery under the links instead of beside them. */
+@media (max-width: 720px) {
+    .dropdown:hover .dropdown-content {
+        flex-direction: column;
+    }
+    .gallery-flyout {
+        width: auto;
+        max-width: 84vw;
+        border-left: none;
+        border-top: 1px solid var(--border-subtle);
+    }
+    /* Shorter scroll area when stacked under the links on narrow screens. */
+    .gallery-grid {
+        max-height: 42vh;
+    }
 }
 
 #container a {

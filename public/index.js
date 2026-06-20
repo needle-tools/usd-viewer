@@ -135,12 +135,17 @@ document.addEventListener("DOMContentLoaded", function() {
   window.addEventListener('error', function(event) {
     if (!event || !event.message) return; // ignore resource-load errors without a message
     addToMessageLog(event.message, 'error');
+    // Catch-all for uncaught errors not already reported with context above.
+    trackError('uncaught', event.error || event.message);
     window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   });
   window.addEventListener('unhandledrejection', function(event) {
     const reason = event && event.reason;
     addToMessageLog(reason && reason.stack ? reason.stack : String(reason), 'error');
+    // Catch-all: load failures with file context are reported in loadUsdFile and
+    // so are caught there (never reaching here); this covers everything else.
+    trackError('unhandledrejection', reason);
     window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   });
@@ -187,6 +192,16 @@ let currentDisplayFilename = "";
 // Used only for analytics — extensions are not sensitive (unlike names/paths).
 function extOf(name) {
   return String(name || "").split("#")[0].split("?")[0].split(".").pop().toLowerCase();
+}
+
+// Basename truncated for analytics: directory segments stripped, only the last
+// 40 chars kept (so the extension survives). Filenames in a pro 3D tool are low
+// sensitivity, but stripping paths + truncating keeps long/identifying paths
+// out. Caveat: a name can still contain personal data (e.g. "personnel_scan") —
+// an accepted, documented low risk for this tool. Returns "" for empty input.
+function safeName(name) {
+  const base = String(name || "").split("/").pop().split("\\").pop();
+  return base.length > 40 ? base.slice(-40) : base;
 }
 
 function setFilenameText(__filename) {
@@ -416,6 +431,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   if (containerEl) containerEl.classList.add("have-custom-file");
   if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
 
+  try {
   let driver = null;
   const delegateConfig = {
     usdRoot: window.usdRoot,
@@ -473,6 +489,16 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   const root = {};
   addPath(root, "/");
   console.log("File system", root, USD.FS_analyzePath("/"));
+  } catch (err) {
+    // A USD parse/render failure here is otherwise un-awaited, so it would only
+    // reach the footer log via the global handler — never Rybbit. Report it with
+    // the file context so these crashes are actually visible in analytics.
+    console.error("Failed to load USD file:", err);
+    trackError('usd_load', err, { type: extOf(filename), name: safeName(filename) });
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    ready = false;
+  }
 }
 
 // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
@@ -632,63 +658,222 @@ async function init() {
   window.addEventListener("drop", endDrag);
   window.addEventListener("dragend", endDrag);
 
-  // attach to link click handlers so that we don't have to reload the entire page
-  const fileLoadingLinks = document.querySelectorAll("a.file");
-  for(let link of fileLoadingLinks) {
-    link.addEventListener('click', async function(event) {
-      event.preventDefault();
+  // ---- Sample Library flyout, populated at runtime from the Needle Asset
+  // Explorer. Lives as the second column of the dropdown mega-menu and loads on
+  // first hover. The static menu links remain a fallback if the fetch fails. ----
+  const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
+  const dropdownEl = document.querySelector('.dropdown');
+  const galleryGrid = document.getElementById('gallery-grid');
+  const galleryStatus = document.getElementById('gallery-status');
+  const converterToggle = document.getElementById('converter-toggle');
 
-      let params = new Map();
-      try {
-        params = (new URL(event.target.href)).searchParams;
-      }
-      catch {}
-      filename = params.get("file");
+  let galleryFetchStarted = false; // guards against duplicate fetches
+  let selectedConverter = 'three'; // three | blender | omniverse
 
-      // Distinguish loading a sample from clicking "Clear" (empty file).
-      if (filename) {
-        // Samples are our own curated dropdown links (not user content), so the
-        // full name/URL is safe and useful here — unlike user drops.
-        const label = (link.textContent || '').trim();
-        track('load_sample', { file: filename, label });
-      } else {
-        track('clear_model');
-      }
-      
-      if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
-      if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
-      if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
-      window._controls.update();
-      
-      // clear existing objects
-      if (filename !== undefined) {
-        // clearStage();  
-        setFilenameText("");
-      }
-      
-      const el = document.querySelector("#container");
-      el.classList.remove("have-custom-file");
-      
-      clearStage();
+  function setGalleryStatus(text, isError = false) {
+    if (!galleryStatus) return;
+    galleryStatus.hidden = !text;
+    galleryStatus.textContent = text || '';
+    galleryStatus.classList.toggle('error', isError);
+  }
 
-      if (filename) {
-        el.classList.add("have-custom-file");
-        messageLog.textContent = "Downloading File " + filename + "...";
-        if (window.setViewerLoading) window.setViewerLoading(true);
-        updateUrl();
-        // get just the filename, no paths
-        const parts = filename.split('/');
-        filename = parts[parts.length - 1];
-        const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-        loadUsdFile(undefined, filename, urlPath, true);
-      } else {
-        // Clear the URL when no file is selected (Clear button clicked)
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.delete("file");
-        window.history.pushState({}, "USD Viewer", currentUrl);
+  // Build a "N textures · M anims · K ext" line from the model metadata.
+  function galleryMetaLine(model) {
+    const info = model.info || {};
+    const bits = [];
+    if (info.textures) bits.push(info.textures + (info.textures === 1 ? ' texture' : ' textures'));
+    if (info.animations) bits.push(info.animations + (info.animations === 1 ? ' anim' : ' anims'));
+    if (Array.isArray(model.extensions) && model.extensions.length) bits.push(model.extensions.length + ' ext');
+    return bits.join(' · ');
+  }
+
+  // Re-point every card to the currently selected converter variant. Cards keep
+  // each available variant URL in their dataset, so the toggle never refetches.
+  function applyConverter() {
+    if (!galleryGrid) return;
+    for (const card of galleryGrid.querySelectorAll('.gallery-card')) {
+      const url = card.dataset[selectedConverter] || card.dataset.three || card.dataset.blender || card.dataset.omniverse;
+      if (url) card.setAttribute('href', '?file=' + url);
+    }
+  }
+
+  function buildGalleryCards(models) {
+    if (!galleryGrid) return;
+    galleryGrid.textContent = '';
+    for (const model of models) {
+      const usdz = (model.assets && model.assets.usdz) || {};
+      const url = usdz[selectedConverter] || usdz.three || usdz.blender || usdz.omniverse;
+      if (!url) continue; // skip models with no USDZ conversion at all
+
+      // Cards are "a.file" so they reuse the delegated URL-load handler below.
+      const card = document.createElement('a');
+      card.className = 'file gallery-card';
+      card.href = '?file=' + url;
+      card.dataset.name = model.name || model.slug || 'Model';
+      if (usdz.three) card.dataset.three = usdz.three;
+      if (usdz.blender) card.dataset.blender = usdz.blender;
+      if (usdz.omniverse) card.dataset.omniverse = usdz.omniverse;
+
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'gallery-thumb-wrap';
+      if (model.thumbnail) {
+        const img = document.createElement('img');
+        img.className = 'gallery-thumb';
+        img.loading = 'lazy';
+        // COEP: require-corp blocks no-cors cross-origin images; load via CORS
+        // (the API host sends Access-Control-Allow-Origin: *).
+        img.crossOrigin = 'anonymous';
+        img.alt = card.dataset.name;
+        img.src = model.thumbnail;
+        thumbWrap.appendChild(img);
       }
+      card.appendChild(thumbWrap);
+
+      const body = document.createElement('div');
+      body.className = 'gallery-card-body';
+      const name = document.createElement('span');
+      name.className = 'gallery-name';
+      name.textContent = card.dataset.name;
+      body.appendChild(name);
+      const meta = galleryMetaLine(model);
+      if (meta) {
+        const metaEl = document.createElement('span');
+        metaEl.className = 'gallery-meta';
+        metaEl.textContent = meta;
+        body.appendChild(metaEl);
+      }
+      card.appendChild(body);
+
+      galleryGrid.appendChild(card);
+    }
+  }
+
+  async function loadGalleryModels() {
+    if (galleryFetchStarted) return; // fetch once, then reuse the cards
+    galleryFetchStarted = true;
+    setGalleryStatus('Loading sample models…');
+    try {
+      const res = await fetch(ASSET_EXPLORER_API);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const models = Array.isArray(data.models) ? data.models : [];
+      if (!models.length) {
+        setGalleryStatus('No sample models available right now.', true);
+        return;
+      }
+      buildGalleryCards(models);
+      setGalleryStatus('');
+    } catch (err) {
+      // Don't swallow: surface to the user and analytics. The static dropdown
+      // links remain usable as a fallback.
+      galleryFetchStarted = false; // allow a retry on next open
+      setGalleryStatus('Couldn’t load sample models. Use the dropdown links instead.', true);
+      trackError('gallery_fetch', err, { api: ASSET_EXPLORER_API });
+    }
+  }
+
+  // Lazy-load on first reveal of the dropdown (hover or keyboard focus) — no
+  // click needed. loadGalleryModels() guards itself against running twice.
+  if (dropdownEl) {
+    let galleryOpened = false;
+    const revealGallery = function() {
+      // Re-entering clears the "load closed it" state so hover reopens normally.
+      dropdownEl.classList.remove('closed');
+      loadGalleryModels();
+      if (!galleryOpened) { galleryOpened = true; track('open_gallery'); }
+    };
+    dropdownEl.addEventListener('mouseenter', revealGallery);
+    dropdownEl.addEventListener('focusin', revealGallery);
+    // Once the cursor leaves, drop the forced-closed state for next time.
+    dropdownEl.addEventListener('mouseleave', function() {
+      dropdownEl.classList.remove('closed');
     });
   }
+  if (converterToggle) {
+    converterToggle.addEventListener('click', function(event) {
+      const btn = event.target.closest('button[data-converter]');
+      if (!btn) return;
+      selectedConverter = btn.dataset.converter;
+      for (const b of converterToggle.querySelectorAll('button')) {
+        b.classList.toggle('active', b === btn);
+      }
+      applyConverter();
+      track('gallery_select_converter', { converter: selectedConverter });
+    });
+  }
+
+  // Load handler for our curated "a.file" links: the dropdown samples, the Clear
+  // button, and the runtime-populated gallery cards. Delegated from the body so
+  // dynamically-added cards are covered without re-binding.
+  async function loadFromFileLink(link) {
+    let params = new Map();
+    try {
+      params = (new URL(link.href)).searchParams;
+    }
+    catch {}
+    filename = params.get("file");
+
+    // Distinguish loading a sample from clicking "Clear" (empty file).
+    if (filename) {
+      // Samples are our own curated links (not user content), so the full
+      // name/URL is safe and useful here — unlike user drops.
+      const label = (link.dataset.name || link.textContent || '').trim();
+      track('load_sample', { file: filename, label });
+    } else {
+      track('clear_model');
+    }
+
+    if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
+    if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
+    if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
+    window._controls.update();
+
+    // clear existing objects
+    if (filename !== undefined) {
+      // clearStage();
+      setFilenameText("");
+    }
+
+    const el = document.querySelector("#container");
+    el.classList.remove("have-custom-file");
+
+    clearStage();
+
+    if (filename) {
+      el.classList.add("have-custom-file");
+      messageLog.textContent = "Downloading File " + filename + "...";
+      if (window.setViewerLoading) window.setViewerLoading(true);
+      updateUrl();
+      // get just the filename, no paths
+      const parts = filename.split('/');
+      filename = parts[parts.length - 1];
+      const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
+      loadUsdFile(undefined, filename, urlPath, true);
+    } else {
+      // Clear the URL when no file is selected (Clear button clicked)
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete("file");
+      window.history.pushState({}, "USD Viewer", currentUrl);
+    }
+  }
+
+  // Single delegated listener so that we don't have to reload the entire page,
+  // and so gallery cards added after init are handled too.
+  document.body.addEventListener('click', function(event) {
+    const link = event.target.closest && event.target.closest('a.file');
+    if (!link) return;
+    event.preventDefault();
+    // Highlight the active gallery card and close the dropdown so the loaded
+    // model is visible (the menu reopens on the next hover).
+    if (link.classList.contains('gallery-card')) {
+      if (galleryGrid) {
+        for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
+        link.classList.add('active');
+      }
+      if (dropdownEl) dropdownEl.classList.add('closed');
+    }
+    loadFromFileLink(link);
+  });
   
   render();
   
@@ -769,8 +954,11 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     console.error("Error loading file " + (fileOrHandle && fileOrHandle.name ? fileOrHandle.name : "") + ": " + ex);
-    // Drops are user content → aggregate posture: report the type, not the name.
-    trackError('load_file', ex, { type: extOf(fileOrHandle && fileOrHandle.name) });
+    // Include the (truncated, path-stripped) name to debug per-file load crashes.
+    trackError('load_file', ex, {
+      type: extOf(fileOrHandle && fileOrHandle.name),
+      name: safeName(fileOrHandle && fileOrHandle.name),
+    });
   }
 }
 
@@ -783,6 +971,7 @@ function testAndLoadFile(file) {
       files: 1,
       bytes: file.size,
       types: extOf(file.name),
+      name: safeName(file.name),
     });
     clearStage();
     // Clear console output when loading a new file
@@ -790,6 +979,9 @@ function testAndLoadFile(file) {
       window.clearMessageLog();
     }
     loadFile(file);
+  } else {
+    // Surface attempts to view a format we don't support.
+    track('load_unsupported', { method: 'drop', type: extOf(file.name), name: safeName(file.name) });
   }
 }
 
@@ -989,17 +1181,21 @@ async function handleFilesystemEntries(entries) {
 
   if (rootFile) {
     const isSupportedFormat = ['usd', 'usdz', 'usda', 'usdc'].includes(rootFile.name.split('.').pop());
-    if (!isSupportedFormat)
+    if (!isSupportedFormat) {
       console.error("Not a supported file format: ", rootFile.name);
+      track('load_unsupported', { method: 'drop', type: extOf(rootFile.name), name: safeName(rootFile.name) });
+    }
     else {
       const resolvedRoot = await getFile(rootFile);
       tallyDropped(resolvedRoot, rootFile.name);
-      // One event per drop (not per nested file): aggregate size/count/types.
+      // One event per drop (not per nested file): aggregate size/count/types,
+      // plus the (truncated, path-stripped) root model name.
       track('load_file', {
         method: 'drop',
         files: allFiles.length + 1, // non-root files + the root file
         bytes: droppedBytes,
         types: [...droppedExts].sort().join(','),
+        name: safeName(rootFile.name),
       });
       loadFile(resolvedRoot, true, rootFile.fullPath);
     }
