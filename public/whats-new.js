@@ -82,12 +82,11 @@ function trackEngagement(id, type) {
   }, 250);
 }
 
-// Dismissal is per-item and time-limited: clicking × on a card hides only that
-// item, for 12 hours. We persist an { id: dismissedAtMs } map; an item is
-// filtered out of the feed while its dismissal is still within the TTL, and
-// reappears once the window passes.
-const DISMISSED_KEY = "needle-whats-new-dismissed";
-const DISMISS_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
+// Dismissal hides the WHOLE banner (not just the current card) and is
+// time-limited: clicking × suppresses the banner for 3 hours, after which it
+// reappears. We persist a single dismissal timestamp.
+const DISMISS_KEY = "needle-whats-new-dismissed-at";
+const DISMISS_TTL_MS = 1000 * 60 * 60 * 3; // 3 hours — re-show after this.
 
 // Remembers the id of the item on screen, so the next page load can start on a
 // *different* one (variety across refreshes).
@@ -167,30 +166,19 @@ function themeFromColors(colors) {
   return `background: ${bg}; color: ${text};`;
 }
 
-// Reads the dismissal map and drops entries whose 12h window has passed,
-// persisting the pruned map back. Returns a Set of ids still dismissed.
-function getActiveDismissedIds() {
+// Whole-banner dismissal: true while the 3h window since the last × is open.
+function isBannerDismissed() {
   try {
-    const raw = localStorage.getItem(DISMISSED_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    const now = Date.now();
-    const pruned = {};
-    for (const [id, at] of Object.entries(map)) {
-      if (typeof at === "number" && now - at < DISMISS_TTL_MS) pruned[id] = at;
-    }
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(pruned));
-    return new Set(Object.keys(pruned));
+    const at = Number(localStorage.getItem(DISMISS_KEY));
+    return Number.isFinite(at) && at > 0 && Date.now() - at < DISMISS_TTL_MS;
   } catch {
-    return new Set();
+    return false;
   }
 }
 
-function markItemDismissed(id) {
+function markBannerDismissed() {
   try {
-    const raw = localStorage.getItem(DISMISSED_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    map[id] = Date.now();
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(map));
+    localStorage.setItem(DISMISS_KEY, String(Date.now()));
   } catch {
     // localStorage may be unavailable (private mode / blocked); dismissal
     // simply won't persist across reloads. Not worth surfacing.
@@ -198,6 +186,9 @@ function markItemDismissed(id) {
 }
 
 async function fetchItems() {
+  // Whole banner suppressed for 3h after a dismissal — skip the feed entirely.
+  if (isBannerDismissed()) return [];
+
   const url = new URL(FEED_ENDPOINT);
   // hostname keeps this correct on staging / preview domains too.
   url.searchParams.set("surface", location.hostname || "usd-viewer.needle.tools");
@@ -210,11 +201,8 @@ async function fetchItems() {
   if (!res.ok) throw new Error(`whats-new feed responded ${res.status}`);
   const data = await res.json();
   const items = Array.isArray(data?.items) ? data.items : [];
-  const dismissed = getActiveDismissedIds();
-  // Only items that can be rendered as a banner and haven't been dismissed.
-  return items.filter(
-    (it) => it && it.banner && it.banner.title && !dismissed.has(it.id)
-  );
+  // Only items that can be rendered as a banner.
+  return items.filter((it) => it && it.banner && it.banner.title);
 }
 
 function buildDom() {
@@ -381,26 +369,19 @@ function start(initialItems, dom) {
     }
   }
 
-  // Dismiss only the item currently on screen: remember its id, drop it from
-  // the rotation, and either show the next remaining item or remove the banner.
-  function dismissCurrent() {
-    const removed = items[index];
-    if (removed) markItemDismissed(removed.id);
-    items.splice(index, 1);
-
-    if (items.length === 0) {
-      stopTimer();
-      root.classList.remove("is-visible");
-      window.setTimeout(() => root.remove(), 250);
-      return;
+  // Dismiss the WHOLE banner: report the dismissal of the card on screen (a
+  // negative signal — to the marketer tracker + Rybbit), suppress the banner for
+  // 3 hours, and remove it.
+  function dismissBanner() {
+    const current = items[index];
+    if (current) {
+      trackEngagement(current.id, "dismiss"); // marketer feed: needleWhatsNew.dismiss()
+      track("whats_new_dismiss", { id: current.id, kind: current.kind });
     }
-
-    if (index >= items.length) index = 0;
-    rebuildDots();
-    render(index);
-    // restart the rotation cadence from this fresh card
+    markBannerDismissed();
     stopTimer();
-    startTimer();
+    root.classList.remove("is-visible");
+    window.setTimeout(() => root.remove(), 250);
   }
 
   // Click the card through — record the outbound click in Rybbit. (Rybbit also
@@ -420,7 +401,7 @@ function start(initialItems, dom) {
   dismiss.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dismissCurrent();
+    dismissBanner();
   });
 
   // Pause rotation while the user is hovering / focused on the card, and record
