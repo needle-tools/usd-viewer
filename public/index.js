@@ -835,21 +835,65 @@ async function init() {
     }
   }
 
-  // Lazy-load on first reveal of the dropdown (hover or keyboard focus) — no
-  // click needed. loadGalleryModels() guards itself against running twice.
+  // Menu open/close is JS-driven (class .menu-open) so the close can be delayed.
+  let menuCloseTimer = null;
+  let menuOpenedAt = 0;
+  function menuOpen() {
+    if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
+    if (!dropdownEl) return;
+    const wasOpen = dropdownEl.classList.contains('menu-open');
+    dropdownEl.classList.add('menu-open');
+    if (!wasOpen) menuOpenedAt = performance.now();
+    loadGalleryModels();
+    if (!menuOpen.tracked) { menuOpen.tracked = true; track('open_gallery'); }
+  }
+  function menuClose() {
+    if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
+    if (dropdownEl) dropdownEl.classList.remove('menu-open');
+  }
+  // Close after a 300ms grace so a brief cursor excursion (or just-loaded a
+  // sample) doesn't yank the menu away instantly.
+  function menuScheduleClose() {
+    if (menuCloseTimer) clearTimeout(menuCloseTimer);
+    menuCloseTimer = setTimeout(menuClose, 300);
+  }
+
   if (dropdownEl) {
-    let galleryOpened = false;
-    const revealGallery = function() {
-      // Re-entering clears the "load closed it" state so hover reopens normally.
-      dropdownEl.classList.remove('closed');
-      loadGalleryModels();
-      if (!galleryOpened) { galleryOpened = true; track('open_gallery'); }
-    };
-    dropdownEl.addEventListener('mouseenter', revealGallery);
-    dropdownEl.addEventListener('focusin', revealGallery);
-    // Once the cursor leaves, drop the forced-closed state for next time.
-    dropdownEl.addEventListener('mouseleave', function() {
-      dropdownEl.classList.remove('closed');
+    // Real mouse pointers: open on enter, close 300ms after leaving. Touch/pen
+    // are ignored here (pointerType !== 'mouse') so the synthetic hover a tap
+    // generates doesn't open the menu only for the tap-click to toggle it back
+    // shut — which made the first tap do nothing and only the second one work.
+    dropdownEl.addEventListener('pointerenter', function(e) {
+      if (e.pointerType === 'mouse') menuOpen();
+    });
+    dropdownEl.addEventListener('pointerleave', function(e) {
+      if (e.pointerType === 'mouse') menuScheduleClose();
+    });
+    dropdownEl.addEventListener('focusin', menuOpen);
+
+    // Tap/click the button toggles the menu — the open path on touch, and a
+    // toggle on pointer devices.
+    const dropdownButton = dropdownEl.querySelector('.dropdown-button');
+    if (dropdownButton) {
+      dropdownButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (dropdownEl.classList.contains('menu-open')) {
+          // If it only just opened (a hover/pointerenter opened it as part of
+          // this same gesture), keep it open — don't let the click toggle it
+          // shut, which made the first tap appear to do nothing. A click after
+          // the grace is a deliberate close.
+          if (performance.now() - menuOpenedAt < 400) return;
+          menuClose();
+        } else {
+          menuOpen();
+        }
+      });
+    }
+    // Tap/click anywhere outside the dropdown closes an open menu.
+    document.addEventListener('click', function(e) {
+      if (!dropdownEl.classList.contains('menu-open')) return;
+      if (dropdownEl.contains(e.target)) return; // inside the trigger or the menu
+      menuClose();
     });
   }
   if (converterToggle) {
@@ -926,14 +970,14 @@ async function init() {
     const link = event.target.closest && event.target.closest('a.file');
     if (!link) return;
     event.preventDefault();
-    // Highlight the active gallery card and close the dropdown so the loaded
-    // model is visible (the menu reopens on the next hover).
+    // Highlight the active gallery card, then close the menu after a 300ms grace
+    // (not instantly) so the choice registers visually before it disappears.
     if (link.classList.contains('gallery-card')) {
       if (galleryGrid) {
         for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
         link.classList.add('active');
       }
-      if (dropdownEl) dropdownEl.classList.add('closed');
+      menuScheduleClose();
     }
     loadFromFileLink(link);
   });

@@ -380,11 +380,18 @@ body.drag-active .dropzone-title {
     background-color: var(--color-surface);
     width: max-content;
     max-width: min(780px, 96vw);
-    box-shadow: 0 8px 16px rgba(26, 26, 26, 0.12);
-    z-index: 1;
+    /* Clear outline + lift so the popover reads as a distinct floating panel
+       against the light page background. */
+    box-shadow: 0 10px 28px rgba(26, 26, 26, 0.18);
+    /* Above the "What's New" banner (110) and other chrome when open. */
+    z-index: 200;
     border-radius: 10px;
-    border: 1px solid var(--border-subtle);
-    top: 100%;
+    border: 1px solid var(--border-strong);
+    /* Gap below the pill. The JS hover model keeps the menu open for a 300ms
+       grace after the cursor leaves, which covers crossing this gap — so no
+       transparent-border bridge is needed and the outline can wrap all sides.
+       Overridden on mobile. */
+    top: calc(100% + 1em);
     /* Centered under the pill (its containing block) so a wide mega-menu stays
        within the viewport regardless of where the trigger sits in the pill. */
     left: 50%;
@@ -393,17 +400,14 @@ body.drag-active .dropzone-title {
     overflow: hidden;
 }
 
-/* The menu is a two-column mega-menu: link list + Sample Library flyout. */
-.dropdown:hover .dropdown-content {
+/* The menu is a two-column mega-menu: link list + Sample Library flyout.
+   Visibility is JS-driven via .menu-open (see index.js): pointer devices open on
+   mouseenter and close 300ms after mouseleave; touch toggles it by tap. A class
+   (not :hover) is used so the close can be delayed and so a tap doesn't get
+   stuck in :hover on touch. */
+.dropdown.menu-open .dropdown-content {
     display: flex;
     align-items: stretch;
-}
-
-/* Dismiss the menu after a sample is loaded, even though the cursor is still
-   over it. Cleared on mouseleave (see index.js) so the next hover reopens it.
-   Placed after the :hover rule so equal-specificity source order wins. */
-.dropdown.closed .dropdown-content {
-    display: none;
 }
 
 .dropdown-menu {
@@ -623,10 +627,17 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 
 .gallery-panel-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 10px;
+}
+
+.gallery-panel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
 }
 
 .gallery-panel-head h4 {
@@ -639,6 +650,20 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     white-space: nowrap;
 }
 
+.gallery-panel-subtitle {
+    font-size: 0.72em;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Brand logo left of each converter label. */
+.conv-logo {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
 /* Segmented converter toggle (three | blender | omniverse). */
 .converter-toggle {
     display: inline-flex;
@@ -649,6 +674,9 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 }
 
 .converter-toggle button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     background: var(--color-surface);
     border: none;
     border-left: 1px solid var(--border-subtle);
@@ -781,14 +809,17 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     }
     .dropdown-content {
         position: fixed;
-        top: 92px;
+        /* Just below the one-row pill (~51px). #top-center's transform makes it
+           the containing block, so this is measured from its top (viewport 5px),
+           i.e. the menu opens ~viewport 59px — snug under the pill. */
+        top: 54px;
         left: 50%;
         right: auto;
         transform: translateX(-50%);
         flex-direction: column;
         width: 94vw;
         max-width: 94vw;
-        max-height: calc(100dvh - 104px);
+        max-height: calc(100dvh - 72px);
         overflow-y: auto;
         z-index: 1000;
     }
@@ -797,6 +828,13 @@ body.show-debug-menu .dropdown-menu a.debug-only {
         max-width: none;
         border-left: none;
         border-top: 1px solid var(--border-subtle);
+    }
+    /* Stack the title above the converter toggle so the (logo-widened) toggle
+       gets the full panel width instead of overflowing the right edge. */
+    .gallery-panel-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
     }
     /* Let the whole panel scroll as one on mobile rather than a nested grid. */
     .gallery-grid {
@@ -937,7 +975,10 @@ button:focus-visible {
     top: 5px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 30;
+    /* Above the "What's New" banner (110): the transform makes #top-center a
+       stacking context, so the open menu inside it can only rise above the
+       banner if #top-center itself does. */
+    z-index: 200;
     display: flex;
     flex-direction: column;
     align-items: center;
