@@ -158,8 +158,10 @@ body {
     padding: 24px;
 }
 
-/* hidden once a model is loaded (#container gains .have-custom-file) */
-#container.have-custom-file ~ #dropzone {
+/* Hidden once a model is loaded (#container gains .have-custom-file). #container
+   is now nested in #top-center, so #dropzone is no longer its sibling — match
+   via :has() on the wrapper instead. */
+#top-center:has(.have-custom-file) ~ #dropzone {
     display: none;
 }
 
@@ -321,8 +323,11 @@ body.drag-active .dropzone-title {
 #container .buttons {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    /* The pill stays a single row at every width; items condense on mobile
+       (see the max-width media query) rather than wrapping to a second line. */
+    flex-wrap: nowrap;
     flex-direction: row;
+    white-space: nowrap;
 }
 
 .needle-logo {
@@ -336,7 +341,10 @@ body.drag-active .dropzone-title {
 
 /* Dropdown Styles */
 .dropdown {
-    position: relative;
+    /* Static (not relative) so the menu's containing block is the centered pill
+       (#container), letting it center under the pill instead of opening off the
+       right edge from the off-centre Load Sample button. */
+    position: static;
     display: inline-block;
 }
 
@@ -377,7 +385,10 @@ body.drag-active .dropzone-title {
     border-radius: 10px;
     border: 1px solid var(--border-subtle);
     top: 100%;
-    left: 0;
+    /* Centered under the pill (its containing block) so a wide mega-menu stays
+       within the viewport regardless of where the trigger sits in the pill. */
+    left: 50%;
+    transform: translateX(-50%);
     /* clip the gallery flyout's square corners to the rounded panel */
     overflow: hidden;
 }
@@ -715,18 +726,80 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 
 /* Narrow screens: stack the gallery under the links instead of beside them. */
 @media (max-width: 720px) {
-    .dropdown:hover .dropdown-content {
+    /* Anchor the menu to the viewport instead of the (centered) button, so it
+       can't run off-screen. It drops down as a near-full-width panel below the
+       header and scrolls as one. */
+    .dropdown {
+        position: static;
+    }
+    .dropdown-content {
+        position: fixed;
+        top: 92px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
         flex-direction: column;
+        width: 94vw;
+        max-width: 94vw;
+        max-height: calc(100dvh - 104px);
+        overflow-y: auto;
+        z-index: 1000;
     }
     .gallery-flyout {
         width: auto;
-        max-width: 84vw;
+        max-width: none;
         border-left: none;
         border-top: 1px solid var(--border-subtle);
     }
-    /* Shorter scroll area when stacked under the links on narrow screens. */
+    /* Let the whole panel scroll as one on mobile rather than a nested grid. */
     .gallery-grid {
-        max-height: 42vh;
+        max-height: none;
+    }
+}
+
+/* Phone widths: condense the pill so it stays one row. The "About USD Viewer"
+   label collapses to just its icon, and spacing tightens. */
+@media (max-width: 560px) {
+    #container {
+        padding-left: 12px;
+        padding-right: 12px;
+        font-size: 0.85em;
+    }
+    .about-text {
+        display: none;
+    }
+    #about-link .usd-logo {
+        margin-right: 0;
+    }
+    .needle-logo {
+        height: 22px;
+        margin-right: 6px;
+    }
+    .filename-bar {
+        max-width: 96vw;
+    }
+}
+
+/* Tiniest phones: Export collapses to its icon so the pill still fits one row.
+   Load Sample keeps its label as the primary action. */
+@media (max-width: 430px) {
+    .export-button {
+        font-size: 0;
+    }
+    .export-button .inline-icon {
+        margin-right: 0;
+    }
+}
+
+/* Very small phones (~320px): drop the About entry and tighten padding so the
+   one-row pill still fits. */
+@media (max-width: 380px) {
+    #about-link {
+        display: none;
+    }
+    #container {
+        padding-left: 10px;
+        padding-right: 10px;
     }
 }
 
@@ -808,8 +881,76 @@ button:focus-visible {
 }
 
 /* Hide filename display when no file is loaded */
-#container:not(.have-custom-file) .filename {
+/* Centered top stack: the header pill on top, the loaded-file row below it.
+   Absolutely positioned and horizontally centered; the pill and file row are
+   stacked so the file row always sits just under the pill, whatever its
+   height. */
+#top-center {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 96vw;
+}
+
+/* The file row is a sibling of #container inside #top-center, so the "no file
+   loaded" hide rule uses the sibling combinator. */
+#container:not(.have-custom-file) ~ .filename-bar {
     display: none;
+}
+
+/* Loaded-file row: filename label, separator, Clear — centered under the pill.
+   No background; it floats as plain text over the canvas. Only the Clear action
+   is interactive so the label never blocks canvas interaction. */
+.filename-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 96vw;
+    pointer-events: none;
+}
+
+.filename-bar .filename {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename-bar .filename-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename-sep {
+    color: var(--color-text-muted);
+    user-select: none;
+}
+
+.filename-bar .clear-button {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.9em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.filename-bar .clear-button:hover {
+    color: var(--color-text);
+    text-decoration: underline;
 }
 
 /* "What's New" banner — small, subtle, bottom-right announcement card that
