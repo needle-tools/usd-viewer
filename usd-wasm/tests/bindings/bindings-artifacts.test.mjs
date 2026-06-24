@@ -103,6 +103,14 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.ReleaseStage, "function");
         assert.equal(typeof USD.CreateUsdzPackage, "function");
         assert.equal(typeof USD.ReadFile, "function");
+        assert.equal(typeof USD.Attribute.prototype.SetVec3f, "function");
+        assert.equal(typeof USD.Attribute.prototype.SetVec3d, "function");
+        assert.equal(typeof USD.Attribute.prototype.SetMatrix4d, "function");
+        assert.equal(typeof USD.Attribute.prototype.AddConnection, "function");
+        assert.equal(typeof USD.Prim.prototype.ApplyAPI, "function");
+        assert.equal(typeof USD.Prim.prototype.CreateRelationship, "function");
+        assert.equal(typeof USD.Relationship.prototype.AddTarget, "function");
+        assert.equal(typeof USD.Relationship.prototype.ClearTargets, "function");
         assert.equal(typeof USD.FS_createDataFile, "function");
         assert.equal(typeof USD.FS_createPath, "function");
         assert.equal(typeof USD.FS_analyzePath, "function");
@@ -175,6 +183,38 @@ def Xform "Root" {
         assert.equal(spin.SetFloat(90, 24), true);
         assert.equal(spin.GetValueStringAtTime(24), "90");
 
+        const translate = root.CreateAttribute("xformOp:translate", "double3", false);
+        assert.equal(translate.SetVec3d(1, 2, 3, Number.NaN), true);
+        assert.equal(translate.GetValueString(), "(1, 2, 3)");
+
+        const transform = root.CreateAttribute("xformOp:transform", "matrix4d", false);
+        assert.equal(transform.SetMatrix4d(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            4, 5, 6, 1,
+            Number.NaN,
+        ), true);
+        assert.match(transform.GetValueString(), /\(4, 5, 6, 1\)/);
+
+        const material = stage.DefinePrim("/Looks/Preview", "Material");
+        const shader = stage.DefinePrim("/Looks/Preview/Shader", "Shader");
+        assert.equal(shader.CreateAttribute("outputs:surface", "token", false).IsValid(), true);
+        const surface = material.CreateAttribute("outputs:surface", "token", false);
+        assert.equal(surface.AddConnection("/Looks/Preview/Shader.outputs:surface"), true);
+        assert.equal(root.ApplyAPI("MaterialBindingAPI"), true);
+        const binding = root.CreateRelationship("material:binding", false);
+        assert.equal(binding.IsValid(), true);
+        assert.equal(binding.AddTarget("/Looks/Preview"), true);
+        const targets = binding.GetTargets();
+        try {
+            assert.equal(targets.size(), 1);
+            assert.equal(targets.get(0), "/Looks/Preview");
+        } finally {
+            targets.delete();
+        }
+        assert.equal(material.IsValid(), true);
+
         assert.equal(root.AddVariant("lod", "low"), true);
         assert.equal(root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope").IsValid(), true);
         assert.equal(root.SetVariantSelection("lod", "high"), true);
@@ -191,6 +231,9 @@ def Xform "Root" {
         const exported = stage.ExportToString();
         assert.match(exported, /custom color3f primvars:displayColor = \(1, 0\.25, 0\.5\)/);
         assert.match(exported, /float userProperties:spin\.timeSamples = \{/);
+        assert.match(exported, /apiSchemas = \["MaterialBindingAPI"\]/);
+        assert.match(exported, /token outputs:surface\.connect = <\/Looks\/Preview\/Shader.outputs:surface>/);
+        assert.match(exported, /rel material:binding = <\/Looks\/Preview>/);
         assert.match(exported, /def Scope "HighGeom"/);
 
         const rootLayerExport = stage.GetRootLayer().ExportToString();

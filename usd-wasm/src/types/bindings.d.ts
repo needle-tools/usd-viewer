@@ -74,6 +74,7 @@ declare type USDPrim = {
     GetTypeName(): string,
     IsActive(): boolean,
     SetActive(active: boolean): boolean,
+    ApplyAPI(schemaIdentifier: string): boolean,
     IsDefined(): boolean,
     IsLoaded(): boolean,
     GetParent(): USDPrim,
@@ -82,6 +83,7 @@ declare type USDPrim = {
     GetAttribute(name: string): USDAttribute,
     CreateAttribute(name: string, typeName: string, custom: boolean): USDAttribute,
     GetRelationship(name: string): USDRelationship,
+    CreateRelationship(name: string, custom: boolean): USDRelationship,
     AddVariant(variantSetName: string, variantName: string): boolean,
     SetVariantSelection(variantSetName: string, variantName: string): boolean,
     GetVariantSelection(variantSetName: string): string,
@@ -104,7 +106,11 @@ declare type USDAttribute = {
     SetDouble(value: number, timeCode: number): boolean,
     SetString(value: string, timeCode: number): boolean,
     SetToken(value: string, timeCode: number): boolean,
+    AddConnection(path: string): boolean,
     SetColor3f(r: number, g: number, b: number, timeCode: number): boolean,
+    SetVec3f(x: number, y: number, z: number, timeCode: number): boolean,
+    SetVec3d(x: number, y: number, z: number, timeCode: number): boolean,
+    SetMatrix4d(m00: number, m01: number, m02: number, m03: number, m10: number, m11: number, m12: number, m13: number, m20: number, m21: number, m22: number, m23: number, m30: number, m31: number, m32: number, m33: number, timeCode: number): boolean,
 }
 
 declare type USDRelationship = {
@@ -112,6 +118,8 @@ declare type USDRelationship = {
     GetName(): string,
     GetPath(): string,
     GetTargets(): StringVector,
+    AddTarget(path: string): boolean,
+    ClearTargets(removeSpec: boolean): boolean,
 }
 
 declare type USDStage = {
