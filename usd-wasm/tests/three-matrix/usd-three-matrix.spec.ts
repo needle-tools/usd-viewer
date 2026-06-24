@@ -48,6 +48,7 @@ type MatrixResult = {
                 namedMaterials: string[];
             };
             handleMethods: Record<string, string>;
+            fixtureChecks: Record<string, any>;
             hydraDiagnostics: Record<string, unknown> | null;
         };
         diagnostics: { errors: string[]; warnings: string[]; phase?: string };
@@ -165,6 +166,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     expect(suite.usd.moduleReady).toBe(true);
     expect(suite.usd.bindingApi.hdWebSyncDriver).toBe('function');
     expect(suite.usd.bindingApi.getStage).toBe('function');
+    expect(suite.usd.bindingApi.repopulate).toBe('function');
     expect(suite.usd.bindingApi.fsCreateDataFile).toBe('function');
     expect(suite.usd.bindingApi.fsCreatePath).toBe('function');
     expect(suite.usd.bindingApi.fsAnalyzePath).toBe('function');
@@ -187,7 +189,9 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         expect(suite.usd.sceneStats.materialXMaterials).toBeGreaterThanOrEqual(matrixPage.fixtureExpectedMaterialXMaterials);
     }
     expect(suite.usd.handleMethods.update).toBe('function');
+    expect(suite.usd.handleMethods.repopulate).toBe('function');
     expect(suite.usd.handleMethods.materialsReady).toBe('function');
+    assertFixtureChecks(matrixPage.fixtureName, suite.usd.fixtureChecks);
     expect(suite.diagnostics.errors).toEqual([]);
 
     return {
@@ -206,4 +210,26 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         loadMs: Date.now() - started,
         suite,
     };
+}
+
+function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
+    if (fixtureName === 'local-binding-override-variants-usda') {
+        expect(checks.beforeMaterialVariant.meshCount).toBe(1);
+        expect(checks.afterMaterialVariant.meshCount).toBe(1);
+        expect(checks.afterMaterialVariant.materialNames).toContain('Metal');
+        expect(checks.afterMaterialVariant.meshes[0].materials[0].metalness).toBe(1);
+    }
+
+    if (fixtureName === 'local-nested-variants-usda') {
+        expect(checks.beforeNestedVariant.meshCount).toBe(1);
+        expect(checks.afterShapeVariant.meshCount).toBe(1);
+        expect(checks.afterFinishVariant.meshCount).toBe(1);
+        expect(checks.afterShapeVariant.materialNames).toContain('Warm');
+        expect(checks.afterFinishVariant.materialNames).toContain('Cool');
+    }
+
+    if (fixtureName === 'local-cesium-man') {
+        expect(checks.cesiumTexture.meshCount).toBeGreaterThan(0);
+        expect(checks.cesiumTexture.texturedMaterialCount).toBeGreaterThan(0);
+    }
 }
