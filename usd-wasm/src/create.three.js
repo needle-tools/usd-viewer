@@ -1,6 +1,20 @@
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
 
+/**
+ * @param {string} url
+ */
+function toBrowserFetchableUrl(url) {
+    if (url.startsWith("http") || url.startsWith("blob")) {
+        return url;
+    }
+
+    if (globalThis.location?.href) {
+        return new URL(url, globalThis.location.href).href;
+    }
+
+    return url;
+}
 
 /**
  * @param {{USD:import("./types").USD, filepath:string, buffer?:ArrayBuffer, parent?:string,}} opts
@@ -22,8 +36,8 @@ async function createFile(opts) {
 
     const format = tryDetermineFileFormat(arrayBuffer);
     const ext = filepath.split(".").pop();
-    if (ext !== "usdz" && ext !== "usd" && ext !== "usda") {
-        if (format === "usdz" || format === "usd" || format === "usda") {
+    if (ext !== "usdz" && ext !== "usd" && ext !== "usda" && ext !== "usdc") {
+        if (format === "usdz" || format === "usd" || format === "usda" || format === "usdc") {
             filepath += "." + format;
         } else {
             console.warn("Unknown file format - assuming .usdz");
@@ -91,8 +105,7 @@ export async function createThreeHydra(config) {
     // Capabilities of the loader.
     // This depends on the HttpAssetResolver implementation and the virtual file system.
     const allowFetchWebUrls = true;
-    // Browser-local paths need to be mounted into Emscripten FS before UsdStage::Open.
-    const allowFetchLocalFiles = false;
+    const allowFetchLocalFiles = true;
 
     // Which file we actually load as root file depends:
     // - when an array of files is provided, we use the first one;
@@ -103,16 +116,17 @@ export async function createThreeHydra(config) {
         file = directoryForFiles + config.files[0].path;
     }
     else if (config.url) {
-        const isBlob = config.url.startsWith("blob");
-        const isWebUrl = config.url.startsWith("http");
+        const resolvedUrl = toBrowserFetchableUrl(config.url);
+        const isBlob = resolvedUrl.startsWith("blob");
+        const isWebUrl = resolvedUrl.startsWith("http");
         if (buffer || isBlob) {
-            file = await createFile({ USD, filepath: config.url, buffer });
+            file = await createFile({ USD, filepath: resolvedUrl, buffer });
         }
         else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
-            file = config.url;
+            file = resolvedUrl;
         }
         else {
-            file = await createFile({ USD, filepath: config.url, buffer });
+            file = await createFile({ USD, filepath: resolvedUrl, buffer });
         }
     }
 
