@@ -180,6 +180,10 @@ class HydraMesh {
         }
       }
       this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
+      if (attributeName === 'position') {
+        this._geometry.computeBoundingBox();
+        this._geometry.computeBoundingSphere();
+      }
     }
   }
 

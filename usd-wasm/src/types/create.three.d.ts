@@ -48,6 +48,9 @@ export declare type NeedleThreeHydraHandle = {
      * @param dt The delta time since the last update.
      */
     update: (dt: number) => void,
+    /** Resolves after the initial Hydra draw has settled.
+     */
+    ready: () => Promise<void>,
     /** Resolves when asynchronous material generation and texture assignment have settled.
      */
     materialsReady: () => Promise<void>,
