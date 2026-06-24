@@ -1,6 +1,7 @@
 import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+import { Experimental_API as MaterialX } from '@needle-tools/materialx';
 
 const debugTextures = false;
 const debugMaterials = false;
@@ -236,8 +237,9 @@ class HydraMesh {
   // This is always called before prims are updated
   setMaterial(materialId) {
     if (debugMaterials) console.log('Setting material on hydra prim: ' + materialId, this._mesh, materialId, this._interface.materials[materialId]);
-    if (this._interface.materials[materialId]) {
-      this._mesh.material = this._interface.materials[materialId]._material;
+    const hydraMaterial = this._interface.materials[materialId];
+    if (hydraMaterial) {
+      hydraMaterial.assignToMesh(this._mesh);
     }
     else {
       console.error("Material not found", materialId, this._interface.materials);
@@ -249,14 +251,20 @@ class HydraMesh {
 
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
-      if (this._interface.materials[section.materialId]) {
-        this._materials.push(this._interface.materials[section.materialId]._material);
+      const hydraMaterial = this._interface.materials[section.materialId];
+      if (hydraMaterial) {
+        this._materials.push(hydraMaterial._material);
         this._geometry.addGroup(section.start, section.length, i + 1);
       }
     }
 
     this._mesh = new Mesh(this._geometry, this._materials);
     this._interface.config.usdRoot.add(this._mesh);
+
+    for (let i = 0; i < sections.length; i++) {
+      const hydraMaterial = this._interface.materials[sections[i].materialId];
+      hydraMaterial?.assignToMesh(this._mesh, i + 1);
+    }
   }
 
   setDisplayColor(data, interpolation) {
@@ -415,6 +423,7 @@ class HydraMaterial {
   constructor(id, hydraInterface) {
     this._id = id;
     this._nodes = {};
+    this._materialXDocuments = [];
     this._interface = hydraInterface;
     if (!defaultMaterial) {
       defaultMaterial = new MeshPhysicalMaterial({
@@ -430,13 +439,48 @@ class HydraMaterial {
 
     /** @type {MeshPhysicalMaterial} */
     this._material = defaultMaterial;
+    this._assignments = [];
+    this._interface.diagnostics.materialSPrims++;
 
     if (debugMaterials) console.log("Hydra Material", this)
   }
 
+  assignToMesh(mesh, materialIndex = null) {
+    this._interface.diagnostics.materialAssignments++;
+    this._assignments.push({ mesh, materialIndex });
+    this._applyMaterialToMesh(mesh, materialIndex);
+  }
+
+  _applyMaterialToMesh(mesh, materialIndex) {
+    if (materialIndex === null || materialIndex === undefined) {
+      mesh.material = this._material;
+      return;
+    }
+
+    if (Array.isArray(mesh.material)) {
+      mesh.material[materialIndex] = this._material;
+      return;
+    }
+
+    mesh.material = this._material;
+  }
+
+  _applyMaterialToAssignedMeshes() {
+    for (const assignment of this._assignments) {
+      this._applyMaterialToMesh(assignment.mesh, assignment.materialIndex);
+    }
+  }
+
   updateNode(networkId, path, parameters) {
     if (debugTextures) console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
+    this._interface.diagnostics.materialNodes++;
     this._nodes[path] = parameters;
+  }
+
+  updateMaterialXDocument(document) {
+    if (debugMaterials) console.log('Updating MaterialX document: ' + this._id, document);
+    this._interface.diagnostics.materialXDocuments++;
+    this._materialXDocuments.push(document);
   }
 
   convertWrap(usdWrapMode) {
@@ -726,15 +770,33 @@ class HydraMaterial {
     }
   }
 
-  async updateFinished(type, relationships) {
+  updateFinished(type, relationships) {
+    this._interface.diagnostics.materialUpdateFinished++;
+    const promise = this._updateFinished(type, relationships);
+    this._interface.trackMaterialUpdate(promise);
+    return promise;
+  }
+
+  async _updateFinished(type, relationships) {
     for (let relationship of relationships) {
       relationship.nodeIn = this._nodes[relationship.inputId];
       relationship.nodeOut = this._nodes[relationship.outputId];
+      if (!relationship.nodeIn || !relationship.nodeOut) {
+        console.warn('Material relationship references an unknown node.', relationship);
+        continue;
+      }
       relationship.nodeIn[relationship.inputName] = relationship;
       relationship.nodeOut[relationship.outputName] = relationship;
     }
     if (debugMaterials) console.log('Finalizing Material: ' + this._id);
     if (debugMaterials) console.log("updateFinished", type, relationships)
+
+    const materialXMaterial = await this.createMaterialXMaterial(type);
+    if (materialXMaterial) {
+      this._material = materialXMaterial;
+      this._applyMaterialToAssignedMeshes();
+      return;
+    }
 
     // find the main material node
     let mainMaterialNode = undefined;
@@ -747,6 +809,7 @@ class HydraMaterial {
 
     if (!mainMaterialNode || disableMaterials) {
       this._material = defaultMaterial;
+      this._applyMaterialToAssignedMeshes();
       return;
     }
 
@@ -806,6 +869,51 @@ class HydraMaterial {
     }
 
     if (debugMaterials) console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
+    this._applyMaterialToAssignedMeshes();
+  }
+
+  async createMaterialXMaterial(type) {
+    if (!this._materialXDocuments.length || disableMaterials) {
+      if (!this._materialXDocuments.length) {
+        this._interface.diagnostics.materialXSkippedNoDocuments++;
+      }
+      return null;
+    }
+    this._interface.diagnostics.materialXCreateAttempts++;
+
+    const materialXDocument = this._materialXDocuments.find(document => document.terminal === type)
+      || this._materialXDocuments[0];
+    const xml = materialXDocument?.xml;
+    if (!xml) {
+      return null;
+    }
+
+    try {
+      const materialName = this._id.split('/').pop() || this._id;
+      const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
+      const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
+        cacheKey: `${this._id}:${materialXDocument.terminal || type}`,
+        getTexture: async (url) => {
+          const texturePath = url?.replace(/^\.?\//, '');
+          return texturePath ? this._interface.registry.getTexture(texturePath) : null;
+        },
+      }, {
+        parameters: {
+          side: DoubleSide,
+        },
+      }, {});
+
+      material.name = materialName;
+      material.side = DoubleSide;
+      material.needsUpdate = true;
+      this._interface.diagnostics.materialXCreateSuccess++;
+      return material;
+    }
+    catch (error) {
+      this._interface.diagnostics.materialXCreateFailures++;
+      console.warn('Failed to create MaterialX material; falling back to USD Preview Surface.', error);
+      return null;
+    }
   }
 }
 
@@ -828,6 +936,34 @@ export class ThreeRenderDelegateInterface {
     this.registry = new TextureRegistry(config);
     this.materials = {};
     this.meshes = {};
+    this.pendingMaterialUpdates = new Set();
+    this.diagnostics = {
+      materialSPrims: 0,
+      materialAssignments: 0,
+      materialNodes: 0,
+      materialUpdateFinished: 0,
+      materialXDocuments: 0,
+      materialXSkippedNoDocuments: 0,
+      materialXCreateAttempts: 0,
+      materialXCreateSuccess: 0,
+      materialXCreateFailures: 0,
+      materialIds: [],
+    };
+  }
+
+  trackMaterialUpdate(promise) {
+    this.pendingMaterialUpdates.add(promise);
+    promise.finally(() => this.pendingMaterialUpdates.delete(promise));
+  }
+
+  async waitForMaterialsReady() {
+    while (this.pendingMaterialUpdates.size > 0) {
+      await Promise.allSettled([...this.pendingMaterialUpdates]);
+    }
+  }
+
+  getDiagnostics() {
+    return { ...this.diagnostics };
   }
 
   /**
@@ -857,6 +993,9 @@ export class ThreeRenderDelegateInterface {
     if (typeId === 'material') {
       let material = new HydraMaterial(id, this);
       this.materials[id] = material;
+      if (this.diagnostics.materialIds.length < 20) {
+        this.diagnostics.materialIds.push(id);
+      }
       return material;
     } else {
       return undefined;

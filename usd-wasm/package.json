@@ -40,6 +40,7 @@
   },
   "scripts": {
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
+    "test:bindings": "node --test tests/bindings/*.test.mjs",
     "test:three-matrix": "node scripts/run-three-matrix.mjs"
   },
   "devDependencies": {
@@ -51,5 +52,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@needle-tools/materialx": "^1.6.0"
   }
 }

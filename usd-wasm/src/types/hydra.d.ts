@@ -28,5 +28,3 @@ export class threeJsRenderDelegate extends hydraDelegate {
 }
 
 
-
-

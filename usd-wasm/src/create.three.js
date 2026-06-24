@@ -83,7 +83,8 @@ export async function createThreeHydra(config) {
             }
 
             USD.FS_createPath("", directoryForFiles + directory, true, true);
-            USD.FS_createDataFile(directoryForFiles + directory, fileName, new Uint8Array(await file.arrayBuffer()), true, true, true);
+            const fileBuffer = await file.arrayBuffer();
+            USD.FS_createDataFile(directoryForFiles + directory, fileName, new Uint8Array(fileBuffer), true, true, true);
         }
     }
 
@@ -103,7 +104,7 @@ export async function createThreeHydra(config) {
     else if (config.url) {
         const isBlob = config.url.startsWith("blob");
         const isWebUrl = config.url.startsWith("http");
-        if (isBlob) {
+        if (buffer || isBlob) {
             file = await createFile({ USD, filepath: config.url, buffer });
         }
         else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
@@ -150,19 +151,18 @@ export async function createThreeHydra(config) {
     /** Draw once */
     driver.Draw();
 
-    let stage = driver.GetStage();
-    if (stage instanceof Promise) {
-        stage = await stage;
-        stage = driver.GetStage();
-    }
-
     /** Support for Y and Z up-axis in the root USD file */
-    delegateConfig.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
+    delegateConfig.usdRoot.rotation.x = String.fromCharCode(driver.GetStageUpAxis()) === 'z' ? -Math.PI / 2 : 0;
 
     let time = 0;
 
     if (debug) {
-        console.log("STAGE", stage);
+        console.log("STAGE", {
+            upAxis: String.fromCharCode(driver.GetStageUpAxis()),
+            startTimeCode: driver.GetStageStartTimeCode(),
+            endTimeCode: driver.GetStageEndTimeCode(),
+            timeCodesPerSecond: driver.GetStageTimeCodesPerSecond(),
+        });
         console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
     }
 
@@ -179,11 +179,18 @@ export async function createThreeHydra(config) {
                 return;
             }
             time += dt;
-            let timecode = time * stage.GetTimeCodesPerSecond();
-            timecode = timecode % (stage.GetEndTimeCode() - stage.GetStartTimeCode());
+            const startTimeCode = driver.GetStageStartTimeCode();
+            const endTimeCode = driver.GetStageEndTimeCode();
+            const duration = endTimeCode - startTimeCode;
+            let timecode = startTimeCode + time * driver.GetStageTimeCodesPerSecond();
+            if (duration > 0) {
+                timecode = startTimeCode + ((timecode - startTimeCode) % duration);
+            }
             driver.SetTime(timecode);
             driver.Draw();
         },
+        materialsReady: () => renderInterface.waitForMaterialsReady(),
+        diagnostics: () => renderInterface.getDiagnostics(),
         /**
          * Dipoose the Three Hydra delegate.
          * This does *not* clear the threejs scene but only dispose the USD delegate and loaded files
