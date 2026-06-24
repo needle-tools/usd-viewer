@@ -1,18 +1,96 @@
 
-import { getUsdModule, createThreeHydra, USD, createThreeHydraReturnType } from '@needle-tools/usd';
+import { getUsdModule, createThreeHydra, USD, NeedleThreeHydraHandle } from '@needle-tools/usd';
 import { loadEnvMap, run } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 
 import { allDroppedFiles } from './fileHandling';
 
-let hydraDelegate: createThreeHydraReturnType | null;
+declare global {
+  interface Window {
+    loadFile: (url: string, label?: string) => Promise<void>;
+  }
+}
+
+let hydraDelegate: NeedleThreeHydraHandle | null;
 let scene: Scene;
 let usdContent: Object3D;
 let usd: USD;
 let app: { fitCamera: () => void };
+let statusElement: HTMLElement | null = null;
+const debugUsd = false;
+
+type TestFile = { path: string, url: string };
+type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
+
+const fixtureUrls = {
+  "asset-explorer/DamagedHelmet.glb": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb", import.meta.url).href,
+  "asset-explorer/DamagedHelmet.glb.three.usdz": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz", import.meta.url).href,
+  "asset-explorer/BoomBox.glb": new URL("../../tests/fixtures/asset-explorer/BoomBox.glb", import.meta.url).href,
+  "asset-explorer/BoomBox.glb.three.usdz": new URL("../../tests/fixtures/asset-explorer/BoomBox.glb.three.usdz", import.meta.url).href,
+  "asset-explorer/CesiumMan.glb": new URL("../../tests/fixtures/asset-explorer/CesiumMan.glb", import.meta.url).href,
+  "asset-explorer/CesiumMan.glb.three.usdz": new URL("../../tests/fixtures/asset-explorer/CesiumMan.glb.three.usdz", import.meta.url).href,
+  "materialx/mxSimple.usda": new URL("../../tests/fixtures/materialx/mxSimple.usda", import.meta.url).href,
+  "materialx/materialx_nested_reference.usda": new URL("../../tests/fixtures/materialx/materialx_nested_reference.usda", import.meta.url).href,
+  "materialx/materialx_variant_bindings.usda": new URL("../../tests/fixtures/materialx/materialx_variant_bindings.usda", import.meta.url).href,
+  "materialx/usdshade_preview_with_mtlx_peer.usda": new URL("../../tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda", import.meta.url).href,
+  "materialx/mtlxFiles/standard_surface_default.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/standard_surface_default.mtlx", import.meta.url).href,
+};
+
+type FixturePath = keyof typeof fixtureUrls;
+const fixtureUrl = (path: FixturePath) => fixtureUrls[path];
+const fixtureFile = (path: FixturePath): TestFile => ({ path, url: fixtureUrl(path) });
+
+const testAssets: TestAsset[] = [
+  { group: "Core", label: "USDZ Cube", url: "/test.usdz" },
+  { group: "Core", label: "Gingerbread USDC", url: "/gingerbread/house/GingerBreadHouse.usdc" },
+  { group: "Core", label: "Gingerbread USDA", url: "/gingerbread/GingerbreadHouse.usda" },
+  { group: "Core", label: "HTTPS References", url: "/HttpReferences.usda" },
+  { group: "Regressions", label: "Carbon Bike USDZ", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz" },
+  { group: "Regressions", label: "Carbon Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
+  { group: "Regressions", label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
+  { group: "Regressions", label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
+  { group: "glTF Plugin", label: "DamagedHelmet GLB", files: [fixtureFile("asset-explorer/DamagedHelmet.glb")] },
+  { group: "glTF Plugin", label: "DamagedHelmet USDZ", url: fixtureUrl("asset-explorer/DamagedHelmet.glb.three.usdz") },
+  { group: "glTF Plugin", label: "BoomBox GLB", files: [fixtureFile("asset-explorer/BoomBox.glb")] },
+  { group: "glTF Plugin", label: "BoomBox USDZ", url: fixtureUrl("asset-explorer/BoomBox.glb.three.usdz") },
+  { group: "glTF Plugin", label: "CesiumMan GLB", files: [fixtureFile("asset-explorer/CesiumMan.glb")] },
+  { group: "glTF Plugin", label: "CesiumMan USDZ", url: fixtureUrl("asset-explorer/CesiumMan.glb.three.usdz") },
+  {
+    group: "MaterialX",
+    label: "MaterialX External Ref",
+    files: [
+      fixtureFile("materialx/mxSimple.usda"),
+      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
+    ],
+  },
+  {
+    group: "MaterialX",
+    label: "MaterialX Nested Ref",
+    files: [
+      fixtureFile("materialx/materialx_nested_reference.usda"),
+      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
+    ],
+  },
+  {
+    group: "MaterialX",
+    label: "MaterialX Variants",
+    files: [
+      fixtureFile("materialx/materialx_variant_bindings.usda"),
+      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
+    ],
+  },
+  {
+    group: "MaterialX",
+    label: "Preview + MaterialX",
+    files: [
+      fixtureFile("materialx/usdshade_preview_with_mtlx_peer.usda"),
+      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
+    ],
+  },
+];
 
 getUsdModule({
-  debug: true,
+  debug: debugUsd,
   urlModifier: async (url: string) => {
     // Resolve GitHub-specific URLs
     // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
@@ -30,11 +108,12 @@ getUsdModule({
 
       if (found) {
         console.log("found file, returning handle", url, found);
+        const fileHandle = found as any;
         if ("file" in found) {
-          return await new Promise((resolve, reject) => found.file(resolve, reject));
+          return await new Promise((resolve, reject) => fileHandle.file(resolve, reject));
         }
         else if ("getFile" in found) {
-          return await found.getFile();
+          return await fileHandle.getFile();
         }
       }
       else {
@@ -46,40 +125,6 @@ getUsdModule({
     return url;
   }
 }).then(async (USD: USD) => {
-
-  const testUrls = [
-    { label: "USDZ Cube", url: "/test.usdz" },
-    { label: "Gingerbread House USDC", url: "/gingerbread/house/GingerBreadHouse.usdc" },
-    { label: "Gingerbread House USDA", url: "/gingerbread/GingerbreadHouse.usda", },
-    { label: "USDA file with HTTPS references", url: "/HttpReferences.usda" },
-    { label: "Gingerbread House from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda" },
-    { label: "Gingerbread House Subasset from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc" },
-    { label: "USD Kitchen from Needle Cloud", url: "https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz" },
-    { label: "Car with Variants", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda" },
-    { label: "Carbon Frame Bike USDZ", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz" },
-    { label: "Carbon Frame Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
-    { label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
-    { label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
-  ];
-
-  // const url = "test.usdz"; // local file
-  // const url = "/gingerbread/house/GingerBreadHouse.usdc";
-  // const url = "/gingerbread/GingerbreadHouse.usda";
-  const url = "/HttpReferences.usda";
-  // ... all the URLs
-  // --> put them all into the virtual file system
-  // --> load the first one (assume which one that actually is)
-
-  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/file.usda"; // remote file
-  // const url = "https://cloud-staging.needle.tools/-/assets/Z23hmXB22WdG2-22WdG2/house/GingerBreadHouse.usdc"; // remote file
-  
-  // using a file/buffer
-  /* 
-  const buffer = await fetch(url).then(response => response.arrayBuffer());
-  const file = new File([buffer], url, { type: "model/usd" });
-  file.path = url; // used to determine the directory structure
-  */
-
   const renderer = new WebGLRenderer({ antialias: true, alpha: true });
   const envmapUrl = "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/studio_small_09_1k.exr";
   const envmap = await loadEnvMap(envmapUrl, renderer);
@@ -115,28 +160,94 @@ getUsdModule({
     }
   });
 
-  const div = document.createElement("div");
-  div.className = "test-buttons";
-  
-  for (const url of testUrls) {
-    const button = document.createElement("button");
-    button.innerText = url.label;
-    button.onclick = () => loadFile(url.url);
-    div.appendChild(button);
-  }
-
+  const div = createControls();
   document.body.appendChild(div);
 
-  const div2 = document.createElement("div");
-  div2.className = "options";
+  const div2 = document.createElement("section");
+  div2.className = "options control-group";
+  const optionsHeading = document.createElement("h2");
+  optionsHeading.innerText = "Actions";
+  div2.appendChild(optionsHeading);
   const frameButton = document.createElement("button");
   frameButton.innerText = "Fit Camera";
   frameButton.onclick = () => app.fitCamera();
   div2.appendChild(frameButton);
+  const downloadButton = document.createElement("button");
+  downloadButton.innerText = "Download API USDZ";
+  downloadButton.onclick = () => downloadApiUsdz();
+  div2.appendChild(downloadButton);
   div.appendChild(div2);
+
+  statusElement = document.createElement("div");
+  statusElement.className = "status";
+  statusElement.innerText = "Ready";
+  div.appendChild(statusElement);
 })
 
-async function loadFile(url: string) {
+function createControls() {
+  const div = document.createElement("div");
+  div.className = "test-buttons";
+
+  const grouped = new Map<string, TestAsset[]>();
+  for (const asset of testAssets) {
+    const assets = grouped.get(asset.group) ?? [];
+    assets.push(asset);
+    grouped.set(asset.group, assets);
+  }
+
+  for (const [group, assets] of grouped) {
+    const section = document.createElement("section");
+    section.className = "control-group";
+    const heading = document.createElement("h2");
+    heading.innerText = group;
+    section.appendChild(heading);
+
+    for (const asset of assets) {
+      const button = document.createElement("button");
+      button.innerText = asset.label;
+      button.onclick = () => loadAsset(asset);
+      section.appendChild(button);
+    }
+    div.appendChild(section);
+  }
+
+  const apiSection = document.createElement("section");
+  apiSection.className = "control-group";
+  const apiHeading = document.createElement("h2");
+  apiHeading.innerText = "API Constructed";
+  apiSection.appendChild(apiHeading);
+  const apiPreview = document.createElement("button");
+  apiPreview.innerText = "Preview Material";
+  apiPreview.onclick = () => loadApiScene("preview");
+  apiSection.appendChild(apiPreview);
+  const apiAnimated = document.createElement("button");
+  apiAnimated.innerText = "Animated Color";
+  apiAnimated.onclick = () => loadApiScene("animated");
+  apiSection.appendChild(apiAnimated);
+  const apiVariantA = document.createElement("button");
+  apiVariantA.innerText = "Variant Sphere";
+  apiVariantA.onclick = () => loadApiScene("variant-sphere");
+  apiSection.appendChild(apiVariantA);
+  const apiVariantB = document.createElement("button");
+  apiVariantB.innerText = "Variant Cube";
+  apiVariantB.onclick = () => loadApiScene("variant-cube");
+  apiSection.appendChild(apiVariantB);
+  div.appendChild(apiSection);
+
+  return div;
+}
+
+async function loadAsset(asset: TestAsset) {
+  if (asset.files) {
+    await loadFiles(asset.files, asset.label);
+    return;
+  }
+  if (asset.url) {
+    await loadFile(asset.url, asset.label);
+  }
+}
+
+async function resetScene() {
 
   if (hydraDelegate)
     hydraDelegate.dispose();
@@ -149,9 +260,14 @@ async function loadFile(url: string) {
 
   usdContent = new Object3D();
   scene.add(usdContent);
+}
+
+async function loadFile(url: string, label = url) {
+  status(`Loading ${label}`);
+  await resetScene();
 
   const delegate = await createThreeHydra({
-    debug: true,
+    debug: debugUsd,
     USD: usd,
     url: url,
     // @ts-ignore
@@ -162,7 +278,131 @@ async function loadFile(url: string) {
 
   console.log("Scene content", usdContent);
   await delegate.ready?.();
+  await delegate.materialsReady?.();
   app.fitCamera();
+  status(`Loaded ${label}`);
+}
+
+async function loadFiles(files: TestFile[], label: string) {
+  status(`Loading ${label}`);
+  await resetScene();
+  const hydraFiles = await Promise.all(files.map(async file => {
+    const response = await fetch(file.url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${file.url}: ${response.status} ${response.statusText}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return {
+      name: file.path.split('/').pop() || file.path,
+      path: file.path,
+      arrayBuffer: async () => buffer,
+    };
+  }));
+
+  const delegate = await createThreeHydra({
+    debug: debugUsd,
+    USD: usd,
+    // @ts-ignore
+    files: hydraFiles,
+    // @ts-ignore
+    scene: usdContent,
+  });
+
+  hydraDelegate = delegate;
+  console.log("Scene content", usdContent);
+  await delegate.ready?.();
+  await delegate.materialsReady?.();
+  app.fitCamera();
+  status(`Loaded ${label}`);
+}
+
+async function loadApiScene(kind: "preview" | "animated" | "variant-sphere" | "variant-cube") {
+  status(`Constructing ${kind}`);
+  const path = `/tmp/${kind}.usda`;
+  const stage = createApiStage(kind, path);
+  stage.Export(path);
+  const bytes = usd.ReadFile(path);
+  usd.ReleaseStage(stage);
+  await loadBuffer(bytes, `${kind}.usda`, `API ${kind}`);
+}
+
+function createApiStage(kind: string, path: string) {
+  const stage = usd.CreateStage(path);
+  stage.SetUpAxis("Z");
+  stage.SetStartTimeCode(1);
+  stage.SetEndTimeCode(48);
+  stage.SetTimeCodesPerSecond(24);
+
+  const world = stage.DefinePrim("/World", "Xform");
+  const sphere = stage.DefinePrim("/World/ApiSphere", kind === "variant-cube" ? "Cube" : "Sphere");
+  sphere.CreateAttribute(kind === "variant-cube" ? "size" : "radius", "double", false).SetDouble(1, Number.NaN);
+
+  if (kind.startsWith("variant")) {
+    world.AddVariant("shape", "sphere");
+    world.AddVariant("shape", "cube");
+    world.DefinePrimInVariant("shape", "sphere", "/World/VariantSphere", "Sphere")
+      .CreateAttribute("radius", "double", false).SetDouble(1, Number.NaN);
+    world.DefinePrimInVariant("shape", "cube", "/World/VariantCube", "Cube")
+      .CreateAttribute("size", "double", false).SetDouble(1.5, Number.NaN);
+    world.SetVariantSelection("shape", kind === "variant-cube" ? "cube" : "sphere");
+  }
+
+  const material = stage.DefinePrim("/Looks/ApiPreview", "Material");
+  const shader = stage.DefinePrim("/Looks/ApiPreview/Shader", "Shader");
+  shader.CreateAttribute("info:id", "token", false).SetToken("UsdPreviewSurface", Number.NaN);
+  const diffuseColor = shader.CreateAttribute("inputs:diffuseColor", "color3f", false);
+  diffuseColor.SetColor3f(0.95, 0.25, 0.1, Number.NaN);
+  if (kind === "animated") {
+    diffuseColor.SetColor3f(0.1, 0.35, 1, 1);
+    diffuseColor.SetColor3f(1, 0.35, 0.05, 24);
+    diffuseColor.SetColor3f(0.1, 0.35, 1, 48);
+  }
+  shader.CreateAttribute("inputs:roughness", "float", false).SetFloat(0.28, Number.NaN);
+  shader.CreateAttribute("outputs:surface", "token", false);
+  material.CreateAttribute("outputs:surface", "token", false).AddConnection("/Looks/ApiPreview/Shader.outputs:surface");
+  sphere.ApplyAPI("MaterialBindingAPI");
+  sphere.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
+
+  return stage;
+}
+
+async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
+  await resetScene();
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const delegate = await createThreeHydra({
+    debug: debugUsd,
+    USD: usd,
+    url: filename,
+    buffer,
+    // @ts-ignore
+    scene: usdContent,
+  });
+  hydraDelegate = delegate;
+  await delegate.ready?.();
+  await delegate.materialsReady?.();
+  app.fitCamera();
+  status(`Loaded ${label}`);
+}
+
+function downloadApiUsdz() {
+  const stage = createApiStage("preview", "/tmp/api-download.usda");
+  stage.Export("/tmp/api-download.usda");
+  usd.CreateUsdzPackage("/tmp/api-download.usda", "/tmp/api-download.usdz");
+  const bytes = usd.ReadFile("/tmp/api-download.usdz");
+  usd.ReleaseStage(stage);
+  const blob = new Blob([bytes], { type: "model/vnd.usdz+zip" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "api-constructed.usdz";
+  anchor.click();
+  URL.revokeObjectURL(url);
+  status("Downloaded API USDZ");
+}
+
+function status(message: string) {
+  console.log(message);
+  if (statusElement) statusElement.innerText = message;
 }
 
 window.loadFile = loadFile;

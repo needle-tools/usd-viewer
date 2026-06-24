@@ -123,7 +123,7 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
     }, {
-        name: "local-materialx-usda",
+        name: "local-materialx-external-usda",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mxSimple.usda")}`,
         files: [{
             path: "mxSimple.usda",
@@ -136,47 +136,75 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-materialx-nested-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_nested_reference.usda")}`,
+        files: [{
+            path: "materialx_nested_reference.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_nested_reference.usda")}`,
+        }, {
+            path: "mtlxFiles/standard_surface_default.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "standard_surface_default.mtlx")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/materialx_nested_reference.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-materialx-variants-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_variant_bindings.usda")}`,
+        files: [{
+            path: "materialx_variant_bindings.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_variant_bindings.usda")}`,
+        }, {
+            path: "mtlxFiles/standard_surface_default.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "standard_surface_default.mtlx")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/materialx_variant_bindings.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-preview-materialx-peer-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "usdshade_preview_with_mtlx_peer.usda")}`,
+        files: [{
+            path: "usdshade_preview_with_mtlx_peer.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "usdshade_preview_with_mtlx_peer.usda")}`,
+        }, {
+            path: "mtlxFiles/standard_surface_default.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "standard_surface_default.mtlx")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
     }];
 
-    const catalogFixtures = [
-        { slug: "BoomBox", name: "asset-explorer-boombox" },
+    const localAssetFixtures = [
+        { slug: "BoomBox", name: "local-boombox" },
         {
             slug: "CesiumMan",
-            name: "asset-explorer-cesium-man",
+            name: "local-cesium-man",
             expectedRenderable: false,
             expectedRenderableReason: "Asset Explorer generated Three USDZ currently contains no Mesh prims for CesiumMan.",
         },
-        { slug: "DamagedHelmet", name: "asset-explorer-damaged-helmet" },
+        { slug: "DamagedHelmet", name: "local-damaged-helmet" },
     ];
 
     await fs.mkdir(cacheRoot, { recursive: true });
-    const catalog = await readNeedleAssetCatalog();
 
-    for (const fixture of catalogFixtures) {
-        const entry = catalog.find(item => item.slug === fixture.slug);
-        const sourceUrl = entry?.assets?.usdz?.three;
-        if (!sourceUrl) {
-            throw new Error(`Asset explorer catalog did not include a generated Three USDZ URL for ${fixture.slug}.`);
-        }
-
-        const filePath = path.join(cacheRoot, `${fixture.slug}.three.usdz`);
-        await downloadIfNeeded(sourceUrl, filePath, refresh);
+    for (const fixture of localAssetFixtures) {
+        const filePath = path.join(repoRoot, "tests", "fixtures", "asset-explorer", `${fixture.slug}.glb.three.usdz`);
         fixtures.push({
             name: fixture.name,
             url: `/@fs${filePath}`,
-            source: sourceUrl,
+            source: `usd-wasm/tests/fixtures/asset-explorer/${fixture.slug}.glb.three.usdz`,
             expectedRenderable: fixture.expectedRenderable ?? true,
             expectedRenderableReason: fixture.expectedRenderableReason ?? null,
             expectedMaterialXMaterials: 0,
         });
 
-        const glbSourceUrl = entry?.assets?.glb;
-        if (!glbSourceUrl) {
-            throw new Error(`Asset explorer catalog did not include a raw GLB URL for ${fixture.slug}.`);
-        }
-
-        const glbFilePath = path.join(cacheRoot, `${fixture.slug}.glb`);
-        await downloadIfNeeded(glbSourceUrl, glbFilePath, refresh);
+        const glbFilePath = path.join(repoRoot, "tests", "fixtures", "asset-explorer", `${fixture.slug}.glb`);
         fixtures.push({
             name: `${fixture.name}-raw-glb`,
             url: `/@fs${glbFilePath}`,
@@ -184,7 +212,7 @@ async function prepareFixtures({ cacheRoot, refresh }) {
                 path: `${fixture.slug}.glb`,
                 url: `/@fs${glbFilePath}`,
             }],
-            source: glbSourceUrl,
+            source: `usd-wasm/tests/fixtures/asset-explorer/${fixture.slug}.glb`,
             expectedRenderable: true,
             expectedRenderableReason: null,
             expectedMaterialXMaterials: 0,
@@ -192,34 +220,6 @@ async function prepareFixtures({ cacheRoot, refresh }) {
     }
 
     return fixtures;
-}
-
-async function readNeedleAssetCatalog() {
-    const response = await fetch("https://asset-explorer.needle.tools/api/models.json");
-    if (!response.ok) {
-        throw new Error(`Failed to fetch Needle asset catalog: ${response.status} ${response.statusText}`);
-    }
-    const catalog = await response.json();
-    return catalog.models || catalog.items || catalog.results || catalog;
-}
-
-async function downloadIfNeeded(url, filePath, refresh) {
-    if (!refresh) {
-        try {
-            const stat = await fs.stat(filePath);
-            if (stat.size > 0) return;
-        }
-        catch {
-            // Cache miss; download below.
-        }
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
-    }
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    await fs.writeFile(filePath, bytes);
 }
 
 function sanitizePathPart(value) {

@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `09e58605c2ddf086b1abf55084bbf5327e8c59f4`
+- `OpenUSD`: `89132d8399ce68fd78bb49082f69785601df86e8`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 
@@ -33,12 +33,11 @@ Important local repositories:
 
 ## Current Result
 
-This checkpoint is a release-candidate modernization baseline for the USD
-Preview Surface / three.js Hydra path. MaterialX is built and packaged in the
-wasm bundle, but the Hydra render delegate intentionally does not advertise the
-`mtlx` material context yet; keep one material path enabled until the
-`@needle-tools/materialx` shader-generation bridge can consume Hydra's MaterialX
-data directly.
+This checkpoint is a release-candidate modernization baseline for the
+OpenUSD 26.05 wasm + three.js Hydra path. The wasm bundle includes OpenSubdiv,
+OpenUSD MaterialX/`hdMtlx`, and Adobe `usdGltf`. Hydra-provided MaterialX
+documents are wired into `@needle-tools/materialx`; USD Preview Surface and
+glTF-derived Preview Surface networks stay on the existing Preview Surface path.
 
 Working now:
 
@@ -50,17 +49,15 @@ Working now:
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
+- MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
+- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, mixed Preview Surface + MaterialX stages, raw GLB assets, and API-constructed scenes.
 
-Not finished yet:
+Still to do before publishing a public package:
 
-- Wire Hydra-provided MaterialX data into `@needle-tools/materialx` as the single
-  MaterialX path. Do not reintroduce sidecar harvesting or synthesized
-  MaterialX materials.
-- Publish the local `@needle-tools/materialx` fixes, then refresh
-  `usd-wasm/package-lock.json` before enabling MaterialX shader generation in a
-  clean release.
+- Publish the local `@needle-tools/materialx` fixes, then refresh package metadata/locks as needed for the release.
+- Decide whether to keep or silence known non-fatal warnings for fixtures without tangents and glTF assets that expose separate metalness/roughness textures.
 
 The viewer currently has the MaterialX-enabled OpenUSD 26.05 Hydra wasm bundle checked in under:
 
@@ -91,8 +88,7 @@ Treat the modernization as production-ready only when all of these are true:
 - `npm run test:bindings` passes.
 - The three.js matrix passes for the supported three.js versions in both WebGL and WebGPU modes.
 - At least one USD Preview Surface fixture renders correctly.
-- MaterialX shader generation is either intentionally disabled, as in this
-  checkpoint, or enabled through Hydra-provided data with browser coverage.
+- MaterialX shader generation is enabled through Hydra-provided data with browser coverage.
 - At least one glTF/GLB-derived USD path is validated.
 - Raw `.glb` opens are validated after the Adobe plugin is linked into wasm.
 - Browser tests run from a clean checkout without relying on local installed prefixes except where documented.
@@ -155,19 +151,23 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 Current result on this machine:
 
 - The Three matrix cache is generated.
-- The manifest is written for 48 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with eight fixtures.
+- The manifest is written for 66 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with eleven fixtures.
 - The test passes in headed Chromium.
 - The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
 
 Observed result on 2026-06-24:
 
 ```text
-summary: passed 32, unsupported 16, failed 0
+summary: passed 44, unsupported 22, failed 0
 ```
 
 Renderable fixtures that pass with geometry and materials:
 
 - `examples/public/test.usdz`
+- `tests/fixtures/materialx/mxSimple.usda` plus `mtlxFiles/standard_surface_default.mtlx`
+- `tests/fixtures/materialx/materialx_nested_reference.usda` plus `mtlxFiles/standard_surface_default.mtlx`
+- `tests/fixtures/materialx/materialx_variant_bindings.usda` plus `mtlxFiles/standard_surface_default.mtlx`
+- `tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda` plus `mtlxFiles/standard_surface_default.mtlx`
 - Asset Explorer `BoomBox.glb.three.usdz`
 - Asset Explorer `BoomBox.glb`
 - Asset Explorer `CesiumMan.glb`
@@ -200,6 +200,27 @@ Carbon Frame Bike USDZ   scene=1 invalidPreviewSurface=0 fatal=0 networkFailures
 Carbon Frame Bike USDA   scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
 McUsd USDA               scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
 ```
+
+Additional real-page buttons validated after the local fixture expansion:
+
+```text
+MaterialX External Ref   Loaded, console errors=0
+MaterialX Nested Ref     Loaded, console errors=0
+MaterialX Variants       Loaded, console errors=0
+Preview + MaterialX      Loaded, console errors=0
+DamagedHelmet GLB        Loaded, console errors=0
+BoomBox GLB              Loaded, console errors=0
+CesiumMan GLB            Loaded, console errors=0
+Preview Material API     Loaded, console errors=0
+Animated Color API       Loaded, console errors=0
+Variant Cube API         Loaded, console errors=0
+```
+
+Known warnings from that headed pass:
+
+- MaterialX reports missing tangents for the simple sphere MaterialX fixtures.
+- The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
+- CesiumMan raw GLB reports an unsupported tangent primvar.
 
 The final long Bike USDZ recheck also has `cannotSaveLayer=0`, confirming that
 the browser no longer attempts to save a package-backed layer after the
@@ -331,6 +352,7 @@ cd /Users/herbst/git/usd-viewer
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.data usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.wasm usd-wasm/src/bindings/
+cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/usd-core-bindings.d.ts usd-wasm/src/types/
 rm -f usd-wasm/src/bindings/emHdBindings.worker.js
 ```
 

@@ -26,6 +26,22 @@
       background-color: rgba(0,0,0,0.5);
       color: white;
       z-index: 1000;
+      max-width: min(540px, calc(100vw - 20px));
+      max-height: calc(100vh - 20px);
+      overflow: auto;
+      font-family: system-ui, sans-serif;
+      font-size: 12px;
+    }
+
+    .control-group {
+      margin-bottom: 8px;
+    }
+
+    .control-group h2 {
+      margin: 5px 3px;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .test-buttons button {
@@ -34,9 +50,10 @@
       background-color: rgb(63, 107, 18);
       border: none;
       outline: none;
-      border-radius: 10px;
+      border-radius: 5px;
       cursor: pointer;
-      padding: 3px 8px;
+      padding: 5px 8px;
+      font: inherit;
     }
 
     .test-buttons button:hover {
@@ -46,6 +63,12 @@
 
     .options button {
       background-color: rgb(75, 75, 75);
+    }
+
+    .status {
+      margin: 5px 3px 0;
+      color: rgba(255,255,255,0.85);
+      word-break: break-word;
     }
   </style>
 </head>
