@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `dbbd37e457da896471e8570d01d41c9c9b69a9fc`
+- `OpenUSD`: `ea0adc529bb72ee2c621878469d05921c507cf42`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -55,6 +55,7 @@ Working now:
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The previous Asset Explorer CesiumMan USDZ was removed because it was a 10 KB Three.js export with no `Mesh` prims. The checked-in `CesiumMan.glb.openusd.usdz` was regenerated from `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path and is renderable.
+- `CesiumMan.glb.openusd.usdz` intentionally keeps the diffuse texture as a bracket-addressed GLB subasset, `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. OpenUSD commit `60936c01a` fixes nested package resolver dispatch so `USDZ[GLB[image]]` opens through the inner glTF package resolver; OpenUSD commit `ea0adc529` anchors hdEmscripten browser asset reads to the stage root layer.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
 - The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, MaterialX marble and procedural brick samples, mixed Preview Surface + MaterialX stages, raw GLB assets, regenerated CesiumMan USDZ, and API-constructed scenes.
 
@@ -90,7 +91,7 @@ Treat the modernization as production-ready only when all of these are true:
 
 - The MaterialX-enabled wasm Hydra bundle is the checked-in viewer bundle.
 - `npm run test:bindings` passes.
-- The three.js matrix passes for the supported three.js versions in both WebGL and WebGPU modes.
+- The three.js matrix passes for the supported three.js versions in WebGL and WebGPU modes; the older local Three `^0.164.1` runtime reports WebGPU modes as unsupported.
 - At least one USD Preview Surface fixture renders correctly.
 - MaterialX shader generation is enabled through Hydra-provided data with browser coverage.
 - At least one glTF/GLB-derived USD path is validated.
@@ -196,10 +197,10 @@ Renderable fixtures that pass with geometry and materials:
 
 The old `CesiumMan.glb.three.usdz` fixture was removed after inspection showed it contained no `def Mesh` prims. The replacement `CesiumMan.glb.openusd.usdz` was generated from the tracked `CesiumMan.glb` with the OpenUSD 26.05 wasm Adobe `usdGltf` plugin path; its USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and the matrix now treats it as renderable.
 
-The checked-in CesiumMan USDZ also rewrites the image reference away from the
-GLB subasset syntax (`@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`) and
-packages the extracted JPEG as `0/Cesium_Man-effect_diffuse.jpg`, which the
-browser resolver can load as a normal USDZ package asset.
+The checked-in CesiumMan USDZ keeps the original GLB subasset texture reference:
+`@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. The browser matrix asserts
+that this nested `USDZ[GLB[image]]` path resolves to a textured material, so
+future regressions in bracket-addressed package extraction fail visibly.
 
 Variant-specific matrix assertions now verify that `material_binding_overrides.usda`
 switches from one `Painted` mesh to one `Metal` mesh, `nested_variants.usda`
