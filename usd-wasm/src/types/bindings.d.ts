@@ -29,15 +29,73 @@ declare type USD = {
 };
 
 declare type USDStage = {
+    GetRootLayer(): USDLayer,
+    GetPseudoRoot(): USDPrim,
+    GetPrimAtPath(path: string): USDPrim,
+    Traverse(): USDPrimVector,
     GetStartTimeCode(): number,
     GetEndTimeCode(): number,
     GetTimeCodesPerSecond(): number,
     GetUpAxis(): number,
 }
 
+declare type USDLayer = {
+    GetIdentifier(): string,
+    GetDisplayName(): string,
+    ExportToString(): string,
+    Save(): boolean,
+}
+
+declare type USDPrim = {
+    IsValid(): boolean,
+    GetName(): string,
+    GetPath(): string,
+    GetTypeName(): string,
+    IsActive(): boolean,
+    SetActive(active: boolean): boolean,
+    IsDefined(): boolean,
+    IsLoaded(): boolean,
+    GetParent(): USDPrim,
+    GetChildren(): USDPrimVector,
+    GetPropertyNames(): StringVector,
+    GetAttribute(name: string): USDAttribute,
+    GetRelationship(name: string): USDRelationship,
+}
+
+declare type USDAttribute = {
+    IsValid(): boolean,
+    GetName(): string,
+    GetPath(): string,
+    GetTypeName(): string,
+    GetValueString(): string,
+}
+
+declare type USDRelationship = {
+    IsValid(): boolean,
+    GetName(): string,
+    GetPath(): string,
+    GetTargets(): StringVector,
+}
+
+declare type USDPrimVector = {
+    size(): number,
+    get(index: number): USDPrim,
+    delete(): void,
+}
+
+declare type StringVector = {
+    size(): number,
+    get(index: number): string,
+    delete(): void,
+}
+
 declare type HdWebSyncDriver = {
     getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => void,
-    GetStage: () => USDStage,
+    GetStage(): USDStage,
+    GetStageUpAxis(): number,
+    GetStageStartTimeCode(): number,
+    GetStageEndTimeCode(): number,
+    GetStageTimeCodesPerSecond(): number,
     SetTime(timecode: number): void,
     GetTime(): number,
     Draw(): void,

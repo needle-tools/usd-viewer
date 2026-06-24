@@ -25,14 +25,6 @@ export async function getUsdModule(opts) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
     }
 
-
-    // HACK for worker import: \"Cannot use import statement outside a module\""
-    // https://github.com/vitejs/vite/issues/6979
-
-    // @ts-ignore
-    const isProd = import.meta.env?.PROD ?? true;
-
-
     /**
      * We use a async import here because otherwise sveltekit vite complains about unknown file extensions (e.g. .wasm)
      */
@@ -41,17 +33,10 @@ export async function getUsdModule(opts) {
         import(`./emHdBindings.js?url`),
         /** @ts-ignore */
         import(`./emHdBindings.data?url`),
-        // https://v3.vitejs.dev/guide/features.html#web-workers
-        // https://github.com/vitejs/vite/issues/6979
-        /** @ts-ignore */
-        import(`./emHdBindings.worker.js?worker&url`),
-        /** @ts-ignore */
-        import(`./emHdBindings.worker.js?url`),
         /** @ts-ignore */
         import(`./emHdBindings.wasm?url`),
     ]);
-    const [bindings, data, workerProd, workerDev, wasm] = bindingsPromise;
-    const worker = isProd ? workerProd : workerDev;
+    const [bindings, data, wasm] = bindingsPromise;
     const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
 
     return usd_module_promise = getUsdModuleFn({
@@ -89,10 +74,6 @@ export async function getUsdModule(opts) {
             else if (file.includes("emHdBindings.wasm")) {
                 res = wasm.default;
             }
-            else if (file.includes("emHdBindings.worker.js")) {
-                res = worker.default;
-            }
-
             // if (url?.startsWith("data:text/javascript;base64")) {
             //     // we're client side and Buffer and atob are not available
             //     // so we need to convert the base64 to a blob
