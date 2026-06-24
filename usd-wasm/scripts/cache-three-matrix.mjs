@@ -17,7 +17,8 @@ import {
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const examplesRoot = path.join(repoRoot, "examples");
-const args = parseMatrixArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const args = parseMatrixArgs(rawArgs);
 const sharedCacheRoot = getDefaultCacheRoot({ cacheRoot: args.cacheRoot, cwd: repoRoot });
 const threeCacheRoot = path.join(sharedCacheRoot, "three-versions");
 const pagesRoot = path.join(repoRoot, ".cache", "usd-three-matrix-pages");
@@ -62,11 +63,12 @@ const fixtures = await prepareFixtures({
     cacheRoot: fixtureCacheRoot,
     refresh: args.refresh,
 });
+const selectedRendererModes = resolveRendererModes(rawArgs);
 
 const pagesManifest = await writeUsdThreeMatrixPages({
     pagesRoot,
     runtimes,
-    rendererModes,
+    rendererModes: selectedRendererModes,
     fixtures,
     createPage: ({ runtime, rendererMode, fixture }) => createCompatPage({ runtime, rendererMode, fixture }),
 });
@@ -74,6 +76,20 @@ const pagesManifest = await writeUsdThreeMatrixPages({
 console.log(`Wrote USD Three matrix manifest for ${pagesManifest.pages.length} cases to ${path.join(pagesRoot, "manifest.json")}`);
 console.log(`Using Three cache at ${threeCacheRoot}`);
 console.log(`Using USD fixture cache at ${fixtureCacheRoot}`);
+console.log(`Using renderer modes: ${selectedRendererModes.join(", ")}`);
+
+function resolveRendererModes(rawArgs) {
+    const argIndex = rawArgs.findIndex(arg => arg === "--renderer-modes" || arg === "--rendererModes");
+    const rawValue = argIndex >= 0 ? rawArgs[argIndex + 1] : process.env.USD_THREE_MATRIX_RENDERER_MODES;
+    if (!rawValue) return rendererModes;
+
+    const requested = rawValue.split(",").map(mode => mode.trim()).filter(Boolean);
+    const unknown = requested.filter(mode => !rendererModes.includes(mode));
+    if (unknown.length) {
+        throw new Error(`Unknown renderer mode(s): ${unknown.join(", ")}. Expected one of: ${rendererModes.join(", ")}`);
+    }
+    return rendererModes.filter(mode => requested.includes(mode));
+}
 
 async function writeUsdThreeMatrixPages(options) {
     const root = path.resolve(options.pagesRoot);

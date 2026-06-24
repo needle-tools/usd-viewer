@@ -17,7 +17,6 @@ def Xform "World" (
         prepend apiSchemas = ["MaterialBindingAPI"]
     )
     {
-        rel material:binding = </Looks/Painted>
         double radius = 0.85
         matrix4d xformOp:transform.timeSamples = {
             1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.55, 0, 0, 1) ),

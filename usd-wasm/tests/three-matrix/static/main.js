@@ -131,6 +131,7 @@ async function runSuite(THREE, renderer) {
     const bindingApi = {
         hdWebSyncDriver: typeof USD.HdWebSyncDriver,
         getStage: typeof USD.HdWebSyncDriver?.prototype?.GetStage,
+        repopulate: typeof USD.HdWebSyncDriver?.prototype?.Repopulate,
         fsCreateDataFile: typeof USD.FS_createDataFile,
         fsCreatePath: typeof USD.FS_createPath,
         fsAnalyzePath: typeof USD.FS_analyzePath,
@@ -169,9 +170,12 @@ async function runSuite(THREE, renderer) {
 
     const handleMethods = {
         update: typeof handle?.update,
+        repopulate: typeof handle?.repopulate,
         materialsReady: typeof handle?.materialsReady,
         dispose: typeof handle?.dispose,
     };
+    const fixtureChecks = await runFixtureChecks(handle, usdRoot, config);
+    const childCount = usdRoot.children.length;
     const sceneStats = collectSceneStats(usdRoot);
 
     handle?.dispose?.();
@@ -193,8 +197,9 @@ async function runSuite(THREE, renderer) {
         usd: {
             moduleReady: Boolean(USD),
             bindingApi,
-            childCount: usdRoot.children.length,
+            childCount,
             sceneStats,
+            fixtureChecks,
             handleMethods,
             hydraDiagnostics: handle?.diagnostics?.() ?? null,
         },
@@ -203,6 +208,46 @@ async function runSuite(THREE, renderer) {
             warnings: [...warnings],
         },
     };
+}
+
+async function runFixtureChecks(handle, usdRoot, config) {
+    const checks = {};
+    if (!handle?.driver?.GetStage) return checks;
+
+    if (config.fixtureName === "local-binding-override-variants-usda") {
+        const stage = handle.driver.GetStage();
+        const world = stage.GetPrimAtPath("/World");
+        checks.beforeMaterialVariant = collectMeshMaterialState(usdRoot);
+        world.SetVariantSelection("material", "metal");
+        await handle.repopulate();
+        await handle.materialsReady();
+        handle.update?.(0);
+        checks.afterMaterialVariant = collectMeshMaterialState(usdRoot);
+    }
+
+    if (config.fixtureName === "local-nested-variants-usda") {
+        const stage = handle.driver.GetStage();
+        const world = stage.GetPrimAtPath("/World");
+        checks.beforeNestedVariant = collectMeshMaterialState(usdRoot);
+        world.SetVariantSelection("shape", "cube");
+        await handle.repopulate();
+        await handle.materialsReady();
+        handle.update?.(0);
+        checks.afterShapeVariant = collectMeshMaterialState(usdRoot);
+
+        const shape = stage.GetPrimAtPath("/World/Shape");
+        shape.SetVariantSelection("finish", "cool");
+        await handle.repopulate();
+        await handle.materialsReady();
+        handle.update?.(0);
+        checks.afterFinishVariant = collectMeshMaterialState(usdRoot);
+    }
+
+    if (config.fixtureName === "local-cesium-man") {
+        checks.cesiumTexture = collectMeshMaterialState(usdRoot);
+    }
+
+    return checks;
 }
 
 async function loadHydraFixture(config) {
@@ -265,4 +310,28 @@ function collectSceneStats(root) {
     });
 
     return stats;
+}
+
+function collectMeshMaterialState(root) {
+    const meshes = [];
+    root.traverse?.(object => {
+        if (!object.isMesh) return;
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        meshes.push({
+            name: object.name || "",
+            materials: materials.filter(Boolean).map(material => ({
+                name: material.name || "",
+                color: material.color?.getHexString?.() || null,
+                metalness: material.metalness ?? null,
+                roughness: material.roughness ?? null,
+                hasMap: Boolean(material.map),
+            })),
+        });
+    });
+    return {
+        meshCount: meshes.length,
+        meshes,
+        materialNames: meshes.flatMap(mesh => mesh.materials.map(material => material.name)),
+        texturedMaterialCount: meshes.flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
+    };
 }

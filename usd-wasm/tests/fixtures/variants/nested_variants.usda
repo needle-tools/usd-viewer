@@ -20,21 +20,14 @@ def Xform "World" (
                 prepend variantSets = "finish"
             )
             {
-                rel material:binding = </Looks/Warm>
                 double size = 1.25
 
                 variantSet "finish" = {
                     "cool" {
-                        over "Shape"
-                        {
-                            rel material:binding = </Looks/Cool>
-                        }
+                        rel material:binding = </Looks/Cool>
                     }
                     "warm" {
-                        over "Shape"
-                        {
-                            rel material:binding = </Looks/Warm>
-                        }
+                        rel material:binding = </Looks/Warm>
                     }
                 }
             }
@@ -48,21 +41,14 @@ def Xform "World" (
                 prepend variantSets = "finish"
             )
             {
-                rel material:binding = </Looks/Cool>
                 double radius = 0.85
 
                 variantSet "finish" = {
                     "cool" {
-                        over "Shape"
-                        {
-                            rel material:binding = </Looks/Cool>
-                        }
+                        rel material:binding = </Looks/Cool>
                     }
                     "warm" {
-                        over "Shape"
-                        {
-                            rel material:binding = </Looks/Warm>
-                        }
+                        rel material:binding = </Looks/Warm>
                     }
                 }
             }
