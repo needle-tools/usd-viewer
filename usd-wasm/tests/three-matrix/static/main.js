@@ -128,6 +128,17 @@ async function runSuite(THREE, renderer) {
         debug: false,
         setStatus: status => setPhase(`suite-usd-status:${status}`),
     });
+    const bindingApi = {
+        hdWebSyncDriver: typeof USD.HdWebSyncDriver,
+        getStage: typeof USD.HdWebSyncDriver?.prototype?.GetStage,
+        fsCreateDataFile: typeof USD.FS_createDataFile,
+        fsCreatePath: typeof USD.FS_createPath,
+        fsAnalyzePath: typeof USD.FS_analyzePath,
+        fsReaddir: typeof USD.FS_readdir,
+        fsRmdir: typeof USD.FS_rmdir,
+        fsUnlink: typeof USD.FS_unlink,
+        readyThen: typeof USD.ready?.then,
+    };
     setPhase("suite-create-scene");
     const scene = new THREE.Scene();
     const usdRoot = new THREE.Object3D();
@@ -136,29 +147,43 @@ async function runSuite(THREE, renderer) {
     camera.position.set(0, 0, 3);
     camera.updateMatrixWorld();
 
+    setPhase("suite-fetch-fixture");
+    const hydraFixture = await loadHydraFixture(config);
+
     setPhase("suite-create-three-hydra");
     const handle = await createThreeHydra({
         debug: false,
         USD,
-        url: config.fixtureUrl,
+        ...hydraFixture,
         scene: usdRoot,
     });
     setPhase("suite-hydra-update");
     handle?.update?.(0);
+    setPhase("suite-materials-ready");
+    await handle?.materialsReady?.();
     setPhase("suite-render");
+    handle?.update?.(0);
     renderer.render(scene, camera);
     setPhase("suite-raf");
     await new Promise(resolve => requestAnimationFrame(resolve));
 
     const handleMethods = {
         update: typeof handle?.update,
+        materialsReady: typeof handle?.materialsReady,
         dispose: typeof handle?.dispose,
     };
+    const sceneStats = collectSceneStats(usdRoot);
+
     handle?.dispose?.();
     renderer.dispose?.();
 
     setPhase("suite-complete");
     return {
+        fixture: {
+            name: config.fixtureName,
+            url: config.fixtureUrl,
+            source: config.fixtureSource,
+        },
         threeRevision: THREE.REVISION,
         renderer: {
             className: renderer.constructor?.name ?? null,
@@ -167,12 +192,77 @@ async function runSuite(THREE, renderer) {
         },
         usd: {
             moduleReady: Boolean(USD),
+            bindingApi,
             childCount: usdRoot.children.length,
+            sceneStats,
             handleMethods,
+            hydraDiagnostics: handle?.diagnostics?.() ?? null,
         },
         diagnostics: {
             errors: [...errors],
             warnings: [...warnings],
         },
     };
+}
+
+async function loadHydraFixture(config) {
+    if (Array.isArray(config.fixtureFiles) && config.fixtureFiles.length) {
+        const files = [];
+        for (const fixtureFile of config.fixtureFiles) {
+            const response = await fetch(fixtureFile.url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch fixture file ${fixtureFile.url}: ${response.status} ${response.statusText}`);
+            }
+            const buffer = await response.arrayBuffer();
+            const path = fixtureFile.path;
+            const name = path.split('/').pop() || path;
+            files.push({
+                name,
+                path,
+                arrayBuffer: async () => buffer,
+            });
+        }
+        return { files };
+    }
+
+    const fixtureResponse = await fetch(config.fixtureUrl);
+    if (!fixtureResponse.ok) {
+        throw new Error(`Failed to fetch fixture ${config.fixtureUrl}: ${fixtureResponse.status} ${fixtureResponse.statusText}`);
+    }
+    const fixtureBuffer = await fixtureResponse.arrayBuffer();
+    return {
+        url: `matrix-fixtures/${config.fixtureName}.usdz`,
+        buffer: fixtureBuffer,
+    };
+}
+
+function collectSceneStats(root) {
+    const stats = {
+        objects: 0,
+        meshes: 0,
+        geometriesWithPosition: 0,
+        materials: 0,
+        materialXMaterials: 0,
+        meshPhysicalMaterials: 0,
+        namedMaterials: [],
+    };
+
+    root.traverse?.(object => {
+        stats.objects++;
+        if (!object.isMesh) return;
+        stats.meshes++;
+        if (object.geometry?.attributes?.position?.count > 0) {
+            stats.geometriesWithPosition++;
+        }
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of materials) {
+            if (!material) continue;
+            stats.materials++;
+            if (material.constructor?.name === "MaterialXMaterial") stats.materialXMaterials++;
+            if (material.isMeshPhysicalMaterial) stats.meshPhysicalMaterials++;
+            if (material.name && stats.namedMaterials.length < 20) stats.namedMaterials.push(material.name);
+        }
+    });
+
+    return stats;
 }
