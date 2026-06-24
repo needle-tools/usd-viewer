@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `89132d8399ce68fd78bb49082f69785601df86e8`
+- `OpenUSD`: `4cafce1075d717cc44cdc55d68beac22bdd90e4a`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 
@@ -52,7 +52,7 @@ Working now:
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
-- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, mixed Preview Surface + MaterialX stages, raw GLB assets, and API-constructed scenes.
+- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, mixed Preview Surface + MaterialX stages, raw GLB assets, and API-constructed scenes.
 
 Still to do before publishing a public package:
 
@@ -151,14 +151,14 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 Current result on this machine:
 
 - The Three matrix cache is generated.
-- The manifest is written for 66 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with eleven fixtures.
+- The manifest is written for 90 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with fifteen fixtures.
 - The test passes in headed Chromium.
 - The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
 
 Observed result on 2026-06-24:
 
 ```text
-summary: passed 44, unsupported 22, failed 0
+summary: passed 60, unsupported 30, failed 0
 ```
 
 Renderable fixtures that pass with geometry and materials:
@@ -168,6 +168,10 @@ Renderable fixtures that pass with geometry and materials:
 - `tests/fixtures/materialx/materialx_nested_reference.usda` plus `mtlxFiles/standard_surface_default.mtlx`
 - `tests/fixtures/materialx/materialx_variant_bindings.usda` plus `mtlxFiles/standard_surface_default.mtlx`
 - `tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda` plus `mtlxFiles/standard_surface_default.mtlx`
+- `tests/fixtures/materialx/materialx_texture_noise.usda` plus `mtlxFiles/texture_noise_surface.mtlx` and `textures/checker.png`
+- `tests/fixtures/payloads/payload_root.usda` plus `payload_payload.usda`
+- `tests/fixtures/variants/nested_variants.usda`
+- `tests/fixtures/variants/material_binding_overrides.usda`
 - Asset Explorer `BoomBox.glb.three.usdz`
 - Asset Explorer `BoomBox.glb`
 - Asset Explorer `CesiumMan.glb`
@@ -208,17 +212,22 @@ MaterialX External Ref   Loaded, console errors=0
 MaterialX Nested Ref     Loaded, console errors=0
 MaterialX Variants       Loaded, console errors=0
 Preview + MaterialX      Loaded, console errors=0
+MaterialX Texture+Noise  Loaded, console errors=0
+Payload Root             Loaded, unload/load controls work, console errors=0
+Nested Variants          Loaded, root and nested dropdowns work, console errors=0
+Binding Override Variant Loaded, dropdown material switch works, console errors=0
 DamagedHelmet GLB        Loaded, console errors=0
 BoomBox GLB              Loaded, console errors=0
 CesiumMan GLB            Loaded, console errors=0
 Preview Material API     Loaded, console errors=0
 Animated Color API       Loaded, console errors=0
+Variant Sphere API       Loaded, shape dropdown works, root-layer variants preserved
 Variant Cube API         Loaded, console errors=0
 ```
 
 Known warnings from that headed pass:
 
-- MaterialX reports missing tangents for the simple sphere MaterialX fixtures.
+- MaterialX reports missing tangents for the simple sphere MaterialX fixtures. The texture/noise MaterialX fixture authors tangents and runs without that warning.
 - The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
 
@@ -518,8 +527,11 @@ needed by `usd-viewer`: `Layer`, `Stage`, `Prim`, `Attribute`, `Relationship`,
 and vector helpers. It also covers the first authoring/package checkpoint:
 `CreateStage`, `OpenStage`, `ReleaseStage`, `Stage.DefinePrim`, stage time/up-axis
 metadata setters, `Prim.CreateAttribute`, variant add/list/select helpers,
-`Prim.DefinePrimInVariant`, typed attribute setters including time samples,
-`CreateUsdzPackage`, and `ReadFile` for browser download handoff. `HdWebSyncDriver`
+`Prim.DefinePrimInVariant`, `Stage.TraverseAll` for unloaded payload discovery,
+payload authoring/load/unload helpers, typed attribute setters including time
+samples, `CreateUsdzPackage`, and `ReadFile` for browser download handoff.
+Use `stage.GetRootLayer().Export(path)` when the authored layer must preserve
+variant sets; `stage.Export(path)` writes a flattened composed stage. `HdWebSyncDriver`
 remains an explicit bridge binding because it is the Hydra/three.js transport API
 rather than USD itself.
 

@@ -48,6 +48,9 @@ export declare type NeedleThreeHydraHandle = {
      * @param dt The delta time since the last update.
      */
     update: (dt: number) => void,
+    /** Redraw the current USD stage after imperative stage edits.
+     */
+    refresh: () => Promise<void>,
     /** Resolves after the initial Hydra draw has settled.
      */
     ready: () => Promise<void>,

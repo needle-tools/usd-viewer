@@ -1,0 +1,74 @@
+#usda 1.0
+(
+    upAxis = "Z"
+    startTimeCode = 1
+    endTimeCode = 48
+    timeCodesPerSecond = 24
+)
+
+def Xform "World" (
+    variants = {
+        string material = "painted"
+    }
+    prepend variantSets = "material"
+)
+{
+    def Sphere "BindingTarget" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/Painted>
+        double radius = 0.85
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.55, 0, 0, 1) ),
+            24: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.55, 0, 0, 1) ),
+            48: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.55, 0, 0, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    variantSet "material" = {
+        "painted" {
+            over "BindingTarget"
+            {
+                rel material:binding = </Looks/Painted>
+            }
+        }
+        "metal" {
+            over "BindingTarget"
+            {
+                rel material:binding = </Looks/Metal>
+            }
+        }
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "Painted"
+    {
+        token outputs:surface.connect = </Looks/Painted/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.9, 0.1, 0.45)
+            float inputs:roughness = 0.65
+            token outputs:surface
+        }
+    }
+
+    def Material "Metal"
+    {
+        token outputs:surface.connect = </Looks/Metal/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.75, 0.8, 0.9)
+            float inputs:metallic = 1
+            float inputs:roughness = 0.18
+            token outputs:surface
+        }
+    }
+}
