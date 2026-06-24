@@ -91,7 +91,8 @@ export async function createThreeHydra(config) {
     // Capabilities of the loader.
     // This depends on the HttpAssetResolver implementation and the virtual file system.
     const allowFetchWebUrls = true;
-    const allowFetchLocalFiles = true;
+    // Browser-local paths need to be mounted into Emscripten FS before UsdStage::Open.
+    const allowFetchLocalFiles = false;
 
     // Which file we actually load as root file depends:
     // - when an array of files is provided, we use the first one;
