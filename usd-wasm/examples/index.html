@@ -65,6 +65,30 @@
       background-color: rgb(75, 75, 75);
     }
 
+    .scene-control-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+      margin: 4px 3px;
+    }
+
+    .scene-control-row span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .scene-control-row select {
+      min-width: 96px;
+      color: white;
+      background-color: rgb(34, 34, 34);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font: inherit;
+    }
+
     .status {
       margin: 5px 3px 0;
       color: rgba(255,255,255,0.85);

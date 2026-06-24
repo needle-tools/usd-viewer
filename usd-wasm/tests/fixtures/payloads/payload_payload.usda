@@ -1,0 +1,44 @@
+#usda 1.0
+(
+    defaultPrim = "PayloadRoot"
+    upAxis = "Z"
+)
+
+def Xform "PayloadRoot"
+{
+    def Sphere "LoadedSphere" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </PayloadRoot/Looks/PayloadPreview>
+        double radius = 0.8
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.75, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Cube "LoadedCube" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </PayloadRoot/Looks/PayloadPreview>
+        double size = 1.15
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.9, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Scope "Looks"
+    {
+        def Material "PayloadPreview"
+        {
+            token outputs:surface.connect = </PayloadRoot/Looks/PayloadPreview/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.95, 0.55, 0.05)
+                float inputs:roughness = 0.4
+                token outputs:surface
+            }
+        }
+    }
+}

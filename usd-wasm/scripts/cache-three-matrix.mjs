@@ -178,6 +178,59 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-materialx-texture-noise-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_texture_noise.usda")}`,
+        files: [{
+            path: "materialx_texture_noise.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_texture_noise.usda")}`,
+        }, {
+            path: "mtlxFiles/texture_noise_surface.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "texture_noise_surface.mtlx")}`,
+        }, {
+            path: "textures/checker.png",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "checker.png")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/materialx_texture_noise.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-payload-root-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "payloads", "payload_root.usda")}`,
+        files: [{
+            path: "payload_root.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "payloads", "payload_root.usda")}`,
+        }, {
+            path: "payload_payload.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "payloads", "payload_payload.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/payloads/payload_root.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-nested-variants-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "variants", "nested_variants.usda")}`,
+        files: [{
+            path: "nested_variants.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "variants", "nested_variants.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/variants/nested_variants.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-binding-override-variants-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "variants", "material_binding_overrides.usda")}`,
+        files: [{
+            path: "material_binding_overrides.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "variants", "material_binding_overrides.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/variants/material_binding_overrides.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
     }];
 
     const localAssetFixtures = [

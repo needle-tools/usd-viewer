@@ -33,7 +33,32 @@ class TextureRegistry {
     }
   }
 
+  normalizeResourcePath(resourcePath) {
+    return String(resourcePath ?? "")
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "")
+      .replace(/^(?:\.\/)+/, "")
+      .replace(/\/\.\//g, "/");
+  }
+
+  resolveResourcePath(resourcePath) {
+    const normalized = this.normalizeResourcePath(resourcePath);
+    if (!normalized) return normalized;
+
+    const knownPaths = Array.isArray(this.allPaths) ? this.allPaths : [];
+    for (const knownPath of knownPaths) {
+      const known = this.normalizeResourcePath(knownPath);
+      const knownWithoutRoot = known.replace(/^needle\//, "");
+      if (knownWithoutRoot === normalized || knownWithoutRoot.endsWith("/" + normalized)) {
+        return known;
+      }
+    }
+
+    return normalized;
+  }
+
   getTexture(resourcePath) {
+    resourcePath = this.resolveResourcePath(resourcePath);
     if (debugTextures) console.log("get texture", resourcePath);
     if (this.textures[resourcePath]) {
       return this.textures[resourcePath];
@@ -141,6 +166,7 @@ class HydraMesh {
     this._interface = hydraInterface;
     this._points = undefined;
     this._normals = undefined;
+    this._tangents = undefined;
     this._colors = undefined;
     this._uvs = undefined;
     this._indices = undefined;
@@ -235,6 +261,15 @@ class HydraMesh {
       // We have per-vertex UVs, so we need to sort them accordingly
       this._normals = data.slice(0);
       this.updateOrder(this._normals, 'normal');
+    }
+  }
+
+  setTangents(data, dimension, interpolation) {
+    if (interpolation === 'facevarying') {
+      this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, dimension));
+    } else if (interpolation === 'vertex') {
+      this._tangents = data.slice(0);
+      this.updateOrder(this._tangents, 'tangent', dimension);
     }
   }
 
@@ -351,6 +386,10 @@ class HydraMesh {
         break;
       case "normals":
         this.setNormals(data, interpolation);
+        break;
+      case "tangent":
+      case "tangents":
+        this.setTangents(data, dimension, interpolation);
         break;
       default:
         if (warningMessagesToCount.has(name)) {

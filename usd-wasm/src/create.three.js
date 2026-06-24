@@ -119,6 +119,7 @@ export async function createThreeHydra(config) {
     // Some common directory is needed so that we don't get clashes with root-level files
     // and directories in the virtual file system
     const directoryForFiles = "needle/";
+    const loadedFilePaths = [];
 
     // We're loading all provided files into the virtual file system.
     // Potentially, we could also resolve dropped files on the fly and load them only when needed,
@@ -138,6 +139,10 @@ export async function createThreeHydra(config) {
             USD.FS_createPath("", directoryForFiles + directory, true, true);
             const fileBuffer = await file.arrayBuffer();
             USD.FS_createDataFile(directoryForFiles + directory, fileName, new Uint8Array(fileBuffer), true, true, true);
+            if (file.path) {
+                loadedFilePaths.push(directoryForFiles + file.path);
+                loadedFilePaths.push(file.path);
+            }
         }
     }
 
@@ -185,7 +190,7 @@ export async function createThreeHydra(config) {
      */
     const delegateConfig = {
         usdRoot: config.scene,
-        paths: new Array(),
+        paths: loadedFilePaths,
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
 
@@ -286,6 +291,7 @@ export async function createThreeHydra(config) {
             }
             draw();
         },
+        refresh: () => draw(),
         materialsReady: () => renderInterface.waitForMaterialsReady(),
         diagnostics: () => renderInterface.getDiagnostics(),
         /**

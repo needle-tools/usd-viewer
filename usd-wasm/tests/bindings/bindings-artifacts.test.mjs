@@ -103,12 +103,18 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.ReleaseStage, "function");
         assert.equal(typeof USD.CreateUsdzPackage, "function");
         assert.equal(typeof USD.ReadFile, "function");
+        assert.equal(typeof USD.Stage.prototype.TraverseAll, "function");
         assert.equal(typeof USD.Attribute.prototype.SetVec3f, "function");
         assert.equal(typeof USD.Attribute.prototype.SetVec3d, "function");
         assert.equal(typeof USD.Attribute.prototype.SetMatrix4d, "function");
         assert.equal(typeof USD.Attribute.prototype.AddConnection, "function");
         assert.equal(typeof USD.Prim.prototype.ApplyAPI, "function");
+        assert.equal(typeof USD.Prim.prototype.GetVariantSetNames, "function");
         assert.equal(typeof USD.Prim.prototype.CreateRelationship, "function");
+        assert.equal(typeof USD.Prim.prototype.HasAuthoredPayloads, "function");
+        assert.equal(typeof USD.Prim.prototype.AddPayload, "function");
+        assert.equal(typeof USD.Prim.prototype.Load, "function");
+        assert.equal(typeof USD.Prim.prototype.Unload, "function");
         assert.equal(typeof USD.Relationship.prototype.AddTarget, "function");
         assert.equal(typeof USD.Relationship.prototype.ClearTargets, "function");
         assert.equal(typeof USD.FS_createDataFile, "function");
@@ -146,6 +152,12 @@ def Xform "Root" {
         assert.equal(root.GetPath(), "/Root");
         assert.equal(root.GetTypeName(), "Xform");
         assert.equal(stage.GetPseudoRoot().GetChildren().size(), 1);
+        const allPrims = stage.TraverseAll();
+        try {
+            assert.equal(allPrims.size(), 1);
+        } finally {
+            allPrims.delete();
+        }
         assert.match(stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
         driver.delete();
     });
@@ -220,6 +232,13 @@ def Xform "Root" {
         assert.equal(root.SetVariantSelection("lod", "high"), true);
         assert.equal(root.GetVariantSelection("lod"), "high");
 
+        const variantSetNames = root.GetVariantSetNames();
+        try {
+            assert.deepEqual([variantSetNames.get(0)], ["lod"]);
+        } finally {
+            variantSetNames.delete();
+        }
+
         const variantNames = root.GetVariantNames("lod");
         try {
             assert.equal(variantNames.size(), 2);
@@ -240,7 +259,7 @@ def Xform "Root" {
         assert.match(rootLayerExport, /variants = \{/);
         assert.match(rootLayerExport, /variantSet "lod" = \{/);
 
-        assert.equal(stage.Export(usdPath), true);
+        assert.equal(stage.GetRootLayer().Export(usdPath), true);
         assert.equal(USD.FS_analyzePath(usdPath).exists, true);
         assert.equal(USD.CreateUsdzPackage(usdPath, usdzPath), true);
 
@@ -255,6 +274,24 @@ def Xform "Root" {
         assert.equal(reopenedRoot.GetVariantSelection("lod"), "high");
         assert.equal(reopened.GetPrimAtPath("/World/HighGeom").IsValid(), true);
         assert.equal(reopenedRoot.GetAttribute("userProperties:spin").GetValueStringAtTime(24), "90");
+        assert.match(reopened.GetRootLayer().ExportToString(), /variantSet "lod" = \{/);
+
+        const payloadPath = "/tmp/generated-payload.usda";
+        const payloadStage = USD.CreateStage(payloadPath);
+        payloadStage.DefinePrim("/PayloadRoot", "Xform");
+        payloadStage.DefinePrim("/PayloadRoot/PayloadSphere", "Sphere");
+        assert.equal(payloadStage.Export(payloadPath), true);
+        USD.ReleaseStage(payloadStage);
+
+        const payloadHolder = stage.DefinePrim("/World/PayloadHolder", "Xform");
+        assert.equal(payloadHolder.AddPayload("generated-payload.usda", "/PayloadRoot"), true);
+        assert.equal(payloadHolder.HasAuthoredPayloads(), true);
+        assert.equal(payloadHolder.IsLoaded(), true);
+        payloadHolder.Unload();
+        assert.equal(payloadHolder.IsLoaded(), false);
+        payloadHolder.Load();
+        assert.equal(payloadHolder.IsLoaded(), true);
+        assert.match(stage.GetRootLayer().ExportToString(), /prepend payload = @generated-payload\.usda@<\/PayloadRoot>/);
 
         USD.ReleaseStage(reopened);
         USD.ReleaseStage(stage);

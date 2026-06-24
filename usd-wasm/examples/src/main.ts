@@ -17,10 +17,13 @@ let usdContent: Object3D;
 let usd: USD;
 let app: { fitCamera: () => void };
 let statusElement: HTMLElement | null = null;
+let variantControlsElement: HTMLElement | null = null;
+let lastApiKind: ApiSceneKind = "preview";
 const debugUsd = false;
 
 type TestFile = { path: string, url: string };
 type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
+type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
 
 const fixtureUrls = {
   "asset-explorer/DamagedHelmet.glb": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb", import.meta.url).href,
@@ -33,7 +36,14 @@ const fixtureUrls = {
   "materialx/materialx_nested_reference.usda": new URL("../../tests/fixtures/materialx/materialx_nested_reference.usda", import.meta.url).href,
   "materialx/materialx_variant_bindings.usda": new URL("../../tests/fixtures/materialx/materialx_variant_bindings.usda", import.meta.url).href,
   "materialx/usdshade_preview_with_mtlx_peer.usda": new URL("../../tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda", import.meta.url).href,
+  "materialx/materialx_texture_noise.usda": new URL("../../tests/fixtures/materialx/materialx_texture_noise.usda", import.meta.url).href,
   "materialx/mtlxFiles/standard_surface_default.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/standard_surface_default.mtlx", import.meta.url).href,
+  "materialx/mtlxFiles/texture_noise_surface.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/texture_noise_surface.mtlx", import.meta.url).href,
+  "materialx/textures/checker.png": new URL("../../tests/fixtures/materialx/textures/checker.png", import.meta.url).href,
+  "payloads/payload_root.usda": new URL("../../tests/fixtures/payloads/payload_root.usda", import.meta.url).href,
+  "payloads/payload_payload.usda": new URL("../../tests/fixtures/payloads/payload_payload.usda", import.meta.url).href,
+  "variants/nested_variants.usda": new URL("../../tests/fixtures/variants/nested_variants.usda", import.meta.url).href,
+  "variants/material_binding_overrides.usda": new URL("../../tests/fixtures/variants/material_binding_overrides.usda", import.meta.url).href,
 };
 
 type FixturePath = keyof typeof fixtureUrls;
@@ -55,6 +65,16 @@ const testAssets: TestAsset[] = [
   { group: "glTF Plugin", label: "BoomBox USDZ", url: fixtureUrl("asset-explorer/BoomBox.glb.three.usdz") },
   { group: "glTF Plugin", label: "CesiumMan GLB", files: [fixtureFile("asset-explorer/CesiumMan.glb")] },
   { group: "glTF Plugin", label: "CesiumMan USDZ", url: fixtureUrl("asset-explorer/CesiumMan.glb.three.usdz") },
+  {
+    group: "Composition",
+    label: "Payload Root",
+    files: [
+      fixtureFile("payloads/payload_root.usda"),
+      fixtureFile("payloads/payload_payload.usda"),
+    ],
+  },
+  { group: "Composition", label: "Nested Variants", files: [fixtureFile("variants/nested_variants.usda")] },
+  { group: "Composition", label: "Binding Override Variants", files: [fixtureFile("variants/material_binding_overrides.usda")] },
   {
     group: "MaterialX",
     label: "MaterialX External Ref",
@@ -85,6 +105,15 @@ const testAssets: TestAsset[] = [
     files: [
       fixtureFile("materialx/usdshade_preview_with_mtlx_peer.usda"),
       fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
+    ],
+  },
+  {
+    group: "MaterialX",
+    label: "MaterialX Texture + Noise",
+    files: [
+      fixtureFile("materialx/materialx_texture_noise.usda"),
+      fixtureFile("materialx/mtlxFiles/texture_noise_surface.mtlx"),
+      fixtureFile("materialx/textures/checker.png"),
     ],
   },
 ];
@@ -182,6 +211,16 @@ getUsdModule({
   statusElement.className = "status";
   statusElement.innerText = "Ready";
   div.appendChild(statusElement);
+
+  variantControlsElement = document.createElement("section");
+  variantControlsElement.className = "control-group variant-controls";
+  const variantHeading = document.createElement("h2");
+  variantHeading.innerText = "Scene Controls";
+  variantControlsElement.appendChild(variantHeading);
+  const emptyState = document.createElement("p");
+  emptyState.innerText = "Load a file with variants or payloads.";
+  variantControlsElement.appendChild(emptyState);
+  div.appendChild(variantControlsElement);
 })
 
 function createControls() {
@@ -279,6 +318,7 @@ async function loadFile(url: string, label = url) {
   console.log("Scene content", usdContent);
   await delegate.ready?.();
   await delegate.materialsReady?.();
+  updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
@@ -312,15 +352,17 @@ async function loadFiles(files: TestFile[], label: string) {
   console.log("Scene content", usdContent);
   await delegate.ready?.();
   await delegate.materialsReady?.();
+  updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
 
-async function loadApiScene(kind: "preview" | "animated" | "variant-sphere" | "variant-cube") {
+async function loadApiScene(kind: ApiSceneKind) {
   status(`Constructing ${kind}`);
+  lastApiKind = kind;
   const path = `/tmp/${kind}.usda`;
   const stage = createApiStage(kind, path);
-  stage.Export(path);
+  stage.GetRootLayer().Export(path);
   const bytes = usd.ReadFile(path);
   usd.ReleaseStage(stage);
   await loadBuffer(bytes, `${kind}.usda`, `API ${kind}`);
@@ -334,17 +376,21 @@ function createApiStage(kind: string, path: string) {
   stage.SetTimeCodesPerSecond(24);
 
   const world = stage.DefinePrim("/World", "Xform");
-  const sphere = stage.DefinePrim("/World/ApiSphere", kind === "variant-cube" ? "Cube" : "Sphere");
-  sphere.CreateAttribute(kind === "variant-cube" ? "size" : "radius", "double", false).SetDouble(1, Number.NaN);
 
   if (kind.startsWith("variant")) {
     world.AddVariant("shape", "sphere");
     world.AddVariant("shape", "cube");
-    world.DefinePrimInVariant("shape", "sphere", "/World/VariantSphere", "Sphere")
-      .CreateAttribute("radius", "double", false).SetDouble(1, Number.NaN);
-    world.DefinePrimInVariant("shape", "cube", "/World/VariantCube", "Cube")
+    world.DefinePrimInVariant("shape", "sphere", "/World/Shape", "Sphere")
+      .CreateAttribute("radius", "double", false).SetDouble(0.95, Number.NaN);
+    world.DefinePrimInVariant("shape", "cube", "/World/Shape", "Cube")
       .CreateAttribute("size", "double", false).SetDouble(1.5, Number.NaN);
     world.SetVariantSelection("shape", kind === "variant-cube" ? "cube" : "sphere");
+  }
+  else {
+    const sphere = stage.DefinePrim("/World/ApiSphere", "Sphere");
+    sphere.CreateAttribute("radius", "double", false).SetDouble(1, Number.NaN);
+    sphere.ApplyAPI("MaterialBindingAPI");
+    sphere.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
   }
 
   const material = stage.DefinePrim("/Looks/ApiPreview", "Material");
@@ -360,8 +406,8 @@ function createApiStage(kind: string, path: string) {
   shader.CreateAttribute("inputs:roughness", "float", false).SetFloat(0.28, Number.NaN);
   shader.CreateAttribute("outputs:surface", "token", false);
   material.CreateAttribute("outputs:surface", "token", false).AddConnection("/Looks/ApiPreview/Shader.outputs:surface");
-  sphere.ApplyAPI("MaterialBindingAPI");
-  sphere.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
+  world.ApplyAPI("MaterialBindingAPI");
+  world.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
 
   return stage;
 }
@@ -380,13 +426,14 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
   hydraDelegate = delegate;
   await delegate.ready?.();
   await delegate.materialsReady?.();
+  updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
 
 function downloadApiUsdz() {
-  const stage = createApiStage("preview", "/tmp/api-download.usda");
-  stage.Export("/tmp/api-download.usda");
+  const stage = createApiStage(lastApiKind, "/tmp/api-download.usda");
+  stage.GetRootLayer().Export("/tmp/api-download.usda");
   usd.CreateUsdzPackage("/tmp/api-download.usda", "/tmp/api-download.usdz");
   const bytes = usd.ReadFile("/tmp/api-download.usdz");
   usd.ReleaseStage(stage);
@@ -394,10 +441,128 @@ function downloadApiUsdz() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "api-constructed.usdz";
+  anchor.download = `api-${lastApiKind}.usdz`;
   anchor.click();
   URL.revokeObjectURL(url);
-  status("Downloaded API USDZ");
+  status(`Downloaded API USDZ (${lastApiKind})`);
+}
+
+function updateSceneControls() {
+  if (!variantControlsElement) return;
+  while (variantControlsElement.children.length > 1) {
+    variantControlsElement.lastChild?.remove();
+  }
+
+  const stage = hydraDelegate?.driver?.GetStage?.();
+  if (!stage) {
+    appendSceneControlEmpty("Load a file with variants or payloads.");
+    return;
+  }
+
+  const prims = vectorToArray(stage.TraverseAll());
+  const variantEntries: Array<{ primPath: string, setName: string, selection: string, names: string[] }> = [];
+  const payloadEntries: Array<{ primPath: string, loaded: boolean }> = [];
+
+  for (const prim of prims) {
+    const setNames = vectorToArray(prim.GetVariantSetNames());
+    for (const setName of setNames) {
+      const names = vectorToArray(prim.GetVariantNames(setName));
+      if (names.length) {
+        variantEntries.push({
+          primPath: prim.GetPath(),
+          setName,
+          selection: prim.GetVariantSelection(setName),
+          names,
+        });
+      }
+    }
+
+    if (prim.HasAuthoredPayloads()) {
+      payloadEntries.push({
+        primPath: prim.GetPath(),
+        loaded: prim.IsLoaded(),
+      });
+    }
+  }
+
+  if (!variantEntries.length && !payloadEntries.length) {
+    appendSceneControlEmpty("No variants or authored payloads found.");
+    return;
+  }
+
+  for (const entry of variantEntries) {
+    const row = document.createElement("label");
+    row.className = "scene-control-row";
+    const text = document.createElement("span");
+    text.innerText = `${entry.primPath} ${entry.setName}`;
+    row.appendChild(text);
+
+    const select = document.createElement("select");
+    for (const name of entry.names) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.innerText = name;
+      option.selected = name === entry.selection;
+      select.appendChild(option);
+    }
+    select.onchange = async () => {
+      const prim = hydraDelegate?.driver?.GetStage?.().GetPrimAtPath(entry.primPath);
+      if (!prim?.IsValid()) return;
+      prim.SetVariantSelection(entry.setName, select.value);
+      await redrawHydra(`${entry.primPath} ${entry.setName}=${select.value}`);
+      updateSceneControls();
+    };
+    row.appendChild(select);
+    variantControlsElement.appendChild(row);
+  }
+
+  for (const entry of payloadEntries) {
+    const row = document.createElement("div");
+    row.className = "scene-control-row";
+    const text = document.createElement("span");
+    text.innerText = `${entry.primPath} payload ${entry.loaded ? "loaded" : "unloaded"}`;
+    row.appendChild(text);
+
+    const toggle = document.createElement("button");
+    toggle.innerText = entry.loaded ? "Unload" : "Load";
+    toggle.onclick = async () => {
+      const prim = hydraDelegate?.driver?.GetStage?.().GetPrimAtPath(entry.primPath);
+      if (!prim?.IsValid()) return;
+      if (prim.IsLoaded()) prim.Unload();
+      else prim.Load();
+      await redrawHydra(`${entry.primPath} payload ${prim.IsLoaded() ? "loaded" : "unloaded"}`);
+      updateSceneControls();
+    };
+    row.appendChild(toggle);
+    variantControlsElement.appendChild(row);
+  }
+}
+
+function appendSceneControlEmpty(message: string) {
+  if (!variantControlsElement) return;
+  const empty = document.createElement("p");
+  empty.innerText = message;
+  variantControlsElement.appendChild(empty);
+}
+
+function vectorToArray<T>(vector: { size(): number, get(index: number): T, delete(): void }) {
+  const values: T[] = [];
+  try {
+    for (let i = 0; i < vector.size(); i++) {
+      values.push(vector.get(i));
+    }
+  } finally {
+    vector.delete();
+  }
+  return values;
+}
+
+async function redrawHydra(label: string) {
+  status(`Applying ${label}`);
+  await hydraDelegate?.refresh?.();
+  await hydraDelegate?.materialsReady?.();
+  app.fitCamera();
+  status(`Applied ${label}`);
 }
 
 function status(message: string) {
