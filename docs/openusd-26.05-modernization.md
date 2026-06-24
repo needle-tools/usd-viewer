@@ -15,7 +15,7 @@ This note records the first modernization pass from the Autodesk/Needle OpenUSD 
 These are the source and dependency commits for this checkpoint.
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `dbbd37e457da896471e8570d01d41c9c9b69a9fc`
+- `OpenUSD`: `ea0adc529bb72ee2c621878469d05921c507cf42`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -334,6 +334,8 @@ OpenUSD source changes required for this probe:
 - `cmake/macros/Private.cmake` now keeps absolute resource source paths intact when generating Emscripten embed/preload file arguments.
 - `pxr/usdImaging/hdEmscripten/CMakeLists.txt` explicitly includes `usdMtlx` and `hdMtlx` resources and libraries when `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
 - `pxr/usdImaging/hdEmscripten/webRenderDelegate.cpp` advertises `mtlx` as a material render context and shader source type, while keeping the universal render context as fallback. This lets OpenUSD populate real material sprims for MaterialX-authored `outputs:mtlx:surface` materials.
+- `pxr/usd/ar/resolver.cpp` dispatches nested package asset opens by the extension of the actual package asset being opened. This fixes `USDZ[GLB[image]]` paths such as `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`, where the inner GLB package resolver must extract the embedded image.
+- `pxr/usdImaging/hdEmscripten/webSyncDriver.h` anchors browser `getFile()` asset reads through the stage root layer so authored package-relative texture paths resolve the same way they do during USD composition.
 - `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json` is now the source of truth for the core `Stage`, `Prim`, `Layer`, `Attribute`, and `Relationship` APIs exposed through `driver.GetStage()` and module-level stage authoring helpers.
 - `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates both the Embind C++ include and `usd-core-bindings.d.ts` from that manifest. `emHdBindings.cpp` now only registers the generated core API and keeps the explicit `HdWebSyncDriver` bridge binding.
 
@@ -386,7 +388,7 @@ Viewer binding changes:
 - Added `USD_THREE_MATRIX_HEADED=1` for headed browser validation.
 - Added Asset Explorer fixtures for BoomBox, CesiumMan, and DamagedHelmet. The old `CesiumMan.glb.three.usdz` was removed because it was about 10 KB and contained no `Mesh` prims.
 - Added `CesiumMan.glb.openusd.usdz`, generated from the tracked `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path. Its packaged USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and includes one mesh plus skeleton data.
-- Repacked `CesiumMan.glb.openusd.usdz` so the embedded diffuse JPEG is a normal package asset (`0/Cesium_Man-effect_diffuse.jpg`) instead of a bracket-addressed GLB subasset. The browser resolver now loads the texture in both WebGL and WebGPU matrix runs.
+- Restored `CesiumMan.glb.openusd.usdz` to the proper package form: USDA plus `CesiumMan.glb`, with texture references authored as `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. The headed matrix now verifies that the nested embedded JPEG resolves as a textured material.
 - Added raw `.glb` fixtures for BoomBox, CesiumMan, and DamagedHelmet to exercise Adobe's wasm glTF plugin directly.
 - Added local MaterialX USDA/MTLX fixtures and assertions for `sceneStats.materialXMaterials`, including external references, nested references, variant-authored bindings, texture/noise, marble, and procedural bricks.
 - Added matrix fixture assertions for material binding variants, nested variants, and CesiumMan texture presence. These checks catch the double-rendering regression by asserting one mesh remains after each variant switch.
@@ -423,7 +425,7 @@ cd /Users/herbst/git/usd-viewer/usd-wasm
 USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0
 ```
 
-This passes on this machine as of 2026-06-24:
+This full headed matrix run passes on this machine as of 2026-06-24:
 
 ```text
 summary: passed 68, unsupported 34, failed 0
@@ -431,7 +433,7 @@ summary: passed 68, unsupported 34, failed 0
 
 The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU modes. Cached Three `0.184.0` passes WebGL, WebGPU forced-WebGL2, and native WebGPU for local USDZ, local MaterialX USDA/MTLX, Asset Explorer USDZ fixtures, and raw GLB fixtures.
 
-Focused headed matrix runs also pass:
+Renderer-specific headed matrix commands:
 
 ```sh
 USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0 --renderer-modes webgl
@@ -450,7 +452,7 @@ Upstream checks:
 
 Current generated checkpoint:
 
-- OpenUSD commit `dbbd37e457da896471e8570d01d41c9c9b69a9fc` includes `pxr/usdImaging/hdEmscripten/bindgen`, the first generated authoring/package API checkpoint, `HdWebSyncDriver.Repopulate()`, and render-delegate destroy callbacks for JS cleanup.
+- OpenUSD commit `ea0adc529bb72ee2c621878469d05921c507cf42` includes `pxr/usdImaging/hdEmscripten/bindgen`, the first generated authoring/package API checkpoint, `HdWebSyncDriver.Repopulate()`, render-delegate destroy callbacks for JS cleanup, nested package resolver dispatch, and stage-relative hdEmscripten browser asset reads.
 - `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, vector helpers, and module-level `CreateStage`, `OpenStage`, `ReleaseStage`, `CreateUsdzPackage`, and `ReadFile`.
 - `generate_bindings.py` emits `generated/emHdCoreBindings.inc` for Embind and `generated/usd-core-bindings.d.ts` for TypeScript from that same manifest.
 - The MaterialX wasm build script builds `emHdBindings`, runs the build-system `install` target, and installs `emHdBindings.js`, `emHdBindings.data`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
