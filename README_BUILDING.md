@@ -20,6 +20,7 @@ Provenance SHAs for this checkpoint:
 - `OpenUSD`: `4cafce1075d717cc44cdc55d68beac22bdd90e4a`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
+- `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
 
 Important local repositories:
 
@@ -51,8 +52,9 @@ Working now:
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
+- The previous Asset Explorer CesiumMan USDZ was removed because it was a 10 KB Three.js export with no `Mesh` prims. The checked-in `CesiumMan.glb.openusd.usdz` was regenerated from `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path and is renderable.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
-- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, mixed Preview Surface + MaterialX stages, raw GLB assets, and API-constructed scenes.
+- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, MaterialX marble and procedural brick samples, mixed Preview Surface + MaterialX stages, raw GLB assets, regenerated CesiumMan USDZ, and API-constructed scenes.
 
 Still to do before publishing a public package:
 
@@ -151,14 +153,14 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 Current result on this machine:
 
 - The Three matrix cache is generated.
-- The manifest is written for 90 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with fifteen fixtures.
+- The manifest is written for 102 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with seventeen fixtures.
 - The test passes in headed Chromium.
 - The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
 
 Observed result on 2026-06-24:
 
 ```text
-summary: passed 60, unsupported 30, failed 0
+summary: passed 68, unsupported 34, failed 0
 ```
 
 Renderable fixtures that pass with geometry and materials:
@@ -169,16 +171,19 @@ Renderable fixtures that pass with geometry and materials:
 - `tests/fixtures/materialx/materialx_variant_bindings.usda` plus `mtlxFiles/standard_surface_default.mtlx`
 - `tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda` plus `mtlxFiles/standard_surface_default.mtlx`
 - `tests/fixtures/materialx/materialx_texture_noise.usda` plus `mtlxFiles/texture_noise_surface.mtlx` and `textures/checker.png`
+- `tests/fixtures/materialx/materialx_marble.usda` plus MaterialX sample `mtlxFiles/standard_surface_marble_solid.mtlx`
+- `tests/fixtures/materialx/materialx_procedural_brick.usda` plus MaterialX sample `mtlxFiles/standard_surface_brick_procedural.mtlx` and `textures/brick_*.jpg`
 - `tests/fixtures/payloads/payload_root.usda` plus `payload_payload.usda`
 - `tests/fixtures/variants/nested_variants.usda`
 - `tests/fixtures/variants/material_binding_overrides.usda`
 - Asset Explorer `BoomBox.glb.three.usdz`
 - Asset Explorer `BoomBox.glb`
+- OpenUSD/Adobe `usdGltf` converted `CesiumMan.glb.openusd.usdz`
 - Asset Explorer `CesiumMan.glb`
 - Asset Explorer `DamagedHelmet.glb.three.usdz`
 - Asset Explorer `DamagedHelmet.glb`
 
-CesiumMan is included in the matrix and opens cleanly, but the current Asset Explorer generated USDZ is only about 10 KB and contains no `def Mesh` prims. The matrix marks it `fixtureExpectedRenderable: false` and requires zero scene objects rather than pretending it rendered. If Asset Explorer starts publishing a renderable CesiumMan USDZ, flip that fixture expectation and the geometry assertions will apply.
+The old `CesiumMan.glb.three.usdz` fixture was removed after inspection showed it contained no `def Mesh` prims. The replacement `CesiumMan.glb.openusd.usdz` was generated from the tracked `CesiumMan.glb` with the OpenUSD 26.05 wasm Adobe `usdGltf` plugin path; its USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and the matrix now treats it as renderable.
 
 ## Headed Viewer Regression Pass
 
@@ -213,12 +218,15 @@ MaterialX Nested Ref     Loaded, console errors=0
 MaterialX Variants       Loaded, console errors=0
 Preview + MaterialX      Loaded, console errors=0
 MaterialX Texture+Noise  Loaded, console errors=0
+MaterialX Marble         Loaded, console errors=0
+MaterialX Bricks         Loaded, console errors=0
 Payload Root             Loaded, unload/load controls work, console errors=0
 Nested Variants          Loaded, root and nested dropdowns work, console errors=0
 Binding Override Variant Loaded, dropdown material switch works, console errors=0
 DamagedHelmet GLB        Loaded, console errors=0
 BoomBox GLB              Loaded, console errors=0
 CesiumMan GLB            Loaded, console errors=0
+CesiumMan USDZ           Loaded, console errors=0
 Preview Material API     Loaded, console errors=0
 Animated Color API       Loaded, console errors=0
 Variant Sphere API       Loaded, shape dropdown works, root-layer variants preserved
@@ -227,7 +235,7 @@ Variant Cube API         Loaded, console errors=0
 
 Known warnings from that headed pass:
 
-- MaterialX reports missing tangents for the simple sphere MaterialX fixtures. The texture/noise MaterialX fixture authors tangents and runs without that warning.
+- MaterialX reports missing tangents for the simple sphere MaterialX fixtures. The texture/noise, marble, and procedural brick MaterialX fixtures author tangents and run without that warning.
 - The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
 
