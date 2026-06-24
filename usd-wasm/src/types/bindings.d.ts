@@ -11,6 +11,8 @@ declare type FSNode = {
     write: boolean,
 }
 
+declare type MaybePromise<T> = T | Promise<T>
+
 declare type USD = {
     FS_createDataFile: (parent: string, filepath: string, data: Uint8Array, canRead: boolean, canWrite: boolean, canOwn: boolean) => FSNode,
     FS_createPath: (parent: string, path: string, canRead: boolean, canWrite: boolean) => FSNode,
@@ -19,9 +21,9 @@ declare type USD = {
     FS_rmdir: (path: string) => void,
     FS_analyzePath: (path: string) => FSNode,
     CreateStage: (path: string) => USDStage,
-    OpenStage: (path: string) => USDStage,
+    OpenStage: (path: string) => MaybePromise<USDStage>,
     ReleaseStage: (stage: USDStage) => boolean,
-    CreateUsdzPackage: (assetPath: string, usdzPath: string) => boolean,
+    CreateUsdzPackage: (assetPath: string, usdzPath: string) => MaybePromise<boolean>,
     ReadFile: (path: string) => Uint8Array,
     HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
     flushPendingDeletes: () => void,
@@ -78,8 +80,8 @@ declare type USDPrim = {
     IsDefined(): boolean,
     IsLoaded(): boolean,
     HasAuthoredPayloads(): boolean,
-    Load(): void,
-    Unload(): void,
+    Load(): MaybePromise<void>,
+    Unload(): MaybePromise<void>,
     AddPayload(assetPath: string, primPath: string): boolean,
     GetParent(): USDPrim,
     GetChildren(): USDPrimVector,
@@ -89,7 +91,7 @@ declare type USDPrim = {
     GetRelationship(name: string): USDRelationship,
     CreateRelationship(name: string, custom: boolean): USDRelationship,
     AddVariant(variantSetName: string, variantName: string): boolean,
-    SetVariantSelection(variantSetName: string, variantName: string): boolean,
+    SetVariantSelection(variantSetName: string, variantName: string): MaybePromise<boolean>,
     GetVariantSelection(variantSetName: string): string,
     ClearVariantSelection(variantSetName: string): boolean,
     BlockVariantSelection(variantSetName: string): boolean,
@@ -156,8 +158,8 @@ declare type HdWebSyncDriver = {
     GetStageTimeCodesPerSecond(): number,
     SetTime(timecode: number): void,
     GetTime(): number,
-    Draw(): void,
-    Repopulate(): void,
+    Draw(): MaybePromise<void>,
+    Repopulate(): MaybePromise<void>,
 
     /** ??? */
     clone(): HdWebSyncDriver,
@@ -178,6 +180,16 @@ export type GetUsdModuleOptions = {
     getPreloadedPackage?: (file: string, size: number) => ArrayBuffer | null,
     setStatus?: (status: string) => void,
     onDownloadProgress?: (downloaded: number, total: number) => void,
+    onAssetFetchProgress?: (progress: {
+        url: string,
+        state: "start" | "progress" | "done" | "error" | string,
+        loaded: number,
+        total: number,
+        active: number,
+        loadedTotal: number,
+        totalBytes: number,
+        error?: string,
+    }) => void,
     /** Returns a transferable object that can be resolved to an ArrayBuffer, 
      *  or an URL that can be fetched to get an ArrayBuffer.
     */

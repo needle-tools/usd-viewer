@@ -38,10 +38,52 @@ export async function getUsdModule(opts) {
     ]);
     const [bindings, data, wasm] = bindingsPromise;
     const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
+    const assetFetches = new Map();
+
+    /**
+     * @param {{ url?: string, state?: string, loaded?: number, total?: number, error?: string }} detail
+     */
+    function handleAssetFetchProgress(detail) {
+        const url = detail.url ?? "";
+        if (url) {
+            if (detail.state === "done" || detail.state === "error") {
+                assetFetches.set(url, detail);
+            }
+            else {
+                assetFetches.set(url, detail);
+            }
+        }
+
+        let loaded = 0;
+        let total = 0;
+        for (const entry of assetFetches.values()) {
+            const entryLoaded = entry.loaded ?? 0;
+            loaded += entryLoaded;
+            total += Math.max(entry.total ?? 0, entryLoaded);
+        }
+
+        const payload = {
+            url,
+            state: detail.state ?? "progress",
+            loaded: detail.loaded ?? 0,
+            total: detail.total ?? 0,
+            error: detail.error,
+            active: assetFetches.size,
+            loadedTotal: loaded,
+            totalBytes: total,
+        };
+
+        opts?.onAssetFetchProgress?.(payload);
+
+        if (detail.state === "done" || detail.state === "error") {
+            assetFetches.delete(url);
+        }
+    }
 
     return usd_module_promise = getUsdModuleFn({
         mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
         ...opts,
+        onAssetFetchProgress: handleAssetFetchProgress,
         setStatus: (status) => {
             // TODO: would be nice to have a progress event
             // for now we parse the log 'Downloading data... (219516/849069)'

@@ -2,7 +2,7 @@
 
 This note records how to reproduce the current OpenUSD modernization results for `usd-viewer`.
 
-Date last checked: 2026-06-24
+Date last checked: 2026-06-25
 
 ## Scope
 
@@ -53,6 +53,7 @@ Working now:
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
+- HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The previous Asset Explorer CesiumMan USDZ was removed because it was a 10 KB Three.js export with no `Mesh` prims. The checked-in `CesiumMan.glb.openusd.usdz` was regenerated from `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path and is renderable.
 - `CesiumMan.glb.openusd.usdz` intentionally keeps the diffuse texture as a bracket-addressed GLB subasset, `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. OpenUSD commit `60936c01a` fixes nested package resolver dispatch so `USDZ[GLB[image]]` opens through the inner glTF package resolver; OpenUSD commit `ea0adc529` anchors hdEmscripten browser asset reads to the stage root layer.
@@ -63,6 +64,7 @@ Still to do before publishing a public package:
 
 - Publish the local `@needle-tools/materialx` fixes, then refresh package metadata/locks as needed for the release.
 - Decide whether to keep or silence known non-fatal warnings for fixtures without tangents and glTF assets that expose separate metalness/roughness textures.
+- Move the wasm build to a newer Emscripten once available locally. This machine currently builds with Emscripten `3.1.74`; Emscripten PR #26000, merged on 2026-01-21, adds the newer async synchronous-proxying behavior that is relevant for reliable promise completion from pthread/embind paths. With `3.1.74`, async fetches complete and the JS thread stays responsive, but some Hydra/embind promises can remain pending. The JS bridge now avoids re-entering or deleting Hydra while those calls are still active and defers cleanup rather than crashing, but this should be revisited with a toolchain containing the 2026 async proxying fixes.
 
 The viewer currently has the MaterialX-enabled OpenUSD 26.05 Hydra wasm bundle checked in under:
 
@@ -258,6 +260,19 @@ Variant Cube API         Loaded, console errors=0
 Known warnings from that headed pass:
 
 - MaterialX reports missing tangents for the simple sphere MaterialX fixtures. The texture/noise, marble, and procedural brick MaterialX fixtures author tangents and run without that warning.
+
+Additional headed async resolver check on 2026-06-25:
+
+```text
+HTTPS References -> Loaded, resolver progress events=86, console errors=0
+HTTPS References -> USDZ Cube switch -> Loaded, console errors=0
+Gingerbread USDC -> Loaded
+Gingerbread USDA -> Loaded
+```
+
+Known caveat from that pass:
+
+- `Hydra draw is still pending after 15000ms` can still appear with Emscripten `3.1.74` after async resolver work. The app remains responsive and asset switching no longer blocks on disposal; cleanup is deferred while Hydra is still inside the pending draw. Remote composition edits such as the Teapot `Fancy` payload/variant path should be revalidated after moving to a newer Emscripten with the 2026 async proxying changes.
 - The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
 
