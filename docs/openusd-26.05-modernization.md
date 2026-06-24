@@ -333,7 +333,8 @@ OpenUSD source changes required for this probe:
 - `cmake/macros/Private.cmake` now keeps absolute resource source paths intact when generating Emscripten embed/preload file arguments.
 - `pxr/usdImaging/hdEmscripten/CMakeLists.txt` explicitly includes `usdMtlx` and `hdMtlx` resources and libraries when `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
 - `pxr/usdImaging/hdEmscripten/webRenderDelegate.cpp` advertises `mtlx` as a material render context and shader source type, while keeping the universal render context as fallback. This lets OpenUSD populate real material sprims for MaterialX-authored `outputs:mtlx:surface` materials.
-- `pxr/usdImaging/hdEmscripten/emHdBindings.cpp` restores `driver.GetStage()` and exposes basic `Stage`, `Prim`, `Layer`, `Attribute`, and `Relationship` APIs for programmatic scene interaction.
+- `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json` is now the source of truth for the core `Stage`, `Prim`, `Layer`, `Attribute`, and `Relationship` APIs exposed through `driver.GetStage()`.
+- `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates both the Embind C++ include and `usd-core-bindings.d.ts` from that manifest. `emHdBindings.cpp` now only registers the generated core API and keeps the explicit `HdWebSyncDriver` bridge binding.
 
 Hydra exposure:
 
@@ -422,9 +423,7 @@ summary: passed 32, unsupported 16, failed 0
 
 The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU modes. Cached Three `0.184.0` passes WebGL, WebGPU forced-WebGL2, and native WebGPU for local USDZ, local MaterialX USDA/MTLX, Asset Explorer USDZ fixtures, and raw GLB fixtures.
 
-## Future USD API Bindings
-
-The restored `driver.GetStage()` bindings are intentionally a minimal programmatic surface for this modernization checkpoint. They should not become the pattern for exposing the full USD API by hand.
+## USD API Bindings
 
 Upstream checks:
 
@@ -434,10 +433,16 @@ Upstream checks:
 - Upstream's stock wasm path is the `wasmFetchResolver` example. Its Embind API is intentionally tiny: `InitWorkerThread`, `ShowTree`, `ComputeAllDependencies`, and `CreateNewUsdzPackage`. It is consumed from JS as `Module.ShowTree(...)` and friends after `wasmFetchResolver.js` initializes.
 - The stock wasm example does not expose `UsdStage`, `UsdPrim`, schema classes, Hydra, or a general programmatic USD scene API. It demonstrates linking USD core libraries, fetch-based asset resolution, and hand-authored Embind entry points.
 
+Current generated checkpoint:
+
+- OpenUSD commit `b0a2ba8dd5c11ad5214523f631d28a54bd8bfffc` adds `pxr/usdImaging/hdEmscripten/bindgen`.
+- `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, and vector helpers.
+- `generate_bindings.py` emits `generated/emHdCoreBindings.inc` for Embind and `generated/usd-core-bindings.d.ts` for TypeScript from that same manifest.
+- The MaterialX wasm build script copies `emHdBindings.js`, `emHdBindings.data`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
+- The bridge-specific `HdWebSyncDriver` binding remains explicit because it is the Hydra/three.js transport layer, not USD scene API.
+
 Recommended next step:
 
-- Add an allowlisted binding generator in the OpenUSD repo, probably under `pxr/usdImaging/hdEmscripten/bindgen` or `herbst/bindgen`.
-- Generate Embind C++ and `.d.ts` from the same manifest so runtime bindings and TypeScript cannot drift.
 - Start with a generic core object model: `SdfPath`, `TfToken`, `VtValue` string/number/vector/matrix/color/asset conversions, `UsdStage`, `UsdPrim`, `UsdProperty`, `UsdAttribute`, `UsdRelationship`, `SdfLayer`, and the `Gf` math types commonly returned by USD schemas.
 - Layer schema APIs on top from USD schema metadata, not handwritten JS. The schema `schema.usda` files know each schema's attributes, relationships, fallback values, and inheritance; those can generate TypeScript wrappers that call the generic attribute/relationship methods.
 - Keep exact C++ method binding behind an allowlist. Binding all OpenUSD headers directly would produce a huge wasm surface, difficult overload/type mappings, many template/ref-pointer edge cases, and a much larger maintenance burden.
