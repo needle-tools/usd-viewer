@@ -15,7 +15,7 @@ This note records the first modernization pass from the Autodesk/Needle OpenUSD 
 These are the source and dependency commits for this checkpoint.
 
 - `usd-viewer`: `c7b2ed5ebca15f6d7d51ff4a6b08739963d6e791`
-- `OpenUSD`: `6d82f572088e46df88ba67a5ba0a77e75a918b35`
+- `OpenUSD`: `cfeddc19d1e3e6ad2d1c34342ed1c266cb61da7a`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 
@@ -333,7 +333,7 @@ OpenUSD source changes required for this probe:
 - `cmake/macros/Private.cmake` now keeps absolute resource source paths intact when generating Emscripten embed/preload file arguments.
 - `pxr/usdImaging/hdEmscripten/CMakeLists.txt` explicitly includes `usdMtlx` and `hdMtlx` resources and libraries when `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
 - `pxr/usdImaging/hdEmscripten/webRenderDelegate.cpp` advertises `mtlx` as a material render context and shader source type, while keeping the universal render context as fallback. This lets OpenUSD populate real material sprims for MaterialX-authored `outputs:mtlx:surface` materials.
-- `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json` is now the source of truth for the core `Stage`, `Prim`, `Layer`, `Attribute`, and `Relationship` APIs exposed through `driver.GetStage()`.
+- `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json` is now the source of truth for the core `Stage`, `Prim`, `Layer`, `Attribute`, and `Relationship` APIs exposed through `driver.GetStage()` and module-level stage authoring helpers.
 - `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates both the Embind C++ include and `usd-core-bindings.d.ts` from that manifest. `emHdBindings.cpp` now only registers the generated core API and keeps the explicit `HdWebSyncDriver` bridge binding.
 
 Hydra exposure:
@@ -375,7 +375,7 @@ Viewer binding changes:
 - Kept `locateFile()` for `.data` and `.wasm`.
 - Switched `createThreeHydra` to mount caller-provided `buffer` data into Emscripten FS before opening the root layer.
 - Replaced the JS-facing `UsdStageRefPtr` access with explicit driver metadata methods for up-axis, start/end time codes, and timecodes-per-second.
-- Added Node tests that verify the generated artifacts, runtime exports, Emscripten data-package size, memory configuration, wasm magic header, and actual Node loading of the generated bundle.
+- Added Node tests that verify the generated artifacts, runtime exports, Emscripten data-package size, memory configuration, wasm magic header, actual Node loading of the generated bundle, and programmatic authoring through the generated API.
 - Extended the three.js matrix static page and Playwright assertions to report and check the Hydra binding API surface before exercising the renderer.
 - Added `USD_THREE_MATRIX_BROWSER=chromium` as a matrix-test escape hatch for running against Playwright's bundled Chromium instead of the configured Chrome channel.
 - Added `USD_THREE_MATRIX_HEADED=1` for headed browser validation.
@@ -435,11 +435,12 @@ Upstream checks:
 
 Current generated checkpoint:
 
-- OpenUSD commit `b0a2ba8dd5c11ad5214523f631d28a54bd8bfffc` adds `pxr/usdImaging/hdEmscripten/bindgen`.
-- `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, and vector helpers.
+- OpenUSD commit `cfeddc19d1e3e6ad2d1c34342ed1c266cb61da7a` adds `pxr/usdImaging/hdEmscripten/bindgen` and the first generated authoring/package API checkpoint.
+- `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, vector helpers, and module-level `CreateStage`, `OpenStage`, `ReleaseStage`, `CreateUsdzPackage`, and `ReadFile`.
 - `generate_bindings.py` emits `generated/emHdCoreBindings.inc` for Embind and `generated/usd-core-bindings.d.ts` for TypeScript from that same manifest.
-- The MaterialX wasm build script copies `emHdBindings.js`, `emHdBindings.data`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
+- The MaterialX wasm build script builds `emHdBindings`, runs the build-system `install` target, and installs `emHdBindings.js`, `emHdBindings.data`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
 - The bridge-specific `HdWebSyncDriver` binding remains explicit because it is the Hydra/three.js transport layer, not USD scene API.
+- The binding tests now author a stage, define a prim, set color and animated float attributes, add/list/select variants, author a prim inside a selected variant, export USDA, package USDZ, read the USDZ bytes for download handoff, and reopen the stage to verify the selected variant and animated sample.
 
 Recommended next step:
 

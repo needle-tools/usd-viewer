@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `b0a2ba8dd5c11ad5214523f631d28a54bd8bfffc`
+- `OpenUSD`: `cfeddc19d1e3e6ad2d1c34342ed1c266cb61da7a`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 
@@ -43,7 +43,7 @@ Working now:
 - The modernized `hdEmscripten` Hydra bridge builds for wasm and produces `emHdBindings.js`, `emHdBindings.data`, and `emHdBindings.wasm`.
 - The core USD programmatic API exposed by that bridge is generated from `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json`; the same generator emits `usd-core-bindings.d.ts`.
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
-- The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, and driver-level stage metadata helpers.
+- The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - A local USDA + MTLX fixture creates real `MaterialXMaterial` instances through Hydra-provided MaterialX documents and `@needle-tools/materialx` in WebGL and WebGPU-capable matrix modes.
@@ -130,7 +130,7 @@ node --check tests/three-matrix/usd-three-matrix.spec.ts
 Expected current result:
 
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
-- `npm run test:bindings` passes 6 tests, including driver metadata helper checks.
+- `npm run test:bindings` passes 7 tests, including driver metadata helper checks and generated authoring/USDZ packaging.
 - The syntax checks pass.
 
 ## Browser Matrix Status
@@ -249,7 +249,7 @@ cd /Users/herbst/git/OpenUSD
 ./herbst/smoke/build-wasm-materialx-openusd.sh
 ```
 
-Then configure, build, copy, and smoke the MaterialX-enabled Hydra bundle:
+Then configure, build, install, and smoke the MaterialX-enabled Hydra bundle:
 
 ```sh
 ./herbst/smoke/configure-wasm-hydra-materialx.sh
@@ -282,10 +282,10 @@ cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.wasm usd-w
 rm -f usd-wasm/src/bindings/emHdBindings.worker.js
 ```
 
-The OpenUSD script copies the sidecars directly from the `emHdBindings` target
-into the prefix. Avoid relying on a full `cmake --install` for this wasm probe:
-the full install can trip over static plugin archive install rules that are not
-needed by the browser bundle.
+Use the build-system install target, not raw `cmake --install` after a partial
+target build. `cmake --build ... --target install` builds install dependencies
+such as `usdShaders` before running install rules; raw `cmake --install` only
+runs install rules for files that already exist.
 
 ## Native OpenUSD and Adobe glTF Plugin
 
@@ -426,8 +426,13 @@ and produces:
 
 The generated surface currently covers the core programmatic scene inspection API
 needed by `usd-viewer`: `Layer`, `Stage`, `Prim`, `Attribute`, `Relationship`,
-and vector helpers. `HdWebSyncDriver` remains an explicit bridge binding because
-it is the Hydra/three.js transport API rather than USD itself.
+and vector helpers. It also covers the first authoring/package checkpoint:
+`CreateStage`, `OpenStage`, `ReleaseStage`, `Stage.DefinePrim`, stage time/up-axis
+metadata setters, `Prim.CreateAttribute`, variant add/list/select helpers,
+`Prim.DefinePrimInVariant`, typed attribute setters including time samples,
+`CreateUsdzPackage`, and `ReadFile` for browser download handoff. `HdWebSyncDriver`
+remains an explicit bridge binding because it is the Hydra/three.js transport API
+rather than USD itself.
 
 The next API expansion should keep this split: generate generic USD value/path
 and scene-editing primitives from the manifest, then generate schema-friendly
