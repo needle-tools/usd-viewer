@@ -63,6 +63,20 @@ class TextureRegistry {
     return extensionMatches.length ? extensionMatches[extensionMatches.length - 1][1] : "";
   }
 
+  readResolvedResource(resourcePath) {
+    if (!resourcePath?.startsWith("/") || typeof this.config.USD?.ReadFile !== "function") {
+      return null;
+    }
+
+    try {
+      const file = this.config.USD.ReadFile(resourcePath);
+      return file?.byteLength ? file : null;
+    }
+    catch {
+      return null;
+    }
+  }
+
   resolveResourcePath(resourcePath) {
     const normalized = this.normalizeResourcePath(resourcePath);
     if (!normalized) return normalized;
@@ -117,48 +131,59 @@ class TextureRegistry {
       // throw new Error('Unknown filetype');
     }
 
-    this.config.driver().getFile(resourcePath, async (loadedFile) => {
-      let loader = this.loader;
-      if (filetype === 'image/tga')
-        loader = this.tgaLoader;
-      else if (filetype === 'image/x-exr')
-        loader = this.exrLoader;
+    let loader = this.loader;
+    if (filetype === 'image/tga')
+      loader = this.tgaLoader;
+    else if (filetype === 'image/x-exr')
+      loader = this.exrLoader;
 
-      const baseUrl = this.baseUrl;
-      function loadFromFile(_loadedFile) {
-        let url = undefined;
-        if (debugTextures) console.log("window.driver.getFile", resourcePath, " => ", _loadedFile);
-        if (_loadedFile) {
-          let blob = new Blob([_loadedFile.slice(0)], { type: filetype });
-          url = URL.createObjectURL(blob);
-        } else {
-          if (baseUrl)
-            url = baseUrl + '/' + resourcePath;
-          else
-            url = resourcePath;
-        }
-        if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "_loadedFile", _loadedFile, "baseUrl", baseUrl, "resourcePath", resourcePath);
-        // Load the texture
-        loader.load(
-          // resource URL
-          url,
-
-          // onLoad callback
-          (texture) => {
-            texture.name = resourcePath;
-            textureResolve(texture);
-          },
-
-          // onProgress callback currently not used
-          undefined,
-
-          // onError callback
-          (err) => {
-            textureReject(err);
-          }
-        );
+    const baseUrl = this.baseUrl;
+    function loadFromFile(_loadedFile) {
+      let url = undefined;
+      if (debugTextures) console.log("window.driver.getFile", resourcePath, " => ", _loadedFile);
+      if (_loadedFile) {
+        let blob = new Blob([_loadedFile.slice(0)], { type: filetype });
+        url = URL.createObjectURL(blob);
+      } else {
+        if (baseUrl)
+          url = baseUrl + '/' + resourcePath;
+        else
+          url = resourcePath;
       }
+      if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "_loadedFile", _loadedFile, "baseUrl", baseUrl, "resourcePath", resourcePath);
+      // Load the texture
+      loader.load(
+        // resource URL
+        url,
 
+        // onLoad callback
+        (texture) => {
+          texture.name = resourcePath;
+          textureResolve(texture);
+        },
+
+        // onProgress callback currently not used
+        undefined,
+
+        // onError callback
+        (err) => {
+          textureReject(err);
+        }
+      );
+    }
+
+    const resolvedFile = this.readResolvedResource(resourcePath);
+    if (resolvedFile) {
+      loadFromFile(resolvedFile);
+      return this.textures[resourcePath];
+    }
+
+    if (resourcePath.startsWith("/") && typeof this.config.USD?.ReadFile === "function") {
+      textureReject(new Error('Resolved file is not available in the USD filesystem: ' + resourcePath));
+      return this.textures[resourcePath];
+    }
+
+    this.config.driver().getFile(resourcePath, async (loadedFile) => {
       if (!loadedFile) {
         // if the file is not part of the filesystem, we can still try to fetch it from the network
         if (baseUrl) {
@@ -504,6 +529,7 @@ class HydraMaterial {
   constructor(id, hydraInterface) {
     this._id = id;
     this._nodes = {};
+    this._resolvedAssetPaths = new Map();
     this._materialXDocuments = [];
     this._interface = hydraInterface;
     if (!defaultMaterial) {
@@ -566,16 +592,64 @@ class HydraMaterial {
     }
   }
 
+  beginMaterialSync() {
+    this._nodes = {};
+    this._resolvedAssetPaths.clear();
+    this._materialXDocuments = [];
+  }
+
+  static canonicalAssetPath(path) {
+    return String(path ?? "")
+      .replace(/\\/g, "/")
+      .replace(/^\/+(?=\.?\/)/, "")
+      .replace(/^(?:\.\/)+/, "")
+      .replace(/\/\.\//g, "/");
+  }
+
+  _rememberResolvedAssetPath(authoredPath, resolvedPath) {
+    if (!authoredPath || !resolvedPath) {
+      return;
+    }
+
+    const authored = String(authoredPath);
+    const canonical = HydraMaterial.canonicalAssetPath(authored);
+    for (const key of [authored, canonical, `./${canonical}`, `/./${canonical}`]) {
+      this._resolvedAssetPaths.set(key, String(resolvedPath));
+    }
+  }
+
+  _resolveMaterialTexturePath(authoredPath) {
+    if (!authoredPath) {
+      return "";
+    }
+
+    const authored = String(authoredPath);
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(authored)) {
+      return authored;
+    }
+
+    return this._resolvedAssetPaths.get(authored)
+      || this._resolvedAssetPaths.get(HydraMaterial.canonicalAssetPath(authored))
+      || "";
+  }
+
   updateNode(networkId, path, parameters) {
     if (debugTextures) console.log('Updating Material Node: ' + networkId + ' ' + path, parameters);
     this._interface.diagnostics.materialNodes++;
     this._nodes[path] = parameters;
+    this._rememberResolvedAssetPath(parameters?.file, parameters?.resolvedPath);
   }
 
   updateMaterialXDocument(document) {
     if (debugMaterials) console.log('Updating MaterialX document: ' + this._id, document);
     this._interface.diagnostics.materialXDocuments++;
-    this._materialXDocuments.push(document);
+    const existingIndex = this._materialXDocuments.findIndex(existing => existing.terminal === document?.terminal);
+    if (existingIndex >= 0) {
+      this._materialXDocuments[existingIndex] = document;
+    }
+    else {
+      this._materialXDocuments.push(document);
+    }
   }
 
   convertWrap(usdWrapMode) {
@@ -607,7 +681,7 @@ class HydraMaterial {
       }
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
-        const textureFileName = (nodeIn.resolvedPath || nodeIn.file || "").replace("./", "");
+        const textureFileName = nodeIn.resolvedPath || "";
         if (!textureFileName) {
           if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
           this._material[materialParameterMapName] = undefined;
@@ -615,7 +689,7 @@ class HydraMaterial {
           return;
         }
         if (debugTextures)
-          console.log("Assigning texture", parameterName, { file: nodeIn.file, resolvedPath: nodeIn.resolvedPath, textureFileName });
+          console.log("Assigning texture with resolved path", parameterName, { file: nodeIn.file, resolvedPath: nodeIn.resolvedPath });
         const channel = mainMaterial[parameterName].inputName;
 
         // For debugging
@@ -872,7 +946,6 @@ class HydraMaterial {
     this._interface.diagnostics.materialUpdateFinished++;
     const promise = this._updateFinished(type, relationships);
     this._interface.trackMaterialUpdate(promise);
-    return promise;
   }
 
   async _updateFinished(type, relationships) {
@@ -889,8 +962,14 @@ class HydraMaterial {
     if (debugMaterials) console.log('Finalizing Material: ' + this._id);
     if (debugMaterials) console.log("updateFinished", type, relationships)
 
-    const materialXMaterial = await this.createMaterialXMaterial(type);
-    if (materialXMaterial) {
+    const materialXDocument = this._materialXDocuments.find(document => document.terminal === type);
+    if (materialXDocument) {
+      const materialXMaterial = await this.createMaterialXMaterial(materialXDocument);
+      if (!materialXMaterial) {
+        this._material = defaultMaterial;
+        this._applyMaterialToAssignedMeshes();
+        return;
+      }
       this._material = materialXMaterial;
       this._applyMaterialToAssignedMeshes();
       return;
@@ -970,17 +1049,15 @@ class HydraMaterial {
     this._applyMaterialToAssignedMeshes();
   }
 
-  async createMaterialXMaterial(type) {
-    if (!this._materialXDocuments.length || disableMaterials) {
-      if (!this._materialXDocuments.length) {
+  async createMaterialXMaterial(materialXDocument) {
+    if (!materialXDocument || disableMaterials) {
+      if (!materialXDocument) {
         this._interface.diagnostics.materialXSkippedNoDocuments++;
       }
       return null;
     }
     this._interface.diagnostics.materialXCreateAttempts++;
 
-    const materialXDocument = this._materialXDocuments.find(document => document.terminal === type)
-      || this._materialXDocuments[0];
     const xml = materialXDocument?.xml;
     if (!xml) {
       return null;
@@ -990,9 +1067,9 @@ class HydraMaterial {
       const materialName = this._id.split('/').pop() || this._id;
       const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
-        cacheKey: `${this._id}:${materialXDocument.terminal || type}`,
+        cacheKey: `${this._id}:${materialXDocument.terminal}`,
         getTexture: async (url) => {
-          const texturePath = url?.replace(/^\.?\//, '');
+          const texturePath = this._resolveMaterialTexturePath(url);
           return texturePath ? this._interface.registry.getTexture(texturePath) : null;
         },
       }, {
@@ -1002,8 +1079,8 @@ class HydraMaterial {
       }, {});
 
       if (!(material instanceof MaterialXMaterial)) {
-        this._interface.diagnostics.materialXFallbacks++;
-        if (debugMaterials) console.debug('MaterialX shader generation returned a non-MaterialX material; using USD Preview Surface instead.', {
+        this._interface.diagnostics.materialXCreateFailures++;
+        if (debugMaterials) console.debug('MaterialX shader generation returned a non-MaterialX material.', {
           materialId: this._id,
           materialName: material?.name,
           materialType: material?.constructor?.name,
@@ -1019,7 +1096,7 @@ class HydraMaterial {
     }
     catch (error) {
       this._interface.diagnostics.materialXCreateFailures++;
-      console.warn('Failed to create MaterialX material; falling back to USD Preview Surface.', error);
+      console.warn('Failed to create MaterialX material.', error);
       return null;
     }
   }
@@ -1055,7 +1132,6 @@ export class ThreeRenderDelegateInterface {
       materialXCreateAttempts: 0,
       materialXCreateSuccess: 0,
       materialXCreateFailures: 0,
-      materialXFallbacks: 0,
       materialIds: [],
     };
   }

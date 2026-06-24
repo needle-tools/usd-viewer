@@ -348,11 +348,45 @@ async function loadFile(url: string, label = url) {
   hydraDelegate = delegate;
 
   console.log("Scene content", usdContent);
-  await delegate.ready?.();
-  await delegate.materialsReady?.();
+  await waitForReadyForStatus(delegate, label);
+  await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
+}
+
+async function waitForMaterialsForStatus(delegate: NeedleThreeHydraHandle, label: string) {
+  if (!delegate.materialsReady) return;
+
+  let didTimeout = false;
+  await Promise.race([
+    delegate.materialsReady(),
+    new Promise<void>(resolve => setTimeout(() => {
+      didTimeout = true;
+      resolve();
+    }, 15000)),
+  ]);
+
+  if (didTimeout) {
+    console.warn(`Material updates are still pending for ${label}.`);
+  }
+}
+
+async function waitForReadyForStatus(delegate: NeedleThreeHydraHandle, label: string) {
+  if (!delegate.ready) return;
+
+  let didTimeout = false;
+  await Promise.race([
+    delegate.ready(),
+    new Promise<void>(resolve => setTimeout(() => {
+      didTimeout = true;
+      resolve();
+    }, 15000)),
+  ]);
+
+  if (didTimeout) {
+    console.warn(`Initial Hydra draw is still pending for ${label}.`);
+  }
 }
 
 async function loadFiles(files: TestFile[], label: string) {
@@ -382,8 +416,8 @@ async function loadFiles(files: TestFile[], label: string) {
 
   hydraDelegate = delegate;
   console.log("Scene content", usdContent);
-  await delegate.ready?.();
-  await delegate.materialsReady?.();
+  await waitForReadyForStatus(delegate, label);
+  await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
@@ -456,8 +490,8 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
     scene: usdContent,
   });
   hydraDelegate = delegate;
-  await delegate.ready?.();
-  await delegate.materialsReady?.();
+  await waitForReadyForStatus(delegate, label);
+  await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
   app.fitCamera();
   status(`Loaded ${label}`);
@@ -592,7 +626,7 @@ function vectorToArray<T>(vector: { size(): number, get(index: number): T, delet
 async function redrawHydra(label: string) {
   status(`Applying ${label}`);
   await hydraDelegate?.refresh?.();
-  await hydraDelegate?.materialsReady?.();
+  if (hydraDelegate) await waitForMaterialsForStatus(hydraDelegate, label);
   app.fitCamera();
   status(`Applied ${label}`);
 }
@@ -600,7 +634,7 @@ async function redrawHydra(label: string) {
 async function repopulateHydra(label: string) {
   status(`Applying ${label}`);
   await hydraDelegate?.repopulate?.();
-  await hydraDelegate?.materialsReady?.();
+  if (hydraDelegate) await waitForMaterialsForStatus(hydraDelegate, label);
   app.fitCamera();
   status(`Applied ${label}`);
 }
