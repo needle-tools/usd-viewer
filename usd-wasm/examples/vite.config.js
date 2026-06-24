@@ -12,7 +12,13 @@ export default defineConfig({
     // ],
     // enable COEP etc
     appType: 'mpa',
+    resolve: {
+        dedupe: ['three'],
+    },
     server: {
+        fs: {
+            allow: ['..'],
+        },
         headers: {
             'Cross-Origin-Embedder-Policy': 'require-corp',
             'Cross-Origin-Opener-Policy': 'same-origin',
