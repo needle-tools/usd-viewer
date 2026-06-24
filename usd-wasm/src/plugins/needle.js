@@ -34,7 +34,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
         }
         onDestroy() {
             if (this.handle) {
-                this.handle.dispose();
+                void this.handle.dispose();
                 this.handle = null;
             }
         }
