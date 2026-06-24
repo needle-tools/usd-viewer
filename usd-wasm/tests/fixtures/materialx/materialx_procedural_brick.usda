@@ -1,0 +1,37 @@
+#usda 1.0
+(
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Mesh "BrickWall" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/MaterialX/Materials/M_BrickPattern>
+        int[] faceVertexCounts = [3, 3]
+        int[] faceVertexIndices = [0, 1, 2, 0, 2, 3]
+        point3f[] points = [(-1.4, 0, -0.85), (1.4, 0, -0.85), (1.4, 0, 0.85), (-1.4, 0, 0.85)]
+        normal3f[] normals = [(0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0)] (
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:tangents = [(1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0)] (
+            interpolation = "faceVarying"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] (
+            interpolation = "faceVarying"
+        )
+    }
+}
+
+def Scope "Looks"
+{
+    def "MaterialX" (
+        references = [
+            @./mtlxFiles/standard_surface_brick_procedural.mtlx@</MaterialX>
+        ]
+    )
+    {
+    }
+}

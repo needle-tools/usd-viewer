@@ -14,10 +14,11 @@ This note records the first modernization pass from the Autodesk/Needle OpenUSD 
 
 These are the source and dependency commits for this checkpoint.
 
-- `usd-viewer`: `c7b2ed5ebca15f6d7d51ff4a6b08739963d6e791`
-- `OpenUSD`: `cfeddc19d1e3e6ad2d1c34342ed1c266cb61da7a`
+- `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
+- `OpenUSD`: `4cafce1075d717cc44cdc55d68beac22bdd90e4a`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
+- `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
 
 ## Source Provenance
 
@@ -346,6 +347,7 @@ Client-side MaterialX status:
 
 - `usd-wasm/src/hydra/ThreeJsRenderDelegate.js` stores only Hydra-provided MaterialX documents and tries `@needle-tools/materialx` shader generation before falling back to the existing USD Preview Surface-to-`MeshPhysicalMaterial` path.
 - The browser matrix includes `usd-wasm/tests/fixtures/materialx/mxSimple.usda` plus `mtlxFiles/standard_surface_default.mtlx`; this fixture creates two `MaterialXMaterial` instances named `Default_Smooth` and `Default_Green`.
+- The matrix also includes MaterialX's standard surface marble sample (`standard_surface_marble_solid.mtlx`) and procedural brick sample (`standard_surface_brick_procedural.mtlx` with `brick_*.jpg` textures), wrapped by local USDA files that bind those materials through USD composition.
 - The MaterialX fixture now uses the golden Hydra path: OpenUSD composes the `.mtlx` reference, Hydra creates material sprims for `/Materials/MaterialX/Materials/Default_Smooth` and `/Materials/MaterialX/Materials/Default_Green`, `hdMtlx` serializes the material documents, and JS passes those documents to `@needle-tools/materialx`.
 - The matrix import map loads `@needle-tools/materialx` as raw browser ESM through `/__rawfs`, with `three` resolved by the selected matrix runtime.
 - `@needle-tools/materialx` was patched in `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` to avoid runtime `package.json` imports, `three/src/...` imports, and WebGL-only named imports from `three`.
@@ -379,9 +381,10 @@ Viewer binding changes:
 - Extended the three.js matrix static page and Playwright assertions to report and check the Hydra binding API surface before exercising the renderer.
 - Added `USD_THREE_MATRIX_BROWSER=chromium` as a matrix-test escape hatch for running against Playwright's bundled Chromium instead of the configured Chrome channel.
 - Added `USD_THREE_MATRIX_HEADED=1` for headed browser validation.
-- Added Asset Explorer fixtures for BoomBox, CesiumMan, and DamagedHelmet. CesiumMan is tracked as a valid but non-renderable generated USDZ because the current `CesiumMan.glb.three.usdz` contains no `Mesh` prims.
+- Added Asset Explorer fixtures for BoomBox, CesiumMan, and DamagedHelmet. The old `CesiumMan.glb.three.usdz` was removed because it was about 10 KB and contained no `Mesh` prims.
+- Added `CesiumMan.glb.openusd.usdz`, generated from the tracked `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path. Its packaged USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and includes one mesh plus skeleton data.
 - Added raw `.glb` fixtures for BoomBox, CesiumMan, and DamagedHelmet to exercise Adobe's wasm glTF plugin directly.
-- Added the local MaterialX USDA/MTLX fixture and assertions for `sceneStats.materialXMaterials`.
+- Added local MaterialX USDA/MTLX fixtures and assertions for `sceneStats.materialXMaterials`, including external references, nested references, variant-authored bindings, texture/noise, marble, and procedural bricks.
 
 ## Validation Status
 
@@ -418,7 +421,7 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 This passes on this machine as of 2026-06-24:
 
 ```text
-summary: passed 32, unsupported 16, failed 0
+summary: passed 68, unsupported 34, failed 0
 ```
 
 The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU modes. Cached Three `0.184.0` passes WebGL, WebGPU forced-WebGL2, and native WebGPU for local USDZ, local MaterialX USDA/MTLX, Asset Explorer USDZ fixtures, and raw GLB fixtures.

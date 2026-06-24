@@ -196,6 +196,52 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 1,
     }, {
+        name: "local-materialx-marble-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_marble.usda")}`,
+        files: [{
+            path: "materialx_marble.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_marble.usda")}`,
+        }, {
+            path: "mtlxFiles/standard_surface_marble_solid.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "standard_surface_marble_solid.mtlx")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/materialx_marble.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
+    }, {
+        name: "local-materialx-procedural-brick-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_procedural_brick.usda")}`,
+        files: [{
+            path: "materialx_procedural_brick.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "materialx_procedural_brick.usda")}`,
+        }, {
+            path: "mtlxFiles/standard_surface_brick_procedural.mtlx",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "mtlxFiles", "standard_surface_brick_procedural.mtlx")}`,
+        }, {
+            path: "textures/brick_base_gray.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_base_gray.jpg")}`,
+        }, {
+            path: "textures/brick_dirt_mask.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_dirt_mask.jpg")}`,
+        }, {
+            path: "textures/brick_mask.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_mask.jpg")}`,
+        }, {
+            path: "textures/brick_normal.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_normal.jpg")}`,
+        }, {
+            path: "textures/brick_roughness.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_roughness.jpg")}`,
+        }, {
+            path: "textures/brick_variation_mask.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_variation_mask.jpg")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/materialx/materialx_procedural_brick.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 1,
+    }, {
         name: "local-payload-root-usda",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "payloads", "payload_root.usda")}`,
         files: [{
@@ -235,23 +281,19 @@ async function prepareFixtures({ cacheRoot, refresh }) {
 
     const localAssetFixtures = [
         { slug: "BoomBox", name: "local-boombox" },
-        {
-            slug: "CesiumMan",
-            name: "local-cesium-man",
-            expectedRenderable: false,
-            expectedRenderableReason: "Asset Explorer generated Three USDZ currently contains no Mesh prims for CesiumMan.",
-        },
+        { slug: "CesiumMan", name: "local-cesium-man", usdzFile: "CesiumMan.glb.openusd.usdz" },
         { slug: "DamagedHelmet", name: "local-damaged-helmet" },
     ];
 
     await fs.mkdir(cacheRoot, { recursive: true });
 
     for (const fixture of localAssetFixtures) {
-        const filePath = path.join(repoRoot, "tests", "fixtures", "asset-explorer", `${fixture.slug}.glb.three.usdz`);
+        const usdzFile = fixture.usdzFile ?? `${fixture.slug}.glb.three.usdz`;
+        const filePath = path.join(repoRoot, "tests", "fixtures", "asset-explorer", usdzFile);
         fixtures.push({
             name: fixture.name,
             url: `/@fs${filePath}`,
-            source: `usd-wasm/tests/fixtures/asset-explorer/${fixture.slug}.glb.three.usdz`,
+            source: `usd-wasm/tests/fixtures/asset-explorer/${usdzFile}`,
             expectedRenderable: fixture.expectedRenderable ?? true,
             expectedRenderableReason: fixture.expectedRenderableReason ?? null,
             expectedMaterialXMaterials: 0,

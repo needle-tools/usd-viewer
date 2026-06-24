@@ -34,11 +34,24 @@ class TextureRegistry {
   }
 
   normalizeResourcePath(resourcePath) {
-    return String(resourcePath ?? "")
+    const path = String(resourcePath ?? "")
       .replace(/\\/g, "/")
       .replace(/^\/+/, "")
       .replace(/^(?:\.\/)+/, "")
       .replace(/\/\.\//g, "/");
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(path)) {
+      return path;
+    }
+    const parts = [];
+    for (const part of path.split("/")) {
+      if (!part || part === ".") continue;
+      if (part === "..") {
+        parts.pop();
+        continue;
+      }
+      parts.push(part);
+    }
+    return parts.join("/");
   }
 
   resolveResourcePath(resourcePath) {
@@ -556,7 +569,10 @@ class HydraMaterial {
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
         if (!nodeIn.resolvedPath) {
-          console.warn("Texture node has no file!", nodeIn);
+          if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
+          this._material[materialParameterMapName] = undefined;
+          resolve();
+          return;
         }
         if (debugTextures)
           console.log("Assigning texture with resolved path", parameterName, nodeIn.resolvedPath);
