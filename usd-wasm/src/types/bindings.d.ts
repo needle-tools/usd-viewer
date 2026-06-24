@@ -18,6 +18,11 @@ declare type USD = {
     FS_readdir: (path: string) => string[],
     FS_rmdir: (path: string) => void,
     FS_analyzePath: (path: string) => FSNode,
+    CreateStage: (path: string) => USDStage,
+    OpenStage: (path: string) => USDStage,
+    ReleaseStage: (stage: USDStage) => boolean,
+    CreateUsdzPackage: (assetPath: string, usdzPath: string) => boolean,
+    ReadFile: (path: string) => Uint8Array,
     HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
     flushPendingDeletes: () => void,
     ready: Promise<any>,
@@ -58,6 +63,7 @@ declare type USDLayer = {
     GetIdentifier(): string,
     GetDisplayName(): string,
     ExportToString(): string,
+    Export(path: string): boolean,
     Save(): boolean,
 }
 
@@ -74,7 +80,15 @@ declare type USDPrim = {
     GetChildren(): USDPrimVector,
     GetPropertyNames(): StringVector,
     GetAttribute(name: string): USDAttribute,
+    CreateAttribute(name: string, typeName: string, custom: boolean): USDAttribute,
     GetRelationship(name: string): USDRelationship,
+    AddVariant(variantSetName: string, variantName: string): boolean,
+    SetVariantSelection(variantSetName: string, variantName: string): boolean,
+    GetVariantSelection(variantSetName: string): string,
+    ClearVariantSelection(variantSetName: string): boolean,
+    BlockVariantSelection(variantSetName: string): boolean,
+    GetVariantNames(variantSetName: string): StringVector,
+    DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): USDPrim,
 }
 
 declare type USDAttribute = {
@@ -83,6 +97,14 @@ declare type USDAttribute = {
     GetPath(): string,
     GetTypeName(): string,
     GetValueString(): string,
+    GetValueStringAtTime(timeCode: number): string,
+    SetBool(value: boolean, timeCode: number): boolean,
+    SetInt(value: number, timeCode: number): boolean,
+    SetFloat(value: number, timeCode: number): boolean,
+    SetDouble(value: number, timeCode: number): boolean,
+    SetString(value: string, timeCode: number): boolean,
+    SetToken(value: string, timeCode: number): boolean,
+    SetColor3f(r: number, g: number, b: number, timeCode: number): boolean,
 }
 
 declare type USDRelationship = {
@@ -96,11 +118,18 @@ declare type USDStage = {
     GetRootLayer(): USDLayer,
     GetPseudoRoot(): USDPrim,
     GetPrimAtPath(path: string): USDPrim,
+    DefinePrim(path: string, typeName: string): USDPrim,
     Traverse(): USDPrimVector,
     GetStartTimeCode(): number,
     GetEndTimeCode(): number,
     GetTimeCodesPerSecond(): number,
+    SetStartTimeCode(timeCode: number): void,
+    SetEndTimeCode(timeCode: number): void,
+    SetTimeCodesPerSecond(timeCodesPerSecond: number): void,
     GetUpAxis(): number,
+    SetUpAxis(upAxis: string): boolean,
+    Export(path: string): boolean,
+    ExportToString(): string,
 }
 
 declare type HdWebSyncDriver = {
