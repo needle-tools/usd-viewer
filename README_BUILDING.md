@@ -33,7 +33,12 @@ Important local repositories:
 
 ## Current Result
 
-This checkpoint is a release-candidate modernization baseline. The remaining release blocker is publishing the local `@needle-tools/materialx` fixes and refreshing the `usd-wasm` lockfile against that published version.
+This checkpoint is a release-candidate modernization baseline for the USD
+Preview Surface / three.js Hydra path. MaterialX is built and packaged in the
+wasm bundle, but the Hydra render delegate intentionally does not advertise the
+`mtlx` material context yet; keep one material path enabled until the
+`@needle-tools/materialx` shader-generation bridge can consume Hydra's MaterialX
+data directly.
 
 Working now:
 
@@ -46,12 +51,16 @@ Working now:
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
-- A local USDA + MTLX fixture creates real `MaterialXMaterial` instances through Hydra-provided MaterialX documents and `@needle-tools/materialx` in WebGL and WebGPU-capable matrix modes.
-- The JS render delegate uses `@needle-tools/materialx` for Hydra MaterialX documents and keeps the USD Preview Surface / `MeshPhysicalMaterial` path for non-MaterialX or failed shader generation cases.
+- The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
 
 Not finished yet:
 
-- The local `@needle-tools/materialx` package has been patched to load as raw browser ESM against the caller's Three import map. Publish those package fixes, then refresh `usd-wasm/package-lock.json` before a clean release.
+- Wire Hydra-provided MaterialX data into `@needle-tools/materialx` as the single
+  MaterialX path. Do not reintroduce sidecar harvesting or synthesized
+  MaterialX materials.
+- Publish the local `@needle-tools/materialx` fixes, then refresh
+  `usd-wasm/package-lock.json` before enabling MaterialX shader generation in a
+  clean release.
 
 The viewer currently has the MaterialX-enabled OpenUSD 26.05 Hydra wasm bundle checked in under:
 
@@ -82,7 +91,8 @@ Treat the modernization as production-ready only when all of these are true:
 - `npm run test:bindings` passes.
 - The three.js matrix passes for the supported three.js versions in both WebGL and WebGPU modes.
 - At least one USD Preview Surface fixture renders correctly.
-- At least one MaterialX-authored USD or `.mtlx` fixture renders correctly.
+- MaterialX shader generation is either intentionally disabled, as in this
+  checkpoint, or enabled through Hydra-provided data with browser coverage.
 - At least one glTF/GLB-derived USD path is validated.
 - Raw `.glb` opens are validated after the Adobe plugin is linked into wasm.
 - Browser tests run from a clean checkout without relying on local installed prefixes except where documented.
@@ -158,7 +168,6 @@ summary: passed 32, unsupported 16, failed 0
 Renderable fixtures that pass with geometry and materials:
 
 - `examples/public/test.usdz`
-- `usd-wasm/tests/fixtures/materialx/mxSimple.usda` plus `mtlxFiles/standard_surface_default.mtlx` (`MaterialXMaterial` count: 2)
 - Asset Explorer `BoomBox.glb.three.usdz`
 - Asset Explorer `BoomBox.glb`
 - Asset Explorer `CesiumMan.glb`
@@ -166,6 +175,35 @@ Renderable fixtures that pass with geometry and materials:
 - Asset Explorer `DamagedHelmet.glb`
 
 CesiumMan is included in the matrix and opens cleanly, but the current Asset Explorer generated USDZ is only about 10 KB and contains no `def Mesh` prims. The matrix marks it `fixtureExpectedRenderable: false` and requires zero scene objects rather than pretending it rendered. If Asset Explorer starts publishing a renderable CesiumMan USDZ, flip that fixture expectation and the geometry assertions will apply.
+
+## Headed Viewer Regression Pass
+
+The actual `usd-wasm/examples` viewer was also validated in headed Chromium at:
+
+```text
+http://127.0.0.1:5175/
+```
+
+Latest report:
+
+```text
+/Users/herbst/git/usd-viewer/.cache/browser-validation-isolated-2026-06-24T15-42-40-530Z/report.json
+/Users/herbst/git/usd-viewer/.cache/browser-validation-bike-usdz-long-2026-06-24T16-23-43-543Z/report.json
+```
+
+Passing assets:
+
+```text
+USDZ Cube                scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
+Teapot USD               scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
+Carbon Frame Bike USDZ   scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
+Carbon Frame Bike USDA   scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
+McUsd USDA               scene=1 invalidPreviewSurface=0 fatal=0 networkFailures=0 usdErrors=0
+```
+
+The final long Bike USDZ recheck also has `cannotSaveLayer=0`, confirming that
+the browser no longer attempts to save a package-backed layer after the
+in-memory skinning bake.
 
 ## Why Upstream Wasm Disables USD Imaging
 
@@ -263,14 +301,28 @@ Expected result:
 - `emHdBindings` links with `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
 - `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates `emHdCoreBindings.inc` and `usd-core-bindings.d.ts`.
 - Node smoke passes against `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
+- `emHdBindings.js` mounts the generated preload table for USD resource files, including `usdShaders/resources/shaders/shaderDefs.usda`.
 - `emHdBindings.data` embeds the `usdMtlx/resources/libraries` documents needed by the browser bundle, including `gltf_pbr.mtlx`, `open_pbr_surface.mtlx`, and `usd_preview_surface.mtlx`.
 
 Observed sidecar sizes:
 
 ```text
 non-MaterialX: emHdBindings.js 187K, emHdBindings.data 782K, emHdBindings.wasm 24M
-MaterialX:     emHdBindings.js 190K, emHdBindings.data 2.2M, emHdBindings.wasm 29M
+MaterialX:     emHdBindings.js 229K, emHdBindings.data 2.2M, emHdBindings.wasm 28M
 ```
+
+Before copying the sidecars, sanity-check the generated preload table:
+
+```sh
+rg "usdShaders/resources/shaders/shaderDefs.usda|usdMtlx/resources/libraries/.+\\.mtlx|usdGltf/resources/plugInfo.json" \
+  /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js
+```
+
+If the generated `emHdBindings.js` only lists `/usd/plugInfo.json` and
+`/usd/usdGltf/resources/plugInfo.json`, the browser bundle will load geometry
+but reject `UsdPreviewSurface` shader nodes with `Invalid info:id` diagnostics.
+That means the OpenUSD branch is missing the `EMSCRIPTEN_RESOURCES` propagation
+fix in `cmake/macros/Private.cmake`; rebuild after applying that source fix.
 
 To update the viewer with the MaterialX-enabled bundle:
 
@@ -378,13 +430,26 @@ OpenUSD links the plugin when `PXR_HD_EMSCRIPTEN_GLTF_PLUGIN_PREFIX` points at `
 
 ## MaterialX Client-Side Shape
 
-OpenUSD/Hydra now has the C++ side needed to expose MaterialX-authored material networks to JavaScript. The wasm render delegate advertises `mtlx` as a material render context and shader source type, so OpenUSD creates real material sprims for `outputs:mtlx:surface` materials instead of only the empty fallback sprim. The bridge forwards normal Hydra material nodes and also sends a serialized MaterialX document to JS through `updateMaterialXDocument(...)` when `hdMtlx` can translate the network.
+OpenUSD/Hydra now builds with MaterialX support and packages `usdMtlx` resources
+into `emHdBindings.data`. The render delegate currently exposes only the default
+USD Preview Surface context to JavaScript, because advertising `mtlx` without a
+complete JS consumer changes Hydra material network shape and breaks the working
+Preview Surface path.
 
-The JS render delegate stores only Hydra-provided MaterialX documents and tries `@needle-tools/materialx` first via `Experimental_API.createMaterialXMaterial(...)`. If shader generation fails or no MaterialX document exists, it falls back to the existing USD Preview Surface-style `MeshPhysicalMaterial` path. It does not synthesize MaterialX materials from caller-provided `.mtlx` sidecars.
+The next MaterialX step should be a single golden path:
 
-For browser/WebGPU compatibility, `@needle-tools/materialx` was adjusted in `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` so it does not import `three/src/...`, does not import `package.json` at runtime, and does not require WebGL-only exports such as `WebGLRenderer` or `UniformsLib` from the host `three` module. The matrix import map now loads it through `/__rawfs/.../node_modules/@needle-tools/materialx/index.js`, so `three` resolves through the selected matrix runtime.
+- keep the MaterialX data coming from USD/Hydra, not caller-provided sidecars;
+- teach the JS bridge to forward that Hydra-provided MaterialX data in a stable
+  shape;
+- let `@needle-tools/materialx` generate the actual Three material from that
+  data;
+- add browser coverage that proves both WebGL and WebGPU behavior before
+  enabling the `mtlx` render context by default.
 
-Until `@needle-tools/materialx@1.7.0` is published, validate the viewer with the local package linked:
+For browser/WebGPU compatibility, `@needle-tools/materialx` should not import
+`three/src/...`, should not import `package.json` at runtime, and should not
+require WebGL-only exports such as `WebGLRenderer` or `UniformsLib` from the host
+`three` module. Validate local package changes with:
 
 ```sh
 cd /Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx
@@ -395,12 +460,14 @@ npm link @needle-tools/materialx
 node -e "const fs=require('fs'); console.log(fs.realpathSync('node_modules/@needle-tools/materialx'))"
 ```
 
-After publishing `@needle-tools/materialx@1.7.0`, refresh the usd-viewer lockfile so a clean checkout uses the fixed package instead of registry `1.6.0`.
+After publishing `@needle-tools/materialx`, refresh the usd-viewer lockfile so a
+clean checkout uses the fixed package.
 
 Important current limitations:
 
-- Publish `@needle-tools/materialx@1.7.0` and refresh `usd-wasm/package-lock.json` before publishing a new `@needle-tools/usd` release.
-- Keep the MaterialX diagnostics in the browser matrix; they now verify real material sprims such as `/Materials/MaterialX/Materials/Default_Smooth`, two Hydra MaterialX documents, and two generated `MaterialXMaterial` instances.
+- MaterialX shader generation is not enabled in this checkpoint.
+- Do not reintroduce the removed `.mtlx` sidecar harvesting or synthesized
+  `MaterialXMaterial` fallback.
 
 The local `@needle-tools/materialx` package exposes `createMaterialXMaterial`, which is the promising entry point. Its current local implementation is centered on `ShaderMaterial`, so WebGPU must be validated explicitly whenever this path changes.
 
