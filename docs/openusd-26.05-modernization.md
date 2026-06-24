@@ -426,6 +426,14 @@ The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU mod
 
 The restored `driver.GetStage()` bindings are intentionally a minimal programmatic surface for this modernization checkpoint. They should not become the pattern for exposing the full USD API by hand.
 
+Upstream checks:
+
+- OpenUSD's Python API is mostly maintained as explicit Boost.Python `wrap*.cpp` files, for example `pxr/usd/usd/wrapStage.cpp`, `wrapPrim.cpp`, and the schema-specific wrappers under packages such as `usdGeom` and `usdShade`.
+- That Python layer is useful as a map of intended API shape and conversion behavior, but it is not directly reusable in wasm because it depends on Boost.Python and the Python runtime.
+- OpenUSD does already generate C++ schema classes from `schema.usda` using `usdGenSchema`. Those schema definitions are a better source of truth for generating JS/TS schema wrappers than scraping the Python wrappers.
+- Upstream's stock wasm path is the `wasmFetchResolver` example. Its Embind API is intentionally tiny: `InitWorkerThread`, `ShowTree`, `ComputeAllDependencies`, and `CreateNewUsdzPackage`. It is consumed from JS as `Module.ShowTree(...)` and friends after `wasmFetchResolver.js` initializes.
+- The stock wasm example does not expose `UsdStage`, `UsdPrim`, schema classes, Hydra, or a general programmatic USD scene API. It demonstrates linking USD core libraries, fetch-based asset resolution, and hand-authored Embind entry points.
+
 Recommended next step:
 
 - Add an allowlisted binding generator in the OpenUSD repo, probably under `pxr/usdImaging/hdEmscripten/bindgen` or `herbst/bindgen`.
