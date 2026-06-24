@@ -2,19 +2,54 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 
-type MatrixPage = { id: string; version: string; rendererMode: string; pagePath: string };
+type MatrixPage = {
+    id: string;
+    version: string;
+    rendererMode: string;
+    fixtureName: string;
+    fixtureUrl: string;
+    fixtureFiles: Array<{ path: string; url: string }> | null;
+    fixtureSource: string;
+    fixtureExpectedRenderable: boolean;
+    fixtureExpectedRenderableReason: string | null;
+    fixtureExpectedMaterialXMaterials: number;
+    pagePath: string;
+};
 type MatrixResult = {
     version: string;
     rendererMode: string;
+    fixtureName: string;
+    fixtureUrl: string;
+    fixtureFiles: Array<{ path: string; url: string }> | null;
+    fixtureSource: string;
+    fixtureExpectedRenderable: boolean;
+    fixtureExpectedRenderableReason: string | null;
+    fixtureExpectedMaterialXMaterials: number;
     rendererClass: string | null;
     backendType: string;
     status: 'ready' | 'unsupported';
     unsupportedReason?: string;
     loadMs: number;
     suite?: {
+        fixture: { name: string; url: string; source: string };
         threeRevision: string;
         renderer: { className: string | null; backendType: string; rendered: boolean };
-        usd: { moduleReady: boolean; childCount: number; handleMethods: Record<string, string> };
+        usd: {
+            moduleReady: boolean;
+            bindingApi: Record<string, string>;
+            childCount: number;
+            sceneStats: {
+                objects: number;
+                meshes: number;
+                geometriesWithPosition: number;
+                materials: number;
+                materialXMaterials: number;
+                meshPhysicalMaterials: number;
+                namedMaterials: string[];
+            };
+            handleMethods: Record<string, string>;
+            hydraDiagnostics: Record<string, unknown> | null;
+        };
         diagnostics: { errors: string[]; warnings: string[]; phase?: string };
     };
 };
@@ -32,7 +67,7 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
         try {
             const result = await runMatrixPage(page, matrixPage);
             results.push(result);
-            console.log(`[usd-three-matrix] ${result.version}/${result.rendererMode}: ${result.status} ${result.backendType}`);
+            console.log(`[usd-three-matrix] ${result.version}/${result.rendererMode}/${result.fixtureName}: ${result.status} ${result.backendType}`);
         }
         catch (error) {
             const message = error instanceof Error ? error.stack || error.message : String(error);
@@ -72,6 +107,12 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     page.on('pageerror', error => {
         pageDiagnostics.push(`pageerror: ${error.stack || error.message}`);
     });
+    page.on('response', response => {
+        const contentType = response.headers()['content-type'] || '';
+        if (contentType.includes('application/json') || response.status() >= 400) {
+            pageDiagnostics.push(`response: ${response.status()} ${contentType} ${response.url()}`);
+        }
+    });
 
     await page.goto(`/__rawfs${matrixPage.pagePath}`);
     const compatibility = await page.waitForFunction(() => (window as any).__USD_THREE_MATRIX__ || (window as any).__USD_THREE_MATRIX_ERROR__, null, { timeout: 120_000 });
@@ -84,6 +125,13 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         return {
             version: matrixPage.version,
             rendererMode: matrixPage.rendererMode,
+            fixtureName: matrixPage.fixtureName,
+            fixtureUrl: matrixPage.fixtureUrl,
+            fixtureFiles: matrixPage.fixtureFiles,
+            fixtureSource: matrixPage.fixtureSource,
+            fixtureExpectedRenderable: matrixPage.fixtureExpectedRenderable,
+            fixtureExpectedRenderableReason: matrixPage.fixtureExpectedRenderableReason,
+            fixtureExpectedMaterialXMaterials: matrixPage.fixtureExpectedMaterialXMaterials,
             rendererClass: state.rendererClass ?? null,
             backendType: state.backendType ?? 'unsupported',
             status: 'unsupported',
@@ -115,13 +163,43 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     }
     expect(suite.renderer.rendered).toBe(true);
     expect(suite.usd.moduleReady).toBe(true);
-    expect(suite.usd.childCount).toBeGreaterThanOrEqual(0);
+    expect(suite.usd.bindingApi.hdWebSyncDriver).toBe('function');
+    expect(suite.usd.bindingApi.getStage).toBe('function');
+    expect(suite.usd.bindingApi.fsCreateDataFile).toBe('function');
+    expect(suite.usd.bindingApi.fsCreatePath).toBe('function');
+    expect(suite.usd.bindingApi.fsAnalyzePath).toBe('function');
+    expect(suite.usd.bindingApi.fsReaddir).toBe('function');
+    expect(suite.usd.bindingApi.fsRmdir).toBe('function');
+    expect(suite.usd.bindingApi.fsUnlink).toBe('function');
+    expect(suite.usd.bindingApi.readyThen).toBe('function');
+    expect(suite.fixture.name).toBe(matrixPage.fixtureName);
+    if (matrixPage.fixtureExpectedRenderable) {
+        expect(suite.usd.childCount).toBeGreaterThan(0);
+        expect(suite.usd.sceneStats.meshes).toBeGreaterThan(0);
+        expect(suite.usd.sceneStats.geometriesWithPosition).toBeGreaterThan(0);
+        expect(suite.usd.sceneStats.materials).toBeGreaterThan(0);
+    }
+    else {
+        expect(suite.usd.childCount).toBe(0);
+        expect(suite.usd.sceneStats.meshes).toBe(0);
+    }
+    if (matrixPage.fixtureExpectedMaterialXMaterials > 0) {
+        expect(suite.usd.sceneStats.materialXMaterials).toBeGreaterThanOrEqual(matrixPage.fixtureExpectedMaterialXMaterials);
+    }
     expect(suite.usd.handleMethods.update).toBe('function');
+    expect(suite.usd.handleMethods.materialsReady).toBe('function');
     expect(suite.diagnostics.errors).toEqual([]);
 
     return {
         version: matrixPage.version,
         rendererMode: matrixPage.rendererMode,
+        fixtureName: matrixPage.fixtureName,
+        fixtureUrl: matrixPage.fixtureUrl,
+        fixtureFiles: matrixPage.fixtureFiles,
+        fixtureSource: matrixPage.fixtureSource,
+        fixtureExpectedRenderable: matrixPage.fixtureExpectedRenderable,
+        fixtureExpectedRenderableReason: matrixPage.fixtureExpectedRenderableReason,
+        fixtureExpectedMaterialXMaterials: matrixPage.fixtureExpectedMaterialXMaterials,
         rendererClass: state.rendererClass ?? null,
         backendType: state.backendType ?? 'unknown',
         status: 'ready',
