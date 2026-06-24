@@ -292,6 +292,13 @@ export async function createThreeHydra(config) {
             draw();
         },
         refresh: () => draw(),
+        repopulate: () => {
+            if (driver.isDeleted()) {
+                return Promise.resolve();
+            }
+            driver.Repopulate();
+            return draw();
+        },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
         diagnostics: () => renderInterface.getDiagnostics(),
         /**

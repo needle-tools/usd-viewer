@@ -541,7 +541,7 @@ function updateSceneControls() {
       const prim = hydraDelegate?.driver?.GetStage?.().GetPrimAtPath(entry.primPath);
       if (!prim?.IsValid()) return;
       prim.SetVariantSelection(entry.setName, select.value);
-      await redrawHydra(`${entry.primPath} ${entry.setName}=${select.value}`);
+      await repopulateHydra(`${entry.primPath} ${entry.setName}=${select.value}`);
       updateSceneControls();
     };
     row.appendChild(select);
@@ -562,7 +562,7 @@ function updateSceneControls() {
       if (!prim?.IsValid()) return;
       if (prim.IsLoaded()) prim.Unload();
       else prim.Load();
-      await redrawHydra(`${entry.primPath} payload ${prim.IsLoaded() ? "loaded" : "unloaded"}`);
+      await repopulateHydra(`${entry.primPath} payload ${prim.IsLoaded() ? "loaded" : "unloaded"}`);
       updateSceneControls();
     };
     row.appendChild(toggle);
@@ -592,6 +592,14 @@ function vectorToArray<T>(vector: { size(): number, get(index: number): T, delet
 async function redrawHydra(label: string) {
   status(`Applying ${label}`);
   await hydraDelegate?.refresh?.();
+  await hydraDelegate?.materialsReady?.();
+  app.fitCamera();
+  status(`Applied ${label}`);
+}
+
+async function repopulateHydra(label: string) {
+  status(`Applying ${label}`);
+  await hydraDelegate?.repopulate?.();
   await hydraDelegate?.materialsReady?.();
   app.fitCamera();
   status(`Applied ${label}`);

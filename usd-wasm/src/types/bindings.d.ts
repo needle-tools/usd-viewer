@@ -157,6 +157,7 @@ declare type HdWebSyncDriver = {
     SetTime(timecode: number): void,
     GetTime(): number,
     Draw(): void,
+    Repopulate(): void,
 
     /** ??? */
     clone(): HdWebSyncDriver,

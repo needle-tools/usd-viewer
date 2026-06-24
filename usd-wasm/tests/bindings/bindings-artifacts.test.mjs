@@ -98,6 +98,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageStartTimeCode, "function");
         assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageEndTimeCode, "function");
         assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageTimeCodesPerSecond, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.Repopulate, "function");
         assert.equal(typeof USD.CreateStage, "function");
         assert.equal(typeof USD.OpenStage, "function");
         assert.equal(typeof USD.ReleaseStage, "function");
@@ -141,6 +142,7 @@ def Xform "Root" {
         const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
         const driver = new USD.HdWebSyncDriver(delegate, "stage-api.usda");
         assert.equal(driver.HasStage(), true);
+        driver.Repopulate();
         const stage = driver.GetStage();
         const root = stage.GetPrimAtPath("/Root");
 

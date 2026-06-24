@@ -51,6 +51,9 @@ export declare type NeedleThreeHydraHandle = {
     /** Redraw the current USD stage after imperative stage edits.
      */
     refresh: () => Promise<void>,
+    /** Rebuild Hydra population for the current USD stage after composition edits.
+     */
+    repopulate: () => Promise<void>,
     /** Resolves after the initial Hydra draw has settled.
      */
     ready: () => Promise<void>,
