@@ -16,8 +16,8 @@ Current branches:
 
 Provenance SHAs for this checkpoint:
 
-- `usd-viewer`: `c7b2ed5ebca15f6d7d51ff4a6b08739963d6e791`
-- `OpenUSD`: `6d82f572088e46df88ba67a5ba0a77e75a918b35`
+- `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
+- `OpenUSD`: `b0a2ba8dd5c11ad5214523f631d28a54bd8bfffc`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 
@@ -41,6 +41,7 @@ Working now:
 - Adobe's glTF plugin builds natively against OpenUSD 26.05.
 - Upstream OpenUSD 26.05 wasm builds and runs the shipped `wasmFetchResolver` example.
 - The modernized `hdEmscripten` Hydra bridge builds for wasm and produces `emHdBindings.js`, `emHdBindings.data`, and `emHdBindings.wasm`.
+- The core USD programmatic API exposed by that bridge is generated from `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json`; the same generator emits `usd-core-bindings.d.ts`.
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, and driver-level stage metadata helpers.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
@@ -70,6 +71,7 @@ Installed source bundle:
 
 ```sh
 /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin
+/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/usd-core-bindings.d.ts
 ```
 
 ## Done Criteria For This Modernization
@@ -247,7 +249,7 @@ cd /Users/herbst/git/OpenUSD
 ./herbst/smoke/build-wasm-materialx-openusd.sh
 ```
 
-Then configure, build, install, and smoke the MaterialX-enabled Hydra bundle:
+Then configure, build, copy, and smoke the MaterialX-enabled Hydra bundle:
 
 ```sh
 ./herbst/smoke/configure-wasm-hydra-materialx.sh
@@ -259,8 +261,9 @@ Expected result:
 - `usdMtlx` builds for wasm.
 - `hdMtlx` builds for wasm.
 - `emHdBindings` links with `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
+- `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates `emHdCoreBindings.inc` and `usd-core-bindings.d.ts`.
 - Node smoke passes against `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
-- `usdMtlx/resources/libraries` contains 56 `.mtlx` files, including `gltf_pbr.mtlx`, `open_pbr_surface.mtlx`, and `usd_preview_surface.mtlx`.
+- `emHdBindings.data` embeds the `usdMtlx/resources/libraries` documents needed by the browser bundle, including `gltf_pbr.mtlx`, `open_pbr_surface.mtlx`, and `usd_preview_surface.mtlx`.
 
 Observed sidecar sizes:
 
@@ -278,6 +281,11 @@ cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.data usd-w
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.wasm usd-wasm/src/bindings/
 rm -f usd-wasm/src/bindings/emHdBindings.worker.js
 ```
+
+The OpenUSD script copies the sidecars directly from the `emHdBindings` target
+into the prefix. Avoid relying on a full `cmake --install` for this wasm probe:
+the full install can trip over static plugin archive install rules that are not
+needed by the browser bundle.
 
 ## Native OpenUSD and Adobe glTF Plugin
 
@@ -395,3 +403,33 @@ Important current limitations:
 - Keep the MaterialX diagnostics in the browser matrix; they now verify real material sprims such as `/Materials/MaterialX/Materials/Default_Smooth`, two Hydra MaterialX documents, and two generated `MaterialXMaterial` instances.
 
 The local `@needle-tools/materialx` package exposes `createMaterialXMaterial`, which is the promising entry point. Its current local implementation is centered on `ShaderMaterial`, so WebGPU must be validated explicitly whenever this path changes.
+
+## Generated USD API Bindings
+
+The core USD API exposed through `driver.GetStage()` is no longer handwritten in
+`emHdBindings.cpp`. In OpenUSD, edit:
+
+```sh
+pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json
+```
+
+CMake runs:
+
+```sh
+pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py
+```
+
+and produces:
+
+- `generated/emHdCoreBindings.inc`, included by `emHdBindings.cpp`
+- `generated/usd-core-bindings.d.ts`, copied to `share/hdEmscripten`
+
+The generated surface currently covers the core programmatic scene inspection API
+needed by `usd-viewer`: `Layer`, `Stage`, `Prim`, `Attribute`, `Relationship`,
+and vector helpers. `HdWebSyncDriver` remains an explicit bridge binding because
+it is the Hydra/three.js transport API rather than USD itself.
+
+The next API expansion should keep this split: generate generic USD value/path
+and scene-editing primitives from the manifest, then generate schema-friendly
+TypeScript wrappers from USD `schema.usda` metadata instead of handwriting schema
+classes in JavaScript.

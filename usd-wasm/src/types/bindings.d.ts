@@ -28,15 +28,30 @@ declare type USD = {
     stdout: any;
 };
 
-declare type USDStage = {
-    GetRootLayer(): USDLayer,
-    GetPseudoRoot(): USDPrim,
-    GetPrimAtPath(path: string): USDPrim,
-    Traverse(): USDPrimVector,
-    GetStartTimeCode(): number,
-    GetEndTimeCode(): number,
-    GetTimeCodesPerSecond(): number,
-    GetUpAxis(): number,
+// Generated in OpenUSD from pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json.
+// Keep this core USD surface in sync with the generated usd-core-bindings.d.ts.
+declare type IntVector = {
+    size(): number,
+    get(index: number): number,
+    delete(): void,
+}
+
+declare type DoubleVector = {
+    size(): number,
+    get(index: number): number,
+    delete(): void,
+}
+
+declare type StringVector = {
+    size(): number,
+    get(index: number): string,
+    delete(): void,
+}
+
+declare type USDPrimVector = {
+    size(): number,
+    get(index: number): USDPrim,
+    delete(): void,
 }
 
 declare type USDLayer = {
@@ -77,16 +92,15 @@ declare type USDRelationship = {
     GetTargets(): StringVector,
 }
 
-declare type USDPrimVector = {
-    size(): number,
-    get(index: number): USDPrim,
-    delete(): void,
-}
-
-declare type StringVector = {
-    size(): number,
-    get(index: number): string,
-    delete(): void,
+declare type USDStage = {
+    GetRootLayer(): USDLayer,
+    GetPseudoRoot(): USDPrim,
+    GetPrimAtPath(path: string): USDPrim,
+    Traverse(): USDPrimVector,
+    GetStartTimeCode(): number,
+    GetEndTimeCode(): number,
+    GetTimeCodesPerSecond(): number,
+    GetUpAxis(): number,
 }
 
 declare type HdWebSyncDriver = {
