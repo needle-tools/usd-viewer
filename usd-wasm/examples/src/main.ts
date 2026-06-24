@@ -62,26 +62,6 @@ getUsdModule({
     { label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
   ];
 
-  const div = document.createElement("div");
-  div.className = "test-buttons";
-  
-  for (const url of testUrls) {
-    const button = document.createElement("button");
-    button.innerText = url.label;
-    button.onclick = () => loadFile(url.url);
-    div.appendChild(button);
-  }
-
-  document.body.appendChild(div);
-
-  const div2 = document.createElement("div");
-  div2.className = "options";
-  const frameButton = document.createElement("button");
-  frameButton.innerText = "Fit Camera";
-  frameButton.onclick = () => app.fitCamera();
-  div2.appendChild(frameButton);
-  div.appendChild(div2);
-
   // const url = "test.usdz"; // local file
   // const url = "/gingerbread/house/GingerBreadHouse.usdc";
   // const url = "/gingerbread/GingerbreadHouse.usda";
@@ -134,6 +114,26 @@ getUsdModule({
       hydraDelegate?.update(dt);
     }
   });
+
+  const div = document.createElement("div");
+  div.className = "test-buttons";
+  
+  for (const url of testUrls) {
+    const button = document.createElement("button");
+    button.innerText = url.label;
+    button.onclick = () => loadFile(url.url);
+    div.appendChild(button);
+  }
+
+  document.body.appendChild(div);
+
+  const div2 = document.createElement("div");
+  div2.className = "options";
+  const frameButton = document.createElement("button");
+  frameButton.innerText = "Fit Camera";
+  frameButton.onclick = () => app.fitCamera();
+  div2.appendChild(frameButton);
+  div.appendChild(div2);
 })
 
 async function loadFile(url: string) {
