@@ -319,18 +319,35 @@ async function loadAsset(asset: TestAsset) {
 }
 
 async function resetScene() {
-
-  if (hydraDelegate)
-    hydraDelegate.dispose();
+  const oldDelegate = hydraDelegate;
   hydraDelegate = null;
+
+  if (oldDelegate)
+    await oldDelegate.dispose();
 
   if (usdContent) {
     scene.remove(usdContent);
-    // TODO dispose as well
+    disposeObject3D(usdContent);
   }
 
   usdContent = new Object3D();
   scene.add(usdContent);
+}
+
+function disposeObject3D(root: Object3D) {
+  root.traverse(object => {
+    const disposable = object as Object3D & {
+      geometry?: { dispose?: () => void },
+      material?: { dispose?: () => void } | Array<{ dispose?: () => void }>,
+    };
+    disposable.geometry?.dispose?.();
+    if (Array.isArray(disposable.material)) {
+      for (const material of disposable.material) material.dispose?.();
+    }
+    else {
+      disposable.material?.dispose?.();
+    }
+  });
 }
 
 async function loadFile(url: string, label = url) {
@@ -572,10 +589,18 @@ function updateSceneControls() {
       select.appendChild(option);
     }
     select.onchange = async () => {
-      const prim = hydraDelegate?.driver?.GetStage?.().GetPrimAtPath(entry.primPath);
-      if (!prim?.IsValid()) return;
-      prim.SetVariantSelection(entry.setName, select.value);
-      await repopulateHydra(`${entry.primPath} ${entry.setName}=${select.value}`);
+      const delegate = hydraDelegate;
+      if (!delegate?.editStage) return;
+      const label = `${entry.primPath} ${entry.setName}=${select.value}`;
+      status(`Applying ${label}`);
+      await delegate.editStage(async (stage) => {
+        const prim = stage.GetPrimAtPath(entry.primPath);
+        if (!prim?.IsValid()) return false;
+        return prim.SetVariantSelection(entry.setName, select.value);
+      });
+      await waitForMaterialsForStatus(delegate, label);
+      app.fitCamera();
+      status(`Applied ${label}`);
       updateSceneControls();
     };
     row.appendChild(select);
@@ -592,11 +617,22 @@ function updateSceneControls() {
     const toggle = document.createElement("button");
     toggle.innerText = entry.loaded ? "Unload" : "Load";
     toggle.onclick = async () => {
-      const prim = hydraDelegate?.driver?.GetStage?.().GetPrimAtPath(entry.primPath);
-      if (!prim?.IsValid()) return;
-      if (prim.IsLoaded()) prim.Unload();
-      else prim.Load();
-      await repopulateHydra(`${entry.primPath} payload ${prim.IsLoaded() ? "loaded" : "unloaded"}`);
+      const delegate = hydraDelegate;
+      if (!delegate?.editStage) return;
+      let loaded = entry.loaded;
+      const label = `${entry.primPath} payload`;
+      status(`Applying ${label}`);
+      await delegate.editStage(async (stage) => {
+        const prim = stage.GetPrimAtPath(entry.primPath);
+        if (!prim?.IsValid()) return false;
+        if (prim.IsLoaded()) prim.Unload();
+        else prim.Load();
+        loaded = prim.IsLoaded();
+        return true;
+      });
+      await waitForMaterialsForStatus(delegate, label);
+      app.fitCamera();
+      status(`Applied ${entry.primPath} payload ${loaded ? "loaded" : "unloaded"}`);
       updateSceneControls();
     };
     row.appendChild(toggle);
@@ -621,22 +657,6 @@ function vectorToArray<T>(vector: { size(): number, get(index: number): T, delet
     vector.delete();
   }
   return values;
-}
-
-async function redrawHydra(label: string) {
-  status(`Applying ${label}`);
-  await hydraDelegate?.refresh?.();
-  if (hydraDelegate) await waitForMaterialsForStatus(hydraDelegate, label);
-  app.fitCamera();
-  status(`Applied ${label}`);
-}
-
-async function repopulateHydra(label: string) {
-  status(`Applying ${label}`);
-  await hydraDelegate?.repopulate?.();
-  if (hydraDelegate) await waitForMaterialsForStatus(hydraDelegate, label);
-  app.fitCamera();
-  status(`Applied ${label}`);
 }
 
 function status(message: string) {

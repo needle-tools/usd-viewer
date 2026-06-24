@@ -212,10 +212,11 @@ export async function createThreeHydra(config) {
 
     if (debug) console.log("DRIVER", driver);
 
+    let disposed = false;
     let drawInFlight = false;
     let drawPromise = Promise.resolve();
     const draw = () => {
-        if (drawInFlight || driver.isDeleted()) {
+        if (disposed || drawInFlight || driver.isDeleted()) {
             return drawPromise;
         }
 
@@ -293,8 +294,24 @@ export async function createThreeHydra(config) {
             draw();
         },
         refresh: () => draw(),
+        editStage: async (callback) => {
+            if (disposed || driver.isDeleted()) {
+                return undefined;
+            }
+            await drawPromise;
+            if (disposed || driver.isDeleted()) {
+                return undefined;
+            }
+            const result = await callback(driver.GetStage(), driver);
+            if (disposed || driver.isDeleted()) {
+                return result;
+            }
+            driver.Repopulate();
+            await draw();
+            return result;
+        },
         repopulate: () => {
-            if (driver.isDeleted()) {
+            if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
             driver.Repopulate();
@@ -306,8 +323,14 @@ export async function createThreeHydra(config) {
          * Dipoose the Three Hydra delegate.
          * This does *not* clear the threejs scene but only dispose the USD delegate and loaded files
          */
-        dispose: () => {
+        dispose: async () => {
+            if (disposed) return;
+            disposed = true;
             if (debug) console.warn("Disposing Three Hydra");
+
+            await drawPromise.catch(() => {});
+            await renderInterface.waitForMaterialsReady().catch(() => {});
+            renderInterface.dispose();
 
             // Unlink all generated files and folders in the virtual file system.
             const unlinkedFiles = new Set();
@@ -363,7 +386,9 @@ export async function createThreeHydra(config) {
                 }
             }
 
-            driver.delete();
+            if (!driver.isDeleted()) {
+                driver.delete();
+            }
             driverOrPromise = null;
 
             if (debug) console.warn("Disposed Three Hydra");

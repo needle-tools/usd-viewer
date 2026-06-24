@@ -1,5 +1,5 @@
 import { Object3D } from "three"
-import { HdWebSyncDriver, USD } from ".."
+import { HdWebSyncDriver, USD, USDStage } from ".."
 
 export declare type HydraFile = File & { path: string };
 
@@ -54,6 +54,9 @@ export declare type NeedleThreeHydraHandle = {
     /** Rebuild Hydra population for the current USD stage after composition edits.
      */
     repopulate: () => Promise<void>,
+    /** Run an imperative USD stage edit after the current draw settles, then repopulate and redraw.
+     */
+    editStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T | undefined>,
     /** Resolves after the initial Hydra draw has settled.
      */
     ready: () => Promise<void>,
@@ -65,7 +68,7 @@ export declare type NeedleThreeHydraHandle = {
     diagnostics: () => Record<string, unknown>,
     /** Dispose the Three Hydra delegate.
      */
-    dispose: () => void,
+    dispose: () => Promise<void>,
 }
 
 export declare class USDLoadingManager {

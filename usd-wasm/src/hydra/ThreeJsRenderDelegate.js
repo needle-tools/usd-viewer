@@ -10,6 +10,32 @@ const debugPrims = false;
 const disableTextures = false;
 const disableMaterials = false;
 
+function disposeTexture(texture, disposed = new Set()) {
+  if (!texture || disposed.has(texture) || typeof texture.dispose !== 'function') return;
+  disposed.add(texture);
+  texture.dispose();
+}
+
+function disposeMaterialResources(material, disposedMaterials = new Set(), disposedTextures = new Set()) {
+  if (!material) return;
+  if (Array.isArray(material)) {
+    for (const entry of material) disposeMaterialResources(entry, disposedMaterials, disposedTextures);
+    return;
+  }
+  if (disposedMaterials.has(material)) return;
+  disposedMaterials.add(material);
+
+  for (const value of Object.values(material)) {
+    if (value && typeof value === 'object' && value.isTexture) {
+      disposeTexture(value, disposedTextures);
+    }
+  }
+
+  if (material !== defaultMaterial && typeof material.dispose === 'function') {
+    material.dispose();
+  }
+}
+
 class TextureRegistry {
   /** 
    * @param {import('..').threeJsRenderDelegateConfig} config
@@ -18,6 +44,9 @@ class TextureRegistry {
     this.config = config;
     this.allPaths = config.paths;
     this.textures = [];
+    this.loadedTextures = new Set();
+    this.objectUrls = new Set();
+    this.disposed = false;
     this.loader = new TextureLoader();
     this.tgaLoader = new TGALoader();
     this.exrLoader = new EXRLoader();
@@ -138,12 +167,13 @@ class TextureRegistry {
       loader = this.exrLoader;
 
     const baseUrl = this.baseUrl;
-    function loadFromFile(_loadedFile) {
+    const loadFromFile = (_loadedFile) => {
       let url = undefined;
       if (debugTextures) console.log("window.driver.getFile", resourcePath, " => ", _loadedFile);
       if (_loadedFile) {
         let blob = new Blob([_loadedFile.slice(0)], { type: filetype });
         url = URL.createObjectURL(blob);
+        this.objectUrls.add(url);
       } else {
         if (baseUrl)
           url = baseUrl + '/' + resourcePath;
@@ -158,7 +188,17 @@ class TextureRegistry {
 
         // onLoad callback
         (texture) => {
+          if (url?.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+            this.objectUrls.delete(url);
+          }
           texture.name = resourcePath;
+          if (this.disposed) {
+            texture.dispose();
+          }
+          else {
+            this.loadedTextures.add(texture);
+          }
           textureResolve(texture);
         },
 
@@ -167,10 +207,14 @@ class TextureRegistry {
 
         // onError callback
         (err) => {
+          if (url?.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+            this.objectUrls.delete(url);
+          }
           textureReject(err);
         }
       );
-    }
+    };
 
     const resolvedFile = this.readResolvedResource(resourcePath);
     if (resolvedFile) {
@@ -199,6 +243,26 @@ class TextureRegistry {
     });
 
     return this.textures[resourcePath];
+  }
+
+  dispose() {
+    this.disposed = true;
+    for (const url of this.objectUrls) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrls.clear();
+
+    for (const texture of this.loadedTextures) {
+      texture.dispose();
+    }
+    this.loadedTextures.clear();
+
+    for (const texturePromise of Object.values(this.textures)) {
+      Promise.resolve(texturePromise).then(texture => {
+        if (texture?.dispose) texture.dispose();
+      }).catch(() => {});
+    }
+    this.textures = [];
   }
 }
 
@@ -244,15 +308,15 @@ class HydraMesh {
   }
 
   dispose() {
+    if (!this._mesh) return;
     this._interface.unassignMeshFromMaterials(this._mesh);
     if (this._mesh.parent) {
       this._mesh.parent.remove(this._mesh);
     }
     this._geometry.dispose();
-    if (this._ownedMaterial && this._ownedMaterial !== defaultMaterial && typeof this._ownedMaterial.dispose === 'function') {
-      this._ownedMaterial.dispose();
-      this._ownedMaterial = null;
-    }
+    disposeMaterialResources(this._ownedMaterial);
+    this._ownedMaterial = null;
+    this._mesh = null;
   }
 
   updateOrder(attribute, attributeName, dimension = 3) {
@@ -454,6 +518,8 @@ class HydraMesh {
       case "tangents":
         this.setTangents(data, dimension, interpolation);
         break;
+      case "rest":
+        break;
       default:
         if (warningMessagesToCount.has(name)) {
           warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
@@ -567,9 +633,8 @@ class HydraMaterial {
 
   dispose() {
     this._assignments = [];
-    if (this._material && this._material !== defaultMaterial && typeof this._material.dispose === 'function') {
-      this._material.dispose();
-    }
+    disposeMaterialResources(this._material);
+    this._material = null;
   }
 
   _applyMaterialToMesh(mesh, materialIndex) {
@@ -1203,6 +1268,17 @@ export class ThreeRenderDelegateInterface {
     if (!material) return;
     material.dispose();
     delete this.materials[id];
+  }
+
+  dispose() {
+    for (const id of Object.keys(this.meshes)) {
+      this.destroyRPrim(id);
+    }
+    for (const id of Object.keys(this.materials)) {
+      this.destroySPrim(id);
+    }
+    this.registry.dispose();
+    this.pendingMaterialUpdates.clear();
   }
 
   unassignMeshFromMaterials(mesh) {
