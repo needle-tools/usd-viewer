@@ -190,6 +190,7 @@ class HydraMesh {
       color: new Color(0xB4B4B4),
       // envMap: hydraInterface.config.envMap,
     });
+    this._ownedMaterial = material;
     this._materials.push(material);
     this._mesh = new Mesh(this._geometry, material);
     this._mesh.castShadow = true;
@@ -206,6 +207,18 @@ class HydraMesh {
     // console.log("Creating HydraMesh: " + id + " -> " + _name);
 
     hydraInterface.config.usdRoot.add(this._mesh); // FIXME
+  }
+
+  dispose() {
+    this._interface.unassignMeshFromMaterials(this._mesh);
+    if (this._mesh.parent) {
+      this._mesh.parent.remove(this._mesh);
+    }
+    this._geometry.dispose();
+    if (this._ownedMaterial && this._ownedMaterial !== defaultMaterial && typeof this._ownedMaterial.dispose === 'function') {
+      this._ownedMaterial.dispose();
+      this._ownedMaterial = null;
+    }
   }
 
   updateOrder(attribute, attributeName, dimension = 3) {
@@ -310,6 +323,9 @@ class HydraMesh {
       }
     }
 
+    if (this._mesh.parent) {
+      this._mesh.parent.remove(this._mesh);
+    }
     this._mesh = new Mesh(this._geometry, this._materials);
     this._interface.config.usdRoot.add(this._mesh);
 
@@ -503,8 +519,22 @@ class HydraMaterial {
 
   assignToMesh(mesh, materialIndex = null) {
     this._interface.diagnostics.materialAssignments++;
-    this._assignments.push({ mesh, materialIndex });
+    const existing = this._assignments.find(assignment => assignment.mesh === mesh && assignment.materialIndex === materialIndex);
+    if (!existing) {
+      this._assignments.push({ mesh, materialIndex });
+    }
     this._applyMaterialToMesh(mesh, materialIndex);
+  }
+
+  unassignMesh(mesh) {
+    this._assignments = this._assignments.filter(assignment => assignment.mesh !== mesh);
+  }
+
+  dispose() {
+    this._assignments = [];
+    if (this._material && this._material !== defaultMaterial && typeof this._material.dispose === 'function') {
+      this._material.dispose();
+    }
   }
 
   _applyMaterialToMesh(mesh, materialIndex) {
@@ -1045,9 +1075,18 @@ export class ThreeRenderDelegateInterface {
    */
   createRPrim(typeId, id, instancerId) {
     if (debugPrims) console.log('Creating RPrim: ', typeId, id, typeof id);
+    this.destroyRPrim(id);
     let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;
+  }
+
+  destroyRPrim(id) {
+    if (debugPrims) console.log('Destroying RPrim: ', id);
+    const mesh = this.meshes[id];
+    if (!mesh) return;
+    mesh.dispose();
+    delete this.meshes[id];
   }
 
   createBPrim(typeId, id) {
@@ -1061,6 +1100,7 @@ export class ThreeRenderDelegateInterface {
     if (debugPrims) console.log('Creating SPrim: ', typeId, id);
 
     if (typeId === 'material') {
+      this.destroySPrim(id);
       let material = new HydraMaterial(id, this);
       this.materials[id] = material;
       if (this.diagnostics.materialIds.length < 20) {
@@ -1069,6 +1109,20 @@ export class ThreeRenderDelegateInterface {
       return material;
     } else {
       return undefined;
+    }
+  }
+
+  destroySPrim(id) {
+    if (debugPrims) console.log('Destroying SPrim: ', id);
+    const material = this.materials[id];
+    if (!material) return;
+    material.dispose();
+    delete this.materials[id];
+  }
+
+  unassignMeshFromMaterials(mesh) {
+    for (const material of Object.values(this.materials)) {
+      material.unassignMesh(mesh);
     }
   }
 
