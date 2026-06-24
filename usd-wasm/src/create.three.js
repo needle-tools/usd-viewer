@@ -53,6 +53,31 @@ function assignMaybeAsync(value, assign, label) {
 }
 
 /**
+ * @template T
+ * @param {T | Promise<T>} value
+ * @returns {Promise<T>}
+ */
+async function waitMaybeAsync(value) {
+    return await value;
+}
+
+/**
+ * @param {Promise<unknown>} promise
+ * @param {string} label
+ * @param {number} timeoutMs
+ */
+function withTimeout(promise, label, timeoutMs = 15000) {
+    let timeout = 0;
+    const timeoutPromise = new Promise((resolve) => {
+        timeout = setTimeout(() => {
+            console.warn(`${label} is still pending after ${timeoutMs}ms.`);
+            resolve(undefined);
+        }, timeoutMs);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
+}
+
+/**
  * @param {{USD:import("./types").USD, filepath:string, buffer?:ArrayBuffer, parent?:string,}} opts
  */
 async function createFile(opts) {
@@ -215,6 +240,7 @@ export async function createThreeHydra(config) {
     let disposed = false;
     let drawInFlight = false;
     let drawPromise = Promise.resolve();
+    let activeDrawPromise = Promise.resolve();
     const draw = () => {
         if (disposed || drawInFlight || driver.isDeleted()) {
             return drawPromise;
@@ -224,9 +250,10 @@ export async function createThreeHydra(config) {
             const result = driver.Draw();
             if (isPromiseLike(result)) {
                 drawInFlight = true;
-                drawPromise = result.catch((error) => console.error("Hydra draw failed", error)).finally(() => {
-                    drawInFlight = false;
-                });
+                activeDrawPromise = result
+                    .catch((error) => console.error("Hydra draw failed", error))
+                    .finally(() => drawInFlight = false);
+                drawPromise = withTimeout(activeDrawPromise, "Hydra draw");
             }
             else {
                 drawPromise = Promise.resolve();
@@ -299,22 +326,27 @@ export async function createThreeHydra(config) {
                 return undefined;
             }
             await drawPromise;
+            if (drawInFlight) {
+                console.warn("Skipping USD stage edit while Hydra draw is still pending.");
+                return undefined;
+            }
             if (disposed || driver.isDeleted()) {
                 return undefined;
             }
-            const result = await callback(driver.GetStage(), driver);
+            const stage = await waitMaybeAsync(driver.GetStage());
+            const result = await callback(stage, driver);
             if (disposed || driver.isDeleted()) {
                 return result;
             }
-            driver.Repopulate();
+            await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
             await draw();
             return result;
         },
-        repopulate: () => {
+        repopulate: async () => {
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
-            driver.Repopulate();
+            await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
             return draw();
         },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
@@ -328,13 +360,13 @@ export async function createThreeHydra(config) {
             disposed = true;
             if (debug) console.warn("Disposing Three Hydra");
 
-            await drawPromise.catch(() => {});
-            await renderInterface.waitForMaterialsReady().catch(() => {});
-            renderInterface.dispose();
+            const cleanup = async () => {
+                await renderInterface.waitForMaterialsReady().catch(() => {});
+                renderInterface.dispose();
 
-            // Unlink all generated files and folders in the virtual file system.
-            const unlinkedFiles = new Set();
-            function unlinkFiles(dir, path) {
+                // Unlink all generated files and folders in the virtual file system.
+                const unlinkedFiles = new Set();
+                function unlinkFiles(dir, path) {
                 for (const fileName of Object.keys(dir.contents)) {
                     const file = dir.contents[fileName];
                     if (file.isFolder) {
@@ -361,18 +393,18 @@ export async function createThreeHydra(config) {
                         }
                     }
                 }
-            }
+                }
 
-            function rmRootDir(rootDir) {
+                function rmRootDir(rootDir) {
                 const allFiles = config.USD.FS_analyzePath(rootDir).object;
                 if (allFiles)
                     unlinkFiles(allFiles, rootDir);
-            }
+                }
 
-            rmRootDir("/" + directoryForFiles);
-            rmRootDir("/1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
+                rmRootDir("/" + directoryForFiles);
+                rmRootDir("/1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
 
-            if (!unlinkedFiles.has(file)) {
+                if (!unlinkedFiles.has(file)) {
                 if (debug) console.warn("Unlinking main file", file);
                 let fileToUnlink = file;
                 if (fileToUnlink.startsWith("http"))
@@ -384,12 +416,22 @@ export async function createThreeHydra(config) {
                         if (debug) console.debug("Error unlinking main file", fileToUnlink, e);
                     }
                 }
+                }
+
+                if (!driver.isDeleted()) {
+                    driver.delete();
+                }
+                driverOrPromise = null;
+            };
+
+            if (drawInFlight) {
+                console.warn("Deferring USD cleanup while Hydra draw is still pending.");
+                activeDrawPromise.finally(cleanup).catch((error) => console.error("Deferred USD cleanup failed", error));
+                return;
             }
 
-            if (!driver.isDeleted()) {
-                driver.delete();
-            }
-            driverOrPromise = null;
+            await drawPromise.catch(() => {});
+            await cleanup();
 
             if (debug) console.warn("Disposed Three Hydra");
         },

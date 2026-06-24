@@ -24,6 +24,13 @@ const debugUsd = false;
 type TestFile = { path: string, url: string };
 type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
+type AssetFetchProgress = {
+  state: string,
+  active: number,
+  loadedTotal: number,
+  totalBytes: number,
+  error?: string,
+};
 
 const fixtureUrls = {
   "asset-explorer/DamagedHelmet.glb": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb", import.meta.url).href,
@@ -152,6 +159,16 @@ const testAssets: TestAsset[] = [
 
 getUsdModule({
   debug: debugUsd,
+  onAssetFetchProgress: (progress: AssetFetchProgress) => {
+    if (progress.state === "error") {
+      status(`USD asset download failed: ${progress.error ?? "unknown error"}`);
+      return;
+    }
+    if (progress.active > 0 && (progress.state === "start" || progress.state === "progress")) {
+      const total = progress.totalBytes > 0 ? ` / ${formatBytes(progress.totalBytes)}` : "";
+      status(`Downloading ${progress.active} USD asset${progress.active === 1 ? "" : "s"} (${formatBytes(progress.loadedTotal)}${total})`);
+    }
+  },
   urlModifier: async (url: string) => {
     // Resolve GitHub-specific URLs
     // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
@@ -596,7 +613,7 @@ function updateSceneControls() {
       await delegate.editStage(async (stage) => {
         const prim = stage.GetPrimAtPath(entry.primPath);
         if (!prim?.IsValid()) return false;
-        return prim.SetVariantSelection(entry.setName, select.value);
+        return await prim.SetVariantSelection(entry.setName, select.value);
       });
       await waitForMaterialsForStatus(delegate, label);
       app.fitCamera();
@@ -625,8 +642,8 @@ function updateSceneControls() {
       await delegate.editStage(async (stage) => {
         const prim = stage.GetPrimAtPath(entry.primPath);
         if (!prim?.IsValid()) return false;
-        if (prim.IsLoaded()) prim.Unload();
-        else prim.Load();
+        if (prim.IsLoaded()) await prim.Unload();
+        else await prim.Load();
         loaded = prim.IsLoaded();
         return true;
       });
@@ -662,6 +679,13 @@ function vectorToArray<T>(vector: { size(): number, get(index: number): T, delet
 function status(message: string) {
   console.log(message);
   if (statusElement) statusElement.innerText = message;
+}
+
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  if (value < 1024) return `${Math.round(value)} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB`;
+  return `${Math.round(value / 1024 / 102.4) / 10} MB`;
 }
 
 window.loadFile = loadFile;
