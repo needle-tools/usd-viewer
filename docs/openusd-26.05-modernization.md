@@ -15,7 +15,7 @@ This note records the first modernization pass from the Autodesk/Needle OpenUSD 
 These are the source and dependency commits for this checkpoint.
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `4cafce1075d717cc44cdc55d68beac22bdd90e4a`
+- `OpenUSD`: `dbbd37e457da896471e8570d01d41c9c9b69a9fc`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -377,14 +377,19 @@ Viewer binding changes:
 - Kept `locateFile()` for `.data` and `.wasm`.
 - Switched `createThreeHydra` to mount caller-provided `buffer` data into Emscripten FS before opening the root layer.
 - Replaced the JS-facing `UsdStageRefPtr` access with explicit driver metadata methods for up-axis, start/end time codes, and timecodes-per-second.
+- Added `HdWebSyncDriver.Repopulate()` for composition edits such as variant selection and payload load/unload, then exposed it on the viewer handle as `repopulate()`.
+- Added JS notifications from the wasm render delegate's `DestroyRprim` and `DestroySprim` hooks. This follows Hydra's render-delegate lifecycle: `HdRenderIndex` calls the render delegate destroy hook when prims are removed, so the JS bridge removes the corresponding Three mesh/material at the same boundary instead of carrying stale objects through variant switches.
 - Added Node tests that verify the generated artifacts, runtime exports, Emscripten data-package size, memory configuration, wasm magic header, actual Node loading of the generated bundle, and programmatic authoring through the generated API.
 - Extended the three.js matrix static page and Playwright assertions to report and check the Hydra binding API surface before exercising the renderer.
+- Added a renderer-mode filter to the matrix cache script (`--renderer-modes webgl`, `--renderer-modes webgpu-force-webgl2,webgpu`) so WebGL and WebGPU can be validated independently while keeping the full 102-case matrix as the canonical run.
 - Added `USD_THREE_MATRIX_BROWSER=chromium` as a matrix-test escape hatch for running against Playwright's bundled Chromium instead of the configured Chrome channel.
 - Added `USD_THREE_MATRIX_HEADED=1` for headed browser validation.
 - Added Asset Explorer fixtures for BoomBox, CesiumMan, and DamagedHelmet. The old `CesiumMan.glb.three.usdz` was removed because it was about 10 KB and contained no `Mesh` prims.
 - Added `CesiumMan.glb.openusd.usdz`, generated from the tracked `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path. Its packaged USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and includes one mesh plus skeleton data.
+- Repacked `CesiumMan.glb.openusd.usdz` so the embedded diffuse JPEG is a normal package asset (`0/Cesium_Man-effect_diffuse.jpg`) instead of a bracket-addressed GLB subasset. The browser resolver now loads the texture in both WebGL and WebGPU matrix runs.
 - Added raw `.glb` fixtures for BoomBox, CesiumMan, and DamagedHelmet to exercise Adobe's wasm glTF plugin directly.
 - Added local MaterialX USDA/MTLX fixtures and assertions for `sceneStats.materialXMaterials`, including external references, nested references, variant-authored bindings, texture/noise, marble, and procedural bricks.
+- Added matrix fixture assertions for material binding variants, nested variants, and CesiumMan texture presence. These checks catch the double-rendering regression by asserting one mesh remains after each variant switch.
 
 ## Validation Status
 
@@ -426,6 +431,13 @@ summary: passed 68, unsupported 34, failed 0
 
 The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU modes. Cached Three `0.184.0` passes WebGL, WebGPU forced-WebGL2, and native WebGPU for local USDZ, local MaterialX USDA/MTLX, Asset Explorer USDZ fixtures, and raw GLB fixtures.
 
+Focused headed matrix runs also pass:
+
+```sh
+USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0 --renderer-modes webgl
+USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0 --renderer-modes webgpu-force-webgl2,webgpu
+```
+
 ## USD API Bindings
 
 Upstream checks:
@@ -438,7 +450,7 @@ Upstream checks:
 
 Current generated checkpoint:
 
-- OpenUSD commit `cfeddc19d1e3e6ad2d1c34342ed1c266cb61da7a` adds `pxr/usdImaging/hdEmscripten/bindgen` and the first generated authoring/package API checkpoint.
+- OpenUSD commit `dbbd37e457da896471e8570d01d41c9c9b69a9fc` includes `pxr/usdImaging/hdEmscripten/bindgen`, the first generated authoring/package API checkpoint, `HdWebSyncDriver.Repopulate()`, and render-delegate destroy callbacks for JS cleanup.
 - `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, vector helpers, and module-level `CreateStage`, `OpenStage`, `ReleaseStage`, `CreateUsdzPackage`, and `ReadFile`.
 - `generate_bindings.py` emits `generated/emHdCoreBindings.inc` for Embind and `generated/usd-core-bindings.d.ts` for TypeScript from that same manifest.
 - The MaterialX wasm build script builds `emHdBindings`, runs the build-system `install` target, and installs `emHdBindings.js`, `emHdBindings.data`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.

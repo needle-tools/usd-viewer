@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `4cafce1075d717cc44cdc55d68beac22bdd90e4a`
+- `OpenUSD`: `dbbd37e457da896471e8570d01d41c9c9b69a9fc`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -50,6 +50,8 @@ Working now:
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
+- Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
+- Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The previous Asset Explorer CesiumMan USDZ was removed because it was a 10 KB Three.js export with no `Mesh` prims. The checked-in `CesiumMan.glb.openusd.usdz` was regenerated from `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path and is renderable.
@@ -133,13 +135,14 @@ node --check tests/bindings/bindings-artifacts.test.mjs
 node --check scripts/cache-three-matrix.mjs
 node --check tests/three-matrix/static/main.js
 node --check tests/three-matrix/usd-three-matrix.spec.ts
+npx vite build
 ```
 
 Expected current result:
 
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
 - `npm run test:bindings` passes 7 tests, including driver metadata helper checks and generated authoring/USDZ packaging.
-- The syntax checks pass.
+- The syntax checks and example build pass.
 
 ## Browser Matrix Status
 
@@ -163,6 +166,14 @@ Observed result on 2026-06-24:
 summary: passed 68, unsupported 34, failed 0
 ```
 
+To isolate a renderer backend while debugging, pass a comma-separated mode list
+through the repo-local cache script filter:
+
+```sh
+USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0 --renderer-modes webgl
+USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.184.0 --renderer-modes webgpu-force-webgl2,webgpu
+```
+
 Renderable fixtures that pass with geometry and materials:
 
 - `examples/public/test.usdz`
@@ -184,6 +195,16 @@ Renderable fixtures that pass with geometry and materials:
 - Asset Explorer `DamagedHelmet.glb`
 
 The old `CesiumMan.glb.three.usdz` fixture was removed after inspection showed it contained no `def Mesh` prims. The replacement `CesiumMan.glb.openusd.usdz` was generated from the tracked `CesiumMan.glb` with the OpenUSD 26.05 wasm Adobe `usdGltf` plugin path; its USDA layer records `generator = "Adobe usdGltf 1.0; glTF generator: COLLADA2GLTF"` and the matrix now treats it as renderable.
+
+The checked-in CesiumMan USDZ also rewrites the image reference away from the
+GLB subasset syntax (`@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`) and
+packages the extracted JPEG as `0/Cesium_Man-effect_diffuse.jpg`, which the
+browser resolver can load as a normal USDZ package asset.
+
+Variant-specific matrix assertions now verify that `material_binding_overrides.usda`
+switches from one `Painted` mesh to one `Metal` mesh, `nested_variants.usda`
+switches shape/finish without double-rendering stale geometry, and CesiumMan USDZ
+has at least one textured material.
 
 ## Headed Viewer Regression Pass
 
