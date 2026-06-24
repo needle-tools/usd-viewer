@@ -1,4 +1,4 @@
-import { Scene } from "three"
+import { Object3D } from "three"
 import { HdWebSyncDriver, USD } from ".."
 
 export declare type HydraFile = File & { path: string };
@@ -34,7 +34,7 @@ export declare type createThreeHydraConfig = {
      * Files to be loaded into the virtual file system.
      * The first file will be loaded as the root file, others will be loaded as dependencies.
      */
-    files: Array<HydraFile>,
+    files?: Array<HydraFile>,
 }
 
 /**

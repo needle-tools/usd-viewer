@@ -310,7 +310,7 @@ export async function createThreeHydra(config) {
                             config.USD.FS_rmdir(path + fileName);
                         }
                         catch (e) {
-                            console.error("Error unlinking folder", fullPath, e);
+                            if (debug) console.debug("Error unlinking folder", fullPath, e);
                         }
                     }
                     else {
@@ -320,7 +320,7 @@ export async function createThreeHydra(config) {
                             config.USD.FS_unlink(fullPath);
                         }
                         catch (e) {
-                            console.error("Error unlinking", fullPath, e);
+                            if (debug) console.debug("Error unlinking", fullPath, e);
                         }
                     }
                 }
@@ -340,10 +340,12 @@ export async function createThreeHydra(config) {
                 let fileToUnlink = file;
                 if (fileToUnlink.startsWith("http"))
                     fileToUnlink = "/" + fileToUnlink.replace("://", ":/");
-                try {
-                    config.USD.FS_unlink(fileToUnlink);
-                } catch (e) {
-                    console.error("Error unlinking main file", fileToUnlink, e);
+                if (config.USD.FS_analyzePath(fileToUnlink)?.exists) {
+                    try {
+                        config.USD.FS_unlink(fileToUnlink);
+                    } catch (e) {
+                        if (debug) console.debug("Error unlinking main file", fileToUnlink, e);
+                    }
                 }
             }
 

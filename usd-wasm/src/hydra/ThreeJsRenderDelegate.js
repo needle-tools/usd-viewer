@@ -1,7 +1,7 @@
 import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-import { Experimental_API as MaterialX } from '@needle-tools/materialx';
+import { Experimental_API as MaterialX, MaterialXMaterial } from '@needle-tools/materialx';
 
 const debugTextures = false;
 const debugMaterials = false;
@@ -907,6 +907,16 @@ class HydraMaterial {
         },
       }, {});
 
+      if (!(material instanceof MaterialXMaterial)) {
+        this._interface.diagnostics.materialXFallbacks++;
+        if (debugMaterials) console.debug('MaterialX shader generation returned a non-MaterialX material; using USD Preview Surface instead.', {
+          materialId: this._id,
+          materialName: material?.name,
+          materialType: material?.constructor?.name,
+        });
+        return null;
+      }
+
       material.name = materialName;
       material.side = DoubleSide;
       material.needsUpdate = true;
@@ -951,6 +961,7 @@ export class ThreeRenderDelegateInterface {
       materialXCreateAttempts: 0,
       materialXCreateSuccess: 0,
       materialXCreateFailures: 0,
+      materialXFallbacks: 0,
       materialIds: [],
     };
   }
