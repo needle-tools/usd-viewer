@@ -5,6 +5,11 @@ import { tryDetermineFileFormat } from "./utils.js";
  * @param {string} url
  */
 function toBrowserFetchableUrl(url) {
+    if (url.startsWith("https://github.com/") || url.startsWith("http://github.com/")) {
+        url = url.replace("github.com", "raw.githubusercontent.com");
+        url = url.replace("/blob/", "/");
+    }
+
     if (url.startsWith("http") || url.startsWith("blob")) {
         return url;
     }
@@ -17,6 +22,37 @@ function toBrowserFetchableUrl(url) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {value is Promise<unknown>}
+ */
+function isPromiseLike(value) {
+    return !!value && typeof value === "object" && "then" in value;
+}
+
+/**
+ * @param {string} url
+ */
+function isUsdPackageUrl(url) {
+    const path = url.split(/[?#]/, 1)[0].toLowerCase();
+    return path.endsWith(".usdz");
+}
+
+/**
+ * @template T
+ * @param {T | Promise<T>} value
+ * @param {(value: T) => void} assign
+ * @param {string} label
+ */
+function assignMaybeAsync(value, assign, label) {
+    if (isPromiseLike(value)) {
+        value.then(assign).catch((error) => console.error(`Failed to read ${label}`, error));
+    }
+    else {
+        assign(/** @type {T} */ (value));
+    }
+}
+
+/**
  * @param {{USD:import("./types").USD, filepath:string, buffer?:ArrayBuffer, parent?:string,}} opts
  */
 async function createFile(opts) {
@@ -26,8 +62,11 @@ async function createFile(opts) {
 
     let arrayBuffer = opts.buffer;
     if (!arrayBuffer) {
-        const blob = await fetch(filepath);
-        arrayBuffer = await blob.arrayBuffer();
+        const response = await fetch(filepath);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch USD file ${filepath}: ${response.status} ${response.statusText}`);
+        }
+        arrayBuffer = await response.arrayBuffer();
     }
 
     // ensure that file paths are not using slashes
@@ -119,7 +158,7 @@ export async function createThreeHydra(config) {
         const resolvedUrl = toBrowserFetchableUrl(config.url);
         const isBlob = resolvedUrl.startsWith("blob");
         const isWebUrl = resolvedUrl.startsWith("http");
-        if (buffer || isBlob) {
+        if (buffer || isBlob || isUsdPackageUrl(resolvedUrl)) {
             file = await createFile({ USD, filepath: resolvedUrl, buffer });
         }
         else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
@@ -160,29 +199,72 @@ export async function createThreeHydra(config) {
     }
 
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
+    if (typeof driver.HasStage === "function" && !driver.HasStage()) {
+        driver.delete();
+        throw new Error(`Failed to open USD stage: ${file}`);
+    }
 
     if (debug) console.log("DRIVER", driver);
 
+    let drawInFlight = false;
+    let drawPromise = Promise.resolve();
+    const draw = () => {
+        if (drawInFlight || driver.isDeleted()) {
+            return drawPromise;
+        }
+
+        try {
+            const result = driver.Draw();
+            if (isPromiseLike(result)) {
+                drawInFlight = true;
+                drawPromise = result.catch((error) => console.error("Hydra draw failed", error)).finally(() => {
+                    drawInFlight = false;
+                });
+            }
+            else {
+                drawPromise = Promise.resolve();
+            }
+        }
+        catch (error) {
+            console.error("Hydra draw failed", error);
+            drawPromise = Promise.resolve();
+        }
+
+        return drawPromise;
+    };
+
     /** Draw once */
-    driver.Draw();
+    const initialDrawPromise = draw();
 
     /** Support for Y and Z up-axis in the root USD file */
-    delegateConfig.usdRoot.rotation.x = String.fromCharCode(driver.GetStageUpAxis()) === 'z' ? -Math.PI / 2 : 0;
+    let stageUpAxis = "y".charCodeAt(0);
+    let stageStartTimeCode = 0;
+    let stageEndTimeCode = 0;
+    let stageTimeCodesPerSecond = 24;
+
+    assignMaybeAsync(driver.GetStageUpAxis(), (value) => {
+        stageUpAxis = value;
+        delegateConfig.usdRoot.rotation.x = String.fromCharCode(stageUpAxis) === 'z' ? -Math.PI / 2 : 0;
+    }, "stage up axis");
+    assignMaybeAsync(driver.GetStageStartTimeCode(), (value) => stageStartTimeCode = value, "stage start time");
+    assignMaybeAsync(driver.GetStageEndTimeCode(), (value) => stageEndTimeCode = value, "stage end time");
+    assignMaybeAsync(driver.GetStageTimeCodesPerSecond(), (value) => stageTimeCodesPerSecond = value, "stage time codes per second");
 
     let time = 0;
 
     if (debug) {
         console.log("STAGE", {
-            upAxis: String.fromCharCode(driver.GetStageUpAxis()),
-            startTimeCode: driver.GetStageStartTimeCode(),
-            endTimeCode: driver.GetStageEndTimeCode(),
-            timeCodesPerSecond: driver.GetStageTimeCodesPerSecond(),
+            upAxis: String.fromCharCode(stageUpAxis),
+            startTimeCode: stageStartTimeCode,
+            endTimeCode: stageEndTimeCode,
+            timeCodesPerSecond: stageTimeCodesPerSecond,
         });
         console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
     }
 
     return {
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
+        ready: () => initialDrawPromise,
         update: (dt) => {
             // ensure we're not dead
             if (driver.isDeleted()) {
@@ -194,15 +276,15 @@ export async function createThreeHydra(config) {
                 return;
             }
             time += dt;
-            const startTimeCode = driver.GetStageStartTimeCode();
-            const endTimeCode = driver.GetStageEndTimeCode();
+            const startTimeCode = stageStartTimeCode;
+            const endTimeCode = stageEndTimeCode;
             const duration = endTimeCode - startTimeCode;
-            let timecode = startTimeCode + time * driver.GetStageTimeCodesPerSecond();
+            let timecode = startTimeCode + time * stageTimeCodesPerSecond;
             if (duration > 0) {
                 timecode = startTimeCode + ((timecode - startTimeCode) % duration);
+                driver.SetTime(timecode);
             }
-            driver.SetTime(timecode);
-            driver.Draw();
+            draw();
         },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
         diagnostics: () => renderInterface.getDiagnostics(),

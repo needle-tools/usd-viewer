@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
@@ -10,6 +11,34 @@ const jsPath = resolve(bindingsDir, "emHdBindings.js");
 const wasmPath = resolve(bindingsDir, "emHdBindings.wasm");
 const dataPath = resolve(bindingsDir, "emHdBindings.data");
 const require = createRequire(import.meta.url);
+const tempModuleDirs = new Set();
+
+process.once("exit", () => {
+    for (const tempDir of tempModuleDirs) {
+        rmSync(tempDir, { recursive: true, force: true });
+    }
+});
+
+async function loadUsdModuleFromTempCopy() {
+    const tempDir = await mkdtemp(join(tmpdir(), "usd-bindings-"));
+    tempModuleDirs.add(tempDir);
+    const cjsPath = join(tempDir, "emHdBindings.cjs");
+    await writeFile(cjsPath, await readFile(jsPath));
+
+    const getUsdModule = require(cjsPath);
+    return getUsdModule({
+        locateFile(file) {
+            return resolve(bindingsDir, file);
+        },
+        print() {},
+        printErr(message) {
+            const text = String(message);
+            if (!text.includes("warning:")) {
+                console.error(text);
+            }
+        },
+    });
+}
 
 describe("OpenUSD wasm binding artifacts", () => {
     it("ship the JS, wasm, and data sidecars used by getUsdModule", async () => {
@@ -60,45 +89,29 @@ describe("OpenUSD wasm binding artifacts", () => {
     });
 
     it("loads in Node with the runtime APIs used by usd-viewer", async () => {
-        const tempDir = await mkdtemp(join(tmpdir(), "usd-bindings-"));
-        const cjsPath = join(tempDir, "emHdBindings.cjs");
+        const USD = await loadUsdModuleFromTempCopy();
 
-        try {
-            await writeFile(cjsPath, await readFile(jsPath));
-            const getUsdModule = require(cjsPath);
-            const USD = await getUsdModule({
-                locateFile(file) {
-                    return resolve(bindingsDir, file);
-                },
-                print() {},
-                printErr(message) {
-                    const text = String(message);
-                    if (!text.includes("warning:")) {
-                        console.error(text);
-                    }
-                },
-            });
+        assert.equal(typeof USD.HdWebSyncDriver, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.HasStage, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageUpAxis, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStage, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageStartTimeCode, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageEndTimeCode, "function");
+        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageTimeCodesPerSecond, "function");
+        assert.equal(typeof USD.CreateStage, "function");
+        assert.equal(typeof USD.OpenStage, "function");
+        assert.equal(typeof USD.ReleaseStage, "function");
+        assert.equal(typeof USD.CreateUsdzPackage, "function");
+        assert.equal(typeof USD.ReadFile, "function");
+        assert.equal(typeof USD.FS_createDataFile, "function");
+        assert.equal(typeof USD.FS_createPath, "function");
+        assert.equal(typeof USD.FS_analyzePath, "function");
+        assert.equal(typeof USD.FS_readdir, "function");
+        assert.equal(typeof USD.FS_rmdir, "function");
+        assert.equal(typeof USD.FS_unlink, "function");
+        assert.equal(typeof USD.ready?.then, "function");
 
-            assert.equal(typeof USD.HdWebSyncDriver, "function");
-            assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageUpAxis, "function");
-            assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStage, "function");
-            assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageStartTimeCode, "function");
-            assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageEndTimeCode, "function");
-            assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageTimeCodesPerSecond, "function");
-            assert.equal(typeof USD.CreateStage, "function");
-            assert.equal(typeof USD.OpenStage, "function");
-            assert.equal(typeof USD.ReleaseStage, "function");
-            assert.equal(typeof USD.CreateUsdzPackage, "function");
-            assert.equal(typeof USD.ReadFile, "function");
-            assert.equal(typeof USD.FS_createDataFile, "function");
-            assert.equal(typeof USD.FS_createPath, "function");
-            assert.equal(typeof USD.FS_analyzePath, "function");
-            assert.equal(typeof USD.FS_readdir, "function");
-            assert.equal(typeof USD.FS_rmdir, "function");
-            assert.equal(typeof USD.FS_unlink, "function");
-            assert.equal(typeof USD.ready?.then, "function");
-
-            const usda = `#usda 1.0
+        const usda = `#usda 1.0
 (
     upAxis = "Z"
     startTimeCode = 1
@@ -110,119 +123,97 @@ def Xform "Root" {
     custom string userProperties:test = "ok"
 }
 `;
-            USD.FS_createDataFile("/", "stage-api.usda", new TextEncoder().encode(usda), true, true, true);
-            const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
-            const driver = new USD.HdWebSyncDriver(delegate, "stage-api.usda");
-            const stage = driver.GetStage();
-            const root = stage.GetPrimAtPath("/Root");
+        USD.FS_createDataFile("/", "stage-api.usda", new TextEncoder().encode(usda), true, true, true);
+        const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
+        const driver = new USD.HdWebSyncDriver(delegate, "stage-api.usda");
+        assert.equal(driver.HasStage(), true);
+        const stage = driver.GetStage();
+        const root = stage.GetPrimAtPath("/Root");
 
-            assert.equal(String.fromCharCode(stage.GetUpAxis()), "z");
-            assert.equal(stage.GetStartTimeCode(), 1);
-            assert.equal(stage.GetEndTimeCode(), 12);
-            assert.equal(stage.GetTimeCodesPerSecond(), 24);
-            assert.equal(root.IsValid(), true);
-            assert.equal(root.GetPath(), "/Root");
-            assert.equal(root.GetTypeName(), "Xform");
-            assert.equal(stage.GetPseudoRoot().GetChildren().size(), 1);
-            assert.match(stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
-            driver.delete();
-        } finally {
-            await rm(tempDir, { recursive: true, force: true });
-        }
+        assert.equal(String.fromCharCode(stage.GetUpAxis()), "z");
+        assert.equal(stage.GetStartTimeCode(), 1);
+        assert.equal(stage.GetEndTimeCode(), 12);
+        assert.equal(stage.GetTimeCodesPerSecond(), 24);
+        assert.equal(root.IsValid(), true);
+        assert.equal(root.GetPath(), "/Root");
+        assert.equal(root.GetTypeName(), "Xform");
+        assert.equal(stage.GetPseudoRoot().GetChildren().size(), 1);
+        assert.match(stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
+        driver.delete();
     });
 
     it("authors stages, variants, animated values, and USDZ packages through the generated API", async () => {
-        const tempDir = await mkdtemp(join(tmpdir(), "usd-authoring-bindings-"));
-        const cjsPath = join(tempDir, "emHdBindings.cjs");
+        const USD = await loadUsdModuleFromTempCopy();
 
         try {
-            await writeFile(cjsPath, await readFile(jsPath));
-            const getUsdModule = require(cjsPath);
-            const USD = await getUsdModule({
-                locateFile(file) {
-                    return resolve(bindingsDir, file);
-                },
-                print() {},
-                printErr(message) {
-                    const text = String(message);
-                    if (!text.includes("warning:")) {
-                        console.error(text);
-                    }
-                },
-            });
-
-            try {
-                USD.FS_createPath("/", "tmp", true, true);
-            } catch {
-                // Repeated test runs may reuse an existing MEMFS path.
-            }
-
-            const usdPath = "/tmp/generated-authoring.usda";
-            const usdzPath = "/tmp/generated-authoring.usdz";
-            const stage = USD.CreateStage(usdPath);
-
-            assert.equal(typeof stage.DefinePrim, "function");
-            assert.equal(stage.SetUpAxis("Z"), true);
-            stage.SetStartTimeCode(1);
-            stage.SetEndTimeCode(24);
-            stage.SetTimeCodesPerSecond(24);
-
-            const root = stage.DefinePrim("/World", "Xform");
-            assert.equal(root.IsValid(), true);
-            assert.equal(root.GetTypeName(), "Xform");
-
-            const color = root.CreateAttribute("primvars:displayColor", "color3f", true);
-            assert.equal(color.IsValid(), true);
-            assert.equal(color.SetColor3f(1, 0.25, 0.5, Number.NaN), true);
-            assert.equal(color.GetValueString(), "(1, 0.25, 0.5)");
-
-            const spin = root.CreateAttribute("userProperties:spin", "float", true);
-            assert.equal(spin.SetFloat(0, 1), true);
-            assert.equal(spin.SetFloat(90, 24), true);
-            assert.equal(spin.GetValueStringAtTime(24), "90");
-
-            assert.equal(root.AddVariant("lod", "low"), true);
-            assert.equal(root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope").IsValid(), true);
-            assert.equal(root.SetVariantSelection("lod", "high"), true);
-            assert.equal(root.GetVariantSelection("lod"), "high");
-
-            const variantNames = root.GetVariantNames("lod");
-            try {
-                assert.equal(variantNames.size(), 2);
-                assert.deepEqual([variantNames.get(0), variantNames.get(1)].sort(), ["high", "low"]);
-            } finally {
-                variantNames.delete();
-            }
-
-            const exported = stage.ExportToString();
-            assert.match(exported, /custom color3f primvars:displayColor = \(1, 0\.25, 0\.5\)/);
-            assert.match(exported, /float userProperties:spin\.timeSamples = \{/);
-            assert.match(exported, /def Scope "HighGeom"/);
-
-            const rootLayerExport = stage.GetRootLayer().ExportToString();
-            assert.match(rootLayerExport, /variants = \{/);
-            assert.match(rootLayerExport, /variantSet "lod" = \{/);
-
-            assert.equal(stage.Export(usdPath), true);
-            assert.equal(USD.FS_analyzePath(usdPath).exists, true);
-            assert.equal(USD.CreateUsdzPackage(usdPath, usdzPath), true);
-
-            const usdz = USD.ReadFile(usdzPath);
-            assert.ok(usdz instanceof Uint8Array);
-            assert.ok(usdz.length > 100);
-            assert.deepEqual([...usdz.subarray(0, 2)], [0x50, 0x4b]);
-
-            const reopened = USD.OpenStage(usdPath);
-            const reopenedRoot = reopened.GetPrimAtPath("/World");
-            assert.equal(reopenedRoot.IsValid(), true);
-            assert.equal(reopenedRoot.GetVariantSelection("lod"), "high");
-            assert.equal(reopened.GetPrimAtPath("/World/HighGeom").IsValid(), true);
-            assert.equal(reopenedRoot.GetAttribute("userProperties:spin").GetValueStringAtTime(24), "90");
-
-            USD.ReleaseStage(reopened);
-            USD.ReleaseStage(stage);
-        } finally {
-            await rm(tempDir, { recursive: true, force: true });
+            USD.FS_createPath("/", "tmp", true, true);
+        } catch {
+            // Repeated test runs may reuse an existing MEMFS path.
         }
+
+        const usdPath = "/tmp/generated-authoring.usda";
+        const usdzPath = "/tmp/generated-authoring.usdz";
+        const stage = USD.CreateStage(usdPath);
+
+        assert.equal(typeof stage.DefinePrim, "function");
+        assert.equal(stage.SetUpAxis("Z"), true);
+        stage.SetStartTimeCode(1);
+        stage.SetEndTimeCode(24);
+        stage.SetTimeCodesPerSecond(24);
+
+        const root = stage.DefinePrim("/World", "Xform");
+        assert.equal(root.IsValid(), true);
+        assert.equal(root.GetTypeName(), "Xform");
+
+        const color = root.CreateAttribute("primvars:displayColor", "color3f", true);
+        assert.equal(color.IsValid(), true);
+        assert.equal(color.SetColor3f(1, 0.25, 0.5, Number.NaN), true);
+        assert.equal(color.GetValueString(), "(1, 0.25, 0.5)");
+
+        const spin = root.CreateAttribute("userProperties:spin", "float", true);
+        assert.equal(spin.SetFloat(0, 1), true);
+        assert.equal(spin.SetFloat(90, 24), true);
+        assert.equal(spin.GetValueStringAtTime(24), "90");
+
+        assert.equal(root.AddVariant("lod", "low"), true);
+        assert.equal(root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope").IsValid(), true);
+        assert.equal(root.SetVariantSelection("lod", "high"), true);
+        assert.equal(root.GetVariantSelection("lod"), "high");
+
+        const variantNames = root.GetVariantNames("lod");
+        try {
+            assert.equal(variantNames.size(), 2);
+            assert.deepEqual([variantNames.get(0), variantNames.get(1)].sort(), ["high", "low"]);
+        } finally {
+            variantNames.delete();
+        }
+
+        const exported = stage.ExportToString();
+        assert.match(exported, /custom color3f primvars:displayColor = \(1, 0\.25, 0\.5\)/);
+        assert.match(exported, /float userProperties:spin\.timeSamples = \{/);
+        assert.match(exported, /def Scope "HighGeom"/);
+
+        const rootLayerExport = stage.GetRootLayer().ExportToString();
+        assert.match(rootLayerExport, /variants = \{/);
+        assert.match(rootLayerExport, /variantSet "lod" = \{/);
+
+        assert.equal(stage.Export(usdPath), true);
+        assert.equal(USD.FS_analyzePath(usdPath).exists, true);
+        assert.equal(USD.CreateUsdzPackage(usdPath, usdzPath), true);
+
+        const usdz = USD.ReadFile(usdzPath);
+        assert.ok(usdz instanceof Uint8Array);
+        assert.ok(usdz.length > 100);
+        assert.deepEqual([...usdz.subarray(0, 2)], [0x50, 0x4b]);
+
+        const reopened = USD.OpenStage(usdPath);
+        const reopenedRoot = reopened.GetPrimAtPath("/World");
+        assert.equal(reopenedRoot.IsValid(), true);
+        assert.equal(reopenedRoot.GetVariantSelection("lod"), "high");
+        assert.equal(reopened.GetPrimAtPath("/World/HighGeom").IsValid(), true);
+        assert.equal(reopenedRoot.GetAttribute("userProperties:spin").GetValueStringAtTime(24), "90");
+
+        USD.ReleaseStage(reopened);
+        USD.ReleaseStage(stage);
     });
 });

@@ -12,6 +12,10 @@ export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Textur
             texture.dispose();
             pmremGenerator.dispose();
             resolve(envMap);
+        }, undefined, error => {
+            console.warn("Failed to load environment map", url, error);
+            pmremGenerator.dispose();
+            resolve(null);
         });
     });
 }

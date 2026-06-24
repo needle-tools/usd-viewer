@@ -134,6 +134,7 @@ declare type USDStage = {
 
 declare type HdWebSyncDriver = {
     getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => void,
+    HasStage(): boolean,
     GetStage(): USDStage,
     GetStageUpAxis(): number,
     GetStageStartTimeCode(): number,

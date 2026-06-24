@@ -161,6 +161,7 @@ async function loadFile(url: string) {
   hydraDelegate = delegate;
 
   console.log("Scene content", usdContent);
+  await delegate.ready?.();
   app.fitCamera();
 }
 
