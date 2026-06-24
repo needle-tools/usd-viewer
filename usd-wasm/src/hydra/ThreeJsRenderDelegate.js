@@ -34,14 +34,17 @@ class TextureRegistry {
   }
 
   normalizeResourcePath(resourcePath) {
-    const path = String(resourcePath ?? "")
-      .replace(/\\/g, "/")
-      .replace(/^\/+/, "")
+    const rawPath = String(resourcePath ?? "").replace(/\\/g, "/");
+    const isUrl = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawPath);
+    if (isUrl) {
+      return rawPath;
+    }
+
+    const preserveLeadingSlash = rawPath.startsWith("/");
+    const path = rawPath
+      .replace(/^\/+/, preserveLeadingSlash ? "/" : "")
       .replace(/^(?:\.\/)+/, "")
       .replace(/\/\.\//g, "/");
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(path)) {
-      return path;
-    }
     const parts = [];
     for (const part of path.split("/")) {
       if (!part || part === ".") continue;
@@ -51,7 +54,13 @@ class TextureRegistry {
       }
       parts.push(part);
     }
-    return parts.join("/");
+    return (preserveLeadingSlash ? "/" : "") + parts.join("/");
+  }
+
+  getResourceExtension(resourcePath) {
+    const path = String(resourcePath ?? "").toLowerCase();
+    const extensionMatches = [...path.matchAll(/\.([a-z0-9]+)(?=\]|$|[?#])/g)];
+    return extensionMatches.length ? extensionMatches[extensionMatches.length - 1][1] : "";
   }
 
   resolveResourcePath(resourcePath) {
@@ -88,18 +97,18 @@ class TextureRegistry {
     }
 
     let filetype = undefined;
-    let lowercaseFilename = resourcePath.toLowerCase();
-    if (lowercaseFilename.indexOf('.png') >= lowercaseFilename.length - 5) {
+    const extension = this.getResourceExtension(resourcePath);
+    if (extension === 'png') {
       filetype = 'image/png';
-    } else if (lowercaseFilename.indexOf('.jpg') >= lowercaseFilename.length - 5) {
+    } else if (extension === 'jpg') {
       filetype = 'image/jpeg';
-    } else if (lowercaseFilename.indexOf('.jpeg') >= lowercaseFilename.length - 5) {
+    } else if (extension === 'jpeg') {
       filetype = 'image/jpeg';
-    } else if (lowercaseFilename.indexOf('.exr') >= lowercaseFilename.length - 4) {
+    } else if (extension === 'exr') {
       console.warn("EXR textures are not fully supported yet", resourcePath);
       // using EXRLoader explicitly
       filetype = 'image/x-exr';
-    } else if (lowercaseFilename.indexOf('.tga') >= lowercaseFilename.length - 4) {
+    } else if (extension === 'tga') {
       console.warn("TGA textures are not fully supported yet", resourcePath);
       // using TGALoader explicitly
       filetype = 'image/tga';
@@ -598,15 +607,15 @@ class HydraMaterial {
       }
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
-        if (!nodeIn.resolvedPath) {
+        const textureFileName = (nodeIn.resolvedPath || nodeIn.file || "").replace("./", "");
+        if (!textureFileName) {
           if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
           this._material[materialParameterMapName] = undefined;
           resolve();
           return;
         }
         if (debugTextures)
-          console.log("Assigning texture with resolved path", parameterName, nodeIn.resolvedPath);
-        const textureFileName = nodeIn.resolvedPath?.replace("./", "");
+          console.log("Assigning texture", parameterName, { file: nodeIn.file, resolvedPath: nodeIn.resolvedPath, textureFileName });
         const channel = mainMaterial[parameterName].inputName;
 
         // For debugging
