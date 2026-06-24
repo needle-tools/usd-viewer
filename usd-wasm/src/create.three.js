@@ -191,6 +191,7 @@ export async function createThreeHydra(config) {
     const delegateConfig = {
         usdRoot: config.scene,
         paths: loadedFilePaths,
+        USD,
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
 
