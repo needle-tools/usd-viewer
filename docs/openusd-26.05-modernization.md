@@ -422,6 +422,20 @@ summary: passed 32, unsupported 16, failed 0
 
 The unsupported cases are the older local Three `^0.164.1` runtime in WebGPU modes. Cached Three `0.184.0` passes WebGL, WebGPU forced-WebGL2, and native WebGPU for local USDZ, local MaterialX USDA/MTLX, Asset Explorer USDZ fixtures, and raw GLB fixtures.
 
+## Future USD API Bindings
+
+The restored `driver.GetStage()` bindings are intentionally a minimal programmatic surface for this modernization checkpoint. They should not become the pattern for exposing the full USD API by hand.
+
+Recommended next step:
+
+- Add an allowlisted binding generator in the OpenUSD repo, probably under `pxr/usdImaging/hdEmscripten/bindgen` or `herbst/bindgen`.
+- Generate Embind C++ and `.d.ts` from the same manifest so runtime bindings and TypeScript cannot drift.
+- Start with a generic core object model: `SdfPath`, `TfToken`, `VtValue` string/number/vector/matrix/color/asset conversions, `UsdStage`, `UsdPrim`, `UsdProperty`, `UsdAttribute`, `UsdRelationship`, `SdfLayer`, and the `Gf` math types commonly returned by USD schemas.
+- Layer schema APIs on top from USD schema metadata, not handwritten JS. The schema `schema.usda` files know each schema's attributes, relationships, fallback values, and inheritance; those can generate TypeScript wrappers that call the generic attribute/relationship methods.
+- Keep exact C++ method binding behind an allowlist. Binding all OpenUSD headers directly would produce a huge wasm surface, difficult overload/type mappings, many template/ref-pointer edge cases, and a much larger maintenance burden.
+
+The practical target is not "every C++ symbol in OpenUSD" for the viewer package. The better target is "complete programmatic USD scene authoring and inspection from JS" with generated types, then explicit opt-in modules for advanced APIs such as `UsdGeom`, `UsdShade`, `UsdSkel`, `UsdLux`, `UsdUtils`, and `Sdf`.
+
 ## Remaining Work
 
 - Publish `@needle-tools/materialx@1.7.0` with the local ESM/Three import fixes, then refresh `usd-wasm/package-lock.json`.
