@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { track, trackError } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
+import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 import './usd/bindings/emHdBindings.js';
 
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
@@ -306,6 +307,7 @@ if (params.has("debug_menu_items")) document.body.classList.add("show-debug-menu
 let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386a1-31e6-4710-8850-a1d5b7026a09/speeder.usdz'; // default file
 let messageLog = document.querySelector("#message-log");
 let currentDisplayFilename = "";
+const testFixtureBaseUrl = testFixtureUrl("");
 
 // Lowercase file extension from a name or URL, with any query/hash stripped.
 // Used only for analytics — extensions are not sensitive (unlike names/paths).
@@ -329,6 +331,12 @@ function setFilenameText(__filename) {
   const _el = document.querySelector(".filename-text");
   if (_el) _el.innerText = _filename;
   currentDisplayFilename = _filename;
+}
+
+function catalogAssetForUrlPath(urlPath) {
+  if (!urlPath || !urlPath.startsWith(testFixtureBaseUrl)) return undefined;
+  const root = decodeURIComponent(urlPath.substring(testFixtureBaseUrl.length));
+  return testAssetLibrary.find(asset => asset.root === root);
 }
   
 if (filename) {
@@ -375,7 +383,7 @@ if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 updateUrl();
 try {
   Promise.all([getUsdModule({
-    mainScriptUrlOrBlob: "./emHdBindings.js",
+    mainScriptUrlOrBlob: "/usd/bindings/emHdBindings.js",
     locateFile: (file) => {
       return "/usd/bindings/" + file;
     },
@@ -397,7 +405,12 @@ try {
 
       clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-      loadUsdFile(undefined, filename, urlPath, true);
+      const catalogAsset = catalogAssetForUrlPath(urlPath);
+      if (catalogAsset?.files?.length) {
+        await loadCatalogAssetBundle(catalogAsset, filename);
+      } else {
+        await loadUsdFile(undefined, filename, urlPath, true);
+      }
     }
   }).catch((error) => {
     // Async rejections aren't caught by the surrounding try/catch — surface them.
@@ -778,7 +791,10 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
     driver = await driver;
   }
   window.driver = driver;
-  window.driver.Draw();
+  let drawResult = window.driver.Draw();
+  if (drawResult instanceof Promise) {
+    await drawResult;
+  }
   if (window.setViewerLoading) window.setViewerLoading(false);
   if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   messageLog.textContent = "";
@@ -786,7 +802,9 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   let stage = window.driver.GetStage();
   if (stage instanceof Promise) {
     stage = await stage;
-    stage = window.driver.GetStage();
+  }
+  if (!stage) {
+    throw new Error("USD did not create a stage for " + (path || filename));
   }
   window.usdStage = stage
   if (stage.GetEndTimeCode){
@@ -828,6 +846,51 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
     // the file context so these crashes are actually visible in analytics.
     console.error("Failed to load USD file:", err);
     trackError('usd_load', err, { type: extOf(filename), name: safeName(filename) });
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    ready = false;
+  }
+}
+
+async function fetchCatalogFile(path) {
+  const url = testFixtureUrl(path);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Failed to fetch " + url + ": " + response.status + " " + response.statusText);
+  }
+  const blob = await response.blob();
+  const name = path.split('/').pop() || path;
+  return new File([blob], name);
+}
+
+async function loadCatalogAssetBundle(asset, displayName) {
+  const rootPath = asset.root;
+  const allPaths = Array.from(new Set([...(asset.files || []), rootPath]));
+  const dependencyPaths = allPaths.filter(path => path !== rootPath);
+  const rootIndex = allPaths.indexOf(rootPath);
+  const totalFiles = dependencyPaths.length + 1;
+
+  try {
+    for (let i = 0; i < dependencyPaths.length; i++) {
+      const path = dependencyPaths[i];
+      if (messageLog) messageLog.textContent = "Downloading " + asset.label + " dependency " + (i + 1) + " / " + totalFiles + "...";
+      const file = await fetchCatalogFile(path);
+      await loadFile(file, false, path);
+    }
+
+    if (messageLog) messageLog.textContent = "Opening " + asset.label + "...";
+    const rootFile = await fetchCatalogFile(rootPath);
+    await loadFile(rootFile, true, rootPath);
+
+    track('load_test_asset_bundle', {
+      file: testFixtureUrl(rootPath),
+      label: displayName || asset.label,
+      files: totalFiles,
+      rootIndex,
+    });
+  } catch (err) {
+    console.error("Failed to load test asset bundle:", err);
+    trackError('load_test_asset_bundle', err, { name: safeName(rootPath), files: totalFiles });
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     ready = false;
@@ -996,6 +1059,7 @@ async function init() {
   // first hover. The static menu links remain a fallback if the fetch fails. ----
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
   const dropdownEl = document.querySelector('.dropdown');
+  const dropdownMenu = document.querySelector('.dropdown-menu');
   const galleryGrid = document.getElementById('gallery-grid');
   const galleryStatus = document.getElementById('gallery-status');
   const converterToggle = document.getElementById('converter-toggle');
@@ -1080,6 +1144,38 @@ async function init() {
       galleryGrid.appendChild(card);
     }
   }
+
+  function addOpenUsdTestAssets() {
+    if (!dropdownMenu) return;
+    const grouped = new Map();
+    for (const asset of testAssetLibrary) {
+      const assets = grouped.get(asset.group) || [];
+      assets.push(asset);
+      grouped.set(asset.group, assets);
+    }
+
+    for (const [group, assets] of grouped) {
+      const section = document.createElement('div');
+      section.className = 'dropdown-section openusd-test-assets';
+      const heading = document.createElement('h4');
+      heading.textContent = group;
+      section.appendChild(heading);
+
+      for (const asset of assets) {
+        const link = document.createElement('a');
+        link.className = 'file';
+        link.href = '?file=' + testFixtureUrl(asset.root);
+        link.dataset.name = asset.label;
+        link.dataset.testAssetRoot = asset.root;
+        if (asset.files) link.dataset.testAssetFiles = JSON.stringify(asset.files);
+        link.textContent = asset.label;
+        section.appendChild(link);
+      }
+      dropdownMenu.appendChild(section);
+    }
+  }
+
+  addOpenUsdTestAssets();
 
   async function loadGalleryModels() {
     if (galleryFetchStarted) return; // fetch once, then reuse the cards
@@ -1221,11 +1317,16 @@ async function init() {
       messageLog.textContent = "Downloading File " + filename + "...";
       if (window.setViewerLoading) window.setViewerLoading(true);
       updateUrl();
+      const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
+      const catalogAsset = catalogAssetForUrlPath(urlPath);
+      if (catalogAsset?.files?.length) {
+        await loadCatalogAssetBundle(catalogAsset, filename);
+        return;
+      }
       // get just the filename, no paths
       const parts = filename.split('/');
       filename = parts[parts.length - 1];
-      const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-      loadUsdFile(undefined, filename, urlPath, true);
+      await loadUsdFile(undefined, filename, urlPath, true);
     } else {
       // Clear the URL when no file is selected (Clear button clicked)
       const currentUrl = new URL(window.location.href);
@@ -1306,31 +1407,35 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
     else
       file = fileOrHandle;
 
-    var reader = new FileReader();
     const loadingPromise = new Promise((resolve, reject) => {
-      reader.onloadend = resolve;
+      var reader = new FileReader();
       reader.onerror = reject;
+      reader.onload = async function(event) {
+        let fileName = file.name;
+        let directory = "/";
+        if (fullPath !== undefined) {
+          fileName = fullPath.split('/').pop();
+          directory = fullPath.substring(0, fullPath.length - fileName.length);
+          if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
+        }
+        USD.FS_createPath("", directory, true, true);
+        USD.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+
+        // Keep the original bytes + relative path so the user can upload this exact
+        // USD set to Needle Cloud (see uploadToNeedleCloud).
+        const relPath = (fullPath !== undefined ? fullPath : file.name).replace(/^\/+/, "");
+        capturedFiles.push({ relativePath: relPath, bytes: event.target.result });
+        if (isRootFile) capturedRootFilename = relPath;
+
+        try {
+          await loadUsdFile(directory, fileName, fullPath, isRootFile);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
     });
-    reader.onload = function(event) {
-      let fileName = file.name;
-      let directory = "/";
-      if (fullPath !== undefined) {
-        fileName = fullPath.split('/').pop();
-        directory = fullPath.substring(0, fullPath.length - fileName.length);
-        if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
-      }
-      USD.FS_createPath("", directory, true, true);
-      USD.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
-
-      // Keep the original bytes + relative path so the user can upload this exact
-      // USD set to Needle Cloud (see uploadToNeedleCloud).
-      const relPath = (fullPath !== undefined ? fullPath : file.name).replace(/^\/+/, "");
-      capturedFiles.push({ relativePath: relPath, bytes: event.target.result });
-      if (isRootFile) capturedRootFilename = relPath;
-
-      loadUsdFile(directory, fileName, fullPath, isRootFile);
-    };
-    reader.readAsArrayBuffer(file);
     await loadingPromise;
   }
   catch(ex) {

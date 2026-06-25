@@ -7,6 +7,7 @@ import UsdViewPanel from './UsdViewPanel.svelte';
 
 import { allDroppedFiles } from './fileHandling';
 import { usdViewState } from './usdViewStore.svelte';
+import { testAssetLibrary } from '../../tests/fixtures/test-asset-library.js';
 
 declare global {
   interface Window {
@@ -46,6 +47,7 @@ const debugUsd = false;
 
 type TestFile = { path: string, url: string };
 type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
+type TestAssetLibraryEntry = { label: string, root: string, files?: string[], group: string };
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
 type AssetFetchProgress = {
   state: string,
@@ -55,52 +57,24 @@ type AssetFetchProgress = {
   error?: string,
 };
 
-const fixtureUrls = {
-  "asset-explorer/DamagedHelmet.glb": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb", import.meta.url).href,
-  "asset-explorer/DamagedHelmet.glb.three.usdz": new URL("../../tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz", import.meta.url).href,
-  "asset-explorer/BoomBox.glb": new URL("../../tests/fixtures/asset-explorer/BoomBox.glb", import.meta.url).href,
-  "asset-explorer/BoomBox.glb.three.usdz": new URL("../../tests/fixtures/asset-explorer/BoomBox.glb.three.usdz", import.meta.url).href,
-  "asset-explorer/CesiumMan.glb": new URL("../../tests/fixtures/asset-explorer/CesiumMan.glb", import.meta.url).href,
-  "asset-explorer/CesiumMan.glb.openusd.usdz": new URL("../../tests/fixtures/asset-explorer/CesiumMan.glb.openusd.usdz", import.meta.url).href,
-  "materialx/mxSimple.usda": new URL("../../tests/fixtures/materialx/mxSimple.usda", import.meta.url).href,
-  "materialx/materialx_nested_reference.usda": new URL("../../tests/fixtures/materialx/materialx_nested_reference.usda", import.meta.url).href,
-  "materialx/materialx_variant_bindings.usda": new URL("../../tests/fixtures/materialx/materialx_variant_bindings.usda", import.meta.url).href,
-  "materialx/usdshade_preview_with_mtlx_peer.usda": new URL("../../tests/fixtures/materialx/usdshade_preview_with_mtlx_peer.usda", import.meta.url).href,
-  "materialx/materialx_texture_noise.usda": new URL("../../tests/fixtures/materialx/materialx_texture_noise.usda", import.meta.url).href,
-  "materialx/materialx_marble.usda": new URL("../../tests/fixtures/materialx/materialx_marble.usda", import.meta.url).href,
-  "materialx/materialx_procedural_brick.usda": new URL("../../tests/fixtures/materialx/materialx_procedural_brick.usda", import.meta.url).href,
-  "materialx/mtlxFiles/standard_surface_default.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/standard_surface_default.mtlx", import.meta.url).href,
-  "materialx/mtlxFiles/texture_noise_surface.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/texture_noise_surface.mtlx", import.meta.url).href,
-  "materialx/mtlxFiles/standard_surface_marble_solid.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/standard_surface_marble_solid.mtlx", import.meta.url).href,
-  "materialx/mtlxFiles/standard_surface_brick_procedural.mtlx": new URL("../../tests/fixtures/materialx/mtlxFiles/standard_surface_brick_procedural.mtlx", import.meta.url).href,
-  "materialx/textures/checker.png": new URL("../../tests/fixtures/materialx/textures/checker.png", import.meta.url).href,
-  "materialx/textures/brick_base_gray.jpg": new URL("../../tests/fixtures/materialx/textures/brick_base_gray.jpg", import.meta.url).href,
-  "materialx/textures/brick_dirt_mask.jpg": new URL("../../tests/fixtures/materialx/textures/brick_dirt_mask.jpg", import.meta.url).href,
-  "materialx/textures/brick_mask.jpg": new URL("../../tests/fixtures/materialx/textures/brick_mask.jpg", import.meta.url).href,
-  "materialx/textures/brick_normal.jpg": new URL("../../tests/fixtures/materialx/textures/brick_normal.jpg", import.meta.url).href,
-  "materialx/textures/brick_roughness.jpg": new URL("../../tests/fixtures/materialx/textures/brick_roughness.jpg", import.meta.url).href,
-  "materialx/textures/brick_variation_mask.jpg": new URL("../../tests/fixtures/materialx/textures/brick_variation_mask.jpg", import.meta.url).href,
-  "payloads/payload_root.usda": new URL("../../tests/fixtures/payloads/payload_root.usda", import.meta.url).href,
-  "payloads/payload_payload.usda": new URL("../../tests/fixtures/payloads/payload_payload.usda", import.meta.url).href,
-  "variants/nested_variants.usda": new URL("../../tests/fixtures/variants/nested_variants.usda", import.meta.url).href,
-  "variants/material_binding_overrides.usda": new URL("../../tests/fixtures/variants/material_binding_overrides.usda", import.meta.url).href,
-  "subdivision/catmull_clark_cube.usda": new URL("../../tests/fixtures/subdivision/catmull_clark_cube.usda", import.meta.url).href,
-  "usd-concepts/native_instances.usda": new URL("../../tests/fixtures/usd-concepts/native_instances.usda", import.meta.url).href,
-  "usd-concepts/point_instancer.usda": new URL("../../tests/fixtures/usd-concepts/point_instancer.usda", import.meta.url).href,
-  "usd-concepts/reference_override.usda": new URL("../../tests/fixtures/usd-concepts/reference_override.usda", import.meta.url).href,
-  "usd-concepts/reference_base.usda": new URL("../../tests/fixtures/usd-concepts/reference_base.usda", import.meta.url).href,
-  "usd-concepts/inherits_specializes.usda": new URL("../../tests/fixtures/usd-concepts/inherits_specializes.usda", import.meta.url).href,
-  "usd-concepts/collection_binding.usda": new URL("../../tests/fixtures/usd-concepts/collection_binding.usda", import.meta.url).href,
-  "usd-concepts/visibility_purpose.usda": new URL("../../tests/fixtures/usd-concepts/visibility_purpose.usda", import.meta.url).href,
-  "usd-concepts/purpose_render_intent.usda": new URL("../../tests/fixtures/usd-concepts/purpose_render_intent.usda", import.meta.url).href,
-  "usd-concepts/camera_light.usda": new URL("../../tests/fixtures/usd-concepts/camera_light.usda", import.meta.url).href,
-  "usd-concepts/time_samples.usda": new URL("../../tests/fixtures/usd-concepts/time_samples.usda", import.meta.url).href,
-  "usdz-nested-material.usdz": new URL("../../tests/fixtures/usdz-nested-material.usdz", import.meta.url).href,
-};
+const fixtureUrls = import.meta.glob("../../tests/fixtures/**/*", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
 
-type FixturePath = keyof typeof fixtureUrls;
-const fixtureUrl = (path: FixturePath) => fixtureUrls[path];
-const fixtureFile = (path: FixturePath): TestFile => ({ path, url: fixtureUrl(path) });
+const fixtureUrl = (path: string) => {
+  const url = fixtureUrls[`../../tests/fixtures/${path}`];
+  if (!url) throw new Error(`Missing test fixture URL for ${path}`);
+  return url;
+};
+const fixtureFile = (path: string): TestFile => ({ path, url: fixtureUrl(path) });
+const catalogAsset = (asset: TestAssetLibraryEntry): TestAsset => ({
+  group: asset.group,
+  label: asset.label,
+  files: asset.files?.map(fixtureFile),
+  url: asset.files ? undefined : fixtureUrl(asset.root),
+});
 
 const testAssets: TestAsset[] = [
   { group: "Core", label: "USDZ Cube", url: "/test.usdz" },
@@ -111,103 +85,7 @@ const testAssets: TestAsset[] = [
   { group: "Regressions", label: "Carbon Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
   { group: "Regressions", label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
   { group: "Regressions", label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
-  { group: "glTF Plugin", label: "DamagedHelmet GLB", files: [fixtureFile("asset-explorer/DamagedHelmet.glb")] },
-  { group: "glTF Plugin", label: "DamagedHelmet USDZ", url: fixtureUrl("asset-explorer/DamagedHelmet.glb.three.usdz") },
-  { group: "glTF Plugin", label: "BoomBox GLB", files: [fixtureFile("asset-explorer/BoomBox.glb")] },
-  { group: "glTF Plugin", label: "BoomBox USDZ", url: fixtureUrl("asset-explorer/BoomBox.glb.three.usdz") },
-  { group: "glTF Plugin", label: "CesiumMan GLB", files: [fixtureFile("asset-explorer/CesiumMan.glb")] },
-  { group: "glTF Plugin", label: "CesiumMan USDZ", url: fixtureUrl("asset-explorer/CesiumMan.glb.openusd.usdz") },
-  {
-    group: "Composition",
-    label: "Payload Root",
-    files: [
-      fixtureFile("payloads/payload_root.usda"),
-      fixtureFile("payloads/payload_payload.usda"),
-    ],
-  },
-  { group: "Composition", label: "Nested Variants", files: [fixtureFile("variants/nested_variants.usda")] },
-  { group: "Composition", label: "Binding Override Variants", files: [fixtureFile("variants/material_binding_overrides.usda")] },
-  { group: "USD Concepts", label: "Native Instances", files: [fixtureFile("usd-concepts/native_instances.usda")] },
-  { group: "USD Concepts", label: "Point Instancer", files: [fixtureFile("usd-concepts/point_instancer.usda")] },
-  {
-    group: "USD Concepts",
-    label: "Reference Override",
-    files: [
-      fixtureFile("usd-concepts/reference_override.usda"),
-      fixtureFile("usd-concepts/reference_base.usda"),
-    ],
-  },
-  { group: "USD Concepts", label: "Inherits + Specializes", files: [fixtureFile("usd-concepts/inherits_specializes.usda")] },
-  { group: "USD Concepts", label: "Collection Binding", files: [fixtureFile("usd-concepts/collection_binding.usda")] },
-  { group: "USD Concepts", label: "Visibility + Purpose", files: [fixtureFile("usd-concepts/visibility_purpose.usda")] },
-  { group: "USD Concepts", label: "Render Intent Purposes", files: [fixtureFile("usd-concepts/purpose_render_intent.usda")] },
-  { group: "USD Concepts", label: "Camera + Light", files: [fixtureFile("usd-concepts/camera_light.usda")] },
-  { group: "USD Concepts", label: "Time Samples", files: [fixtureFile("usd-concepts/time_samples.usda")] },
-  { group: "USD Concepts", label: "Nested Material USDZ", url: fixtureUrl("usdz-nested-material.usdz") },
-  { group: "Subdivision", label: "Catmull-Clark Cube", files: [fixtureFile("subdivision/catmull_clark_cube.usda")] },
-  {
-    group: "MaterialX",
-    label: "MaterialX External Ref",
-    files: [
-      fixtureFile("materialx/mxSimple.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "MaterialX Nested Ref",
-    files: [
-      fixtureFile("materialx/materialx_nested_reference.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "MaterialX Variants",
-    files: [
-      fixtureFile("materialx/materialx_variant_bindings.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "Preview + MaterialX",
-    files: [
-      fixtureFile("materialx/usdshade_preview_with_mtlx_peer.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_default.mtlx"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "MaterialX Texture + Noise",
-    files: [
-      fixtureFile("materialx/materialx_texture_noise.usda"),
-      fixtureFile("materialx/mtlxFiles/texture_noise_surface.mtlx"),
-      fixtureFile("materialx/textures/checker.png"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "MaterialX Marble",
-    files: [
-      fixtureFile("materialx/materialx_marble.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_marble_solid.mtlx"),
-    ],
-  },
-  {
-    group: "MaterialX",
-    label: "MaterialX Procedural Bricks",
-    files: [
-      fixtureFile("materialx/materialx_procedural_brick.usda"),
-      fixtureFile("materialx/mtlxFiles/standard_surface_brick_procedural.mtlx"),
-      fixtureFile("materialx/textures/brick_base_gray.jpg"),
-      fixtureFile("materialx/textures/brick_dirt_mask.jpg"),
-      fixtureFile("materialx/textures/brick_mask.jpg"),
-      fixtureFile("materialx/textures/brick_normal.jpg"),
-      fixtureFile("materialx/textures/brick_roughness.jpg"),
-      fixtureFile("materialx/textures/brick_variation_mask.jpg"),
-    ],
-  },
+  ...(testAssetLibrary as TestAssetLibraryEntry[]).map(catalogAsset),
 ];
 
 getUsdModule({

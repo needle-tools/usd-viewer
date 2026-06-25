@@ -73,9 +73,14 @@
     {
       "imports": {
         "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+        "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/",
+        "three/examples/jsm/": "https://unpkg.com/three@0.163.0/examples/jsm/",
+        "@needle-tools/materialx": "/materialx/index.js"
       }
     }
+  </script>
+  <script>
+    globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";
   </script>
   <script type="module" src="https://unpkg.com/three@0.163.0/build/three.module.js"></script>
   <script type="module" src ="index.js"></script>
