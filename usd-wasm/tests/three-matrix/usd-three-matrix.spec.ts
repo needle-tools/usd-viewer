@@ -259,9 +259,15 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         const material = checks.separateMetalRoughTextures.meshes[0].materials[0];
         expect(material.hasRoughnessMap).toBe(true);
         expect(material.hasMetalnessMap).toBe(true);
+        expect(material.hasAoMap).toBe(true);
         expect(material.roughnessAndMetalnessShareMap).toBe(true);
+        expect(material.occlusionRoughnessMetalnessShareMap).toBe(true);
         expect(material.roughnessMapName).toContain('packed-orm');
+        expect(material.aoMapName).toBe(material.roughnessMapName);
         expect(material.metalnessMapName).toBe(material.roughnessMapName);
+        expect(material.roughnessMapName).toContain('brick_dirt_mask.jpg');
+        expect(material.roughnessMapName).toContain('brick_roughness.jpg');
+        expect(material.roughnessMapName).toContain('brick_mask.jpg');
     }
 
     if (fixtureName === 'local-catmull-clark-subdivision-usda') {

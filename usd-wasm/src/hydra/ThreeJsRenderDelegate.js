@@ -1169,7 +1169,7 @@ class HydraMaterial {
   }
 
   _packMaterialTextureChannels({ haveOcclusionMap, haveRoughnessMap, haveMetalnessMap }) {
-    if (!haveRoughnessMap && !haveMetalnessMap) return;
+    if (!haveOcclusionMap && !haveRoughnessMap && !haveMetalnessMap) return;
 
     const aoMap = this._material.aoMap;
     const roughnessMap = this._material.roughnessMap;
@@ -1197,7 +1197,7 @@ class HydraMaterial {
 
     const packedMap = HydraMaterial._packMetallicRoughnessMap({ aoMap, roughnessMap, metalnessMap });
     if (!packedMap) {
-      console.error("Something went wrong while packing metallic/roughness textures.", {
+      console.error("Something went wrong while packing occlusion/metallic/roughness textures.", {
         aoMap,
         roughnessMap,
         metalnessMap,
