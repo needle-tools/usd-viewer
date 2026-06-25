@@ -1,5 +1,3 @@
-import { writable } from "svelte/store";
-
 export type USDObjectsChangedNotice = {
   resyncedPaths: string[];
   changedInfoOnlyPaths: string[];
@@ -134,70 +132,71 @@ export type USDCompositionArc = {
   isIntroducedInRootLayerPrimSpec: boolean;
 };
 
-export type UsdViewState = {
+export type UsdViewSnapshot = {
   stage: USDStageLike | null;
   selectedPath: string;
   revision: number;
   notice: USDObjectsChangedNotice | null;
 };
 
-const initialState: UsdViewState = {
-  stage: null,
-  selectedPath: "/",
-  revision: 0,
-  notice: null,
-};
+class UsdViewState {
+  stage = $state<USDStageLike | null>(null);
+  selectedPath = $state("/");
+  revision = $state(0);
+  notice = $state<USDObjectsChangedNotice | null>(null);
 
-let activeStage: USDStageLike | null = null;
-let activeListenerId: number | null = null;
+  #activeStage: USDStageLike | null = null;
+  #activeListenerId: number | null = null;
 
-export const usdViewState = writable<UsdViewState>(initialState);
+  setStage(stage: USDStageLike | null) {
+    this.#revokeObjectsChanged();
+    this.#activeStage = stage;
 
-export function setUsdViewStage(stage: USDStageLike | null) {
-  revokeObjectsChanged();
-  activeStage = stage;
+    if (stage) {
+      this.#activeListenerId = stage.RegisterObjectsChanged((notice) => {
+        this.notice = notice;
+        this.revision += 1;
+      });
+    }
 
-  if (stage) {
-    activeListenerId = stage.RegisterObjectsChanged((notice) => {
-      usdViewState.update((state) => ({
-        ...state,
-        notice,
-        revision: state.revision + 1,
-      }));
-    });
+    this.stage = stage;
+    this.selectedPath = "/";
+    this.revision = 0;
+    this.notice = null;
   }
 
-  usdViewState.set({
-    stage,
-    selectedPath: "/",
-    revision: 0,
-    notice: null,
-  });
-}
-
-export function selectUsdViewPath(path: string) {
-  usdViewState.update((state) => ({
-    ...state,
-    selectedPath: path,
-  }));
-}
-
-export function refreshUsdView() {
-  usdViewState.update((state) => ({
-    ...state,
-    revision: state.revision + 1,
-  }));
-}
-
-export function disposeUsdViewStage() {
-  revokeObjectsChanged();
-  activeStage = null;
-  usdViewState.set(initialState);
-}
-
-function revokeObjectsChanged() {
-  if (activeStage && activeListenerId !== null) {
-    activeStage.RevokeObjectsChanged(activeListenerId);
+  selectPath(path: string) {
+    this.selectedPath = path;
   }
-  activeListenerId = null;
+
+  refresh() {
+    this.revision += 1;
+  }
+
+  dispose() {
+    this.#revokeObjectsChanged();
+    this.#activeStage = null;
+    this.stage = null;
+    this.selectedPath = "/";
+    this.revision = 0;
+    this.notice = null;
+  }
+
+  snapshot(): UsdViewSnapshot {
+    return {
+      stage: this.stage,
+      selectedPath: this.selectedPath,
+      revision: this.revision,
+      notice: this.notice,
+    };
+  }
+
+  #revokeObjectsChanged() {
+    if (this.#activeStage && this.#activeListenerId !== null) {
+      this.#activeStage.RevokeObjectsChanged(this.#activeListenerId);
+    }
+    this.#activeListenerId = null;
+  }
 }
+
+export const usdViewState = new UsdViewState();
