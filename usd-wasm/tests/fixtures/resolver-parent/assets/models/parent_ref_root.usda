@@ -1,0 +1,11 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    upAxis = "Y"
+)
+
+def Xform "World" (
+    prepend references = @../../shared/geometry/referenced_cube.usda@</Asset>
+)
+{
+}

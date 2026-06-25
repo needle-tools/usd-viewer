@@ -82,6 +82,7 @@ async function createFile(opts) {
     if (typeof opts.filepath !== "string") throw new Error("Filepath must be a string");
 
     let filepath = /** @type {string} */ (opts.filepath);
+    let parent = opts.parent || "";
 
     let arrayBuffer = opts.buffer;
     if (!arrayBuffer) {
@@ -110,10 +111,17 @@ async function createFile(opts) {
         console.warn("File extension does not match file format", { ext, format });
     }
 
+    if (parent) {
+        parent = parent.replaceAll(/\\/g, "/");
+        if (parent.startsWith("/")) parent = parent.slice(1);
+        if (!parent.endsWith("/")) parent += "/";
+        opts.USD.FS_createPath("", parent, true, true);
+    }
+
     // Put a simple USDZ file into the virtual file system so USD can access it
     // Create a file in the virtual file system
-    opts.USD.FS_createDataFile("", filepath, new Uint8Array(arrayBuffer), true, true, true);
-    return filepath;
+    opts.USD.FS_createDataFile(parent, filepath, new Uint8Array(arrayBuffer), true, true, true);
+    return parent + filepath;
 }
 
 export class USDLoadingManager {
@@ -150,7 +158,7 @@ export async function createThreeHydra(config) {
     if (Array.isArray(config.files)) {
         for (const file of config.files) {
             let fileName = file.name;
-            let directory = "/";
+            let directory = "";
             if (file.path) {
                 const parts = file.path.split('/');
                 if (parts.length > 1) {
@@ -161,7 +169,8 @@ export async function createThreeHydra(config) {
 
             USD.FS_createPath("", directoryForFiles + directory, true, true);
             const fileBuffer = await file.arrayBuffer();
-            USD.FS_createDataFile(directoryForFiles + directory, fileName, new Uint8Array(fileBuffer), true, true, true);
+            const bytes = new Uint8Array(fileBuffer);
+            USD.FS_createDataFile(directoryForFiles + directory, fileName, bytes, true, true, true);
             if (file.path) {
                 loadedFilePaths.push(directoryForFiles + file.path);
                 loadedFilePaths.push(file.path);
@@ -180,20 +189,26 @@ export async function createThreeHydra(config) {
     // - when a blob is provided, we create a file from that blob and sanitize the filename.
     let file = "";
     if (config.files?.length) {
-        file = directoryForFiles + config.files[0].path;
+        file = "/" + directoryForFiles + config.files[0].path;
     }
     else if (config.url) {
-        const resolvedUrl = toBrowserFetchableUrl(config.url);
-        const isBlob = resolvedUrl.startsWith("blob");
-        const isWebUrl = resolvedUrl.startsWith("http");
-        if (buffer || isBlob || isUsdPackageUrl(resolvedUrl)) {
-            file = await createFile({ USD, filepath: resolvedUrl, buffer });
-        }
-        else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
-            file = resolvedUrl;
+        if (buffer) {
+            file = await createFile({ USD, filepath: config.url, buffer, parent: directoryForFiles });
+            if (!file.startsWith("/")) file = "/" + file;
         }
         else {
-            file = await createFile({ USD, filepath: resolvedUrl, buffer });
+            const resolvedUrl = toBrowserFetchableUrl(config.url);
+            const isBlob = resolvedUrl.startsWith("blob");
+            const isWebUrl = resolvedUrl.startsWith("http");
+            if (isBlob || isUsdPackageUrl(resolvedUrl)) {
+                file = await createFile({ USD, filepath: resolvedUrl });
+            }
+            else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
+                file = resolvedUrl;
+            }
+            else {
+                file = await createFile({ USD, filepath: resolvedUrl });
+            }
         }
     }
 
@@ -535,11 +550,8 @@ export async function createThreeHydra(config) {
             };
 
             if (drawInFlight) {
-                console.warn("Deferring USD cleanup while Hydra draw is still pending.");
-                activeDrawPromise.finally(cleanup).catch((error) => console.error("Deferred USD cleanup failed", error));
-                return;
+                console.warn("Waiting for pending Hydra draw before USD cleanup.");
             }
-
             await drawPromise.catch(() => {});
             await cleanup();
 
