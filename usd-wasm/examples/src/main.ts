@@ -413,6 +413,7 @@ async function loadFile(url: string, label = url) {
     debug: debugUsd,
     USD: usd,
     url: url,
+    showScenePrimitiveHelpers: true,
     // @ts-ignore
     scene: usdContent,
   })
@@ -482,6 +483,7 @@ async function loadFiles(files: TestFile[], label: string) {
     USD: usd,
     // @ts-ignore
     files: hydraFiles,
+    showScenePrimitiveHelpers: true,
     // @ts-ignore
     scene: usdContent,
   });
@@ -558,6 +560,7 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
     USD: usd,
     url: filename,
     buffer,
+    showScenePrimitiveHelpers: true,
     // @ts-ignore
     scene: usdContent,
   });

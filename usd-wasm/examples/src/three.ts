@@ -27,7 +27,7 @@ export function run(config: {
     onRender: (dt: number) => void
 }) {
 
-    const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.x = 2;
     camera.position.y = 2;
     camera.position.z = 10;
@@ -95,10 +95,12 @@ function fitCameraToSelection(camera: PerspectiveCamera, controls: OrbitControls
     const size = new Vector3();
     const center = new Vector3();
     const box = new Box3();
+    const objectBox = new Box3();
     
     box.makeEmpty();
     for(const object of selection) {
-      box.expandByObject(object);
+      object.updateWorldMatrix(true, false);
+      expandFitBox(box, object, objectBox);
     }
   
     box.getSize(size);
@@ -142,3 +144,26 @@ function fitCameraToSelection(camera: PerspectiveCamera, controls: OrbitControls
     camera.position.copy(controls.target).sub(direction);
     controls.update();
   }
+
+function expandFitBox(box: Box3, object: Object3D, objectBox: Box3) {
+    if (object.userData?.usdHelperFor) return;
+
+    const geometry = (object as Object3D & {
+        geometry?: {
+            boundingBox?: Box3 | null,
+            computeBoundingBox?: () => void,
+        }
+    }).geometry;
+
+    if (geometry) {
+        if (!geometry.boundingBox) geometry.computeBoundingBox?.();
+        if (geometry.boundingBox) {
+            objectBox.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld);
+            box.union(objectBox);
+        }
+    }
+
+    for (const child of object.children) {
+        expandFitBox(box, child, objectBox);
+    }
+}

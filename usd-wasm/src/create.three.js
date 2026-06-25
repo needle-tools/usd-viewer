@@ -82,6 +82,7 @@ const lightTypeNames = new Set([
     "SphereLight",
     "CylinderLight",
 ]);
+const defaultScenePrimitiveLightIntensityScale = 0.01;
 
 function vectorToArray(vector) {
     const values = [];
@@ -169,17 +170,19 @@ function createUsdCameraObject(prim, config) {
     camera.userData.usdPath = prim.GetPath?.() || "";
     camera.userData.usdTypeName = "Camera";
     applyUsdXformOps(prim, camera);
-    if (config.showCameraHelpers || config.showScenePrimitiveHelpers) {
-        const helper = new CameraHelper(camera);
-        helper.name = `${camera.name}Helper`;
-        camera.add(helper);
-    }
     return camera;
+}
+
+function getThreeLightIntensity(prim, config) {
+    const intensity = getUsdNumberAttribute(prim, "inputs:intensity", 1);
+    const exposure = getUsdNumberAttribute(prim, "inputs:exposure", 0);
+    const scale = config.scenePrimitiveLightIntensityScale ?? defaultScenePrimitiveLightIntensityScale;
+    return intensity * Math.pow(2, exposure) * scale;
 }
 
 function createUsdLightObject(prim, config) {
     const typeName = prim.GetTypeName?.() || "";
-    const intensity = getUsdNumberAttribute(prim, "inputs:intensity", 1);
+    const intensity = getThreeLightIntensity(prim, config);
     const colorValue = getUsdVectorAttribute(prim, "inputs:color", [1, 1, 1]);
     const color = new Color(colorValue[0], colorValue[1], colorValue[2]);
     let light;
@@ -197,20 +200,34 @@ function createUsdLightObject(prim, config) {
     light.userData.usdTypeName = typeName;
     applyUsdXformOps(prim, light);
 
-    if (config.showLightHelpers || config.showScenePrimitiveHelpers) {
+    return light;
+}
+
+function createUsdScenePrimitiveHelpers(object, prim, config) {
+    const helpers = [];
+    if (object.isCamera && (config.showCameraHelpers || config.showScenePrimitiveHelpers)) {
+        const helper = new CameraHelper(object);
+        helper.name = `${object.name}Helper`;
+        helper.userData.usdHelperFor = object.userData.usdPath;
+        helpers.push(helper);
+    }
+
+    if (object.isLight && (config.showLightHelpers || config.showScenePrimitiveHelpers)) {
+        const color = object.color || new Color(1, 1, 1);
         let helper = null;
-        if (light.isDirectionalLight) {
-            helper = new DirectionalLightHelper(light, 0.5, color);
-        } else if (light.isPointLight) {
-            helper = new PointLightHelper(light, getUsdNumberAttribute(prim, "inputs:radius", 0.25), color);
+        if (object.isDirectionalLight) {
+            helper = new DirectionalLightHelper(object, 0.5, color);
+        } else if (object.isPointLight) {
+            helper = new PointLightHelper(object, getUsdNumberAttribute(prim, "inputs:radius", 0.25), color);
         }
         if (helper) {
-            helper.name = `${light.name}Helper`;
-            light.add(helper);
+            helper.name = `${object.name}Helper`;
+            helper.userData.usdHelperFor = object.userData.usdPath;
+            helpers.push(helper);
         }
     }
 
-    return light;
+    return helpers;
 }
 
 async function syncUsdScenePrimitives(driver, root, config) {
@@ -225,10 +242,17 @@ async function syncUsdScenePrimitives(driver, root, config) {
     for (const prim of prims) {
         if (!prim?.IsValid?.()) continue;
         const typeName = prim.GetTypeName?.() || "";
+        let object = null;
         if (typeName === "Camera") {
-            root.add(createUsdCameraObject(prim, config));
+            object = createUsdCameraObject(prim, config);
         } else if (lightTypeNames.has(typeName)) {
-            root.add(createUsdLightObject(prim, config));
+            object = createUsdLightObject(prim, config);
+        }
+        if (object) {
+            root.add(object);
+            for (const helper of createUsdScenePrimitiveHelpers(object, prim, config)) {
+                root.add(helper);
+            }
         }
     }
 }

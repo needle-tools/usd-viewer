@@ -338,6 +338,7 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.cameraLight.meshState.materialNames).toContain('Neutral');
         expect(checks.cameraLight.scenePrimitives.cameras.map((camera: any) => camera.name)).toContain('ShotCam');
         expect(checks.cameraLight.scenePrimitives.lights.map((light: any) => light.name)).toContain('KeyLight');
+        expect(checks.cameraLight.scenePrimitives.lights.find((light: any) => light.name === 'KeyLight').intensity).toBeCloseTo(4.5);
         expect(checks.cameraLight.scenePrimitives.helpers.length).toBeGreaterThanOrEqual(2);
     }
 

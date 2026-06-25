@@ -64,6 +64,13 @@ export declare type createThreeHydraConfig = {
      * Add Three.js light helper objects for USD light prims.
      */
     showLightHelpers?: boolean,
+
+    /**
+     * Preview scale used when mirroring USD Lux intensity values into Three lights.
+     * Defaults to 0.01. USD intensity and exposure are still authored values; this
+     * only controls the helper/demo Three light brightness.
+     */
+    scenePrimitiveLightIntensityScale?: number,
 }
 
 /**
