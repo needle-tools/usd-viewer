@@ -110,7 +110,7 @@ async function createRenderHost(config: {
         const dt = clock.getDelta();
         requestAnimationFrame(render);
         controls.update(dt);
-        needleContext?.update(timestamp, null);
+        needleContext?.update(timestamp / 1000, null);
         onRender(dt);
         if (needleContext) needleContext.renderNow(camera);
         else renderer.render(scene, camera);

@@ -21,6 +21,8 @@ declare global {
       childCount: number,
       renderHost: RenderHostRuntime,
       needleIntegration: NeedleIntegrationMode,
+      renderMode: RenderMode,
+      model: string | null,
       rootRotationX: number | null,
       rootMatrixWorld: number[] | null,
       stageMetadata: ReturnType<NeedleThreeHydraHandle["stageMetadata"]> | null,
@@ -51,7 +53,8 @@ let statusElement: HTMLElement | null = null;
 let variantControlsElement: HTMLElement | null = null;
 let lastApiKind: ApiSceneKind = "preview";
 const renderHostRuntime = getRenderHostRuntime();
-const needleIntegrationMode = getNeedleIntegrationMode();
+const needleIntegrationMode = renderHostRuntime === "needle-engine" ? getNeedleIntegrationMode() : "direct";
+const renderMode = getRenderMode();
 const debugUsd = false;
 let assetFetchStatusEnabled = false;
 let removeNeedleLoaderPlugin: (() => void) | null = null;
@@ -62,6 +65,7 @@ type TestAsset = { label: string, root?: string, url?: string, files?: TestFile[
 type TestAssetLibraryEntry = { label: string, root: string, files?: string[], group: string };
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
 type NeedleIntegrationMode = "direct" | "loader";
+type RenderMode = "three" | "needle-direct" | "needle-loader";
 type AssetFetchProgress = {
   state: string,
   active: number,
@@ -157,7 +161,9 @@ getUsdModule({
     renderer,
     runtime: renderHostRuntime,
     onRender: (dt) => {
-      hydraDelegate?.update(dt);
+      if (!shouldUseNeedleLoader()) {
+        hydraDelegate?.update(dt);
+      }
       usdViewState.tickTime();
     }
   });
@@ -219,6 +225,8 @@ getUsdModule({
   emptyState.innerText = "Load a file with variants or payloads.";
   variantControlsElement.appendChild(emptyState);
   div.appendChild(variantControlsElement);
+
+  await loadModelFromUrl();
 })
 
 function createControls() {
@@ -256,6 +264,7 @@ function createControls() {
     for (const asset of assets) {
       const button = document.createElement("button");
       button.innerText = asset.label;
+      button.dataset.active = String(getCurrentModelParam() === asset.label);
       button.onclick = () => loadAsset(asset);
       section.appendChild(button);
     }
@@ -294,9 +303,11 @@ function createRenderHostControl() {
   container.setAttribute("role", "group");
   container.setAttribute("aria-label", "Render host");
 
-  const threeButton = createRenderHostButton("three", "three.js");
-  const needleButton = createRenderHostButton("needle-engine", "Needle Engine");
-  container.append(threeButton, needleButton);
+  container.append(
+    createRenderModeButton("three", "three.js"),
+    createRenderModeButton("needle-direct", "Needle Direct Hydra"),
+    createRenderModeButton("needle-loader", "Needle Loader"),
+  );
 
   const label = document.createElement("p");
   label.className = "runtime-info";
@@ -304,53 +315,35 @@ function createRenderHostControl() {
   label.innerText = `Viewing via ${app.runtimeLabel}${version}`;
   container.appendChild(label);
 
-  if (renderHostRuntime === "needle-engine") {
-    const mode = document.createElement("div");
-    mode.className = "render-host-toggle";
-    mode.setAttribute("role", "group");
-    mode.setAttribute("aria-label", "Needle Engine integration");
-    mode.append(
-      createNeedleIntegrationButton("direct", "Direct Hydra"),
-      createNeedleIntegrationButton("loader", "Needle Loader"),
-    );
-    container.appendChild(mode);
-  }
-
   return container;
 }
 
-function createRenderHostButton(runtime: RenderHostRuntime, label: string) {
+function createRenderModeButton(mode: RenderMode, label: string) {
   const button = document.createElement("button");
   button.type = "button";
   button.innerText = label;
-  button.setAttribute("aria-pressed", String(renderHostRuntime === runtime));
-  button.dataset.active = String(renderHostRuntime === runtime);
+  button.setAttribute("aria-pressed", String(renderMode === mode));
+  button.dataset.active = String(renderMode === mode);
   button.onclick = () => {
-    if (renderHostRuntime === runtime) return;
+    if (renderMode === mode) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("host", runtime);
+    if (mode === "three") {
+      url.searchParams.set("host", "three");
+      url.searchParams.delete("needle");
+    }
+    else {
+      url.searchParams.set("host", "needle-engine");
+      url.searchParams.set("needle", mode === "needle-loader" ? "loader" : "direct");
+    }
     window.location.href = url.href;
   };
   return button;
 }
 
-function createNeedleIntegrationButton(mode: NeedleIntegrationMode, label: string) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.innerText = label;
-  button.setAttribute("aria-pressed", String(needleIntegrationMode === mode));
-  button.dataset.active = String(needleIntegrationMode === mode);
-  button.onclick = () => {
-    if (needleIntegrationMode === mode) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("host", "needle-engine");
-    url.searchParams.set("needle", mode);
-    window.location.href = url.href;
-  };
-  return button;
-}
-
-async function loadAsset(asset: TestAsset) {
+async function loadAsset(asset: TestAsset, options: { updateUrl?: boolean } = {}) {
+  if (options.updateUrl !== false) {
+    setCurrentModelParam(asset.label);
+  }
   if (shouldUseNeedleLoader()) {
     await loadAssetWithNeedleLoader(asset);
     return;
@@ -362,6 +355,17 @@ async function loadAsset(asset: TestAsset) {
   if (asset.url) {
     await loadFile(asset.url, asset.label);
   }
+}
+
+async function loadModelFromUrl() {
+  const model = getCurrentModelParam();
+  if (!model) return;
+  const asset = testAssets.find(candidate => candidate.label === model);
+  if (!asset) {
+    console.warn(`Unknown USD demo model in URL: ${model}`);
+    return;
+  }
+  await loadAsset(asset, { updateUrl: false });
 }
 
 async function resetScene() {
@@ -870,8 +874,32 @@ function getNeedleIntegrationMode(): NeedleIntegrationMode {
   return mode === "loader" ? "loader" : "direct";
 }
 
+function getRenderMode(): RenderMode {
+  if (renderHostRuntime !== "needle-engine") return "three";
+  return needleIntegrationMode === "loader" ? "needle-loader" : "needle-direct";
+}
+
 function shouldUseNeedleLoader() {
   return renderHostRuntime === "needle-engine" && needleIntegrationMode === "loader";
+}
+
+function getCurrentModelParam() {
+  return new URLSearchParams(window.location.search).get("model");
+}
+
+function setCurrentModelParam(model: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("model", model);
+  window.history.replaceState(null, "", url);
+  updateAssetButtonState(model);
+}
+
+function updateAssetButtonState(model: string | null) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(".test-buttons button")) {
+    if (testAssets.some(asset => asset.label === button.innerText)) {
+      button.dataset.active = String(button.innerText === model);
+    }
+  }
 }
 
 function findObject3D(value: unknown): Object3D | null {
@@ -889,6 +917,8 @@ window.__usdViewerTestState = () => {
     childCount: usdContent?.children?.length ?? 0,
     renderHost: app?.runtime ?? renderHostRuntime,
     needleIntegration: needleIntegrationMode,
+    renderMode,
+    model: getCurrentModelParam(),
     rootRotationX: usdContent?.rotation?.x ?? null,
     rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
     stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
