@@ -17,9 +17,9 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `2034ff011ef63d97d4f389b89e7b33be1c4ebac9`
+- `OpenUSD`: `091e1c02196d7bbda8b536ec745b36824da71589`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
-- `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
+- `needle-engine-materialx`: `9ec2906c9c24635c46e0c376b12c7fbe063c88ae` (`@needle-tools/materialx@1.7.0-next.9ec2906`)
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
 - `emsdk`: `af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f` (`emcc 4.0.23`, Emscripten `7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed`)
 
@@ -72,7 +72,7 @@ Working now:
 
 Still to do before publishing a public package:
 
-- Publish the local `@needle-tools/materialx` fixes, then refresh package metadata/locks as needed for the release.
+- Publish/deploy from the checked `@needle-tools/usd` package artifacts.
 - Decide whether to keep or silence known non-fatal warnings for fixtures without tangents and glTF assets that expose separate metalness/roughness textures.
 - Watch bundle size/performance after enabling full Asyncify instrumentation. The current Emscripten 4.0.23 build intentionally removed the old broad `ASYNCIFY_REMOVE` list because it stripped instrumentation from USD/Sdf/Crate paths that can fetch assets during composition.
 
@@ -179,7 +179,7 @@ Current result on this machine:
 - The Three matrix cache is generated.
 - The manifest is written for 168 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with twenty-eight fixtures.
 - The test passes in headed Chromium.
-- The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
+- The latest dependency-refresh pass uses the published `@needle-tools/materialx@1.7.0-next.9ec2906` package, not a local `npm link`.
 
 Observed result on 2026-06-25:
 
@@ -583,25 +583,28 @@ Hydra-provided document. Do not reintroduce caller-side `.mtlx` sidecar
 harvesting or synthetic MaterialX fallback materials.
 
 For browser/WebGPU compatibility, `@needle-tools/materialx` should not import
-`three/src/...`, should not import `package.json` at runtime, and should not
-require WebGL-only exports such as `WebGLRenderer` or `UniformsLib` from the host
-`three` module. Validate local package changes with:
+`three/src/...` and should not require WebGL-only exports such as
+`WebGLRenderer` or `UniformsLib` from the host `three` module. Its version is
+read from the package's exported `package.json`; Node tests use the JSON loader
+registered by the package. The published package currently used by this branch
+is:
 
 ```sh
-cd /Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx
-npm link
-
 cd /Users/herbst/git/usd-viewer/usd-wasm
-npm link @needle-tools/materialx
-node -e "const fs=require('fs'); console.log(fs.realpathSync('node_modules/@needle-tools/materialx'))"
+npm ls @needle-tools/materialx
 ```
 
-After publishing `@needle-tools/materialx`, refresh the usd-viewer lockfile so a
-clean checkout uses the fixed package.
+Expected version: `@needle-tools/materialx@1.7.0-next.9ec2906`. Root
+`usd-viewer/package.json` also depends on the same package because `server.js`
+serves `/materialx` from root `node_modules` for the production viewer import
+map. The production viewer sets `globalThis.NEEDLE_MATERIALX_LOCATION` to
+`/materialx/bin/`; the Vite example sets it to `package` so Vite copies the
+package wasm/data assets locally. The `@needle-tools/usd` library itself does
+not force that global because the raw-browser matrix and import-map viewer use
+different asset-serving shapes.
 
 Important current limitations:
 
-- The local `@needle-tools/materialx` package still needs to be published, then `usd-wasm/package-lock.json` should be refreshed.
 - The glTF fixtures still report separate metalness/roughness texture handling as a TODO.
 - The local MaterialX implementation is centered on `ShaderMaterial`, so WebGPU must be validated explicitly whenever this path changes.
 

@@ -188,6 +188,29 @@ def Xform "Root" {
         driver.delete();
     });
 
+    it("imports the public ESM package entrypoints in Node", async () => {
+        const usd = await import("@needle-tools/usd");
+        const plugins = await import("@needle-tools/usd/plugins");
+
+        assert.equal(typeof usd.getUsdModule, "function");
+        assert.equal(typeof usd.loadOpenUsdBuildInfo, "function");
+        assert.equal(typeof usd.createThreeHydra, "function");
+        assert.equal(typeof plugins.addPluginForNeedleEngine, "function");
+
+        const buildInfo = await usd.loadOpenUsdBuildInfo({
+            print() {},
+            printErr(message) {
+                const text = String(message);
+                if (!text.includes("warning:")) {
+                    console.error(text);
+                }
+            },
+        });
+        assert.equal(buildInfo.openusd.version, "0.26.5");
+        assert.equal(buildInfo.modules.hydraBridge, true);
+        assert.equal(buildInfo.modules.materialX, true);
+    });
+
     it("exposes usdview-style composed inspection APIs and ObjectsChanged notices", async () => {
         const USD = await loadUsdModuleFromTempCopy();
         const encoder = new TextEncoder();

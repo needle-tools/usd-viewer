@@ -6,13 +6,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "require": "./src/index.cjs"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
     },
     "./plugins": {
       "types": "./src/types/plugins.d.ts",
-      "import": "./src/plugins/index.js",
-      "require": "./src/plugins/index.cjs"
+      "import": "./src/plugins/index.js"
     }
   },
   "files": [
@@ -61,6 +60,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "^1.6.0"
+    "@needle-tools/materialx": "1.7.0-next.9ec2906"
   }
 }
