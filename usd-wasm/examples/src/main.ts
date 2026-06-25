@@ -77,8 +77,10 @@ const fixtureUrls = {
   "usd-concepts/inherits_specializes.usda": new URL("../../tests/fixtures/usd-concepts/inherits_specializes.usda", import.meta.url).href,
   "usd-concepts/collection_binding.usda": new URL("../../tests/fixtures/usd-concepts/collection_binding.usda", import.meta.url).href,
   "usd-concepts/visibility_purpose.usda": new URL("../../tests/fixtures/usd-concepts/visibility_purpose.usda", import.meta.url).href,
+  "usd-concepts/purpose_render_intent.usda": new URL("../../tests/fixtures/usd-concepts/purpose_render_intent.usda", import.meta.url).href,
   "usd-concepts/camera_light.usda": new URL("../../tests/fixtures/usd-concepts/camera_light.usda", import.meta.url).href,
   "usd-concepts/time_samples.usda": new URL("../../tests/fixtures/usd-concepts/time_samples.usda", import.meta.url).href,
+  "usdz-nested-material.usdz": new URL("../../tests/fixtures/usdz-nested-material.usdz", import.meta.url).href,
 };
 
 type FixturePath = keyof typeof fixtureUrls;
@@ -123,8 +125,10 @@ const testAssets: TestAsset[] = [
   { group: "USD Concepts", label: "Inherits + Specializes", files: [fixtureFile("usd-concepts/inherits_specializes.usda")] },
   { group: "USD Concepts", label: "Collection Binding", files: [fixtureFile("usd-concepts/collection_binding.usda")] },
   { group: "USD Concepts", label: "Visibility + Purpose", files: [fixtureFile("usd-concepts/visibility_purpose.usda")] },
+  { group: "USD Concepts", label: "Render Intent Purposes", files: [fixtureFile("usd-concepts/purpose_render_intent.usda")] },
   { group: "USD Concepts", label: "Camera + Light", files: [fixtureFile("usd-concepts/camera_light.usda")] },
   { group: "USD Concepts", label: "Time Samples", files: [fixtureFile("usd-concepts/time_samples.usda")] },
+  { group: "USD Concepts", label: "Nested Material USDZ", url: fixtureUrl("usdz-nested-material.usdz") },
   { group: "Subdivision", label: "Catmull-Clark Cube", files: [fixtureFile("subdivision/catmull_clark_cube.usda")] },
   {
     group: "MaterialX",

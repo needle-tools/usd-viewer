@@ -300,9 +300,21 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.visibilityPurpose.authoredState['/World/VisibleRender'].visibility).toBe('inherited');
         expect(checks.visibilityPurpose.authoredState['/World/InvisibleGuide'].visibility).toBe('invisible');
         expect(checks.visibilityPurpose.authoredState['/World/InvisibleGuide'].purpose).toBe('guide');
-        expect(checks.visibilityPurpose.meshState.meshCount).toBe(2);
-        expect(checks.visibilityPurpose.meshState.materialNames).toContain('VisibleMat');
-        expect(checks.visibilityPurpose.meshState.materialNames).toContain('');
+        expect(checks.visibilityPurpose.meshState.visibleMeshCount).toBe(1);
+        expect(checks.visibilityPurpose.meshState.visibleMaterialNames).toContain('VisibleMat');
+        expect(checks.visibilityPurpose.meshState.visibleMaterialNames).not.toContain('HiddenMat');
+    }
+
+    if (fixtureName === 'local-purpose-render-intent-usda') {
+        expect(checks.purposeRenderIntent.authoredState['/World/DefaultPurpose'].purpose).toBe('default');
+        expect(checks.purposeRenderIntent.authoredState['/World/RenderPurpose'].purpose).toBe('render');
+        expect(checks.purposeRenderIntent.authoredState['/World/ProxyPurpose'].purpose).toBe('proxy');
+        expect(checks.purposeRenderIntent.authoredState['/World/GuidePurpose'].purpose).toBe('guide');
+        expect(checks.purposeRenderIntent.meshState.visibleMeshCount).toBe(2);
+        expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).toContain('DefaultMat');
+        expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).toContain('RenderMat');
+        expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).not.toContain('ProxyMat');
+        expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).not.toContain('GuideMat');
     }
 
     if (fixtureName === 'local-camera-light-usda') {
@@ -322,5 +334,13 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
             checks.timeSamples.after.meshes[0].worldPosition[0],
             2,
         );
+    }
+
+    if (fixtureName === 'local-usdz-nested-material') {
+        expect(checks.usdzNestedMaterial.stageTypes['/World/NestedTexturedPanel'].typeName).toBe('Mesh');
+        expect(checks.usdzNestedMaterial.stageTypes['/World/Looks/NestedTextured'].typeName).toBe('Material');
+        expect(checks.usdzNestedMaterial.meshState.visibleMeshCount).toBe(1);
+        expect(checks.usdzNestedMaterial.meshState.visibleTexturedMaterialCount).toBeGreaterThan(0);
+        expect(checks.usdzNestedMaterial.geometryState.maxPositionCount).toBe(6);
     }
 }

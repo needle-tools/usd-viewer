@@ -42,6 +42,12 @@ export declare type createThreeHydraConfig = {
      * The first file will be loaded as the root file, others will be loaded as dependencies.
      */
     files?: Array<HydraFile>,
+
+    /**
+     * USD geometry purposes to include in the Hydra render pass.
+     * Defaults to ["default", "render"].
+     */
+    includedPurposes?: Array<"default" | "render" | "proxy" | "guide" | string>,
 }
 
 /**
