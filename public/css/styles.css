@@ -549,14 +549,27 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     padding-top: 16px;
     border-top: 1px solid var(--border-subtle);
     display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
+    /* One link per row. align-items:flex-start keeps each link's hit/underline
+       area to its own width rather than stretching across the dialog. */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .dialog-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     color: var(--color-link);
     text-decoration: none;
     font-weight: 600;
+}
+
+/* Leading icon on each About link — inherits the link colour via currentColor. */
+.dialog-actions a svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .dialog-actions a:hover {
@@ -609,6 +622,131 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 
 .cta-secondary:hover {
     color: var(--color-text);
+}
+
+/* Crisp open/close animation for all dialogs: the backdrop fades while the panel
+   lifts + scales in. JS (openDialogAnimated/closeDialogAnimated) sets display,
+   then toggles .is-open, and hides after the fade-out. Because the resting state
+   is opacity:0, every dialog MUST be opened via openDialogAnimated — a plain
+   display toggle would leave it invisible. */
+.dialog-overlay {
+    opacity: 0;
+    transition: opacity 0.14s ease;
+}
+
+.dialog-overlay.is-open {
+    opacity: 1;
+}
+
+.dialog-overlay .dialog {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top center;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+}
+
+.dialog-overlay.is-open .dialog {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Respect users who prefer reduced motion: show/hide instantly. */
+@media (prefers-reduced-motion: reduce) {
+    .dialog-overlay,
+    .dialog-overlay .dialog {
+        transition: none;
+    }
+}
+
+/* Feedback form (inside #feedback-dialog) */
+.feedback-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.feedback-label {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.feedback-label:not(:first-child) {
+    margin-top: 14px;
+}
+
+.feedback-optional {
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.feedback-textarea,
+.feedback-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 0.95em;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.feedback-textarea {
+    resize: vertical;
+    min-height: 96px;
+    line-height: 1.4;
+}
+
+.feedback-textarea:focus,
+.feedback-input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(130, 106, 237, 0.18);
+}
+
+/* Honeypot: visually removed but still present in the DOM so bots fill it.
+   Kept off-screen rather than display:none (which some bots skip). */
+.feedback-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.feedback-status {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    /* Fills the left of the CTA row, pushing the Send button to the right edge.
+       Works even when empty (auto margin absorbs the free space). */
+    margin-right: auto;
+}
+
+.feedback-status.is-error {
+    color: #b3261e;
+}
+
+.feedback-status.is-success {
+    color: var(--color-green-dark);
+}
+
+/* The feedback submit reuses .cta-primary but is a <button>, so reset the UA
+   border/typography the export dialog's <a> never had. */
+button.cta-primary {
+    border: none;
+    font-family: inherit;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.cta-primary[disabled] {
+    opacity: 0.6;
+    cursor: default;
 }
 
 /* Sample Library flyout — a second column of the dropdown mega-menu, revealed
@@ -856,6 +994,13 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     #about-link .usd-logo {
         margin-right: 0;
     }
+    /* Collapse Feedback to its icon so the pill stays one row. */
+    .feedback-text {
+        display: none;
+    }
+    .feedback-button .inline-icon {
+        margin-right: 0;
+    }
     .needle-logo {
         height: 22px;
         margin-right: 6px;
@@ -905,6 +1050,16 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 #container a span {
     font-size: 0.8em;
     color: var(--color-text-muted);
+}
+
+/* The header menu labels (About, Feedback) match the "Load Sample" button
+   (.dropdown-button): same pill font-size and secondary colour, and they follow
+   the anchor's colour on hover. The "#container .x" prefix (1,1,0) out-specifies
+   "#container a span" (1,0,2). */
+#container .about-text,
+#container .feedback-text {
+    font-size: inherit; /* = #container's 0.9em, same as .dropdown-button */
+    color: inherit;     /* secondary by default, darkens on hover via #container a */
 }
 
 /* Inline SVG icons that sit left of a text label (filename, Export glTF) */

@@ -45,6 +45,22 @@ PRs are very welcome!
 The three.js Hydra Delegate is in `public/ThreeJsRenderDelegate.js`.  
 Loading and rendering are currently intermingled in `public/index.html`.  
 
+### Feedback → Discord
+
+The in-app "Feedback" dialog posts to `POST /api/feedback`, which forwards the
+message to a Discord channel via an incoming webhook. The webhook URL is a
+**secret** and must only be set as an environment variable in the deployment
+environment — never in client code:
+
+```
+DISCORD_FEEDBACK_WEBHOOK_URL=https://discord.com/api/webhooks/<id>/<token>
+```
+
+If the variable is unset, the endpoint responds with `503` and the dialog shows
+that feedback isn't configured (it is never silently dropped). The endpoint is
+public, so it is protected with a hidden honeypot field, a per-IP rate limit,
+and length caps on every field.
+
 ### Rebuilding USD-wasm
 
 NOTE: Origins for these instructions can be found [here](https://github.com/autodesk-forks/USD/blob/adsk/feature/webgpu/pxr/usdImaging/bin/usdviewweb/README.md)

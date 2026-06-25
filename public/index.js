@@ -8,22 +8,44 @@ import './usd/bindings/emHdBindings.js';
 
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
+// Show / hide a .dialog-overlay with a quick fade + lift. The dialogs default to
+// display:none in CSS; we set display first, force a reflow so the opacity/
+// transform transition has a start state, then flip .is-open. On close we drop
+// .is-open (transitioning back out) and hide after the animation — guarded so a
+// reopen mid-animation cancels the pending hide. Works with reduced motion too
+// (the timeout still hides it even when the transition is disabled).
+//
+// Defined at module scope (not inside init()) so BOTH the About dialog wiring
+// below and the export/feedback wiring inside init() can use it.
+const DIALOG_ANIM_MS = 220; // must be >= the CSS transition duration
+function openDialogAnimated(el) {
+  if (!el) return;
+  el.style.display = 'block';
+  void el.offsetWidth; // reflow: commit display + opacity:0 before .is-open
+  el.classList.add('is-open');
+}
+function closeDialogAnimated(el) {
+  if (!el) return;
+  el.classList.remove('is-open');
+  window.setTimeout(() => {
+    if (!el.classList.contains('is-open')) el.style.display = 'none';
+  }, DIALOG_ANIM_MS);
+}
+
 // About dialog functionality - runs when module is loaded
 document.addEventListener("DOMContentLoaded", function() {
   const aboutLink = document.getElementById('about-link');
   const aboutDialog = document.getElementById('about-dialog');
   const dialogCloseBtn = document.getElementById('dialog-close-btn');
 
+  // openDialogAnimated / closeDialogAnimated are module-scope helpers (hoisted)
+  // that fade + lift the dialog in/out — see their definition further below.
   function openAboutDialog() {
-    if (aboutDialog) {
-      aboutDialog.style.display = 'block';
-    }
+    openDialogAnimated(aboutDialog);
   }
 
   function closeAboutDialog() {
-    if (aboutDialog) {
-      aboutDialog.style.display = 'none';
-    }
+    closeDialogAnimated(aboutDialog);
   }
 
   if (aboutLink) {
@@ -373,11 +395,11 @@ function openExportDialog() {
   exportDialogResolved = false;
   exportHovered = {};
   track('open_export_dialog', { file: currentDisplayFilename || undefined });
-  if (exportDialog) exportDialog.style.display = 'block';
+  openDialogAnimated(exportDialog);
 }
 
 function closeExportDialog(via) {
-  if (exportDialog) exportDialog.style.display = 'none';
+  closeDialogAnimated(exportDialog);
   if (!exportDialogResolved) {
     // Opened the prompt, then closed it without choosing Cloud or downloading.
     // `via` distinguishes the X button from clicking the backdrop.
@@ -415,6 +437,107 @@ if (exportDownloadDirectBtn) {
     track('export_download_direct', { file: currentDisplayFilename || undefined });
     closeExportDialog('download');
     doGltfExport();
+  });
+}
+
+// "Feedback" opens a dialog that posts a message to the Needle team via the
+// server-side Discord webhook (POST /api/feedback). The webhook URL is a secret
+// held only on the server — this page just sends the message + light context.
+const feedbackLink = document.getElementById('feedback-link');
+const feedbackDialog = document.getElementById('feedback-dialog');
+const feedbackDialogCloseBtn = document.getElementById('feedback-dialog-close-btn');
+const feedbackForm = document.getElementById('feedback-form');
+const feedbackMessage = document.getElementById('feedback-message');
+const feedbackEmail = document.getElementById('feedback-email');
+const feedbackWebsite = document.getElementById('feedback-website'); // honeypot
+const feedbackSubmit = document.getElementById('feedback-submit');
+const feedbackStatus = document.getElementById('feedback-status');
+
+let feedbackSending = false;
+
+function setFeedbackStatus(text, kind) {
+  if (!feedbackStatus) return;
+  feedbackStatus.textContent = text || '';
+  feedbackStatus.classList.toggle('is-error', kind === 'error');
+  feedbackStatus.classList.toggle('is-success', kind === 'success');
+}
+
+function openFeedbackDialog() {
+  track('open_feedback', { file: currentDisplayFilename || undefined });
+  setFeedbackStatus('');
+  openDialogAnimated(feedbackDialog);
+  // Defer focus until the dialog is painted.
+  window.requestAnimationFrame(() => feedbackMessage && feedbackMessage.focus());
+}
+
+function closeFeedbackDialog() {
+  closeDialogAnimated(feedbackDialog);
+}
+
+if (feedbackLink) {
+  feedbackLink.addEventListener('click', (evt) => {
+    evt.preventDefault();
+    openFeedbackDialog();
+  });
+}
+if (feedbackDialogCloseBtn) feedbackDialogCloseBtn.addEventListener('click', closeFeedbackDialog);
+if (feedbackDialog) feedbackDialog.addEventListener('click', (event) => {
+  if (event.target === feedbackDialog) closeFeedbackDialog();
+});
+
+if (feedbackForm) {
+  feedbackForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (feedbackSending) return;
+
+    const message = (feedbackMessage?.value || '').trim();
+    if (!message) {
+      setFeedbackStatus('Please enter a message.', 'error');
+      feedbackMessage && feedbackMessage.focus();
+      return;
+    }
+
+    feedbackSending = true;
+    if (feedbackSubmit) feedbackSubmit.disabled = true;
+    setFeedbackStatus('Sending…');
+
+    const body = {
+      message,
+      email: (feedbackEmail?.value || '').trim(),
+      website: feedbackWebsite?.value || '', // honeypot — should be empty
+      pageUrl: location.href,
+      file: currentDisplayFilename || '',
+      userAgent: navigator.userAgent,
+    };
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        let msg = 'Could not send feedback. Please try again later.';
+        try {
+          const data = await res.json();
+          if (data && data.error) msg = data.error;
+        } catch {
+          // non-JSON error body — keep the generic message
+        }
+        throw new Error(msg);
+      }
+      track('feedback_submit', { has_email: !!body.email, file: currentDisplayFilename || undefined });
+      setFeedbackStatus('Thanks! Your feedback was sent.', 'success');
+      feedbackForm.reset();
+      window.setTimeout(closeFeedbackDialog, 1500);
+    } catch (err) {
+      // Surface the failure to the user; never pretend it succeeded.
+      trackError('feedback_submit', err);
+      setFeedbackStatus(err && err.message ? err.message : 'Could not send feedback.', 'error');
+    } finally {
+      feedbackSending = false;
+      if (feedbackSubmit) feedbackSubmit.disabled = false;
+    }
   });
 }
 

@@ -106,7 +106,7 @@
       <a href="https://needle.tools" target="_blank" rel="noopener" class="needle-logo-link">
         <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
       </a>
-    <a href="#" id="about-link"><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About <strong>USD&nbsp;Viewer</strong></span></a>
+    <a href="#" id="about-link"><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
 
     <div class="dropdown">
       <button class="dropdown-button">
@@ -171,6 +171,8 @@
       </div>
     </div>
 
+    <a href="#" id="feedback-link" class="feedback-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
+
     <a id="export-gltf" class="export-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Export glTF</a>
   </div>
 
@@ -221,15 +223,22 @@
         <button class="dialog-close" id="dialog-close-btn">&times;</button>
       </div>
       <div class="dialog-content">
-        <p>This is a basic USD Viewer created and maintained by <a href="https://needle.tools">Needle</a>, based on Autodesk's USD WASM Fork. It allows you to view Universal Scene Description (USD) files directly in your browser.</p>
-        <p>Drag and drop USDZ files to load them, or use the samples provided to explore different 3D models.</p>
-        <p>The actual USD runtime, compiled to WebAssembly, is used here, including all composition features.</p>
-        <p>We created this viewer while adding OpenUSD support to <a href="https://cloud.needle.tools">Needle Cloud</a>.</p>
-        <p>For more information or to open an issue, please visit the GitHub repo.</p>
+        <p>A free, in-browser viewer for <strong>OpenUSD</strong> files (.usd, .usdz, .usda, .usdc), built and maintained by <a href="https://needle.tools" target="_blank" rel="noopener">Needle</a>.</p>
+        <p>It runs the real OpenUSD runtime — Autodesk's USD fork compiled to WebAssembly — so full scene composition works right in your browser. Nothing is uploaded; everything runs locally on your device.</p>
+        <p>Drag &amp; drop a file to load it, pick one from the <strong>Load Sample</strong> menu, or export the scene to glTF. We built this while adding OpenUSD support to <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Needle Cloud</a> — found a bug or have an idea? Use the <strong>Feedback</strong> button.</p>
         <div class="dialog-actions">
-          <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">View on Needle GitHub</a>
-          <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Learn more about Needle Cloud</a>
-          <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">Autodesk Fork</a>
+          <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.6 1.6.2 2.9.1 3.2.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+            View USD Viewer on GitHub
+          </a>
+          <a href="https://cloud.needle.tools" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97 6 6 0 0 0-11.66-1.5A4 4 0 0 0 6.5 19z"/></svg>
+            Explore Needle Cloud
+          </a>
+          <a href="https://autodesk-forks.github.io/USD/" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1V9"/><path d="M12 12v3"/></svg>
+            Autodesk USD fork
+          </a>
         </div>
       </div>
     </div>
@@ -251,6 +260,41 @@
           <a id="export-cloud-cta" class="cta-primary" href="https://cloud.needle.tools/?utm_source=usd-viewer&utm_medium=export-dialog" target="_blank" rel="noopener">Open Needle Cloud&nbsp;→</a>
           <button id="export-download-direct" type="button" class="cta-secondary">Download .glb from browser</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback dialog. Sends a message to the Needle team via a server-side
+       Discord webhook (POST /api/feedback). The webhook URL is a secret held
+       only on the server — never in this page. -->
+  <div id="feedback-dialog" class="dialog-overlay">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>Feedback &amp; feature requests</h2>
+        <button class="dialog-close" id="feedback-dialog-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="dialog-content">
+        <p>Found a bug, hit a file that won't load, or want to request a feature? Let us know — it goes straight to the Needle team.</p>
+        <form id="feedback-form" class="feedback-form" novalidate>
+          <label class="feedback-label" for="feedback-message">Your message</label>
+          <textarea id="feedback-message" name="message" class="feedback-textarea" rows="5" maxlength="4000" required placeholder="What's on your mind?"></textarea>
+
+          <label class="feedback-label" for="feedback-email">Email <span class="feedback-optional">(optional, if you'd like a reply)</span></label>
+          <input id="feedback-email" name="email" class="feedback-input" type="email" maxlength="320" autocomplete="email" placeholder="you@example.com" />
+
+          <!-- Honeypot: hidden from humans, tempting to bots. If filled, the
+               server silently drops the submission. Kept out of the tab order
+               and the accessibility tree, and never autofilled. -->
+          <div class="feedback-hp" aria-hidden="true">
+            <label for="feedback-website">Website</label>
+            <input id="feedback-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <div class="dialog-cta">
+            <span id="feedback-status" class="feedback-status" role="status" aria-live="polite"></span>
+            <button id="feedback-submit" type="submit" class="cta-primary">Send feedback</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
