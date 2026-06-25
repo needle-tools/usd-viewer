@@ -6,7 +6,10 @@ const path = require('path')
 
 function setHeaders(res, path, stat) {
 
-  const needsHeaders = path.replaceAll("\\", '/').includes('/emHd') || path.endsWith('index.html');
+  const normalizedPath = path.replaceAll("\\", '/');
+  const needsHeaders = normalizedPath.includes('/emHd') ||
+    normalizedPath.includes('/materialx/') ||
+    path.endsWith('index.html');
   if (!needsHeaders) return;
 
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
@@ -83,6 +86,20 @@ fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'usd-wasm/src'),
   prefix: '/usd',
   setHeaders,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/@needle-tools/materialx'),
+  prefix: '/materialx',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'usd-wasm/tests/fixtures'),
+  prefix: '/test-fixtures',
+  setHeaders,
+  decorateReply: false,
 });
 
 fastify.register(require('@fastify/static'), {
