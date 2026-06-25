@@ -17,10 +17,11 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `ea0adc529bb72ee2c621878469d05921c507cf42`
+- `OpenUSD`: `8bbcc64b03bf4afa0ed46900d27034757c35089d`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
+- `emsdk`: `af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f` (`emcc 4.0.23`, Emscripten `7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed`)
 
 Important local repositories:
 
@@ -45,7 +46,7 @@ Working now:
 - OpenUSD 26.05 builds natively.
 - Adobe's glTF plugin builds natively against OpenUSD 26.05.
 - Upstream OpenUSD 26.05 wasm builds and runs the shipped `wasmFetchResolver` example.
-- The modernized `hdEmscripten` Hydra bridge builds for wasm and produces `emHdBindings.js`, `emHdBindings.data`, and `emHdBindings.wasm`.
+- The modernized `hdEmscripten` Hydra bridge builds for wasm and produces `emHdBindings.js` and `emHdBindings.wasm`; resources are embedded into the JS/wasm output and there is no `.data` sidecar.
 - The core USD programmatic API exposed by that bridge is generated from `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json`; the same generator emits `usd-core-bindings.d.ts`.
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
@@ -54,9 +55,12 @@ Working now:
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
+- Async USD APIs that can cross resolver fetches are registered with Embind `async()`, including `OpenStage`, `CreateUsdzPackage`, `Prim.Load`, `Prim.Unload`, `Prim.SetVariantSelection`, `HdWebSyncDriver.Draw`, and `HdWebSyncDriver.Repopulate`.
+- The viewer pauses Hydra draw calls while an async USD edit is in flight, then repopulates and draws once after the edit. This avoids re-entering Hydra during variant/payload composition changes.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
 - The previous Asset Explorer CesiumMan USDZ was removed because it was a 10 KB Three.js export with no `Mesh` prims. The checked-in `CesiumMan.glb.openusd.usdz` was regenerated from `CesiumMan.glb` through the OpenUSD/Adobe `usdGltf` path and is renderable.
 - `CesiumMan.glb.openusd.usdz` intentionally keeps the diffuse texture as a bracket-addressed GLB subasset, `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. OpenUSD commit `60936c01a` fixes nested package resolver dispatch so `USDZ[GLB[image]]` opens through the inner glTF package resolver; OpenUSD commit `ea0adc529` anchors hdEmscripten browser asset reads to the stage root layer.
+- The viewer texture bridge now falls through to Hydra's `driver.getFile()` for absolute package paths, so OpenUSD's resolver remains the authority for bracket-addressed images instead of JS rejecting them early.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
 - The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, MaterialX marble and procedural brick samples, mixed Preview Surface + MaterialX stages, raw GLB assets, regenerated CesiumMan USDZ, and API-constructed scenes.
 
@@ -64,7 +68,7 @@ Still to do before publishing a public package:
 
 - Publish the local `@needle-tools/materialx` fixes, then refresh package metadata/locks as needed for the release.
 - Decide whether to keep or silence known non-fatal warnings for fixtures without tangents and glTF assets that expose separate metalness/roughness textures.
-- Move the wasm build to a newer Emscripten once available locally. This machine currently builds with Emscripten `3.1.74`; Emscripten PR #26000, merged on 2026-01-21, adds the newer async synchronous-proxying behavior that is relevant for reliable promise completion from pthread/embind paths. With `3.1.74`, async fetches complete and the JS thread stays responsive, but some Hydra/embind promises can remain pending. The JS bridge now avoids re-entering or deleting Hydra while those calls are still active and defers cleanup rather than crashing, but this should be revisited with a toolchain containing the 2026 async proxying fixes.
+- Watch bundle size/performance after enabling full Asyncify instrumentation. The current Emscripten 4.0.23 build intentionally removed the old broad `ASYNCIFY_REMOVE` list because it stripped instrumentation from USD/Sdf/Crate paths that can fetch assets during composition.
 
 The viewer currently has the MaterialX-enabled OpenUSD 26.05 Hydra wasm bundle checked in under:
 
@@ -75,7 +79,6 @@ usd-wasm/src/bindings/
 Files:
 
 - `emHdBindings.js`
-- `emHdBindings.data`
 - `emHdBindings.wasm`
 
 Modern Emscripten does not emit `emHdBindings.worker.js` for this build, so the old worker import was removed from `usd-wasm/src/bindings/index.js`.
@@ -264,15 +267,17 @@ Known warnings from that headed pass:
 Additional headed async resolver check on 2026-06-25:
 
 ```text
-HTTPS References -> Loaded, resolver progress events=86, console errors=0
+Teapot USD -> modelVariant Fancy -> Applied, console errors=0
+HTTPS References -> Loaded, resolver progress events=172, console errors=0
 HTTPS References -> USDZ Cube switch -> Loaded, console errors=0
 Gingerbread USDC -> Loaded
 Gingerbread USDA -> Loaded
+Headed WebGL matrix slice -> 34 passed, 0 failed
 ```
 
 Known caveat from that pass:
 
-- `Hydra draw is still pending after 15000ms` can still appear with Emscripten `3.1.74` after async resolver work. The app remains responsive and asset switching no longer blocks on disposal; cleanup is deferred while Hydra is still inside the pending draw. Remote composition edits such as the Teapot `Fancy` payload/variant path should be revalidated after moving to a newer Emscripten with the 2026 async proxying changes.
+- `Hydra draw is still pending after 15000ms` can still appear after the `HTTPS References` load. The app remains responsive and the asset reaches `Loaded HTTPS References`; the measured recent frame gap after load was about 10ms, with one earlier heavy-work gap around 683ms.
 - The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
 
@@ -344,9 +349,8 @@ To update the viewer with that bundle:
 ```sh
 cd /Users/herbst/git/usd-viewer
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-exp/bin/emHdBindings.js usd-wasm/src/bindings/
-cp /Users/herbst/OpenUSD-26.05-wasm-hydra-exp/bin/emHdBindings.data usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-exp/bin/emHdBindings.wasm usd-wasm/src/bindings/
-rm -f usd-wasm/src/bindings/emHdBindings.worker.js
+rm -f usd-wasm/src/bindings/emHdBindings.data usd-wasm/src/bindings/emHdBindings.worker.js
 ```
 
 Then run the viewer checks from `usd-wasm`.
@@ -376,17 +380,15 @@ Expected result:
 - `emHdBindings` links with `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
 - `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates `emHdCoreBindings.inc` and `usd-core-bindings.d.ts`.
 - Node smoke passes against `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
-- `emHdBindings.js` mounts the generated preload table for USD resource files, including `usdShaders/resources/shaders/shaderDefs.usda`.
-- `emHdBindings.data` embeds the `usdMtlx/resources/libraries` documents needed by the browser bundle, including `gltf_pbr.mtlx`, `open_pbr_surface.mtlx`, and `usd_preview_surface.mtlx`.
+- `emHdBindings.js`/`emHdBindings.wasm` embed USD resource files, including `usdShaders/resources/shaders/shaderDefs.usda` and the `usdMtlx/resources/libraries` MaterialX documents needed by the browser bundle.
 
 Observed sidecar sizes:
 
 ```text
-non-MaterialX: emHdBindings.js 187K, emHdBindings.data 782K, emHdBindings.wasm 24M
-MaterialX:     emHdBindings.js 229K, emHdBindings.data 2.2M, emHdBindings.wasm 28M
+MaterialX Emscripten 4.0.23: emHdBindings.js 164K, emHdBindings.wasm 33M
 ```
 
-Before copying the sidecars, sanity-check the generated preload table:
+Before copying the sidecars, sanity-check the generated embedded resource table:
 
 ```sh
 rg "usdShaders/resources/shaders/shaderDefs.usda|usdMtlx/resources/libraries/.+\\.mtlx|usdGltf/resources/plugInfo.json" \
@@ -396,18 +398,17 @@ rg "usdShaders/resources/shaders/shaderDefs.usda|usdMtlx/resources/libraries/.+\
 If the generated `emHdBindings.js` only lists `/usd/plugInfo.json` and
 `/usd/usdGltf/resources/plugInfo.json`, the browser bundle will load geometry
 but reject `UsdPreviewSurface` shader nodes with `Invalid info:id` diagnostics.
-That means the OpenUSD branch is missing the `EMSCRIPTEN_RESOURCES` propagation
-fix in `cmake/macros/Private.cmake`; rebuild after applying that source fix.
+That means the OpenUSD branch is missing the hdEmscripten/USD resource embedding
+fixes; rebuild after applying those source fixes.
 
 To update the viewer with the MaterialX-enabled bundle:
 
 ```sh
 cd /Users/herbst/git/usd-viewer
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js usd-wasm/src/bindings/
-cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.data usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.wasm usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/usd-core-bindings.d.ts usd-wasm/src/types/
-rm -f usd-wasm/src/bindings/emHdBindings.worker.js
+rm -f usd-wasm/src/bindings/emHdBindings.data usd-wasm/src/bindings/emHdBindings.worker.js
 ```
 
 Use the build-system install target, not raw `cmake --install` after a partial
@@ -502,25 +503,16 @@ Wasm-specific Adobe plugin patches in this checkpoint:
 - Native-only `-m64` is disabled for Emscripten so plugin objects are wasm32-compatible.
 - `plugInfo.json` uses `LibraryPath: ""` for Emscripten/static builds. Missing `LibraryPath` is rejected by USD, while `../libusdGltf.so` triggers dynamic loading errors.
 
-OpenUSD links the plugin when `PXR_HD_EMSCRIPTEN_GLTF_PLUGIN_PREFIX` points at `/Users/herbst/USD-Fileformat-plugins-2026.03-wasm-probe`. The resulting `emHdBindings.data` embeds `/usd/usdGltf/resources/plugInfo.json`; raw `.glb` fixtures render in headed Chromium.
+OpenUSD links the plugin when `PXR_HD_EMSCRIPTEN_GLTF_PLUGIN_PREFIX` points at `/Users/herbst/USD-Fileformat-plugins-2026.03-wasm-probe`. The resulting embedded-resource `emHdBindings.js`/`emHdBindings.wasm` bundle contains `/usd/usdGltf/resources/plugInfo.json`; raw `.glb` fixtures render in headed Chromium.
 
 ## MaterialX Client-Side Shape
 
-OpenUSD/Hydra now builds with MaterialX support and packages `usdMtlx` resources
-into `emHdBindings.data`. The render delegate currently exposes only the default
-USD Preview Surface context to JavaScript, because advertising `mtlx` without a
-complete JS consumer changes Hydra material network shape and breaks the working
-Preview Surface path.
-
-The next MaterialX step should be a single golden path:
-
-- keep the MaterialX data coming from USD/Hydra, not caller-provided sidecars;
-- teach the JS bridge to forward that Hydra-provided MaterialX data in a stable
-  shape;
-- let `@needle-tools/materialx` generate the actual Three material from that
-  data;
-- add browser coverage that proves both WebGL and WebGPU behavior before
-  enabling the `mtlx` render context by default.
+OpenUSD/Hydra now builds with MaterialX support and embeds the `usdMtlx`
+resources into the viewer wasm bundle. The MaterialX path is intentionally
+single-source: USD composes the material, Hydra exposes the MaterialX document,
+and `@needle-tools/materialx` generates the Three material from that
+Hydra-provided document. Do not reintroduce caller-side `.mtlx` sidecar
+harvesting or synthetic MaterialX fallback materials.
 
 For browser/WebGPU compatibility, `@needle-tools/materialx` should not import
 `three/src/...`, should not import `package.json` at runtime, and should not
@@ -541,11 +533,9 @@ clean checkout uses the fixed package.
 
 Important current limitations:
 
-- MaterialX shader generation is not enabled in this checkpoint.
-- Do not reintroduce the removed `.mtlx` sidecar harvesting or synthesized
-  `MaterialXMaterial` fallback.
-
-The local `@needle-tools/materialx` package exposes `createMaterialXMaterial`, which is the promising entry point. Its current local implementation is centered on `ShaderMaterial`, so WebGPU must be validated explicitly whenever this path changes.
+- The local `@needle-tools/materialx` package still needs to be published, then `usd-wasm/package-lock.json` should be refreshed.
+- The glTF fixtures still report separate metalness/roughness texture handling as a TODO.
+- The local MaterialX implementation is centered on `ShaderMaterial`, so WebGPU must be validated explicitly whenever this path changes.
 
 ## Generated USD API Bindings
 

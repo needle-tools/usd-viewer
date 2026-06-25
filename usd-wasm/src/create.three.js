@@ -239,10 +239,11 @@ export async function createThreeHydra(config) {
 
     let disposed = false;
     let drawInFlight = false;
+    let editInFlight = false;
     let drawPromise = Promise.resolve();
     let activeDrawPromise = Promise.resolve();
-    const draw = () => {
-        if (disposed || drawInFlight || driver.isDeleted()) {
+    const draw = (force = false) => {
+        if (disposed || drawInFlight || driver.isDeleted() || (editInFlight && !force)) {
             return drawPromise;
         }
 
@@ -334,13 +335,20 @@ export async function createThreeHydra(config) {
                 return undefined;
             }
             const stage = await waitMaybeAsync(driver.GetStage());
-            const result = await callback(stage, driver);
-            if (disposed || driver.isDeleted()) {
+            editInFlight = true;
+            try {
+                const result = await callback(stage, driver);
+                if (disposed || driver.isDeleted()) {
+                    return result;
+                }
+                await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
+                editInFlight = false;
+                await draw(true);
                 return result;
             }
-            await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
-            await draw();
-            return result;
+            finally {
+                editInFlight = false;
+            }
         },
         repopulate: async () => {
             if (disposed || driver.isDeleted()) {
