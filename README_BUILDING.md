@@ -273,8 +273,9 @@ HTTPS References -> Loaded, resolver progress events=172, console errors=0
 HTTPS References -> USDZ Cube switch -> Loaded, console errors=0
 Gingerbread USDC -> Loaded
 Gingerbread USDA -> Loaded
-Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmull-Clark cube refined to 36 positions from 8 authored control points
+Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmull-Clark cube refined to 576 positions from 8 authored control points
 Full headed matrix -> 108 cases, 72 passed, 36 unsupported, 0 failed
+Stress sequence DamagedHelmet GLB -> BoomBox USDZ -> CesiumMan USDZ -> MaterialX Texture+Noise -> MaterialX Bricks -> Gingerbread USDA -> Loaded, visible textures correct, no out-of-memory errors
 ```
 
 Known caveat from that pass:

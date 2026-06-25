@@ -10,9 +10,9 @@
       "require": "./src/index.cjs"
     },
     "./plugins": {
+      "types": "./src/types/plugins.d.ts",
       "import": "./src/plugins/index.js",
-      "require": "./src/plugins/index.cjs",
-      "types": "./src/types/plugins.d.ts"
+      "require": "./src/plugins/index.cjs"
     }
   },
   "keywords": [

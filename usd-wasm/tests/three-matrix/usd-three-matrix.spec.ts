@@ -45,7 +45,9 @@ type MatrixResult = {
                 materials: number;
                 materialXMaterials: number;
                 meshPhysicalMaterials: number;
+                materialTextures: number;
                 namedMaterials: string[];
+                textureNames: string[];
             };
             handleMethods: Record<string, string>;
             fixtureChecks: Record<string, any>;
@@ -192,6 +194,12 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     expect(suite.usd.handleMethods.repopulate).toBe('function');
     expect(suite.usd.handleMethods.materialsReady).toBe('function');
     assertFixtureChecks(matrixPage.fixtureName, suite.usd.fixtureChecks);
+    if (
+        matrixPage.fixtureName === 'local-materialx-texture-noise-usda' ||
+        matrixPage.fixtureName === 'local-materialx-procedural-brick-usda'
+    ) {
+        expect(suite.diagnostics.warnings.filter(warning => warning.includes('Failed to load texture'))).toEqual([]);
+    }
     expect(suite.diagnostics.errors).toEqual([]);
 
     return {
@@ -233,8 +241,17 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.cesiumTexture.texturedMaterialCount).toBeGreaterThan(0);
     }
 
+    if (
+        fixtureName === 'local-materialx-texture-noise-usda' ||
+        fixtureName === 'local-materialx-procedural-brick-usda'
+    ) {
+        expect(checks.materialXTextures.meshCount).toBeGreaterThan(0);
+        expect(checks.materialXTextures.textureCount).toBeGreaterThan(0);
+    }
+
     if (fixtureName === 'local-catmull-clark-subdivision-usda') {
         expect(checks.subdivision.meshCount).toBe(1);
         expect(checks.subdivision.maxPositionCount).toBeGreaterThan(8);
+        expect(checks.subdivision.maxAbsBound).toBeLessThan(0.95);
     }
 }
