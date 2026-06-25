@@ -281,6 +281,16 @@ export async function createThreeHydra(config) {
     };
 
     const stage = await waitMaybeAsync(driver.GetStage());
+    const requireStageMethod = (name) => {
+        if (!stage || typeof stage[name] !== "function") {
+            throw new Error(`OpenUSD stage API is missing ${name}; cannot read stage metadata`);
+        }
+        return stage[name].bind(stage);
+    };
+    const getStageUpAxis = requireStageMethod("GetUpAxis");
+    const getStageStartTimeCode = requireStageMethod("GetStartTimeCode");
+    const getStageEndTimeCode = requireStageMethod("GetEndTimeCode");
+    const getStageTimeCodesPerSecond = requireStageMethod("GetTimeCodesPerSecond");
     /** Support for Y and Z up-axis in the root USD file */
     let stageUpAxis = 0;
     let stageStartTimeCode = 0;
@@ -314,10 +324,10 @@ export async function createThreeHydra(config) {
             };
         }
         return {
-            upAxis: stage?.GetUpAxis?.() ?? driver.GetStageUpAxis?.() ?? "y",
-            startTimeCode: stage?.GetStartTimeCode?.() ?? driver.GetStageStartTimeCode?.() ?? 0,
-            endTimeCode: stage?.GetEndTimeCode?.() ?? driver.GetStageEndTimeCode?.() ?? 0,
-            timeCodesPerSecond: stage?.GetTimeCodesPerSecond?.() ?? driver.GetStageTimeCodesPerSecond?.() ?? 24,
+            upAxis: getStageUpAxis(),
+            startTimeCode: getStageStartTimeCode(),
+            endTimeCode: getStageEndTimeCode(),
+            timeCodesPerSecond: getStageTimeCodesPerSecond(),
         };
     };
     applyStageMetadata(readStageMetadata());
