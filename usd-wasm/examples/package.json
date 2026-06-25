@@ -16,9 +16,10 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
+    "@needle-tools/engine": "^5.1.2",
     "@needle-tools/usd": "file:..",
     "@types/three": "^0.165.0",
-    "three": "^0.164.1",
+    "three": "npm:@needle-tools/three@^0.169.19",
     "vite-plugin-top-level-await": "^1.4.1",
     "vite-plugin-wasm": "^3.3.0"
   }

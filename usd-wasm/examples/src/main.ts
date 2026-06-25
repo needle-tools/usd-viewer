@@ -1,6 +1,6 @@
 
 import { getUsdModule, getOpenUsdBuildInfo, createThreeHydra, type USD, type NeedleThreeHydraHandle, type OpenUsdBuildInfo } from '@needle-tools/usd';
-import { loadEnvMap, run } from './three';
+import { loadEnvMap, run, type DemoRenderHost, type RenderHostRuntime } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 import { mount } from 'svelte';
 import UsdViewPanel from './UsdViewPanel.svelte';
@@ -19,6 +19,7 @@ declare global {
     __usdViewerTestState?: () => {
       status: string,
       childCount: number,
+      renderHost: RenderHostRuntime,
       rootRotationX: number | null,
       rootMatrixWorld: number[] | null,
       stageMetadata: ReturnType<NeedleThreeHydraHandle["stageMetadata"]> | null,
@@ -44,10 +45,11 @@ let scene: Scene;
 let usdContent: Object3D;
 let usd: USD;
 let openUsdBuildInfo: OpenUsdBuildInfo | null = null;
-let app: { fitCamera: () => void };
+let app: DemoRenderHost;
 let statusElement: HTMLElement | null = null;
 let variantControlsElement: HTMLElement | null = null;
 let lastApiKind: ApiSceneKind = "preview";
+const renderHostRuntime = getRenderHostRuntime();
 const debugUsd = false;
 
 type TestFile = { path: string, url: string };
@@ -143,7 +145,16 @@ getUsdModule({
   const envmapUrl = "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/studio_small_09_1k.exr";
   const envmap = await loadEnvMap(envmapUrl, renderer);
 
-  scene = new Scene();
+  app = await run({
+    renderer,
+    runtime: renderHostRuntime,
+    onRender: (dt) => {
+      hydraDelegate?.update(dt);
+      usdViewState.tickTime();
+    }
+  });
+
+  scene = app.scene;
   scene.environment = envmap;
   scene.background = envmap;
   scene.backgroundBlurriness = 0.8;
@@ -166,15 +177,6 @@ getUsdModule({
     */
 
   // loadFile(url);
-
-  app = run({
-    renderer,
-    scene: scene,
-    onRender: (dt) => {
-      hydraDelegate?.update(dt);
-      usdViewState.tickTime();
-    }
-  });
 
   const div = createControls();
   document.body.appendChild(div);
@@ -225,6 +227,7 @@ function createControls() {
     runtimeInfo.className = "runtime-info";
     runtimeInfo.innerText = formatOpenUsdBuildInfo(openUsdBuildInfo);
     runtimeSection.appendChild(runtimeInfo);
+    runtimeSection.appendChild(createRenderHostControl());
     div.appendChild(runtimeSection);
   }
 
@@ -275,6 +278,40 @@ function createControls() {
   div.appendChild(apiSection);
 
   return div;
+}
+
+function createRenderHostControl() {
+  const container = document.createElement("div");
+  container.className = "render-host-toggle";
+  container.setAttribute("role", "group");
+  container.setAttribute("aria-label", "Render host");
+
+  const threeButton = createRenderHostButton("three", "three.js");
+  const needleButton = createRenderHostButton("needle-engine", "Needle Engine");
+  container.append(threeButton, needleButton);
+
+  const label = document.createElement("p");
+  label.className = "runtime-info";
+  const version = app.runtimeVersion ? ` ${app.runtimeVersion}` : "";
+  label.innerText = `Viewing via ${app.runtimeLabel}${version}`;
+  container.appendChild(label);
+
+  return container;
+}
+
+function createRenderHostButton(runtime: RenderHostRuntime, label: string) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.innerText = label;
+  button.setAttribute("aria-pressed", String(renderHostRuntime === runtime));
+  button.dataset.active = String(renderHostRuntime === runtime);
+  button.onclick = () => {
+    if (renderHostRuntime === runtime) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("host", runtime);
+    window.location.href = url.href;
+  };
+  return button;
 }
 
 async function loadAsset(asset: TestAsset) {
@@ -670,12 +707,18 @@ function formatOpenUsdBuildInfo(buildInfo: OpenUsdBuildInfo) {
   return `OpenUSD ${buildInfo.openusd.version} (${buildInfo.openusd.gitSha.slice(0, 8)}) - ${modules}`;
 }
 
+function getRenderHostRuntime(): RenderHostRuntime {
+  const host = new URLSearchParams(window.location.search).get("host");
+  return host === "needle-engine" ? "needle-engine" : "three";
+}
+
 window.loadFile = loadFile;
 window.__usdViewerTestState = () => {
   const usdview = usdViewState.snapshot();
   return {
     status: statusElement?.innerText ?? "",
     childCount: usdContent?.children?.length ?? 0,
+    renderHost: app?.runtime ?? renderHostRuntime,
     rootRotationX: usdContent?.rotation?.x ?? null,
     rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
     stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
