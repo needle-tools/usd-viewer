@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { usdViewState, selectUsdViewPath, type USDAttributeLike, type USDCompositionArc, type USDLayerInfo, type USDPrimLike, type USDPcpNode, type USDRelationshipLike, type USDStageLike, type USDVectorLike, type USDSpecStackEntry } from "./usdViewStore";
+  import { usdViewState, type USDAttributeLike, type USDCompositionArc, type USDLayerInfo, type USDPrimLike, type USDPcpNode, type USDRelationshipLike, type USDStageLike, type USDVectorLike, type USDSpecStackEntry } from "./usdViewStore.svelte";
 
   type TreeNode = {
     name: string;
@@ -89,9 +89,9 @@
     compositionErrors: [],
   };
 
-  $: state = $usdViewState;
-  $: model = buildModel(state.stage, state.selectedPath, state.revision);
-  $: lastNotice = state.notice;
+  const state = usdViewState;
+  let model = $derived(buildModel(state.stage, state.selectedPath, state.revision));
+  let lastNotice = $derived(state.notice);
 
   function buildModel(stage: USDStageLike | null, selectedPath: string, revision: number): InspectorModel {
     void revision;
@@ -367,7 +367,7 @@
 </aside>
 
 {#snippet TreeView({ node, selectedPath }: { node: TreeNode; selectedPath: string })}
-  <button class:selected={node.path === selectedPath} class="tree-row" type="button" on:click={() => selectUsdViewPath(node.path)}>
+  <button class:selected={node.path === selectedPath} class="tree-row" type="button" onclick={() => state.selectPath(node.path)}>
     <span>{node.name}</span>
     <small>{node.typeName}</small>
   </button>

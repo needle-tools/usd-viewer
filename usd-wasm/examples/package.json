@@ -10,11 +10,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^4.0.4",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "svelte": "^5.56.4",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vite-plugin-static-copy": "^1.0.5"
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0"
   },
   "dependencies": {
     "@needle-tools/usd": "file:..",

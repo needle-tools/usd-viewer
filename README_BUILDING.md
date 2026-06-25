@@ -51,7 +51,7 @@ Working now:
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - The core inspection API now exposes usdview-style stage/prim/property/composition data from USD itself, including `Prim.GetAttributes()`, `Prim.GetRelationships()`, `Prim.GetPrimStackWithLayerOffsets()`, `Prim.GetPrimIndex()`, `Prim.GetCompositionArcs()`, `Stage.GetLayerStack()`, `Stage.GetUsedLayers()`, `Stage.GetCompositionErrors()`, and stage-scoped `UsdNotice::ObjectsChanged` callbacks via `Stage.RegisterObjectsChanged()`/`Stage.RevokeObjectsChanged()`.
-- The example viewer includes a Svelte `Usdview` panel that reads those USD APIs directly from `driver.GetStage()`. It is an inspection UI layered beside the Hydra viewport, not a Hydra projection.
+- The example viewer includes a Svelte 5 runes-based `Usdview` panel, built with Vite 8 and `@sveltejs/vite-plugin-svelte` 7, that reads those USD APIs directly from `driver.GetStage()`. It is an inspection UI layered beside the Hydra viewport, not a Hydra projection.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
 - OpenSubdiv is built for wasm and linked into the Hydra bundle; the matrix includes a Catmull-Clark cube fixture that verifies the runtime geometry is refined beyond the authored 8-point control cage.
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
@@ -155,6 +155,7 @@ Expected current result:
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
 - `npm run test:bindings` passes 7 tests, including generated authoring/USDZ packaging and usdview-style inspection/notice APIs.
 - The syntax checks and example build pass.
+- The `usd-wasm/examples` build runs on Vite 8/Svelte 5 with rune-backed inspector state.
 
 ## Browser Matrix Status
 

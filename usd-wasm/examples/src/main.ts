@@ -3,11 +3,10 @@ import { getUsdModule, createThreeHydra, USD, NeedleThreeHydraHandle } from '@ne
 import { loadEnvMap, run } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 import { mount } from 'svelte';
-import { get } from 'svelte/store';
 import UsdViewPanel from './UsdViewPanel.svelte';
 
 import { allDroppedFiles } from './fileHandling';
-import { disposeUsdViewStage, refreshUsdView, setUsdViewStage, usdViewState } from './usdViewStore';
+import { usdViewState } from './usdViewStore.svelte';
 
 declare global {
   interface Window {
@@ -386,7 +385,7 @@ async function loadAsset(asset: TestAsset) {
 }
 
 async function resetScene() {
-  disposeUsdViewStage();
+  usdViewState.dispose();
   const oldDelegate = hydraDelegate;
   hydraDelegate = null;
 
@@ -432,13 +431,13 @@ async function loadFile(url: string, label = url) {
   })
 
   hydraDelegate = delegate;
-  setUsdViewStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage());
 
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
-  refreshUsdView();
+  usdViewState.refresh();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
@@ -504,12 +503,12 @@ async function loadFiles(files: TestFile[], label: string) {
   });
 
   hydraDelegate = delegate;
-  setUsdViewStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage());
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
-  refreshUsdView();
+  usdViewState.refresh();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
@@ -571,7 +570,7 @@ function createApiStage(kind: string, path: string) {
 
 async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
   await resetScene();
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const buffer = copyToArrayBuffer(bytes);
   const delegate = await createThreeHydra({
     debug: debugUsd,
     USD: usd,
@@ -582,11 +581,11 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
     scene: usdContent,
   });
   hydraDelegate = delegate;
-  setUsdViewStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage());
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
-  refreshUsdView();
+  usdViewState.refresh();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
@@ -597,7 +596,7 @@ function downloadApiUsdz() {
   usd.CreateUsdzPackage("/tmp/api-download.usda", "/tmp/api-download.usdz");
   const bytes = usd.ReadFile("/tmp/api-download.usdz");
   usd.ReleaseStage(stage);
-  const blob = new Blob([bytes], { type: "model/vnd.usdz+zip" });
+  const blob = new Blob([copyToArrayBuffer(bytes)], { type: "model/vnd.usdz+zip" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -605,6 +604,12 @@ function downloadApiUsdz() {
   anchor.click();
   URL.revokeObjectURL(url);
   status(`Downloaded API USDZ (${lastApiKind})`);
+}
+
+function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 function updateSceneControls() {
@@ -676,7 +681,7 @@ function updateSceneControls() {
         return await prim.SetVariantSelection(entry.setName, select.value);
       });
       await waitForMaterialsForStatus(delegate, label);
-      refreshUsdView();
+      usdViewState.refresh();
       app.fitCamera();
       status(`Applied ${label}`);
       updateSceneControls();
@@ -709,7 +714,7 @@ function updateSceneControls() {
         return true;
       });
       await waitForMaterialsForStatus(delegate, label);
-      refreshUsdView();
+      usdViewState.refresh();
       app.fitCamera();
       status(`Applied ${entry.primPath} payload ${loaded ? "loaded" : "unloaded"}`);
       updateSceneControls();
@@ -759,10 +764,10 @@ window.__usdViewerTestState = () => ({
   stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
   diagnostics: hydraDelegate?.diagnostics?.() ?? null,
   usdview: {
-    hasStage: Boolean(get(usdViewState).stage),
-    selectedPath: get(usdViewState).selectedPath,
-    revision: get(usdViewState).revision,
-    lastNoticeResyncedPaths: get(usdViewState).notice?.resyncedPaths ?? [],
-    lastNoticeChangedInfoOnlyPaths: get(usdViewState).notice?.changedInfoOnlyPaths ?? [],
+    hasStage: Boolean(usdViewState.snapshot().stage),
+    selectedPath: usdViewState.snapshot().selectedPath,
+    revision: usdViewState.snapshot().revision,
+    lastNoticeResyncedPaths: usdViewState.snapshot().notice?.resyncedPaths ?? [],
+    lastNoticeChangedInfoOnlyPaths: usdViewState.snapshot().notice?.changedInfoOnlyPaths ?? [],
   },
 });
