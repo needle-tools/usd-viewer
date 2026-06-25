@@ -382,7 +382,8 @@ Viewer binding changes:
 - Added JS notifications from the wasm render delegate's `DestroyRprim` and `DestroySprim` hooks. This follows Hydra's render-delegate lifecycle: `HdRenderIndex` calls the render delegate destroy hook when prims are removed, so the JS bridge removes the corresponding Three mesh/material at the same boundary instead of carrying stale objects through variant switches.
 - Added Node tests that verify the generated artifacts, runtime exports, absence of a stale `.data` package, memory configuration, wasm magic header, actual Node loading of the generated bundle, and programmatic authoring through the generated API.
 - Extended the three.js matrix static page and Playwright assertions to report and check the Hydra binding API surface before exercising the renderer.
-- Added a renderer-mode filter to the matrix cache script (`--renderer-modes webgl`, `--renderer-modes webgpu-force-webgl2,webgpu`) so WebGL and WebGPU can be validated independently while keeping the full 102-case matrix as the canonical run.
+- Added a local Catmull-Clark subdivision fixture and matrix assertion that verifies OpenSubdiv runtime refinement by checking that the rendered Three geometry has more positions than the authored 8-point control cage.
+- Added a renderer-mode filter to the matrix cache script (`--renderer-modes webgl`, `--renderer-modes webgpu-force-webgl2,webgpu`) so WebGL and WebGPU can be validated independently while keeping the full matrix as the canonical run.
 - Added `USD_THREE_MATRIX_BROWSER=chromium` as a matrix-test escape hatch for running against Playwright's bundled Chromium instead of the configured Chrome channel.
 - Let absolute texture/package paths fall through to Hydra's `driver.getFile()` instead of rejecting them from JS. This keeps OpenUSD's resolver in charge of bracket-addressed images such as `USDZ[GLB[image]]`.
 - Added `USD_THREE_MATRIX_HEADED=1` for headed browser validation.

@@ -293,6 +293,17 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-catmull-clark-subdivision-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "subdivision", "catmull_clark_cube.usda")}`,
+        files: [{
+            path: "catmull_clark_cube.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "subdivision", "catmull_clark_cube.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/subdivision/catmull_clark_cube.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
     }];
 
     const localAssetFixtures = [
