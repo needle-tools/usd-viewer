@@ -68,7 +68,23 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     });
   }
-  
+
+  // Track clicks on the About footer links. Rybbit auto-tracks outbound clicks,
+  // but this attributes them to the About dialog and labels which link it was.
+  const aboutActions = aboutDialog && aboutDialog.querySelector('.dialog-actions');
+  if (aboutActions) {
+    aboutActions.addEventListener('click', function(event) {
+      const link = event.target.closest('a');
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      let target = 'other';
+      if (href.includes('github.com/needle-tools/usd-viewer')) target = 'github';
+      else if (href.includes('cloud.needle.tools')) target = 'cloud';
+      else if (href.includes('autodesk')) target = 'autodesk';
+      track('about_link_click', { target, url: href });
+    });
+  }
+
   // Console output redirection to message log (warnings and errors only)
   const messageLog = document.getElementById('message-log');
   const originalConsole = {
@@ -454,6 +470,9 @@ const feedbackSubmit = document.getElementById('feedback-submit');
 const feedbackStatus = document.getElementById('feedback-status');
 
 let feedbackSending = false;
+// True once the form was successfully sent, so closing afterwards isn't counted
+// as an abandonment.
+let feedbackResolved = false;
 
 function setFeedbackStatus(text, kind) {
   if (!feedbackStatus) return;
@@ -463,6 +482,7 @@ function setFeedbackStatus(text, kind) {
 }
 
 function openFeedbackDialog() {
+  feedbackResolved = false;
   track('open_feedback', { file: currentDisplayFilename || undefined });
   setFeedbackStatus('');
   openDialogAnimated(feedbackDialog);
@@ -470,7 +490,21 @@ function openFeedbackDialog() {
   window.requestAnimationFrame(() => feedbackMessage && feedbackMessage.focus());
 }
 
-function closeFeedbackDialog() {
+function closeFeedbackDialog(via) {
+  // Count an abandonment only if the dialog is actually open, the user typed a
+  // message, and it wasn't sent. We report the length (not the text) — content
+  // the user chose not to send must not leak into analytics.
+  const wasOpen = feedbackDialog && feedbackDialog.classList.contains('is-open');
+  if (wasOpen && !feedbackResolved) {
+    const chars = (feedbackMessage?.value || '').trim().length;
+    if (chars > 0) {
+      track('feedback_dismiss', {
+        via: via || 'unknown',
+        chars,
+        has_email: !!(feedbackEmail?.value || '').trim(),
+      });
+    }
+  }
   closeDialogAnimated(feedbackDialog);
 }
 
@@ -480,9 +514,9 @@ if (feedbackLink) {
     openFeedbackDialog();
   });
 }
-if (feedbackDialogCloseBtn) feedbackDialogCloseBtn.addEventListener('click', closeFeedbackDialog);
+if (feedbackDialogCloseBtn) feedbackDialogCloseBtn.addEventListener('click', () => closeFeedbackDialog('close_button'));
 if (feedbackDialog) feedbackDialog.addEventListener('click', (event) => {
-  if (event.target === feedbackDialog) closeFeedbackDialog();
+  if (event.target === feedbackDialog) closeFeedbackDialog('backdrop');
 });
 
 if (feedbackForm) {
@@ -526,10 +560,11 @@ if (feedbackForm) {
         }
         throw new Error(msg);
       }
+      feedbackResolved = true; // sent — closing now is not an abandonment
       track('feedback_submit', { has_email: !!body.email, file: currentDisplayFilename || undefined });
       setFeedbackStatus('Thanks! Your feedback was sent.', 'success');
       feedbackForm.reset();
-      window.setTimeout(closeFeedbackDialog, 1500);
+      window.setTimeout(() => closeFeedbackDialog(), 1500);
     } catch (err) {
       // Surface the failure to the user; never pretend it succeeded.
       trackError('feedback_submit', err);
