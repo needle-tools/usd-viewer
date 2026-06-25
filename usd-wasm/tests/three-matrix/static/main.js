@@ -483,6 +483,7 @@ function collectMeshMaterialState(root) {
                 metalnessMapName: material.metalnessMap?.name || "",
                 aoMapName: material.aoMap?.name || "",
                 roughnessAndMetalnessShareMap: Boolean(material.roughnessMap && material.roughnessMap === material.metalnessMap),
+                occlusionRoughnessMetalnessShareMap: Boolean(material.aoMap && material.roughnessMap && material.metalnessMap && material.aoMap === material.roughnessMap && material.roughnessMap === material.metalnessMap),
                 textureCount: collectMaterialTextures(material).length,
             })),
         });

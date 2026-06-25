@@ -23,10 +23,11 @@ export const testAssetLibrary = [
   { group: "USD Concepts", label: "Time Samples", root: "usd-concepts/time_samples.usda", files: ["usd-concepts/time_samples.usda"] },
   {
     group: "USD Concepts",
-    label: "Separate Metal/Rough Textures",
+    label: "Separate ORM Textures",
     root: "usd-concepts/preview_separate_metal_rough.usda",
     files: [
       "usd-concepts/preview_separate_metal_rough.usda",
+      "materialx/textures/brick_dirt_mask.jpg",
       "materialx/textures/brick_roughness.jpg",
       "materialx/textures/brick_mask.jpg",
     ],

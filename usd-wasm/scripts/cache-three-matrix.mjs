@@ -413,6 +413,9 @@ async function prepareFixtures({ cacheRoot, refresh }) {
             path: "usd-concepts/preview_separate_metal_rough.usda",
             url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "preview_separate_metal_rough.usda")}`,
         }, {
+            path: "materialx/textures/brick_dirt_mask.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_dirt_mask.jpg")}`,
+        }, {
             path: "materialx/textures/brick_roughness.jpg",
             url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_roughness.jpg")}`,
         }, {

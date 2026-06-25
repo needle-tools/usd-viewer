@@ -33,9 +33,21 @@ def Scope "Looks"
         {
             uniform token info:id = "UsdPreviewSurface"
             color3f inputs:diffuseColor = (0.82, 0.82, 0.82)
+            float inputs:occlusion.connect = </Looks/SeparateMetalRough/Occlusion.outputs:rgb>
             float inputs:roughness.connect = </Looks/SeparateMetalRough/Roughness.outputs:rgb>
             float inputs:metallic.connect = </Looks/SeparateMetalRough/Metallic.outputs:rgb>
             token outputs:surface
+        }
+
+        def Shader "Occlusion"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @../materialx/textures/brick_dirt_mask.jpg@
+            token inputs:sourceColorSpace = "raw"
+            float2 inputs:st.connect = </Looks/SeparateMetalRough/Primvar.outputs:result>
+            token inputs:wrapS = "repeat"
+            token inputs:wrapT = "repeat"
+            float3 outputs:rgb
         }
 
         def Shader "Roughness"
