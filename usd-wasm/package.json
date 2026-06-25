@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/usd",
-  "version": "0.0.2",
+  "version": "1.0.0-next.0",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",

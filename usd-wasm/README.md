@@ -6,7 +6,14 @@ Developed & maintained by [Needle](https://needle.tools).
 For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).  
 
 ## Install
-`npm install @needle-tools/usd`
+
+```sh
+npm install @needle-tools/usd@next three @needle-tools/materialx@1.7.0
+```
+
+This major prerelease uses upstream OpenUSD 26.05 and ships a Hydra imaging
+bridge for three.js. The wasm bundle includes Adobe `usdGltf`, MaterialX, and
+OpenSubdiv support.
 
 
 
@@ -45,6 +52,15 @@ const handle = await createThreeHydra({
     usdz: "http://localhost:8081/v1/public/89aa693/89aa693/ImageTrackingNeedleSample.usdz",
 })
 // Call handle.update(dt) in your threejs update loop 
+```
+
+Public package entrypoints:
+
+```js
+import { getUsdModule, loadOpenUsdBuildInfo } from "@needle-tools/usd";
+import { createThreeHydra } from "@needle-tools/usd/three";
+import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
+import { needleUSD } from "@needle-tools/usd/vite";
 ```
 
 
