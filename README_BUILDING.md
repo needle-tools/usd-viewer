@@ -19,7 +19,7 @@ Provenance SHAs for this checkpoint:
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
 - `OpenUSD`: `091e1c02196d7bbda8b536ec745b36824da71589`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
-- `needle-engine-materialx`: `9ec2906c9c24635c46e0c376b12c7fbe063c88ae` (`@needle-tools/materialx@1.7.0-next.9ec2906`)
+- `needle-engine-materialx`: `57183d693f33ed230e199c73bb6fe70df934c0ab` (`@needle-tools/materialx@1.7.0`)
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
 - `emsdk`: `af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f` (`emcc 4.0.23`, Emscripten `7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed`)
 
@@ -179,7 +179,7 @@ Current result on this machine:
 - The Three matrix cache is generated.
 - The manifest is written for 168 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with twenty-eight fixtures.
 - The test passes in headed Chromium.
-- The latest dependency-refresh pass uses the published `@needle-tools/materialx@1.7.0-next.9ec2906` package, not a local `npm link`.
+- The latest dependency-refresh pass uses the published `@needle-tools/materialx@1.7.0` package, not a local `npm link`.
 
 Observed result on 2026-06-25:
 
@@ -594,7 +594,7 @@ cd /Users/herbst/git/usd-viewer/usd-wasm
 npm ls @needle-tools/materialx
 ```
 
-Expected version: `@needle-tools/materialx@1.7.0-next.9ec2906`. Root
+Expected version: `@needle-tools/materialx@1.7.0`. Root
 `usd-viewer/package.json` also depends on the same package because `server.js`
 serves `/materialx` from root `node_modules` for the production viewer import
 map. The production viewer sets `globalThis.NEEDLE_MATERIALX_LOCATION` to

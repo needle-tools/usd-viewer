@@ -280,15 +280,47 @@ export async function createThreeHydra(config) {
         return drawPromise;
     };
 
+    const stage = await waitMaybeAsync(driver.GetStage());
     /** Support for Y and Z up-axis in the root USD file */
-    let stageUpAxis = await waitMaybeAsync(driver.GetStageUpAxis());
-    let stageStartTimeCode = await waitMaybeAsync(driver.GetStageStartTimeCode());
-    let stageEndTimeCode = await waitMaybeAsync(driver.GetStageEndTimeCode());
-    let stageTimeCodesPerSecond = await waitMaybeAsync(driver.GetStageTimeCodesPerSecond());
-    const stageUpAxisToken = String.fromCharCode(stageUpAxis).toLowerCase();
-    stageUpAxis = stageUpAxisToken.charCodeAt(0);
-    delegateConfig.usdRoot.rotation.x = stageUpAxisToken === 'z' ? -Math.PI / 2 : 0;
-    delegateConfig.usdRoot.updateMatrixWorld(true);
+    let stageUpAxis = 0;
+    let stageStartTimeCode = 0;
+    let stageEndTimeCode = 0;
+    let stageTimeCodesPerSecond = 24;
+    const normalizeUpAxisToken = (axis) => {
+        if (typeof axis === "number" && Number.isFinite(axis)) {
+            return String.fromCharCode(axis).toLowerCase();
+        }
+        if (typeof axis === "string" && axis.length > 0) {
+            return axis[0].toLowerCase();
+        }
+        return "y";
+    };
+    const applyStageMetadata = (metadata) => {
+        const stageUpAxisToken = normalizeUpAxisToken(metadata.upAxis);
+        stageUpAxis = stageUpAxisToken.charCodeAt(0);
+        stageStartTimeCode = Number.isFinite(metadata.startTimeCode) ? metadata.startTimeCode : 0;
+        stageEndTimeCode = Number.isFinite(metadata.endTimeCode) ? metadata.endTimeCode : stageStartTimeCode;
+        stageTimeCodesPerSecond = metadata.timeCodesPerSecond > 0 ? metadata.timeCodesPerSecond : 24;
+        delegateConfig.usdRoot.rotation.x = stageUpAxisToken === 'z' ? -Math.PI / 2 : 0;
+        delegateConfig.usdRoot.updateMatrixWorld(true);
+    };
+    const readStageMetadata = () => {
+        if (disposed || driver.isDeleted()) {
+            return {
+                upAxis: stageUpAxis,
+                startTimeCode: stageStartTimeCode,
+                endTimeCode: stageEndTimeCode,
+                timeCodesPerSecond: stageTimeCodesPerSecond,
+            };
+        }
+        return {
+            upAxis: stage?.GetUpAxis?.() ?? driver.GetStageUpAxis?.() ?? "y",
+            startTimeCode: stage?.GetStartTimeCode?.() ?? driver.GetStageStartTimeCode?.() ?? 0,
+            endTimeCode: stage?.GetEndTimeCode?.() ?? driver.GetStageEndTimeCode?.() ?? 0,
+            timeCodesPerSecond: stage?.GetTimeCodesPerSecond?.() ?? driver.GetStageTimeCodesPerSecond?.() ?? 24,
+        };
+    };
+    applyStageMetadata(readStageMetadata());
 
     /** Draw once, after stage metadata has been applied to the root scene. */
     const initialDrawPromise = draw();
@@ -409,12 +441,15 @@ export async function createThreeHydra(config) {
         },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
         diagnostics: () => renderInterface.getDiagnostics(),
-        stageMetadata: () => ({
-            upAxis: String.fromCharCode(stageUpAxis),
-            startTimeCode: stageStartTimeCode,
-            endTimeCode: stageEndTimeCode,
-            timeCodesPerSecond: stageTimeCodesPerSecond,
-        }),
+        stageMetadata: () => {
+            applyStageMetadata(readStageMetadata());
+            return {
+                upAxis: String.fromCharCode(stageUpAxis),
+                startTimeCode: stageStartTimeCode,
+                endTimeCode: stageEndTimeCode,
+                timeCodesPerSecond: stageTimeCodesPerSecond,
+            };
+        },
         /**
          * Dispose the Three Hydra delegate.
          * This does *not* clear the threejs scene but only dispose the USD delegate and loaded files
