@@ -19,7 +19,7 @@ def Scope "Looks"
     }
 }
 
-def Xform "Prototype"
+class Xform "Prototype"
 {
     def Cube "Shape" (
         prepend apiSchemas = ["MaterialBindingAPI"]

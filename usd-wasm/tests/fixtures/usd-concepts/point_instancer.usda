@@ -21,34 +21,34 @@ def Scope "Looks"
 
 def Xform "World"
 {
-    def Scope "Prototypes"
-    {
-        def Cube "CubeProto" (
-            prepend apiSchemas = ["MaterialBindingAPI"]
-        )
-        {
-            double size = 0.45
-            rel material:binding = </Looks/InstancedPaint>
-        }
-
-        def Sphere "SphereProto" (
-            prepend apiSchemas = ["MaterialBindingAPI"]
-        )
-        {
-            double radius = 0.28
-            rel material:binding = </Looks/InstancedPaint>
-        }
-    }
-
     def PointInstancer "Scatter"
     {
         rel prototypes = [
-            </World/Prototypes/CubeProto>,
-            </World/Prototypes/SphereProto>,
+            </World/Scatter/Prototypes/CubeProto>,
+            </World/Scatter/Prototypes/SphereProto>,
         ]
         int[] protoIndices = [0, 1, 0]
         point3f[] positions = [(-0.7, 0, 0), (0, 0, 0), (0.7, 0, 0)]
         quath[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
         float3[] scales = [(1, 1, 1), (1, 1, 1), (1, 1, 1)]
+
+        def Scope "Prototypes"
+        {
+            def Cube "CubeProto" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                double size = 0.45
+                rel material:binding = </Looks/InstancedPaint>
+            }
+
+            def Sphere "SphereProto" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                double radius = 0.28
+                rel material:binding = </Looks/InstancedPaint>
+            }
+        }
     }
 }

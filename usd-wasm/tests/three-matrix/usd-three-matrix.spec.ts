@@ -263,16 +263,24 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.nativeInstances.stageTypes['/Prototype/Shape'].typeName).toBe('Cube');
         expect(checks.nativeInstances.stageTypes['/World/InstanceA'].valid).toBe(true);
         expect(checks.nativeInstances.stageTypes['/World/InstanceB'].valid).toBe(true);
-        expect(checks.nativeInstances.meshState.meshCount).toBeGreaterThanOrEqual(2);
+        expect(checks.nativeInstances.meshState.visibleMeshCount).toBe(1);
+        expect(checks.nativeInstances.meshState.meshes.filter((mesh: any) => mesh.visible)[0].instanced).toBe(true);
+        expect(checks.nativeInstances.meshState.meshes.filter((mesh: any) => mesh.visible)[0].instanceCount).toBe(2);
+        expect(checks.nativeInstances.worldState.visibleMeshCount).toBe(2);
+        expect(checks.nativeInstances.worldState.visibleXPositions).toEqual([-0.65, 0.65]);
         expect(checks.nativeInstances.meshState.materialNames).toContain('InstanceGreen');
     }
 
     if (fixtureName === 'local-point-instancer-usda') {
         expect(checks.pointInstancer.stageTypes['/World/Scatter'].typeName).toBe('PointInstancer');
-        expect(checks.pointInstancer.stageTypes['/World/Prototypes/CubeProto'].typeName).toBe('Cube');
-        expect(checks.pointInstancer.stageTypes['/World/Prototypes/SphereProto'].typeName).toBe('Sphere');
+        expect(checks.pointInstancer.stageTypes['/World/Scatter/Prototypes/CubeProto'].typeName).toBe('Cube');
+        expect(checks.pointInstancer.stageTypes['/World/Scatter/Prototypes/SphereProto'].typeName).toBe('Sphere');
         expect(checks.pointInstancer.geometryState.meshCount).toBeGreaterThan(0);
         expect(checks.pointInstancer.geometryState.maxPositionCount).toBeGreaterThan(0);
+        expect(checks.pointInstancer.meshState.visibleMeshCount).toBe(2);
+        expect(checks.pointInstancer.meshState.meshes.filter((mesh: any) => mesh.visible).every((mesh: any) => mesh.instanced)).toBe(true);
+        expect(checks.pointInstancer.worldState.visibleMeshCount).toBe(3);
+        expect(checks.pointInstancer.worldState.visibleXPositions).toEqual([-0.7, 0, 0.7]);
     }
 
     if (fixtureName === 'local-reference-override-usda') {
@@ -328,6 +336,9 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.cameraLight.stageTypes['/World/LitCube'].typeName).toBe('Cube');
         expect(checks.cameraLight.meshState.meshCount).toBe(1);
         expect(checks.cameraLight.meshState.materialNames).toContain('Neutral');
+        expect(checks.cameraLight.scenePrimitives.cameras.map((camera: any) => camera.name)).toContain('ShotCam');
+        expect(checks.cameraLight.scenePrimitives.lights.map((light: any) => light.name)).toContain('KeyLight');
+        expect(checks.cameraLight.scenePrimitives.helpers.length).toBeGreaterThanOrEqual(2);
     }
 
     if (fixtureName === 'local-time-samples-usda') {

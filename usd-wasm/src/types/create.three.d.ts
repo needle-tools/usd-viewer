@@ -48,6 +48,22 @@ export declare type createThreeHydraConfig = {
      * Defaults to ["default", "render"].
      */
     includedPurposes?: Array<"default" | "render" | "proxy" | "guide" | string>,
+
+    /**
+     * Add Three.js helper objects for USD cameras and lights.
+     * The cameras and lights themselves are created from the composed USD stage either way.
+     */
+    showScenePrimitiveHelpers?: boolean,
+
+    /**
+     * Add Three.js CameraHelper objects for USD Camera prims.
+     */
+    showCameraHelpers?: boolean,
+
+    /**
+     * Add Three.js light helper objects for USD light prims.
+     */
+    showLightHelpers?: boolean,
 }
 
 /**
