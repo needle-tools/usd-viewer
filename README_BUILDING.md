@@ -311,12 +311,13 @@ Full headed matrix -> 108 cases, 72 passed, 36 unsupported, 0 failed
 Stress sequence DamagedHelmet GLB -> BoomBox USDZ -> CesiumMan USDZ -> MaterialX Texture+Noise -> MaterialX Bricks -> Gingerbread USDA -> Loaded, visible textures correct, no out-of-memory errors
 Order-dependent visual goldens -> MaterialX Texture+Noise and MaterialX Bricks stay flat, textured panels after USDZ Cube, payload, variants, GLB/USDZ, and subdivision warmup loads
 Headed 0.184.0 matrix after instancer/camera-light bridge -> 168 cases, 112 ready, 56 unsupported on old local Three WebGPU modes, 0 failed
+Headed 0.185.0 matrix after 1.0 prerelease prep -> 116 cases, 87 ready, 29 unsupported on old local Three WebGPU modes, 0 failed
+Headed Needle Engine matrix -> @needle-tools/engine 5.1.2 dist + module runtime shapes, both ready, Three r169.19
 ```
 
 Known caveat from that pass:
 
 - `Hydra draw is still pending after 15000ms` can still appear after the `HTTPS References` load. The app remains responsive and the asset reaches `Loaded HTTPS References`; the measured recent frame gap after load was about 10ms, with one earlier heavy-work gap around 683ms.
-- The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
 
 Run the viewer visual golden checks from `usd-wasm` with:

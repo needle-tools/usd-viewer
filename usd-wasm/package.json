@@ -52,8 +52,10 @@
     "three": ">=0.160.0"
   },
   "scripts": {
+    "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
     "test:bindings": "node --test tests/bindings/*.test.mjs",
+    "test:needle-engine-matrix": "npm run needle-engine-matrix:cache && playwright test -c tests/needle-engine-matrix/playwright.config.ts",
     "test:three-matrix": "node scripts/run-three-matrix.mjs",
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
