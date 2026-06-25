@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^4.0.4",
+    "svelte": "^5.56.4",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "vite-plugin-static-copy": "^1.0.5"

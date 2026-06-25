@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `4cc9b40d48b7c544d945d3f089cdf2b032bae98e`
+- `OpenUSD`: `2034ff011ef63d97d4f389b89e7b33be1c4ebac9`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -50,6 +50,8 @@ Working now:
 - The core USD programmatic API exposed by that bridge is generated from `pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json`; the same generator emits `usd-core-bindings.d.ts`.
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
+- The core inspection API now exposes usdview-style stage/prim/property/composition data from USD itself, including `Prim.GetAttributes()`, `Prim.GetRelationships()`, `Prim.GetPrimStackWithLayerOffsets()`, `Prim.GetPrimIndex()`, `Prim.GetCompositionArcs()`, `Stage.GetLayerStack()`, `Stage.GetUsedLayers()`, `Stage.GetCompositionErrors()`, and stage-scoped `UsdNotice::ObjectsChanged` callbacks via `Stage.RegisterObjectsChanged()`/`Stage.RevokeObjectsChanged()`.
+- The example viewer includes a Svelte `Usdview` panel that reads those USD APIs directly from `driver.GetStage()`. It is an inspection UI layered beside the Hydra viewport, not a Hydra projection.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
 - OpenSubdiv is built for wasm and linked into the Hydra bundle; the matrix includes a Catmull-Clark cube fixture that verifies the runtime geometry is refined beyond the authored 8-point control cage.
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
@@ -151,7 +153,7 @@ npx vite build
 Expected current result:
 
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
-- `npm run test:bindings` passes 6 tests, including generated authoring/USDZ packaging.
+- `npm run test:bindings` passes 7 tests, including generated authoring/USDZ packaging and usdview-style inspection/notice APIs.
 - The syntax checks and example build pass.
 
 ## Browser Matrix Status
@@ -318,6 +320,12 @@ For local headed validation:
 
 ```bash
 USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewer-visual
+```
+
+To run only the usdview-style panel regression:
+
+```bash
+USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewer-visual -- -g "Usdview panel"
 ```
 
 These tests intentionally load several local assets before the target MaterialX
@@ -609,7 +617,14 @@ and produces:
 
 The generated surface currently covers the core programmatic scene inspection API
 needed by `usd-viewer`: `Layer`, `Stage`, `Prim`, `Attribute`, `Relationship`,
-and vector helpers. It also covers the first authoring/package checkpoint:
+and vector helpers. The usdview-style browser surface includes composed prim
+children, attributes, relationships, metadata, authored value/resolve info,
+time samples, property stacks with layer offsets, prim stacks with layer
+offsets, prim indexes, composition arcs, layer stack/used layer info arrays,
+composition errors, and stage-scoped `UsdNotice::ObjectsChanged` callbacks.
+Layer stack methods return serializable `USDLayerInfo[]` objects instead of live
+`SdfLayerHandle` vectors so the browser UI does not depend on embind handle
+lifetimes. It also covers the first authoring/package checkpoint:
 `CreateStage`, `OpenStage`, `ReleaseStage`, `Stage.DefinePrim`, stage time/up-axis
 metadata setters, `Prim.CreateAttribute`, variant add/list/select helpers,
 `Prim.DefinePrimInVariant`, `Stage.TraverseAll` for unloaded payload discovery,
