@@ -1,0 +1,50 @@
+#usda 1.0
+(
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Camera "ShotCam"
+    {
+        double focalLength = 35
+        double horizontalAperture = 20.955
+        double verticalAperture = 15.2908
+        double3 xformOp:translate = (0, -3, 1.2)
+        float3 xformOp:rotateXYZ = (70, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+
+    def SphereLight "KeyLight"
+    {
+        float inputs:intensity = 450
+        color3f inputs:color = (1, 0.92, 0.82)
+        float inputs:radius = 0.3
+        double3 xformOp:translate = (0, -1.2, 1.8)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "LitCube" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 0.65
+        rel material:binding = </Looks/Neutral>
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "Neutral"
+    {
+        token outputs:surface.connect = </Looks/Neutral/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.55, 0.58, 0.62)
+            float inputs:roughness = 0.32
+            token outputs:surface
+        }
+    }
+}

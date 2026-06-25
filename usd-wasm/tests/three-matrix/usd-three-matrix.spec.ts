@@ -256,4 +256,71 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.subdivision.maxPositionCount).toBeGreaterThan(8);
         expect(checks.subdivision.maxAbsBound).toBeLessThan(0.95);
     }
+
+    if (fixtureName === 'local-native-instances-usda') {
+        expect(checks.nativeInstances.stageTypes['/Prototype/Shape'].typeName).toBe('Cube');
+        expect(checks.nativeInstances.stageTypes['/World/InstanceA'].valid).toBe(true);
+        expect(checks.nativeInstances.stageTypes['/World/InstanceB'].valid).toBe(true);
+        expect(checks.nativeInstances.meshState.meshCount).toBeGreaterThanOrEqual(2);
+        expect(checks.nativeInstances.meshState.materialNames).toContain('InstanceGreen');
+    }
+
+    if (fixtureName === 'local-point-instancer-usda') {
+        expect(checks.pointInstancer.stageTypes['/World/Scatter'].typeName).toBe('PointInstancer');
+        expect(checks.pointInstancer.stageTypes['/World/Prototypes/CubeProto'].typeName).toBe('Cube');
+        expect(checks.pointInstancer.stageTypes['/World/Prototypes/SphereProto'].typeName).toBe('Sphere');
+        expect(checks.pointInstancer.geometryState.meshCount).toBeGreaterThan(0);
+        expect(checks.pointInstancer.geometryState.maxPositionCount).toBeGreaterThan(0);
+    }
+
+    if (fixtureName === 'local-reference-override-usda') {
+        expect(checks.referenceOverride.stageTypes['/World/Referenced'].valid).toBe(true);
+        expect(checks.referenceOverride.stageTypes['/World/Referenced/Shape'].typeName).toBe('Cube');
+        expect(checks.referenceOverride.meshState.meshCount).toBe(1);
+        expect(checks.referenceOverride.meshState.materialNames).toContain('OverrideBlue');
+        expect(checks.referenceOverride.geometryState.maxAbsBound).toBeGreaterThan(0.6);
+    }
+
+    if (fixtureName === 'local-inherits-specializes-usda') {
+        expect(checks.inheritsSpecializes.stageTypes['/World/InheritedCube/Shape'].typeName).toBe('Cube');
+        expect(checks.inheritsSpecializes.stageTypes['/World/SpecializedBall/Shape'].typeName).toBe('Sphere');
+        expect(checks.inheritsSpecializes.meshState.meshCount).toBe(2);
+        expect(checks.inheritsSpecializes.meshState.materialNames).toContain('ClassWarm');
+        expect(checks.inheritsSpecializes.meshState.materialNames).toContain('SpecialCool');
+    }
+
+    if (fixtureName === 'local-collection-binding-usda') {
+        expect(checks.collectionBinding.meshCount).toBe(2);
+        expect(checks.collectionBinding.materialNames).toContain('CollectionGold');
+        expect(checks.collectionBinding.meshes.every((mesh: any) =>
+            mesh.materials.some((material: any) => material.name === 'CollectionGold'))).toBe(true);
+    }
+
+    if (fixtureName === 'local-visibility-purpose-usda') {
+        expect(checks.visibilityPurpose.authoredState['/World/VisibleRender'].visibility).toBe('inherited');
+        expect(checks.visibilityPurpose.authoredState['/World/InvisibleGuide'].visibility).toBe('invisible');
+        expect(checks.visibilityPurpose.authoredState['/World/InvisibleGuide'].purpose).toBe('guide');
+        expect(checks.visibilityPurpose.meshState.meshCount).toBe(2);
+        expect(checks.visibilityPurpose.meshState.materialNames).toContain('VisibleMat');
+        expect(checks.visibilityPurpose.meshState.materialNames).toContain('');
+    }
+
+    if (fixtureName === 'local-camera-light-usda') {
+        expect(checks.cameraLight.stageTypes['/World/ShotCam'].typeName).toBe('Camera');
+        expect(checks.cameraLight.stageTypes['/World/KeyLight'].typeName).toBe('SphereLight');
+        expect(checks.cameraLight.stageTypes['/World/LitCube'].typeName).toBe('Cube');
+        expect(checks.cameraLight.meshState.meshCount).toBe(1);
+        expect(checks.cameraLight.meshState.materialNames).toContain('Neutral');
+    }
+
+    if (fixtureName === 'local-time-samples-usda') {
+        expect(checks.timeSamples.stageMetadata.startTimeCode).toBe(1);
+        expect(checks.timeSamples.stageMetadata.endTimeCode).toBe(48);
+        expect(checks.timeSamples.before.meshCount).toBe(1);
+        expect(checks.timeSamples.after.meshCount).toBe(1);
+        expect(checks.timeSamples.before.meshes[0].worldPosition[0]).not.toBeCloseTo(
+            checks.timeSamples.after.meshes[0].worldPosition[0],
+            2,
+        );
+    }
 }

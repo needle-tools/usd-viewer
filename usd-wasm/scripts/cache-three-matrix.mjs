@@ -304,6 +304,97 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-native-instances-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "native_instances.usda")}`,
+        files: [{
+            path: "native_instances.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "native_instances.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/native_instances.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-point-instancer-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "point_instancer.usda")}`,
+        files: [{
+            path: "point_instancer.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "point_instancer.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/point_instancer.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-reference-override-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "reference_override.usda")}`,
+        files: [{
+            path: "reference_override.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "reference_override.usda")}`,
+        }, {
+            path: "reference_base.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "reference_base.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/reference_override.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-inherits-specializes-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "inherits_specializes.usda")}`,
+        files: [{
+            path: "inherits_specializes.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "inherits_specializes.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/inherits_specializes.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-collection-binding-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "collection_binding.usda")}`,
+        files: [{
+            path: "collection_binding.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "collection_binding.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/collection_binding.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-visibility-purpose-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "visibility_purpose.usda")}`,
+        files: [{
+            path: "visibility_purpose.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "visibility_purpose.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/visibility_purpose.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-camera-light-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "camera_light.usda")}`,
+        files: [{
+            path: "camera_light.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "camera_light.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/camera_light.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-time-samples-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "time_samples.usda")}`,
+        files: [{
+            path: "time_samples.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "time_samples.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/time_samples.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
     }];
 
     const localAssetFixtures = [

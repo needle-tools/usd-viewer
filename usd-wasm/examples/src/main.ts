@@ -70,6 +70,15 @@ const fixtureUrls = {
   "variants/nested_variants.usda": new URL("../../tests/fixtures/variants/nested_variants.usda", import.meta.url).href,
   "variants/material_binding_overrides.usda": new URL("../../tests/fixtures/variants/material_binding_overrides.usda", import.meta.url).href,
   "subdivision/catmull_clark_cube.usda": new URL("../../tests/fixtures/subdivision/catmull_clark_cube.usda", import.meta.url).href,
+  "usd-concepts/native_instances.usda": new URL("../../tests/fixtures/usd-concepts/native_instances.usda", import.meta.url).href,
+  "usd-concepts/point_instancer.usda": new URL("../../tests/fixtures/usd-concepts/point_instancer.usda", import.meta.url).href,
+  "usd-concepts/reference_override.usda": new URL("../../tests/fixtures/usd-concepts/reference_override.usda", import.meta.url).href,
+  "usd-concepts/reference_base.usda": new URL("../../tests/fixtures/usd-concepts/reference_base.usda", import.meta.url).href,
+  "usd-concepts/inherits_specializes.usda": new URL("../../tests/fixtures/usd-concepts/inherits_specializes.usda", import.meta.url).href,
+  "usd-concepts/collection_binding.usda": new URL("../../tests/fixtures/usd-concepts/collection_binding.usda", import.meta.url).href,
+  "usd-concepts/visibility_purpose.usda": new URL("../../tests/fixtures/usd-concepts/visibility_purpose.usda", import.meta.url).href,
+  "usd-concepts/camera_light.usda": new URL("../../tests/fixtures/usd-concepts/camera_light.usda", import.meta.url).href,
+  "usd-concepts/time_samples.usda": new URL("../../tests/fixtures/usd-concepts/time_samples.usda", import.meta.url).href,
 };
 
 type FixturePath = keyof typeof fixtureUrls;
@@ -101,6 +110,21 @@ const testAssets: TestAsset[] = [
   },
   { group: "Composition", label: "Nested Variants", files: [fixtureFile("variants/nested_variants.usda")] },
   { group: "Composition", label: "Binding Override Variants", files: [fixtureFile("variants/material_binding_overrides.usda")] },
+  { group: "USD Concepts", label: "Native Instances", files: [fixtureFile("usd-concepts/native_instances.usda")] },
+  { group: "USD Concepts", label: "Point Instancer", files: [fixtureFile("usd-concepts/point_instancer.usda")] },
+  {
+    group: "USD Concepts",
+    label: "Reference Override",
+    files: [
+      fixtureFile("usd-concepts/reference_override.usda"),
+      fixtureFile("usd-concepts/reference_base.usda"),
+    ],
+  },
+  { group: "USD Concepts", label: "Inherits + Specializes", files: [fixtureFile("usd-concepts/inherits_specializes.usda")] },
+  { group: "USD Concepts", label: "Collection Binding", files: [fixtureFile("usd-concepts/collection_binding.usda")] },
+  { group: "USD Concepts", label: "Visibility + Purpose", files: [fixtureFile("usd-concepts/visibility_purpose.usda")] },
+  { group: "USD Concepts", label: "Camera + Light", files: [fixtureFile("usd-concepts/camera_light.usda")] },
+  { group: "USD Concepts", label: "Time Samples", files: [fixtureFile("usd-concepts/time_samples.usda")] },
   { group: "Subdivision", label: "Catmull-Clark Cube", files: [fixtureFile("subdivision/catmull_clark_cube.usda")] },
   {
     group: "MaterialX",
