@@ -371,7 +371,7 @@ For `usd-viewer`, we need more than that stock usage. We need:
 - a wasm render delegate / bridge, so Hydra data is handed to JavaScript.
 - the three.js side, so JS turns that Hydra stream into WebGL/WebGPU renderable objects.
 
-That is why this branch reintroduces and modernizes the Autodesk/Needle `hdEmscripten` bridge instead of relying on upstream's stock wasm target alone.
+That is why this branch carries the Needle-maintained `hdEmscripten` Hydra bridge on top of modern upstream OpenUSD instead of relying on upstream's stock wasm target alone.
 
 ## Rebuild: Wasm Hydra Bundle
 

@@ -2,7 +2,7 @@
 
 Date: 2026-06-25
 
-This note records the first modernization pass from the Autodesk/Needle OpenUSD wasm fork toward upstream OpenUSD 26.05.
+This note records the modernization pass that moves `usd-viewer` onto upstream OpenUSD 26.05 while keeping the Needle-maintained three.js Hydra bridge.
 
 ## Branches
 
@@ -23,7 +23,7 @@ These are the source and dependency commits for this checkpoint.
 
 ## Source Provenance
 
-The viewer runtime is based on the Autodesk/Needle wasm Hydra path. The existing README points at Autodesk's `adsk/feature/webgpu` branch and originally expected these generated files:
+The viewer runtime now uses the Needle-maintained wasm Hydra bridge carried in the OpenUSD tree. Older versions of this project expected these generated files:
 
 - `emHdBindings.js`
 - `emHdBindings.wasm`
@@ -32,7 +32,7 @@ The viewer runtime is based on the Autodesk/Needle wasm Hydra path. The existing
 
 The viewer code imports these in `usd-wasm/src/bindings/index.js` and constructs `HdWebSyncDriver` in `usd-wasm/src/create.three.js`.
 
-Upstream OpenUSD 26.05 does not generate `emHdBindings.*`, and it no longer contains the Autodesk/Needle `hdEmscripten` layer that exposed Hydra to JavaScript. This branch ports that bridge forward as `pxr/usdImaging/hdEmscripten` and emits the modern sidecars used by the viewer:
+Upstream OpenUSD 26.05 does not generate `emHdBindings.*` by itself. This branch carries the Needle `pxr/usdImaging/hdEmscripten` bridge forward and emits the modern sidecars used by the viewer:
 
 - `emHdBindings.js`
 - `emHdBindings.wasm`
