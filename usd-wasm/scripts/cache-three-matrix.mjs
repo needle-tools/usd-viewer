@@ -407,6 +407,23 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
     }, {
+        name: "local-preview-separate-metal-rough-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "preview_separate_metal_rough.usda")}`,
+        files: [{
+            path: "usd-concepts/preview_separate_metal_rough.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "preview_separate_metal_rough.usda")}`,
+        }, {
+            path: "materialx/textures/brick_roughness.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_roughness.jpg")}`,
+        }, {
+            path: "materialx/textures/brick_mask.jpg",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "materialx", "textures", "brick_mask.jpg")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/preview_separate_metal_rough.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
         name: "local-usdz-nested-material",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usdz-nested-material.usdz")}`,
         source: "usd-wasm/tests/fixtures/usdz-nested-material.usdz",

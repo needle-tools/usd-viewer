@@ -855,7 +855,7 @@ class HydraMaterial {
       }
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
-        const textureFileName = nodeIn.resolvedPath || "";
+        const textureFileName = this._resolveMaterialTexturePath(nodeIn.resolvedPath || nodeIn.file);
         if (!textureFileName) {
           if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
           this._material[materialParameterMapName] = undefined;
@@ -919,7 +919,7 @@ class HydraMaterial {
           if (materialParameterMapName == 'metalnessMap' && channel != 'b') {
             targetSwizzle = '01' + channel + '1';
           }
-          if (materialParameterMapName == 'occlusionMap' && channel != 'r') {
+          if (materialParameterMapName == 'aoMap' && channel != 'r') {
             targetSwizzle = channel + '111';
           }
           if (materialParameterMapName == 'opacityMap' && channel != 'a') {
@@ -1093,6 +1093,127 @@ class HydraMaterial {
     }
   }
 
+  static _imageChannelData(image, width, height, channel) {
+    if (!image) return null;
+
+    if ((typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement) ||
+      (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) ||
+      (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap)) {
+
+      const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, width, height);
+
+      const imageData = context.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      const channelData = new Uint8ClampedArray(width * height);
+      for (let i = 0, j = channel; i < channelData.length; i++, j += 4) {
+        channelData[i] = data[j];
+      }
+      return channelData;
+    }
+
+    return null;
+  }
+
+  static _packMetallicRoughnessMap({ aoMap, roughnessMap, metalnessMap }) {
+    const sourceTexture = roughnessMap || metalnessMap || aoMap;
+    const sourceImage = sourceTexture?.image;
+    const width = sourceImage?.width;
+    const height = sourceImage?.height;
+    if (!sourceTexture || !sourceImage || !width || !height) {
+      return null;
+    }
+
+    const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    const imageData = context.createImageData(width, height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+      data[i + 3] = 255;
+    }
+
+    const ao = HydraMaterial._imageChannelData(aoMap?.image, width, height, 0);
+    const roughness = HydraMaterial._imageChannelData(roughnessMap?.image, width, height, 1);
+    const metalness = HydraMaterial._imageChannelData(metalnessMap?.image, width, height, 2);
+
+    for (let i = 0, j = 0; i < width * height; i++, j += 4) {
+      if (ao) data[j] = ao[i];
+      if (roughness) data[j + 1] = roughness[i];
+      if (metalness) data[j + 2] = metalness[i];
+    }
+
+    context.putImageData(imageData, 0, 0);
+
+    const packedTexture = sourceTexture.clone();
+    packedTexture.image = canvas;
+    packedTexture.format = RGBAFormat;
+    packedTexture.colorSpace = LinearSRGBColorSpace;
+    packedTexture.name = [
+      "packed-orm",
+      aoMap?.name || "ao:1",
+      roughnessMap?.name || "roughness:1",
+      metalnessMap?.name || "metalness:1",
+    ].join("|");
+    packedTexture.needsUpdate = true;
+    return packedTexture;
+  }
+
+  _packMaterialTextureChannels({ haveOcclusionMap, haveRoughnessMap, haveMetalnessMap }) {
+    if (!haveRoughnessMap && !haveMetalnessMap) return;
+
+    const aoMap = this._material.aoMap;
+    const roughnessMap = this._material.roughnessMap;
+    const metalnessMap = this._material.metalnessMap;
+    const existingPackedMap = [aoMap, roughnessMap, metalnessMap]
+      .find(texture => texture?.name?.startsWith?.("packed-orm"));
+    if (existingPackedMap) {
+      if (haveOcclusionMap) this._material.aoMap = existingPackedMap;
+      this._material.roughnessMap = existingPackedMap;
+      this._material.metalnessMap = existingPackedMap;
+      return;
+    }
+
+    if ((haveOcclusionMap && !aoMap) || (haveRoughnessMap && !roughnessMap) || (haveMetalnessMap && !metalnessMap)) {
+      console.error("Something went wrong with the texture promise; a material texture was authored but not loaded.", {
+        haveOcclusionMap,
+        haveRoughnessMap,
+        haveMetalnessMap,
+        aoMap,
+        roughnessMap,
+        metalnessMap,
+      });
+      return;
+    }
+
+    const packedMap = HydraMaterial._packMetallicRoughnessMap({ aoMap, roughnessMap, metalnessMap });
+    if (!packedMap) {
+      console.error("Something went wrong while packing metallic/roughness textures.", {
+        aoMap,
+        roughnessMap,
+        metalnessMap,
+      });
+      return;
+    }
+
+    if (haveOcclusionMap) this._material.aoMap = packedMap;
+    this._material.roughnessMap = packedMap;
+    this._material.metalnessMap = packedMap;
+
+    for (const texture of new Set([aoMap, roughnessMap, metalnessMap])) {
+      if (texture && texture !== packedMap) texture.dispose();
+    }
+  }
+
   assignProperty(mainMaterial, parameterName) {
     const materialParameterName = HydraMaterial.usdPreviewToMeshPhysicalMap[parameterName];
     if (materialParameterName === undefined) {
@@ -1197,21 +1318,7 @@ class HydraMaterial {
       }
       await Promise.all(texturePromises);
 
-      // Need to sanitize metallic/roughness/occlusion maps - if we want to export glTF they need to be identical right now
-      if (haveRoughnessMap && !haveMetalnessMap) {
-        if (debugMaterials) console.log(this._material.roughnessMap, this._material);
-        this._material.metalnessMap = this._material.roughnessMap;
-        if (this._material.metalnessMap) this._material.metalnessMap.needsUpdate = true;
-        else console.error("Something went wrong with the texture promise; haveRoughnessMap is true but no roughnessMap was loaded.");
-      }
-      else if (haveMetalnessMap && !haveRoughnessMap) {
-        this._material.roughnessMap = this._material.metalnessMap;
-        if (this._material.roughnessMap) this._material.roughnessMap.needsUpdate = true;
-        else console.error("Something went wrong with the texture promise; haveMetalnessMap is true but no metalnessMap was loaded.");
-      }
-      else if (haveMetalnessMap && haveRoughnessMap) {
-        console.warn("TODO: [Three USD] separate metalness and roughness textures need to be merged");
-      }
+      this._packMaterialTextureChannels({ haveOcclusionMap, haveRoughnessMap, haveMetalnessMap });
     }
 
     // Assign material properties
