@@ -23,6 +23,7 @@
     "webgl"
   ],
   "homepage": "https://needle.tools",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "author": {
     "name": "Needle",
     "email": "hi@needle.tools",
