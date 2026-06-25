@@ -535,6 +535,18 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     margin-bottom: 0;
 }
 
+.runtime-info {
+    padding: 10px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: var(--color-info);
+    color: var(--color-text);
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
 .dialog-content a {
     color: var(--color-link);
     text-decoration: none;

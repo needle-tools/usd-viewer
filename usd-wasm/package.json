@@ -15,6 +15,11 @@
       "require": "./src/plugins/index.cjs"
     }
   },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "needle",
     "usd",

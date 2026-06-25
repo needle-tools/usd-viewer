@@ -10,6 +10,25 @@ import './usd/bindings/emHdBindings.js';
 const SHOW_OPENUSD_TEST_ASSETS = false;
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
+function formatOpenUsdBuildInfo(buildInfo) {
+  const modules = Object.entries(buildInfo.modules ?? {})
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name)
+    .join(", ");
+  const sha = buildInfo.openusd?.gitSha ? buildInfo.openusd.gitSha.slice(0, 8) : "unknown";
+  return `OpenUSD ${buildInfo.openusd?.version ?? "unknown"} (${sha}) - ${modules}`;
+}
+
+function updateOpenUsdBuildInfo(Usd) {
+  const element = document.getElementById("openusd-build-info");
+  if (!element || typeof Usd?.GetBuildInfoJson !== "function") return;
+  try {
+    element.textContent = formatOpenUsdBuildInfo(JSON.parse(Usd.GetBuildInfoJson()));
+  } catch (error) {
+    console.warn("Failed to read OpenUSD build info", error);
+  }
+}
+
 // About dialog functionality - runs when module is loaded
 document.addEventListener("DOMContentLoaded", function() {
   const aboutLink = document.getElementById('about-link');
@@ -271,6 +290,7 @@ try {
     },
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
+    updateOpenUsdBuildInfo(USD);
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
     animate();

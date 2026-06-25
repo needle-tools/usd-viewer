@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 const bindingsDir = resolve("src/bindings");
 const jsPath = resolve(bindingsDir, "emHdBindings.js");
 const wasmPath = resolve(bindingsDir, "emHdBindings.wasm");
+const buildInfoPath = resolve(bindingsDir, "openusd-build-info.json");
 const require = createRequire(import.meta.url);
 const tempModuleDirs = new Set();
 
@@ -44,6 +45,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         const [js, wasm] = await Promise.all([
             stat(jsPath),
             stat(wasmPath),
+            stat(buildInfoPath),
         ]);
 
         assert.ok(js.size > 100_000, "emHdBindings.js should be a generated Emscripten bundle");
@@ -94,6 +96,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.OpenStage, "function");
         assert.equal(typeof USD.ReleaseStage, "function");
         assert.equal(typeof USD.CreateUsdzPackage, "function");
+        assert.equal(typeof USD.GetBuildInfoJson, "function");
         assert.equal(typeof USD.ReadFile, "function");
         assert.equal(typeof USD.Stage.prototype.TraverseAll, "function");
         assert.equal(typeof USD.Stage.prototype.GetLayerStack, "function");
@@ -133,6 +136,19 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.FS_rmdir, "function");
         assert.equal(typeof USD.FS_unlink, "function");
         assert.equal(typeof USD.ready?.then, "function");
+
+        const buildInfo = JSON.parse(USD.GetBuildInfoJson());
+        const shippedBuildInfo = JSON.parse(await readFile(buildInfoPath, "utf8"));
+        assert.deepEqual(buildInfo, shippedBuildInfo);
+        assert.equal(buildInfo.openusd.version, "0.26.5");
+        assert.equal(buildInfo.openusd.gitDirty, false);
+        assert.equal(buildInfo.modules.usdImaging, true);
+        assert.equal(buildInfo.modules.hydraBridge, true);
+        assert.equal(buildInfo.modules.materialX, true);
+        assert.equal(buildInfo.modules.openSubdiv, true);
+        assert.equal(buildInfo.modules.usdGltf, true);
+        assert.match(buildInfo.toolchain.emscripten, /Emscripten/);
+        assert.equal(buildInfo.dependencies.openSubdiv.version, "3.6.1");
 
         const usda = `#usda 1.0
 (

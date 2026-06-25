@@ -24,6 +24,7 @@ declare type USD = {
     OpenStage: (path: string) => MaybePromise<USDStage>,
     ReleaseStage: (stage: USDStage) => boolean,
     CreateUsdzPackage: (assetPath: string, usdzPath: string) => MaybePromise<boolean>,
+    GetBuildInfoJson: () => string,
     ReadFile: (path: string) => Uint8Array,
     HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
     flushPendingDeletes: () => void,
@@ -34,6 +35,47 @@ declare type USD = {
     stdin: any;
     stdout: any;
 };
+
+export type OpenUsdBuildInfo = {
+    schema: 1,
+    openusd: {
+        version: string,
+        pxrVersion: number,
+        gitSha: string,
+        gitDirty: boolean,
+    },
+    toolchain: {
+        emscripten: string,
+        cxxCompiler: string,
+        cmakeBuildType: string,
+    },
+    modules: {
+        usdImaging: boolean,
+        hydraBridge: boolean,
+        materialX: boolean,
+        openSubdiv: boolean,
+        usdGltf: boolean,
+    },
+    dependencies: {
+        openSubdiv: {
+            version: string,
+        },
+        materialX: {
+            prefix: string,
+            gitSha: string,
+            gitDirty: boolean,
+        },
+        usdGltf: {
+            prefix: string,
+            gitSha: string,
+            gitDirty: boolean,
+        },
+        emsdk: {
+            gitSha: string,
+            gitDirty: boolean,
+        },
+    },
+}
 
 // Generated in OpenUSD from pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json.
 // Keep this core USD surface in sync with the generated usd-core-bindings.d.ts.
@@ -327,5 +369,7 @@ export type GetUsdModuleOptions = {
  * ```
  */
 export function getUsdModule(opts?: GetUsdModuleOptions): Promise<USD>;
+export function getOpenUsdBuildInfo(USD: USD): OpenUsdBuildInfo;
+export function loadOpenUsdBuildInfo(opts?: GetUsdModuleOptions): Promise<OpenUsdBuildInfo>;
 
 export type USDRoot = {}

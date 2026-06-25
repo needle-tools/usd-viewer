@@ -86,6 +86,7 @@ Files:
 
 - `emHdBindings.js`
 - `emHdBindings.wasm`
+- `openusd-build-info.json`
 
 Modern Emscripten does not emit `emHdBindings.worker.js` for this build, so the old worker import was removed from `usd-wasm/src/bindings/index.js`.
 
@@ -94,7 +95,14 @@ Installed source bundle:
 ```sh
 /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin
 /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/usd-core-bindings.d.ts
+/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/openusd-build-info.json
 ```
+
+The checked-in runtime exposes the same provenance at runtime via
+`USD.GetBuildInfoJson()` and the package helper `getOpenUsdBuildInfo(USD)`.
+The current bundle reports OpenUSD `091e1c02196d7bbda8b536ec745b36824da71589`
+with `usdImaging`, `hydraBridge`, `materialX`, `openSubdiv`, and `usdGltf`
+enabled.
 
 ## Done Criteria For This Modernization
 
@@ -467,6 +475,7 @@ cd /Users/herbst/git/usd-viewer
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.wasm usd-wasm/src/bindings/
 cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/usd-core-bindings.d.ts usd-wasm/src/types/
+cp /Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/share/hdEmscripten/openusd-build-info.json usd-wasm/src/bindings/
 rm -f usd-wasm/src/bindings/emHdBindings.data usd-wasm/src/bindings/emHdBindings.worker.js
 ```
 

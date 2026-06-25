@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "openusd": {
+    "version": "0.26.5",
+    "pxrVersion": 2605,
+    "gitSha": "091e1c02196d7bbda8b536ec745b36824da71589",
+    "gitDirty": false
+  },
+  "toolchain": {
+    "emscripten": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23 (7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed)",
+    "cxxCompiler": "/Users/herbst/git/emsdk/upstream/emscripten/em++",
+    "cmakeBuildType": "Release"
+  },
+  "modules": {
+    "usdImaging": true,
+    "hydraBridge": true,
+    "materialX": true,
+    "openSubdiv": true,
+    "usdGltf": true
+  },
+  "dependencies": {
+    "openSubdiv": {
+      "version": "3.6.1"
+    },
+    "materialX": {
+      "prefix": "/Users/herbst/MaterialX-1.39.5-wasm-openusd/lib/cmake/MaterialX",
+      "gitSha": "ab218c56f016a9a2d398e8d306f3aeb439ae9e9e",
+      "gitDirty": false
+    },
+    "usdGltf": {
+      "prefix": "/Users/herbst/USD-Fileformat-plugins-2026.03-wasm-probe",
+      "gitSha": "ca3c2de5553648ae280077ddde079b6f3362a830",
+      "gitDirty": false
+    },
+    "emsdk": {
+      "gitSha": "af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f",
+      "gitDirty": false
+    }
+  }
+}

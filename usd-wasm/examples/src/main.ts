@@ -1,5 +1,5 @@
 
-import { getUsdModule, createThreeHydra, USD, NeedleThreeHydraHandle } from '@needle-tools/usd';
+import { getUsdModule, getOpenUsdBuildInfo, createThreeHydra, type USD, type NeedleThreeHydraHandle, type OpenUsdBuildInfo } from '@needle-tools/usd';
 import { loadEnvMap, run } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 import { mount } from 'svelte';
@@ -39,6 +39,7 @@ let hydraDelegate: NeedleThreeHydraHandle | null;
 let scene: Scene;
 let usdContent: Object3D;
 let usd: USD;
+let openUsdBuildInfo: OpenUsdBuildInfo | null = null;
 let app: { fitCamera: () => void };
 let statusElement: HTMLElement | null = null;
 let variantControlsElement: HTMLElement | null = null;
@@ -145,6 +146,7 @@ getUsdModule({
   scene.backgroundIntensity = 0.2;
 
   usd = USD;
+  openUsdBuildInfo = getOpenUsdBuildInfo(USD);
 
   /*
     usdContent = new Object3D();
@@ -208,6 +210,19 @@ getUsdModule({
 function createControls() {
   const div = document.createElement("div");
   div.className = "test-buttons";
+
+  if (openUsdBuildInfo) {
+    const runtimeSection = document.createElement("section");
+    runtimeSection.className = "control-group";
+    const runtimeHeading = document.createElement("h2");
+    runtimeHeading.innerText = "Runtime";
+    runtimeSection.appendChild(runtimeHeading);
+    const runtimeInfo = document.createElement("p");
+    runtimeInfo.className = "runtime-info";
+    runtimeInfo.innerText = formatOpenUsdBuildInfo(openUsdBuildInfo);
+    runtimeSection.appendChild(runtimeInfo);
+    div.appendChild(runtimeSection);
+  }
 
   const grouped = new Map<string, TestAsset[]>();
   for (const asset of testAssets) {
@@ -641,6 +656,14 @@ function formatBytes(value: number) {
   if (value < 1024) return `${Math.round(value)} B`;
   if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB`;
   return `${Math.round(value / 1024 / 102.4) / 10} MB`;
+}
+
+function formatOpenUsdBuildInfo(buildInfo: OpenUsdBuildInfo) {
+  const modules = Object.entries(buildInfo.modules)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name)
+    .join(", ");
+  return `OpenUSD ${buildInfo.openusd.version} (${buildInfo.openusd.gitSha.slice(0, 8)}) - ${modules}`;
 }
 
 window.loadFile = loadFile;
