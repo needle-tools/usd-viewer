@@ -132,6 +132,7 @@ async function runSuite(THREE, renderer) {
         hdWebSyncDriver: typeof USD.HdWebSyncDriver,
         getStage: typeof USD.HdWebSyncDriver?.prototype?.GetStage,
         repopulate: typeof USD.HdWebSyncDriver?.prototype?.Repopulate,
+        setIncludedPurposes: typeof USD.HdWebSyncDriver?.prototype?.SetIncludedPurposes,
         fsCreateDataFile: typeof USD.FS_createDataFile,
         fsCreatePath: typeof USD.FS_createPath,
         fsAnalyzePath: typeof USD.FS_analyzePath,
@@ -171,6 +172,7 @@ async function runSuite(THREE, renderer) {
     const handleMethods = {
         update: typeof handle?.update,
         repopulate: typeof handle?.repopulate,
+        setIncludedPurposes: typeof handle?.setIncludedPurposes,
         materialsReady: typeof handle?.materialsReady,
         dispose: typeof handle?.dispose,
     };
@@ -326,6 +328,10 @@ async function runFixtureChecks(handle, usdRoot, config) {
                 "/World/GuidePurpose": ["purpose"],
             }),
         };
+        await handle.setIncludedPurposes?.(["default", "render", "proxy", "guide"]);
+        await handle.materialsReady?.();
+        handle.update?.(0);
+        checks.purposeRenderIntent.afterAllPurposes = collectMeshMaterialState(usdRoot);
     }
 
     if (config.fixtureName === "local-camera-light-usda") {

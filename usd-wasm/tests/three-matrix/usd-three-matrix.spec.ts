@@ -169,6 +169,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     expect(suite.usd.bindingApi.hdWebSyncDriver).toBe('function');
     expect(suite.usd.bindingApi.getStage).toBe('function');
     expect(suite.usd.bindingApi.repopulate).toBe('function');
+    expect(suite.usd.bindingApi.setIncludedPurposes).toBe('function');
     expect(suite.usd.bindingApi.fsCreateDataFile).toBe('function');
     expect(suite.usd.bindingApi.fsCreatePath).toBe('function');
     expect(suite.usd.bindingApi.fsAnalyzePath).toBe('function');
@@ -192,6 +193,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     }
     expect(suite.usd.handleMethods.update).toBe('function');
     expect(suite.usd.handleMethods.repopulate).toBe('function');
+    expect(suite.usd.handleMethods.setIncludedPurposes).toBe('function');
     expect(suite.usd.handleMethods.materialsReady).toBe('function');
     assertFixtureChecks(matrixPage.fixtureName, suite.usd.fixtureChecks);
     if (
@@ -315,6 +317,9 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).toContain('RenderMat');
         expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).not.toContain('ProxyMat');
         expect(checks.purposeRenderIntent.meshState.visibleMaterialNames).not.toContain('GuideMat');
+        expect(checks.purposeRenderIntent.afterAllPurposes.visibleMeshCount).toBe(4);
+        expect(checks.purposeRenderIntent.afterAllPurposes.visibleMaterialNames).toContain('ProxyMat');
+        expect(checks.purposeRenderIntent.afterAllPurposes.visibleMaterialNames).toContain('GuideMat');
     }
 
     if (fixtureName === 'local-camera-light-usda') {

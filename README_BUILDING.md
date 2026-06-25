@@ -54,7 +54,7 @@ Working now:
 - OpenSubdiv is built for wasm and linked into the Hydra bundle; the matrix includes a Catmull-Clark cube fixture that verifies the runtime geometry is refined beyond the authored 8-point control cage.
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
-- Hydra visibility and purpose/render-intent support is bridged from USD imaging. The default viewer pass includes USD `default` and `render` purposes; `proxy`, `guide`, and invisible rprims stay hidden unless a caller asks for those purposes through `createThreeHydra({ includedPurposes })`.
+- Hydra visibility and purpose/render-intent support is bridged from USD imaging. The initial viewer pass includes USD `default` and `render` purposes; `proxy`, `guide`, and invisible rprims stay hidden unless a caller switches the view through `handle.setIncludedPurposes(...)` or provides an initial `createThreeHydra({ includedPurposes })` value before first draw.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
 - Async USD APIs that can cross resolver fetches are registered with Embind `async()`, including `OpenStage`, `CreateUsdzPackage`, `Prim.Load`, `Prim.Unload`, `Prim.SetVariantSelection`, `HdWebSyncDriver.Draw`, and `HdWebSyncDriver.Repopulate`.
@@ -225,8 +225,10 @@ switches from one `Painted` mesh to one `Metal` mesh, `nested_variants.usda`
 switches shape/finish without double-rendering stale geometry, CesiumMan USDZ
 has at least one textured material, `visibility_purpose.usda` keeps invisible
 geometry hidden, `purpose_render_intent.usda` shows only `default`/`render`
-purpose meshes by default, and `usdz-nested-material.usdz` resolves the internal
-texture on a material authored in a nested package layer.
+purpose meshes by default and then reveals `proxy`/`guide` after a runtime
+`handle.setIncludedPurposes(["default", "render", "proxy", "guide"])` switch,
+and `usdz-nested-material.usdz` resolves the internal texture on a material
+authored in a nested package layer.
 
 ## Headed Viewer Regression Pass
 

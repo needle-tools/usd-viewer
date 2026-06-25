@@ -307,6 +307,14 @@ export async function createThreeHydra(config) {
             draw();
         },
         refresh: () => draw(),
+        setIncludedPurposes: async (includedPurposes) => {
+            if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {
+                return Promise.resolve();
+            }
+            await drawPromise;
+            driver.SetIncludedPurposes(includedPurposes);
+            return draw(true);
+        },
         editStage: async (callback) => {
             if (disposed || driver.isDeleted()) {
                 return undefined;
