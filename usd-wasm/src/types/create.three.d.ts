@@ -64,6 +64,9 @@ export declare type NeedleThreeHydraHandle = {
     /** Redraw the current USD stage after imperative stage edits.
      */
     refresh: () => Promise<void>,
+    /** Change the visible USD geometry purposes for the current Hydra view.
+     */
+    setIncludedPurposes: (includedPurposes: Array<"default" | "render" | "proxy" | "guide" | string>) => Promise<void>,
     /** Rebuild Hydra population for the current USD stage after composition edits.
      */
     repopulate: () => Promise<void>,
