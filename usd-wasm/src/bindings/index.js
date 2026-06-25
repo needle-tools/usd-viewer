@@ -127,3 +127,19 @@ export async function getUsdModule(opts) {
         },
     });
 }
+
+/**
+ * @param {import("..").USD} USD
+ * @returns {import("..").OpenUsdBuildInfo}
+ */
+export function getOpenUsdBuildInfo(USD) {
+    return JSON.parse(USD.GetBuildInfoJson());
+}
+
+/**
+ * @param {undefined | import("..").GetUsdModuleOptions} opts
+ * @returns {Promise<import("..").OpenUsdBuildInfo>}
+ */
+export async function loadOpenUsdBuildInfo(opts) {
+    return getOpenUsdBuildInfo(await getUsdModule(opts));
+}

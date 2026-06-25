@@ -476,9 +476,9 @@ Concise checklist from the current modernization branch to a new `usd-viewer` de
    Check with `git status --short`, `git rev-parse HEAD`, and `./herbst/smoke/wasm-hydra-bindings-node.sh`.
 
 2. `OpenUSD`: rebuild the MaterialX/OpenSubdiv/Adobe `usdGltf` Hydra wasm bundle from scripts, not manual copy steps.
-   Check that `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` are regenerated and that the OpenUSD smoke scripts pass.
+   Check that `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js`, `emHdBindings.wasm`, `share/hdEmscripten/usd-core-bindings.d.ts`, and `share/hdEmscripten/openusd-build-info.json` are regenerated and that the OpenUSD smoke scripts pass.
 
-3. `usd-viewer`: update the checked-in wasm sidecars and generated TypeScript declarations under `usd-wasm/src/bindings`.
+3. `usd-viewer`: update the checked-in wasm sidecars, build provenance JSON, and generated TypeScript declarations under `usd-wasm/src/bindings`.
    Check with `cd usd-wasm && npm run test:bindings` plus `npm --prefix examples run build`.
 
 4. `needle-engine-dev/modules/needle-engine/modules/needle-tools/materialx`: publish the local `@needle-tools/materialx` fixes used by the Hydra MaterialX path.
