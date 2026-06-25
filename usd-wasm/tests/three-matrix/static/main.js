@@ -252,6 +252,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
         config.fixtureName === "local-materialx-procedural-brick-usda"
     ) {
         checks.materialXTextures = collectMeshMaterialState(usdRoot);
+        checks.materialXPanelGeometry = collectMeshGeometryState(usdRoot);
     }
 
     if (config.fixtureName === "local-catmull-clark-subdivision-usda") {

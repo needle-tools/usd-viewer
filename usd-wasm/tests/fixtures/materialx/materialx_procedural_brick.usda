@@ -10,6 +10,7 @@ def Xform "World"
     )
     {
         rel material:binding = </Looks/MaterialX/Materials/M_BrickPattern>
+        uniform token subdivisionScheme = "none"
         int[] faceVertexCounts = [3, 3]
         int[] faceVertexIndices = [0, 1, 2, 0, 2, 3]
         point3f[] points = [(-1.4, 0, -0.85), (1.4, 0, -0.85), (1.4, 0, 0.85), (-1.4, 0, 0.85)]
