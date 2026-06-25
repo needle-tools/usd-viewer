@@ -44,6 +44,8 @@ let statusElement: HTMLElement | null = null;
 let variantControlsElement: HTMLElement | null = null;
 let lastApiKind: ApiSceneKind = "preview";
 const debugUsd = false;
+const showFixtureLibrarySamples = false;
+const showApiConstructedSamples = false;
 
 type TestFile = { path: string, url: string };
 type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
@@ -85,7 +87,7 @@ const testAssets: TestAsset[] = [
   { group: "Regressions", label: "Carbon Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
   { group: "Regressions", label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
   { group: "Regressions", label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
-  ...(testAssetLibrary as TestAssetLibraryEntry[]).map(catalogAsset),
+  ...(showFixtureLibrarySamples ? (testAssetLibrary as TestAssetLibraryEntry[]).map(catalogAsset) : []),
 ];
 
 getUsdModule({
@@ -232,28 +234,30 @@ function createControls() {
     div.appendChild(section);
   }
 
-  const apiSection = document.createElement("section");
-  apiSection.className = "control-group";
-  const apiHeading = document.createElement("h2");
-  apiHeading.innerText = "API Constructed";
-  apiSection.appendChild(apiHeading);
-  const apiPreview = document.createElement("button");
-  apiPreview.innerText = "Preview Material";
-  apiPreview.onclick = () => loadApiScene("preview");
-  apiSection.appendChild(apiPreview);
-  const apiAnimated = document.createElement("button");
-  apiAnimated.innerText = "Animated Color";
-  apiAnimated.onclick = () => loadApiScene("animated");
-  apiSection.appendChild(apiAnimated);
-  const apiVariantA = document.createElement("button");
-  apiVariantA.innerText = "Variant Sphere";
-  apiVariantA.onclick = () => loadApiScene("variant-sphere");
-  apiSection.appendChild(apiVariantA);
-  const apiVariantB = document.createElement("button");
-  apiVariantB.innerText = "Variant Cube";
-  apiVariantB.onclick = () => loadApiScene("variant-cube");
-  apiSection.appendChild(apiVariantB);
-  div.appendChild(apiSection);
+  if (showApiConstructedSamples) {
+    const apiSection = document.createElement("section");
+    apiSection.className = "control-group";
+    const apiHeading = document.createElement("h2");
+    apiHeading.innerText = "API Constructed";
+    apiSection.appendChild(apiHeading);
+    const apiPreview = document.createElement("button");
+    apiPreview.innerText = "Preview Material";
+    apiPreview.onclick = () => loadApiScene("preview");
+    apiSection.appendChild(apiPreview);
+    const apiAnimated = document.createElement("button");
+    apiAnimated.innerText = "Animated Color";
+    apiAnimated.onclick = () => loadApiScene("animated");
+    apiSection.appendChild(apiAnimated);
+    const apiVariantA = document.createElement("button");
+    apiVariantA.innerText = "Variant Sphere";
+    apiVariantA.onclick = () => loadApiScene("variant-sphere");
+    apiSection.appendChild(apiVariantA);
+    const apiVariantB = document.createElement("button");
+    apiVariantB.innerText = "Variant Cube";
+    apiVariantB.onclick = () => loadApiScene("variant-cube");
+    apiSection.appendChild(apiVariantB);
+    div.appendChild(apiSection);
+  }
 
   return div;
 }
