@@ -129,9 +129,7 @@
 
   function buildModel(stage: USDStageLike | null, selectedPath: string, revision: number, currentTime: number, selectedPropertyPath: string, selectedLayerIdentifier: string, selectedLayerSource: string): InspectorModel {
     void revision;
-    if (!stage?.GetPseudoRoot || !stage?.GetPrimAtPath) {
-      return { ...emptyModel, stageTime: readStageTime(currentTime) };
-    }
+    if (!stage) return { ...emptyModel, stageTime: readStageTime(currentTime) };
 
     const pseudoRoot = stage.GetPseudoRoot();
     const selectedPrim = selectedPath === "/" ? pseudoRoot : stage.GetPrimAtPath(selectedPath);
@@ -344,8 +342,6 @@
 
   {#if !state.stage}
     <p class="empty">Load a USD stage.</p>
-  {:else if !model.tree}
-    <p class="empty">Inspection API unavailable for this stage.</p>
   {:else}
     <div class="panel-grid">
       <section class="hierarchy">
