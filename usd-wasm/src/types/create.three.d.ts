@@ -3,6 +3,13 @@ import { HdWebSyncDriver, USD, USDStage } from ".."
 
 export declare type HydraFile = File & { path: string };
 
+export declare type NeedleThreeHydraStageMetadata = {
+    upAxis: string,
+    startTimeCode: number,
+    endTimeCode: number,
+    timeCodesPerSecond: number,
+}
+
 export declare type createThreeHydraConfig = {
 
     debug?: boolean,
@@ -66,6 +73,9 @@ export declare type NeedleThreeHydraHandle = {
     /** Returns lightweight delegate diagnostics for smoke tests and debugging.
      */
     diagnostics: () => Record<string, unknown>,
+    /** Returns root-stage metadata captured before the first Hydra draw.
+     */
+    stageMetadata: () => NeedleThreeHydraStageMetadata,
     /** Dispose the Three Hydra delegate.
      */
     dispose: () => Promise<void>,

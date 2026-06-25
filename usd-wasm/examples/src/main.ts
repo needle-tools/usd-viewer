@@ -8,6 +8,14 @@ import { allDroppedFiles } from './fileHandling';
 declare global {
   interface Window {
     loadFile: (url: string, label?: string) => Promise<void>;
+    __usdViewerTestState?: () => {
+      status: string,
+      childCount: number,
+      rootRotationX: number | null,
+      rootMatrixWorld: number[] | null,
+      stageMetadata: ReturnType<NeedleThreeHydraHandle["stageMetadata"]> | null,
+      diagnostics: Record<string, unknown> | null,
+    };
   }
 }
 
@@ -691,3 +699,11 @@ function formatBytes(value: number) {
 }
 
 window.loadFile = loadFile;
+window.__usdViewerTestState = () => ({
+  status: statusElement?.innerText ?? "",
+  childCount: usdContent?.children?.length ?? 0,
+  rootRotationX: usdContent?.rotation?.x ?? null,
+  rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
+  stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
+  diagnostics: hydraDelegate?.diagnostics?.() ?? null,
+});

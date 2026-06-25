@@ -20,6 +20,25 @@ const forbiddenConsolePatterns = [
 ];
 
 test.describe('usd-viewer order-dependent visual regressions', () => {
+    test('Gingerbread up-axis stays stable across USDA/USDC/USDA reload order', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+
+        const states = [];
+        for (const assetName of ['Gingerbread USDA', 'Gingerbread USDC', 'Gingerbread USDA']) {
+            await loadAssetsInOrder(page, [assetName]);
+            states.push(await getViewerState(page));
+        }
+
+        for (const state of states) {
+            expect(state?.stageMetadata?.upAxis).toBe('z');
+            expect(state?.rootRotationX).toBeCloseTo(-Math.PI / 2, 5);
+            expect(state?.childCount).toBeGreaterThan(0);
+        }
+        expect(states[2]?.rootRotationX).toBeCloseTo(states[0]?.rootRotationX ?? 0, 6);
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
     test('MaterialX Texture + Noise remains textured and polygonal after prior asset loads', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page);
@@ -65,6 +84,20 @@ async function waitForFrames(page, frames: number) {
             await new Promise(requestAnimationFrame);
         }
     }, frames);
+}
+
+async function getViewerState(page) {
+    return await page.evaluate(() => {
+        const testWindow = window as Window & {
+            __usdViewerTestState?: () => {
+                status: string;
+                childCount: number;
+                rootRotationX: number | null;
+                stageMetadata: { upAxis: string } | null;
+            };
+        };
+        return testWindow.__usdViewerTestState?.();
+    });
 }
 
 function collectConsoleDiagnostics(page) {
