@@ -17,7 +17,7 @@ Current branches:
 Provenance SHAs for this checkpoint:
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `8bbcc64b03bf4afa0ed46900d27034757c35089d`
+- `OpenUSD`: `4cc9b40d48b7c544d945d3f089cdf2b032bae98e`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`

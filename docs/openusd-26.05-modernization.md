@@ -15,7 +15,7 @@ This note records the first modernization pass from the Autodesk/Needle OpenUSD 
 These are the source and dependency commits for this checkpoint.
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `8bbcc64b03bf4afa0ed46900d27034757c35089d`
+- `OpenUSD`: `4cc9b40d48b7c544d945d3f089cdf2b032bae98e`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
 - `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
@@ -453,7 +453,7 @@ Upstream checks:
 
 Current generated checkpoint:
 
-- OpenUSD commit `8bbcc64b03bf4afa0ed46900d27034757c35089d` includes `pxr/usdImaging/hdEmscripten/bindgen`, the generated authoring/package API checkpoint, `HdWebSyncDriver.Repopulate()`, render-delegate destroy callbacks for JS cleanup, nested package resolver dispatch, stage-relative hdEmscripten browser asset reads, Emscripten 4.0.23 embedded resources, async Embind policies, `Draw`/`Repopulate` async bindings, and the wasm Adobe glTF plugin smoke script.
+- OpenUSD commit `4cc9b40d48b7c544d945d3f089cdf2b032bae98e` includes `pxr/usdImaging/hdEmscripten/bindgen`, the generated authoring/package API checkpoint, `HdWebSyncDriver.Repopulate()`, render-delegate destroy callbacks for JS cleanup, nested package resolver dispatch, stage-relative hdEmscripten browser asset reads, Emscripten 4.0.23 embedded resources, async Embind policies, `Draw`/`Repopulate` async bindings, wasm Adobe glTF plugin smoke script, and the explicit OpenSubdiv source-selection override.
 - `core-bindings.json` allowlists the current core scene API: `SdfLayer`, `UsdStage`, `UsdPrim`, `UsdAttribute`, `UsdRelationship`, vector helpers, and module-level `CreateStage`, `OpenStage`, `ReleaseStage`, `CreateUsdzPackage`, and `ReadFile`.
 - `generate_bindings.py` emits `generated/emHdCoreBindings.inc` for Embind and `generated/usd-core-bindings.d.ts` for TypeScript from that same manifest.
 - The MaterialX wasm build script builds `emHdBindings`, runs the build-system `install` target, and installs `emHdBindings.js`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` into `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
