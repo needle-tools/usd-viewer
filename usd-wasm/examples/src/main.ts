@@ -437,7 +437,7 @@ async function loadFile(url: string, label = url) {
   })
 
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage(), delegate);
+  usdViewState.setStage(await getDelegateStage(delegate), delegate);
 
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
@@ -509,7 +509,7 @@ async function loadFiles(files: TestFile[], label: string) {
   });
 
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage(), delegate);
+  usdViewState.setStage(await getDelegateStage(delegate), delegate);
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
@@ -587,7 +587,7 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
     scene: usdContent,
   });
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage(), delegate);
+  usdViewState.setStage(await getDelegateStage(delegate), delegate);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
@@ -610,6 +610,10 @@ function downloadApiUsdz() {
   anchor.click();
   URL.revokeObjectURL(url);
   status(`Downloaded API USDZ (${lastApiKind})`);
+}
+
+async function getDelegateStage(delegate: NeedleThreeHydraHandle) {
+  return await delegate.driver.GetStage();
 }
 
 function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
