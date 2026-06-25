@@ -1,5 +1,17 @@
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
+import {
+    CameraHelper,
+    Color,
+    DirectionalLight,
+    DirectionalLightHelper,
+    HemisphereLight,
+    Object3D,
+    PerspectiveCamera,
+    PointLight,
+    PointLightHelper,
+    MathUtils,
+} from "three";
 
 /**
  * @param {string} url
@@ -60,6 +72,165 @@ function withTimeout(promise, label, timeoutMs = 15000) {
         }, timeoutMs);
     });
     return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
+}
+
+const lightTypeNames = new Set([
+    "DistantLight",
+    "DiskLight",
+    "DomeLight",
+    "RectLight",
+    "SphereLight",
+    "CylinderLight",
+]);
+
+function vectorToArray(vector) {
+    const values = [];
+    const size = vector?.size?.() ?? 0;
+    for (let i = 0; i < size; i++) {
+        values.push(vector.get(i));
+    }
+    vector?.delete?.();
+    return values;
+}
+
+function getAttributeValueString(prim, name) {
+    const attribute = prim?.GetAttribute?.(name);
+    if (!attribute?.IsValid?.()) {
+        return "";
+    }
+    return String(attribute.GetValueString?.() ?? "");
+}
+
+function parseUsdNumber(value, fallback = 0) {
+    const match = String(value ?? "").match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
+    return match ? Number(match[0]) : fallback;
+}
+
+function parseUsdVector(value, fallback = [0, 0, 0]) {
+    const matches = String(value ?? "").match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+    if (!matches || matches.length < fallback.length) {
+        return [...fallback];
+    }
+    return fallback.map((_, index) => Number(matches[index]));
+}
+
+function getUsdNumberAttribute(prim, name, fallback = 0) {
+    const value = getAttributeValueString(prim, name);
+    return value ? parseUsdNumber(value, fallback) : fallback;
+}
+
+function getUsdVectorAttribute(prim, name, fallback = [0, 0, 0]) {
+    const value = getAttributeValueString(prim, name);
+    return value ? parseUsdVector(value, fallback) : [...fallback];
+}
+
+function applyUsdXformOps(prim, object) {
+    const translate = getUsdVectorAttribute(prim, "xformOp:translate", [0, 0, 0]);
+    object.position.set(translate[0], translate[1], translate[2]);
+
+    const rotate = getUsdVectorAttribute(prim, "xformOp:rotateXYZ", [0, 0, 0]);
+    object.rotation.set(
+        MathUtils.degToRad(rotate[0]),
+        MathUtils.degToRad(rotate[1]),
+        MathUtils.degToRad(rotate[2]),
+        "XYZ",
+    );
+
+    const scale = getUsdVectorAttribute(prim, "xformOp:scale", [1, 1, 1]);
+    object.scale.set(scale[0], scale[1], scale[2]);
+}
+
+function disposeObjectTree(root) {
+    if (!root) return;
+    root.traverse?.((object) => {
+        object.geometry?.dispose?.();
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of materials) {
+            material?.dispose?.();
+        }
+    });
+    root.parent?.remove(root);
+}
+
+function clearObjectChildren(root) {
+    for (const child of [...root.children]) {
+        disposeObjectTree(child);
+    }
+}
+
+function createUsdCameraObject(prim, config) {
+    const focalLength = getUsdNumberAttribute(prim, "focalLength", 50);
+    const verticalAperture = getUsdNumberAttribute(prim, "verticalAperture", 20.955);
+    const horizontalAperture = getUsdNumberAttribute(prim, "horizontalAperture", 20.955);
+    const fov = MathUtils.radToDeg(2 * Math.atan((verticalAperture * 0.5) / focalLength));
+    const aspect = horizontalAperture > 0 && verticalAperture > 0 ? horizontalAperture / verticalAperture : 1;
+    const camera = new PerspectiveCamera(fov, aspect, 0.01, 100000);
+    camera.name = prim.GetName?.() || "UsdCamera";
+    camera.userData.usdPath = prim.GetPath?.() || "";
+    camera.userData.usdTypeName = "Camera";
+    applyUsdXformOps(prim, camera);
+    if (config.showCameraHelpers || config.showScenePrimitiveHelpers) {
+        const helper = new CameraHelper(camera);
+        helper.name = `${camera.name}Helper`;
+        camera.add(helper);
+    }
+    return camera;
+}
+
+function createUsdLightObject(prim, config) {
+    const typeName = prim.GetTypeName?.() || "";
+    const intensity = getUsdNumberAttribute(prim, "inputs:intensity", 1);
+    const colorValue = getUsdVectorAttribute(prim, "inputs:color", [1, 1, 1]);
+    const color = new Color(colorValue[0], colorValue[1], colorValue[2]);
+    let light;
+
+    if (typeName === "DistantLight") {
+        light = new DirectionalLight(color, intensity);
+    } else if (typeName === "DomeLight") {
+        light = new HemisphereLight(color, new Color(0.2, 0.2, 0.2), intensity);
+    } else {
+        light = new PointLight(color, intensity);
+    }
+
+    light.name = prim.GetName?.() || typeName || "UsdLight";
+    light.userData.usdPath = prim.GetPath?.() || "";
+    light.userData.usdTypeName = typeName;
+    applyUsdXformOps(prim, light);
+
+    if (config.showLightHelpers || config.showScenePrimitiveHelpers) {
+        let helper = null;
+        if (light.isDirectionalLight) {
+            helper = new DirectionalLightHelper(light, 0.5, color);
+        } else if (light.isPointLight) {
+            helper = new PointLightHelper(light, getUsdNumberAttribute(prim, "inputs:radius", 0.25), color);
+        }
+        if (helper) {
+            helper.name = `${light.name}Helper`;
+            light.add(helper);
+        }
+    }
+
+    return light;
+}
+
+async function syncUsdScenePrimitives(driver, root, config) {
+    if (!driver?.GetStage || !root) {
+        return;
+    }
+
+    const stage = await waitMaybeAsync(driver.GetStage());
+    const prims = vectorToArray(stage?.TraverseAll?.());
+    clearObjectChildren(root);
+
+    for (const prim of prims) {
+        if (!prim?.IsValid?.()) continue;
+        const typeName = prim.GetTypeName?.() || "";
+        if (typeName === "Camera") {
+            root.add(createUsdCameraObject(prim, config));
+        } else if (lightTypeNames.has(typeName)) {
+            root.add(createUsdLightObject(prim, config));
+        }
+    }
 }
 
 /**
@@ -204,6 +375,10 @@ export async function createThreeHydra(config) {
         USD,
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
+    const scenePrimitiveRoot = new Object3D();
+    scenePrimitiveRoot.name = "__usd_scene_primitives";
+    scenePrimitiveRoot.userData.usdScenePrimitiveRoot = true;
+    delegateConfig.usdRoot.add(scenePrimitiveRoot);
 
     const renderInterface = new threeJsRenderDelegate(delegateConfig);
 
@@ -266,6 +441,7 @@ export async function createThreeHydra(config) {
     stageUpAxis = stageUpAxisToken.charCodeAt(0);
     delegateConfig.usdRoot.rotation.x = stageUpAxisToken === 'z' ? -Math.PI / 2 : 0;
     delegateConfig.usdRoot.updateMatrixWorld(true);
+    await syncUsdScenePrimitives(driver, scenePrimitiveRoot, config);
 
     /** Draw once, after stage metadata has been applied to the root scene. */
     const initialDrawPromise = draw();
@@ -335,6 +511,7 @@ export async function createThreeHydra(config) {
                     return result;
                 }
                 await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
+                await syncUsdScenePrimitives(driver, scenePrimitiveRoot, config);
                 editInFlight = false;
                 await draw(true);
                 return result;
@@ -348,6 +525,7 @@ export async function createThreeHydra(config) {
                 return Promise.resolve();
             }
             await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
+            await syncUsdScenePrimitives(driver, scenePrimitiveRoot, config);
             return draw();
         },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
@@ -370,6 +548,7 @@ export async function createThreeHydra(config) {
             const cleanup = async () => {
                 await renderInterface.waitForMaterialsReady().catch(() => {});
                 renderInterface.dispose();
+                disposeObjectTree(scenePrimitiveRoot);
 
                 // Unlink all generated files and folders in the virtual file system.
                 const unlinkedFiles = new Set();

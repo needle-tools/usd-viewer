@@ -55,6 +55,8 @@ Working now:
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
 - Hydra visibility and purpose/render-intent support is bridged from USD imaging. The initial viewer pass includes USD `default` and `render` purposes; `proxy`, `guide`, and invisible rprims stay hidden unless a caller switches the view through `handle.setIncludedPurposes(...)` or provides an initial `createThreeHydra({ includedPurposes })` value before first draw.
+- Hydra native instances and PointInstancer prims are forwarded through hdEmscripten instancer transforms and represented as Three `InstancedMesh` objects. Prototype meshes remain present for shared geometry/material ownership but are hidden; matrix assertions expand the instance matrices and verify authored instance positions.
+- USD `Camera` and USD Lux light prims are mirrored into Three scene objects from the composed stage. `createThreeHydra({ showScenePrimitiveHelpers: true })`, or the camera/light-specific helper flags, add visible Three helpers for inspection; the default renderer path does not add helper geometry.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
 - Async USD APIs that can cross resolver fetches are registered with Embind `async()`, including `OpenStage`, `CreateUsdzPackage`, `Prim.Load`, `Prim.Unload`, `Prim.SetVariantSelection`, `HdWebSyncDriver.Draw`, and `HdWebSyncDriver.Repopulate`.
@@ -227,8 +229,11 @@ has at least one textured material, `visibility_purpose.usda` keeps invisible
 geometry hidden, `purpose_render_intent.usda` shows only `default`/`render`
 purpose meshes by default and then reveals `proxy`/`guide` after a runtime
 `handle.setIncludedPurposes(["default", "render", "proxy", "guide"])` switch,
-and `usdz-nested-material.usdz` resolves the internal texture on a material
-authored in a nested package layer.
+`native_instances.usda` renders two visible instance placements from one
+`InstancedMesh`, `point_instancer.usda` renders three point-instanced placements
+from hidden prototype meshes, `camera_light.usda` exposes a Three camera and
+light plus opt-in helpers, and `usdz-nested-material.usdz` resolves the internal
+texture on a material authored in a nested package layer.
 
 ## Headed Viewer Regression Pass
 
@@ -294,6 +299,7 @@ Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmul
 Full headed matrix -> 108 cases, 72 passed, 36 unsupported, 0 failed
 Stress sequence DamagedHelmet GLB -> BoomBox USDZ -> CesiumMan USDZ -> MaterialX Texture+Noise -> MaterialX Bricks -> Gingerbread USDA -> Loaded, visible textures correct, no out-of-memory errors
 Order-dependent visual goldens -> MaterialX Texture+Noise and MaterialX Bricks stay flat, textured panels after USDZ Cube, payload, variants, GLB/USDZ, and subdivision warmup loads
+Headed 0.184.0 matrix after instancer/camera-light bridge -> 168 cases, 112 ready, 56 unsupported on old local Three WebGPU modes, 0 failed
 ```
 
 Known caveat from that pass:

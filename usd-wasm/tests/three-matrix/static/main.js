@@ -158,6 +158,7 @@ async function runSuite(THREE, renderer) {
         USD,
         ...hydraFixture,
         scene: usdRoot,
+        showScenePrimitiveHelpers: true,
     });
     setPhase("suite-hydra-update");
     handle?.update?.(0);
@@ -264,6 +265,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
     if (config.fixtureName === "local-native-instances-usda") {
         checks.nativeInstances = {
             meshState: collectMeshMaterialState(usdRoot),
+            worldState: collectMeshWorldState(usdRoot),
             stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
                 "/Prototype/Shape",
                 "/World/InstanceA",
@@ -275,10 +277,12 @@ async function runFixtureChecks(handle, usdRoot, config) {
     if (config.fixtureName === "local-point-instancer-usda") {
         checks.pointInstancer = {
             geometryState: collectMeshGeometryState(usdRoot),
+            meshState: collectMeshMaterialState(usdRoot),
+            worldState: collectMeshWorldState(usdRoot),
             stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
                 "/World/Scatter",
-                "/World/Prototypes/CubeProto",
-                "/World/Prototypes/SphereProto",
+                "/World/Scatter/Prototypes/CubeProto",
+                "/World/Scatter/Prototypes/SphereProto",
             ]),
         };
     }
@@ -337,6 +341,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
     if (config.fixtureName === "local-camera-light-usda") {
         checks.cameraLight = {
             meshState: collectMeshMaterialState(usdRoot),
+            scenePrimitives: collectScenePrimitiveState(usdRoot),
             stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
                 "/World/ShotCam",
                 "/World/KeyLight",
@@ -407,6 +412,10 @@ function collectSceneStats(root) {
     const stats = {
         objects: 0,
         meshes: 0,
+        instancedMeshes: 0,
+        cameras: 0,
+        lights: 0,
+        helpers: 0,
         geometriesWithPosition: 0,
         materials: 0,
         materialXMaterials: 0,
@@ -418,8 +427,13 @@ function collectSceneStats(root) {
 
     root.traverse?.(object => {
         stats.objects++;
+        if (object.isCamera) stats.cameras++;
+        if (object.isLight) stats.lights++;
+        if (object.type?.includes?.("Helper")) stats.helpers++;
+        if (isUsdScenePrimitiveDescendant(object)) return;
         if (!object.isMesh) return;
         stats.meshes++;
+        if (object.isInstancedMesh) stats.instancedMeshes++;
         if (object.geometry?.attributes?.position?.count > 0) {
             stats.geometriesWithPosition++;
         }
@@ -443,11 +457,14 @@ function collectSceneStats(root) {
 function collectMeshMaterialState(root) {
     const meshes = [];
     root.traverse?.(object => {
+        if (isUsdScenePrimitiveDescendant(object)) return;
         if (!object.isMesh) return;
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         meshes.push({
             name: object.name || "",
             visible: Boolean(object.visible),
+            instanced: Boolean(object.isInstancedMesh),
+            instanceCount: object.isInstancedMesh ? object.count : 0,
             renderTag: object.userData?.usdRenderTag || "",
             materials: materials.filter(Boolean).map(material => ({
                 name: material.name || "",
@@ -474,6 +491,7 @@ function collectMeshMaterialState(root) {
 function collectMeshGeometryState(root) {
     const meshes = [];
     root.traverse?.(object => {
+        if (isUsdScenePrimitiveDescendant(object)) return;
         if (!object.isMesh) return;
         meshes.push({
             name: object.name || "",
@@ -500,19 +518,75 @@ function collectMeshWorldState(root) {
     root.updateMatrixWorld?.(true);
     const meshes = [];
     root.traverse?.(object => {
+        if (isUsdScenePrimitiveDescendant(object)) return;
         if (!object.isMesh) return;
+        if (object.isInstancedMesh) {
+            const matrixArray = object.instanceMatrix?.array ?? [];
+            for (let i = 0; i < object.count; i++) {
+                const offset = i * 16;
+                meshes.push({
+                    name: `${object.name || ""}#${i}`,
+                    visible: Boolean(object.visible),
+                    instanced: true,
+                    worldPosition: [
+                        matrixArray[offset + 12] ?? 0,
+                        matrixArray[offset + 13] ?? 0,
+                        matrixArray[offset + 14] ?? 0,
+                    ],
+                });
+            }
+            return;
+        }
         const elements = object.matrixWorld?.elements ?? [];
-        const position = [elements[12] ?? 0, elements[13] ?? 0, elements[14] ?? 0];
         meshes.push({
             name: object.name || "",
-            worldPosition: position,
+            visible: Boolean(object.visible),
+            instanced: false,
+            worldPosition: [elements[12] ?? 0, elements[13] ?? 0, elements[14] ?? 0],
         });
     });
+    const visibleMeshes = meshes.filter(mesh => mesh.visible);
     return {
         meshCount: meshes.length,
+        visibleMeshCount: visibleMeshes.length,
         meshes,
-        maxAbsX: Math.max(0, ...meshes.map(mesh => Math.abs(mesh.worldPosition[0]))),
+        visibleMaxAbsX: Math.max(0, ...visibleMeshes.map(mesh => Math.abs(mesh.worldPosition[0]))),
+        visibleXPositions: visibleMeshes.map(mesh => Number(mesh.worldPosition[0].toFixed(3))).sort((a, b) => a - b),
     };
+}
+
+function isUsdScenePrimitiveDescendant(object) {
+    for (let current = object; current; current = current.parent) {
+        if (current.userData?.usdScenePrimitiveRoot) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function collectScenePrimitiveState(root) {
+    root.updateMatrixWorld?.(true);
+    const cameras = [];
+    const lights = [];
+    const helpers = [];
+    root.traverse?.(object => {
+        const elements = object.matrixWorld?.elements ?? [];
+        const entry = {
+            name: object.name || "",
+            type: object.type || "",
+            usdPath: object.userData?.usdPath || "",
+            usdTypeName: object.userData?.usdTypeName || "",
+            worldPosition: [elements[12] ?? 0, elements[13] ?? 0, elements[14] ?? 0],
+        };
+        if (object.isCamera) cameras.push(entry);
+        if (object.isLight) lights.push({
+            ...entry,
+            intensity: object.intensity ?? null,
+            color: object.color?.getHexString?.() ?? null,
+        });
+        if (object.type?.includes?.("Helper")) helpers.push(entry);
+    });
+    return { cameras, lights, helpers };
 }
 
 function collectStagePrimTypes(stage, paths) {

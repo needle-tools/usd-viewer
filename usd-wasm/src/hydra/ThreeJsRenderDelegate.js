@@ -1,4 +1,4 @@
-import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
+import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, InstancedMesh, Matrix4, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { Experimental_API as MaterialX, MaterialXMaterial } from '@needle-tools/materialx';
@@ -308,6 +308,8 @@ class HydraMesh {
     this._materials = [];
     this._visible = false;
     this._renderTag = 'geometry';
+    this._instancedMesh = null;
+    this._instanceMatrix = new Matrix4();
 
     let material = new MeshPhysicalMaterial({
       side: DoubleSide,
@@ -337,6 +339,7 @@ class HydraMesh {
   dispose() {
     if (!this._mesh) return;
     this._interface.unassignMeshFromMaterials(this._mesh);
+    this._disposeInstancedMesh();
     if (this._mesh.parent) {
       this._mesh.parent.remove(this._mesh);
     }
@@ -392,12 +395,62 @@ class HydraMesh {
     this._mesh.matrixAutoUpdate = false;
   }
 
+  setInstanceTransforms(matrices, count = 0) {
+    if (!this._mesh) return;
+    const instanceCount = Number(count) || 0;
+    if (instanceCount <= 0) {
+      this._disposeInstancedMesh();
+      this._mesh.visible = this._visible && this._renderTag !== 'hidden';
+      return;
+    }
+
+    if (!this._instancedMesh || this._instancedMesh.count !== instanceCount) {
+      this._disposeInstancedMesh();
+      this._instancedMesh = new InstancedMesh(this._geometry, this._mesh.material, instanceCount);
+      this._instancedMesh.name = `${this._mesh.name}_instances`;
+      this._instancedMesh.castShadow = this._mesh.castShadow;
+      this._instancedMesh.receiveShadow = this._mesh.receiveShadow;
+      this._instancedMesh.matrixAutoUpdate = false;
+      this._instancedMesh.userData.usdPath = this._id;
+      this._instancedMesh.userData.usdInstanced = true;
+      this._interface.config.usdRoot.add(this._instancedMesh);
+    }
+
+    this._instancedMesh.material = this._mesh.material;
+    this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
+    this._instancedMesh.userData.usdRenderTag = this._renderTag;
+    this._mesh.visible = false;
+
+    for (let i = 0; i < instanceCount; i++) {
+      const offset = i * 16;
+      this._instanceMatrix.set(...Array.from(matrices.slice(offset, offset + 16)));
+      this._instanceMatrix.transpose();
+      this._instancedMesh.setMatrixAt(i, this._instanceMatrix);
+    }
+    this._instancedMesh.instanceMatrix.needsUpdate = true;
+    this._instancedMesh.computeBoundingBox?.();
+    this._instancedMesh.computeBoundingSphere?.();
+  }
+
+  _disposeInstancedMesh() {
+    if (!this._instancedMesh) return;
+    if (this._instancedMesh.parent) {
+      this._instancedMesh.parent.remove(this._instancedMesh);
+    }
+    this._instancedMesh.dispose?.();
+    this._instancedMesh = null;
+  }
+
   setVisibilityState(visible, renderTag = 'geometry') {
     this._visible = Boolean(visible);
     this._renderTag = String(renderTag || 'geometry');
     if (this._mesh) {
-      this._mesh.visible = this._visible && this._renderTag !== 'hidden';
+      this._mesh.visible = !this._instancedMesh && this._visible && this._renderTag !== 'hidden';
       this._mesh.userData.usdRenderTag = this._renderTag;
+    }
+    if (this._instancedMesh) {
+      this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
+      this._instancedMesh.userData.usdRenderTag = this._renderTag;
     }
   }
 
@@ -574,7 +627,9 @@ class HydraMesh {
   }
 
   commit() {
-    // Nothing to do here. All Three.js resources are already updated during the sync phase.
+    if (this._instancedMesh && this._mesh) {
+      this._instancedMesh.material = this._mesh.material;
+    }
   }
 
 }
