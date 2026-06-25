@@ -10,6 +10,7 @@ def Xform "World"
     )
     {
         rel material:binding = </Looks/MaterialX/Materials/Marble_3D>
+        uniform token subdivisionScheme = "none"
         int[] faceVertexCounts = [3, 3, 3, 3]
         int[] faceVertexIndices = [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]
         point3f[] points = [(-1.2, -0.08, -0.75), (1.2, -0.08, -0.75), (1.2, -0.08, 0.75), (-1.2, -0.08, 0.75), (-1.2, 0.08, -0.75), (1.2, 0.08, -0.75), (1.2, 0.08, 0.75), (-1.2, 0.08, 0.75)]

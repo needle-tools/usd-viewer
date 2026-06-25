@@ -10,6 +10,7 @@ def Xform "World"
     )
     {
         rel material:binding = </Looks/MaterialX/Materials/Texture_Noise>
+        uniform token subdivisionScheme = "none"
         int[] faceVertexCounts = [3, 3]
         int[] faceVertexIndices = [0, 1, 2, 0, 2, 3]
         point3f[] points = [(-1.25, 0, -0.8), (1.25, 0, -0.8), (1.25, 0, 0.8), (-1.25, 0, 0.8)]

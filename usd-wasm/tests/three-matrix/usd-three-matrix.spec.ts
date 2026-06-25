@@ -247,6 +247,8 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
     ) {
         expect(checks.materialXTextures.meshCount).toBeGreaterThan(0);
         expect(checks.materialXTextures.textureCount).toBeGreaterThan(0);
+        expect(checks.materialXPanelGeometry.meshCount).toBe(1);
+        expect(checks.materialXPanelGeometry.maxPositionCount).toBeLessThanOrEqual(8);
     }
 
     if (fixtureName === 'local-catmull-clark-subdivision-usda') {

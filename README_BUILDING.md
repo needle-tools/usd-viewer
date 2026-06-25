@@ -276,6 +276,7 @@ Gingerbread USDA -> Loaded
 Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmull-Clark cube refined to 576 positions from 8 authored control points
 Full headed matrix -> 108 cases, 72 passed, 36 unsupported, 0 failed
 Stress sequence DamagedHelmet GLB -> BoomBox USDZ -> CesiumMan USDZ -> MaterialX Texture+Noise -> MaterialX Bricks -> Gingerbread USDA -> Loaded, visible textures correct, no out-of-memory errors
+Order-dependent visual goldens -> MaterialX Texture+Noise and MaterialX Bricks stay flat, textured panels after USDZ Cube, payload, variants, GLB/USDZ, and subdivision warmup loads
 ```
 
 Known caveat from that pass:
@@ -283,6 +284,24 @@ Known caveat from that pass:
 - `Hydra draw is still pending after 15000ms` can still appear after the `HTTPS References` load. The app remains responsive and the asset reaches `Loaded HTTPS References`; the measured recent frame gap after load was about 10ms, with one earlier heavy-work gap around 683ms.
 - The glTF fixtures currently report separate metalness/roughness texture handling as a TODO.
 - CesiumMan raw GLB reports an unsupported tangent primvar.
+
+Run the viewer visual golden checks from `usd-wasm` with:
+
+```bash
+USD_VIEWER_VISUAL_BROWSER=chromium npm run test:viewer-visual
+```
+
+For local headed validation:
+
+```bash
+USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewer-visual
+```
+
+These tests intentionally load several local assets before the target MaterialX
+asset. The MaterialX panel fixtures explicitly author
+`uniform token subdivisionScheme = "none"` because USD's mesh fallback scheme is
+Catmull-Clark; omitting it lets a refined Hydra path correctly subdivide what
+was intended to be a polygonal test panel.
 
 The final long Bike USDZ recheck also has `cannotSaveLayer=0`, confirming that
 the browser no longer attempts to save a package-backed layer after the
