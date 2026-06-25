@@ -222,11 +222,6 @@ class TextureRegistry {
       return this.textures[resourcePath];
     }
 
-    if (resourcePath.startsWith("/") && typeof this.config.USD?.ReadFile === "function") {
-      textureReject(new Error('Resolved file is not available in the USD filesystem: ' + resourcePath));
-      return this.textures[resourcePath];
-    }
-
     this.config.driver().getFile(resourcePath, async (loadedFile) => {
       if (!loadedFile) {
         // if the file is not part of the filesystem, we can still try to fetch it from the network

@@ -32,12 +32,9 @@ export async function getUsdModule(opts) {
         /** @ts-ignore */
         import(`./emHdBindings.js?url`),
         /** @ts-ignore */
-        import(`./emHdBindings.data?url`),
-        /** @ts-ignore */
         import(`./emHdBindings.wasm?url`),
     ]);
-    const [bindings, data, wasm] = bindingsPromise;
-    const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
+    const [bindings, wasm] = bindingsPromise;
     const assetFetches = new Map();
 
     /**
@@ -47,7 +44,7 @@ export async function getUsdModule(opts) {
         const url = detail.url ?? "";
         if (url) {
             if (detail.state === "done" || detail.state === "error") {
-                assetFetches.set(url, detail);
+                assetFetches.delete(url);
             }
             else {
                 assetFetches.set(url, detail);
@@ -74,10 +71,6 @@ export async function getUsdModule(opts) {
         };
 
         opts?.onAssetFetchProgress?.(payload);
-
-        if (detail.state === "done" || detail.state === "error") {
-            assetFetches.delete(url);
-        }
     }
 
     return usd_module_promise = getUsdModuleFn({
@@ -110,10 +103,7 @@ export async function getUsdModule(opts) {
             /** resolved filepath */
             let res = null;
 
-            if (file.includes("emHdBindings.data")) {
-                res = data.default;
-            }
-            else if (file.includes("emHdBindings.wasm")) {
+            if (file.includes("emHdBindings.wasm")) {
                 res = wasm.default;
             }
             // if (url?.startsWith("data:text/javascript;base64")) {
@@ -133,14 +123,6 @@ export async function getUsdModule(opts) {
         getPreloadedPackage(name, size) {
             const userResult = opts?.getPreloadedPackage?.(name, size);
             if (userResult) return userResult;
-
-            // For debugging if the data file isnt loaded or the size might be wrong
-            // Make sure to clear the vite cache. See https://linear.app/needle/issue/NE-4851#comment-2a9538e3
-            if (name.includes("emHdBindings.data")) {
-                if (preloaded_data.byteLength !== size) {
-                    throw new Error(`emHdBindings.data size mismatch: expected ${size} but got ${preloaded_data.byteLength}\n${data.default}`);
-                }
-            }
             return null;
         },
     });

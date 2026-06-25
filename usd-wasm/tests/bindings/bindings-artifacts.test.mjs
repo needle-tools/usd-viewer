@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
@@ -9,7 +9,6 @@ import { tmpdir } from "node:os";
 const bindingsDir = resolve("src/bindings");
 const jsPath = resolve(bindingsDir, "emHdBindings.js");
 const wasmPath = resolve(bindingsDir, "emHdBindings.wasm");
-const dataPath = resolve(bindingsDir, "emHdBindings.data");
 const require = createRequire(import.meta.url);
 const tempModuleDirs = new Set();
 
@@ -41,37 +40,29 @@ async function loadUsdModuleFromTempCopy() {
 }
 
 describe("OpenUSD wasm binding artifacts", () => {
-    it("ship the JS, wasm, and data sidecars used by getUsdModule", async () => {
-        const [js, wasm, data] = await Promise.all([
+    it("ships the JS and wasm artifacts used by getUsdModule", async () => {
+        const [js, wasm] = await Promise.all([
             stat(jsPath),
             stat(wasmPath),
-            stat(dataPath),
         ]);
 
         assert.ok(js.size > 100_000, "emHdBindings.js should be a generated Emscripten bundle");
         assert.ok(wasm.size > 1_000_000, "emHdBindings.wasm should be a real side module");
-        assert.ok(data.size > 1_000, "emHdBindings.data should contain preloaded USD resources");
+        assert.equal(existsSync(resolve(bindingsDir, "emHdBindings.data")), false, "USD resources should be embedded in the bundle, not shipped as a stale data sidecar");
     });
 
     it("keeps the generated JS wired to the expected global, runtime helpers, and sidecar files", async () => {
         const js = await readFile(jsPath, "utf8");
 
         assert.match(js, /globalThis\["NEEDLE:USD:GET"\]\s*=\s*getUsdModule/);
-        assert.match(js, /Module\["ready"\]\s*=\s*readyPromise/);
+        assert.match(js, /Module\["ready"\]\s*=\s*Promise\.resolve\(Module\)/);
+        assert.doesNotMatch(js, /Module\["ready"\]\s*=\s*readyPromise/);
         assert.match(js, /Module\["FS_readdir"\]\s*=\s*FS\.readdir/);
         assert.match(js, /Module\["FS_rmdir"\]\s*=\s*FS\.rmdir/);
         assert.match(js, /Module\["FS_analyzePath"\]\s*=\s*FS\.analyzePath/);
         assert.match(js, /emHdBindings\.wasm/);
-        assert.match(js, /emHdBindings\.data/);
-    });
-
-    it("keeps the preloaded data size in sync with the .data sidecar", async () => {
-        const js = await readFile(jsPath, "utf8");
-        const data = await stat(dataPath);
-        const match = js.match(/remote_package_size:\s*(\d+)/);
-
-        assert.ok(match, "emHdBindings.js should declare remote_package_size");
-        assert.equal(Number(match[1]), data.size);
+        assert.doesNotMatch(js, /emHdBindings\.data/);
+        assert.doesNotMatch(js, /remote_package_size/);
     });
 
     it("uses a wasm32-compatible imported shared-memory ceiling", async () => {
