@@ -1,4 +1,4 @@
-import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, InstancedMesh, Matrix4, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2 } from 'three';
+import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, InstancedMesh, Matrix4, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, CameraHelper, DirectionalLight, DirectionalLightHelper, HemisphereLight, OrthographicCamera, PerspectiveCamera, PointLight, PointLightHelper, MathUtils } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { Experimental_API as MaterialX, MaterialXMaterial } from '@needle-tools/materialx';
@@ -35,6 +35,52 @@ function disposeMaterialResources(material, disposedMaterials = new Set(), dispo
     material.dispose();
   }
 }
+
+function disposeObjectResources(object) {
+  if (!object) return;
+  object.traverse?.((entry) => {
+    entry.geometry?.dispose?.();
+    disposeMaterialResources(entry.material);
+  });
+  object.parent?.remove(object);
+}
+
+function primNameFromPath(id, fallback) {
+  const path = String(id || "");
+  const slash = path.lastIndexOf("/");
+  return slash >= 0 ? path.substring(slash + 1) || fallback : path || fallback;
+}
+
+function applyHydraTransform(object, matrix) {
+  if (!object || !matrix || matrix.length < 16) return;
+  object.matrix.set(...Array.from(matrix).slice(0, 16));
+  object.matrix.transpose();
+  object.matrix.decompose(object.position, object.quaternion, object.scale);
+  object.matrixAutoUpdate = true;
+}
+
+const defaultScenePrimitiveLightIntensityScale = 0.01;
+const lightSprimTypeIds = new Set([
+  "domeLight",
+  "cylinderLight",
+  "diskLight",
+  "distantLight",
+  "light",
+  "rectLight",
+  "simpleLight",
+  "sphereLight",
+]);
+
+const usdLightTypeNames = {
+  domeLight: "DomeLight",
+  cylinderLight: "CylinderLight",
+  diskLight: "DiskLight",
+  distantLight: "DistantLight",
+  light: "LightAPI",
+  rectLight: "RectLight",
+  simpleLight: "SimpleLight",
+  sphereLight: "SphereLight",
+};
 
 class TextureRegistry {
   /** 
@@ -287,6 +333,146 @@ class TextureRegistry {
       }).catch(() => {});
     }
     this.textures = [];
+  }
+}
+
+class HydraScenePrimitive {
+  /**
+   * @param {string} typeId
+   * @param {string} id
+   * @param {ThreeRenderDelegateInterface} hydraInterface
+   */
+  constructor(typeId, id, hydraInterface) {
+    this._typeId = typeId;
+    this._id = id;
+    this._interface = hydraInterface;
+    this._object = null;
+    this._helper = null;
+  }
+
+  updateCameraState(state) {
+    if (!this._id) return;
+    const projection = state?.projection || "perspective";
+    const isOrthographic = projection === "orthographic";
+    if (!this._object || (isOrthographic && !this._object.isOrthographicCamera) || (!isOrthographic && !this._object.isPerspectiveCamera)) {
+      this._replaceObject(isOrthographic
+        ? new OrthographicCamera(-1, 1, 1, -1, Number(state?.near) || 0.01, Number(state?.far) || 100000)
+        : new PerspectiveCamera(45, 1, Number(state?.near) || 0.01, Number(state?.far) || 100000));
+      this._object.userData.usdKind = "sprim";
+    }
+
+    const focalLength = Number(state?.focalLength) || 50;
+    const verticalAperture = Number(state?.verticalAperture) || 20.955;
+    const horizontalAperture = Number(state?.horizontalAperture) || verticalAperture;
+    const near = Number(state?.near);
+    const far = Number(state?.far);
+    if (this._object.isPerspectiveCamera) {
+      this._object.fov = MathUtils.radToDeg(2 * Math.atan((verticalAperture * 0.5) / focalLength));
+      this._object.aspect = horizontalAperture > 0 && verticalAperture > 0 ? horizontalAperture / verticalAperture : 1;
+    }
+    if (Number.isFinite(near) && near > 0) this._object.near = near;
+    if (Number.isFinite(far) && far > 0) this._object.far = far;
+    this._object.name = primNameFromPath(this._id, "UsdCamera");
+    this._object.userData.usdPath = this._id;
+    this._object.userData.usdTypeName = "Camera";
+    applyHydraTransform(this._object, state?.transform);
+    this._object.updateProjectionMatrix?.();
+    this._syncHelper();
+  }
+
+  updateLightState(state) {
+    if (!this._id) return;
+    const typeId = String(state?.typeId || this._typeId);
+    const LightCtor = typeId === "distantLight"
+      ? DirectionalLight
+      : typeId === "domeLight"
+        ? HemisphereLight
+        : PointLight;
+
+    if (!this._object || !(this._object instanceof LightCtor)) {
+      const color = new Color(1, 1, 1);
+      this._replaceObject(typeId === "domeLight"
+        ? new HemisphereLight(color, new Color(0.2, 0.2, 0.2), 1)
+        : new LightCtor(color, 1));
+      this._object.userData.usdKind = "sprim";
+    }
+
+    const colorValue = Array.isArray(state?.color) ? state.color : [1, 1, 1];
+    this._object.color?.setRGB?.(
+      Number(colorValue[0]) || 0,
+      Number(colorValue[1]) || 0,
+      Number(colorValue[2]) || 0);
+    const scale = this._interface.config.scenePrimitiveLightIntensityScale ?? defaultScenePrimitiveLightIntensityScale;
+    this._object.intensity = (Number(state?.intensity) || 0) * scale;
+    this._object.visible = state?.visible !== false;
+    this._object.name = primNameFromPath(this._id, usdLightTypeNames[typeId] || "UsdLight");
+    this._object.userData.usdPath = this._id;
+    this._object.userData.usdTypeName = usdLightTypeNames[typeId] || typeId;
+    applyHydraTransform(this._object, state?.transform);
+    this._syncHelper(state);
+  }
+
+  dispose() {
+    disposeObjectResources(this._helper);
+    disposeObjectResources(this._object);
+    this._helper = null;
+    this._object = null;
+  }
+
+  _replaceObject(object) {
+    disposeObjectResources(this._helper);
+    disposeObjectResources(this._object);
+    this._helper = null;
+    this._object = object;
+    this._interface.config.scenePrimitiveRoot?.add(object);
+  }
+
+  _syncHelper(state = {}) {
+    const object = this._object;
+    if (!object) return;
+    const wantHelper = object.isCamera
+      ? (this._interface.config.showCameraHelpers || this._interface.config.showScenePrimitiveHelpers)
+      : object.isLight
+        ? (this._interface.config.showLightHelpers || this._interface.config.showScenePrimitiveHelpers)
+        : false;
+    if (!wantHelper) {
+      disposeObjectResources(this._helper);
+      this._helper = null;
+      return;
+    }
+
+    const helperCtor = object.isCamera
+      ? CameraHelper
+      : object.isDirectionalLight
+        ? DirectionalLightHelper
+        : object.isPointLight
+          ? PointLightHelper
+          : null;
+    if (!helperCtor) {
+      disposeObjectResources(this._helper);
+      this._helper = null;
+      return;
+    }
+
+    const needsNewHelper = !this._helper ||
+      (object.isCamera && !this._helper.isCameraHelper) ||
+      (object.isDirectionalLight && this._helper.type !== "DirectionalLightHelper") ||
+      (object.isPointLight && this._helper.type !== "PointLightHelper");
+    if (needsNewHelper) {
+      disposeObjectResources(this._helper);
+      const color = object.color || new Color(1, 1, 1);
+      this._helper = object.isCamera
+        ? new CameraHelper(object)
+        : object.isDirectionalLight
+          ? new DirectionalLightHelper(object, 0.5, color)
+          : new PointLightHelper(object, Number(state?.radius) || 0.25, color);
+      this._helper.name = `${object.name}Helper`;
+      this._helper.userData.usdHelperFor = this._id;
+      this._interface.config.scenePrimitiveRoot?.add(this._helper);
+    }
+    this._helper.name = `${object.name}Helper`;
+    this._helper.visible = object.visible;
+    this._helper.update?.();
   }
 }
 
@@ -1402,9 +1588,11 @@ export class ThreeRenderDelegateInterface {
     this.registry = new TextureRegistry(config);
     this.materials = {};
     this.meshes = {};
+    this.scenePrimitives = {};
     this.pendingMaterialUpdates = new Set();
     this.diagnostics = {
       materialSPrims: 0,
+      sceneSPrims: 0,
       materialAssignments: 0,
       materialNodes: 0,
       materialUpdateFinished: 0,
@@ -1414,6 +1602,7 @@ export class ThreeRenderDelegateInterface {
       materialXCreateSuccess: 0,
       materialXCreateFailures: 0,
       materialIds: [],
+      scenePrimitiveIds: [],
     };
   }
 
@@ -1473,6 +1662,18 @@ export class ThreeRenderDelegateInterface {
         this.diagnostics.materialIds.push(id);
       }
       return material;
+    } else if (typeId === 'camera' || lightSprimTypeIds.has(typeId)) {
+      const scenePrimitive = new HydraScenePrimitive(typeId, id, this);
+      if (!id) {
+        return scenePrimitive;
+      }
+      this.destroySPrim(id);
+      this.scenePrimitives[id] = scenePrimitive;
+      this.diagnostics.sceneSPrims++;
+      if (this.diagnostics.scenePrimitiveIds.length < 20) {
+        this.diagnostics.scenePrimitiveIds.push(id);
+      }
+      return scenePrimitive;
     } else {
       return undefined;
     }
@@ -1481,9 +1682,15 @@ export class ThreeRenderDelegateInterface {
   destroySPrim(id) {
     if (debugPrims) console.log('Destroying SPrim: ', id);
     const material = this.materials[id];
-    if (!material) return;
-    material.dispose();
-    delete this.materials[id];
+    if (material) {
+      material.dispose();
+      delete this.materials[id];
+    }
+    const scenePrimitive = this.scenePrimitives[id];
+    if (scenePrimitive) {
+      scenePrimitive.dispose();
+      delete this.scenePrimitives[id];
+    }
   }
 
   dispose() {
@@ -1491,6 +1698,9 @@ export class ThreeRenderDelegateInterface {
       this.destroyRPrim(id);
     }
     for (const id of Object.keys(this.materials)) {
+      this.destroySPrim(id);
+    }
+    for (const id of Object.keys(this.scenePrimitives)) {
       this.destroySPrim(id);
     }
     this.registry.dispose();

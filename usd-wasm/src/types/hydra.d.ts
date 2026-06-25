@@ -19,6 +19,11 @@ export type threeJsRenderDelegateConfig = {
     driver: () => HdWebSyncDriver,
     USD?: USD,
     usdRoot: Object3D,
+    scenePrimitiveRoot?: Object3D,
+    showScenePrimitiveHelpers?: boolean,
+    showCameraHelpers?: boolean,
+    showLightHelpers?: boolean,
+    scenePrimitiveLightIntensityScale?: number,
     /** Paths for resolving textures */
     paths?: string[],
     /** @deprecated */
@@ -27,4 +32,3 @@ export type threeJsRenderDelegateConfig = {
 export class threeJsRenderDelegate extends hydraDelegate {
     constructor(path: string, config: threeJsRenderDelegateConfig)
 }
-
