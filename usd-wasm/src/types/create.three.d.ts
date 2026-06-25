@@ -84,6 +84,18 @@ export declare type NeedleThreeHydraHandle = {
      * @param dt The delta time since the last update.
      */
     update: (dt: number) => void,
+    /** Set the current USD stage time code and redraw.
+     */
+    setTime: (timeCode: number) => Promise<void>,
+    /** Return the current USD stage time code used by Hydra.
+     */
+    getTime: () => number,
+    /** Enable or disable automatic playback in update().
+     */
+    setPlaying: (playing: boolean) => void,
+    /** Return whether update() is currently advancing stage time.
+     */
+    isPlaying: () => boolean,
     /** Redraw the current USD stage after imperative stage edits.
      */
     refresh: () => Promise<void>,

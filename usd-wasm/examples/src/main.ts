@@ -21,6 +21,11 @@ declare global {
       usdview: {
         hasStage: boolean,
         selectedPath: string,
+        selectedPropertyPath: string,
+        selectedLayerIdentifier: string,
+        selectedLayerSource: string,
+        currentTime: number,
+        isPlaying: boolean,
         revision: number,
         lastNoticeResyncedPaths: string[],
         lastNoticeChangedInfoOnlyPaths: string[],
@@ -283,6 +288,7 @@ getUsdModule({
     scene: scene,
     onRender: (dt) => {
       hydraDelegate?.update(dt);
+      usdViewState.tickTime();
     }
   });
 
@@ -431,7 +437,7 @@ async function loadFile(url: string, label = url) {
   })
 
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage(), delegate);
 
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
@@ -503,7 +509,7 @@ async function loadFiles(files: TestFile[], label: string) {
   });
 
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage(), delegate);
   console.log("Scene content", usdContent);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
@@ -581,7 +587,7 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
     scene: usdContent,
   });
   hydraDelegate = delegate;
-  usdViewState.setStage(delegate.driver.GetStage());
+  usdViewState.setStage(delegate.driver.GetStage(), delegate);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
   updateSceneControls();
@@ -756,18 +762,26 @@ function formatBytes(value: number) {
 }
 
 window.loadFile = loadFile;
-window.__usdViewerTestState = () => ({
-  status: statusElement?.innerText ?? "",
-  childCount: usdContent?.children?.length ?? 0,
-  rootRotationX: usdContent?.rotation?.x ?? null,
-  rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
-  stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
-  diagnostics: hydraDelegate?.diagnostics?.() ?? null,
-  usdview: {
-    hasStage: Boolean(usdViewState.snapshot().stage),
-    selectedPath: usdViewState.snapshot().selectedPath,
-    revision: usdViewState.snapshot().revision,
-    lastNoticeResyncedPaths: usdViewState.snapshot().notice?.resyncedPaths ?? [],
-    lastNoticeChangedInfoOnlyPaths: usdViewState.snapshot().notice?.changedInfoOnlyPaths ?? [],
-  },
-});
+window.__usdViewerTestState = () => {
+  const usdview = usdViewState.snapshot();
+  return {
+    status: statusElement?.innerText ?? "",
+    childCount: usdContent?.children?.length ?? 0,
+    rootRotationX: usdContent?.rotation?.x ?? null,
+    rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
+    stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
+    diagnostics: hydraDelegate?.diagnostics?.() ?? null,
+    usdview: {
+      hasStage: Boolean(usdview.stage),
+      selectedPath: usdview.selectedPath,
+      selectedPropertyPath: usdview.selectedPropertyPath,
+      selectedLayerIdentifier: usdview.selectedLayerIdentifier,
+      selectedLayerSource: usdview.selectedLayerSource,
+      currentTime: usdview.currentTime,
+      isPlaying: usdview.isPlaying,
+      revision: usdview.revision,
+      lastNoticeResyncedPaths: usdview.notice?.resyncedPaths ?? [],
+      lastNoticeChangedInfoOnlyPaths: usdview.notice?.changedInfoOnlyPaths ?? [],
+    },
+  };
+};

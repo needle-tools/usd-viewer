@@ -41,10 +41,15 @@
     relationships: RelationshipRow[];
     variants: VariantRow[];
     primStack: USDSpecStackEntry[];
+    selectedProperty: AttributeRow | RelationshipRow | null;
+    selectedPropertyStack: USDSpecStackEntry[];
     primIndex: USDPcpNode | null;
     compositionArcs: USDCompositionArc[];
     layerStack: LayerRow[];
     usedLayers: LayerRow[];
+    layerRows: LayerTableRow[];
+    selectedLayer: LayerTableRow | null;
+    stageTime: StageTimeInfo;
     compositionErrors: string[];
   };
 
@@ -75,6 +80,23 @@
     realPath: string;
   };
 
+  type LayerTableRow = LayerRow & {
+    source: "Layer Stack" | "Used Layers" | "Prim Stack" | "Property Stack";
+    path?: string;
+    value?: string;
+    metadata?: Record<string, string>;
+    offset?: string;
+  };
+
+  type StageTimeInfo = {
+    startTimeCode: number;
+    endTimeCode: number;
+    timeCodesPerSecond: number;
+    currentTime: number;
+    hasRange: boolean;
+    step: number;
+  };
+
   const emptyModel: InspectorModel = {
     tree: null,
     selectedPrim: null,
@@ -82,35 +104,71 @@
     relationships: [],
     variants: [],
     primStack: [],
+    selectedProperty: null,
+    selectedPropertyStack: [],
     primIndex: null,
     compositionArcs: [],
     layerStack: [],
     usedLayers: [],
+    layerRows: [],
+    selectedLayer: null,
+    stageTime: {
+      startTimeCode: 0,
+      endTimeCode: 0,
+      timeCodesPerSecond: 24,
+      currentTime: 0,
+      hasRange: false,
+      step: 1,
+    },
     compositionErrors: [],
   };
 
   const state = usdViewState;
-  let model = $derived(buildModel(state.stage, state.selectedPath, state.revision));
+  let model = $derived(buildModel(state.stage, state.selectedPath, state.revision, state.currentTime, state.selectedPropertyPath, state.selectedLayerIdentifier, state.selectedLayerSource));
   let lastNotice = $derived(state.notice);
 
-  function buildModel(stage: USDStageLike | null, selectedPath: string, revision: number): InspectorModel {
+  function buildModel(stage: USDStageLike | null, selectedPath: string, revision: number, currentTime: number, selectedPropertyPath: string, selectedLayerIdentifier: string, selectedLayerSource: string): InspectorModel {
     void revision;
-    if (!stage) return emptyModel;
+    if (!stage?.GetPseudoRoot || !stage?.GetPrimAtPath) {
+      return { ...emptyModel, stageTime: readStageTime(currentTime) };
+    }
 
     const pseudoRoot = stage.GetPseudoRoot();
     const selectedPrim = selectedPath === "/" ? pseudoRoot : stage.GetPrimAtPath(selectedPath);
+    const attributes = readAttributes(selectedPrim, currentTime);
+    const relationships = readRelationships(selectedPrim, currentTime);
+    const selectedProperty = [...attributes, ...relationships].find((property) => property.path === selectedPropertyPath) ?? null;
+    const selectedPropertyStack = selectedProperty?.stack ?? [];
+    const primStack = safe(() => selectedPrim.GetPrimStackWithLayerOffsets(), []);
+    const layerStack = readLayers(safe(() => stage.GetLayerStack?.(true) ?? [], []));
+    const usedLayers = readLayers(safe(() => stage.GetUsedLayers?.(false) ?? [], []));
+    const stageTime = readStageTime(currentTime);
+    const layerRows = [
+      ...layerStack.map((layer): LayerTableRow => ({ ...layer, source: "Layer Stack" })),
+      ...usedLayers.map((layer): LayerTableRow => ({ ...layer, source: "Used Layers" })),
+      ...primStack.map(specToLayerRow("Prim Stack")),
+      ...selectedPropertyStack.map(specToLayerRow("Property Stack")),
+    ];
+    const selectedLayer = layerRows.find((row) =>
+      row.identifier === selectedLayerIdentifier && row.source === selectedLayerSource) ?? null;
+
     return {
       tree: buildTreeNode(pseudoRoot),
       selectedPrim: readPrimDetails(selectedPrim),
-      attributes: readAttributes(selectedPrim),
-      relationships: readRelationships(selectedPrim),
+      attributes,
+      relationships,
       variants: readVariants(selectedPrim),
-      primStack: safe(() => selectedPrim.GetPrimStackWithLayerOffsets(), []),
+      primStack,
+      selectedProperty,
+      selectedPropertyStack,
       primIndex: safe(() => selectedPrim.GetPrimIndex().rootNode ?? null, null),
       compositionArcs: safe(() => selectedPrim.GetCompositionArcs(), []),
-      layerStack: readLayers(stage.GetLayerStack(true)),
-      usedLayers: readLayers(stage.GetUsedLayers(false)),
-      compositionErrors: safe(() => stage.GetCompositionErrors(), []),
+      layerStack,
+      usedLayers,
+      layerRows,
+      selectedLayer,
+      stageTime,
+      compositionErrors: safe(() => stage.GetCompositionErrors?.() ?? [], []),
     };
   }
 
@@ -147,29 +205,29 @@
     };
   }
 
-  function readAttributes(prim: USDPrimLike): AttributeRow[] {
+  function readAttributes(prim: USDPrimLike, currentTime: number): AttributeRow[] {
     if (!prim?.IsValid?.()) return [];
     return vectorToArray(prim.GetAttributes()).map((attribute: USDAttributeLike) => ({
       name: attribute.GetName(),
       path: attribute.GetPath(),
       typeName: attribute.GetTypeName(),
-      value: safe(() => attribute.GetValueString(), ""),
-      resolveSource: safe(() => attribute.GetResolveInfo(Number.NaN).source, ""),
+      value: safe(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
+      resolveSource: safe(() => attribute.GetResolveInfo(currentTime).source, ""),
       timeSamples: vectorToArray(attribute.GetTimeSamples()),
       connections: vectorToArray(attribute.GetConnections()),
       metadata: attribute.GetAllMetadata(),
-      stack: safe(() => attribute.GetPropertyStackWithLayerOffsets(Number.NaN), []),
+      stack: safe(() => attribute.GetPropertyStackWithLayerOffsets(currentTime), []),
     }));
   }
 
-  function readRelationships(prim: USDPrimLike): RelationshipRow[] {
+  function readRelationships(prim: USDPrimLike, currentTime: number): RelationshipRow[] {
     if (!prim?.IsValid?.()) return [];
     return vectorToArray(prim.GetRelationships()).map((relationship: USDRelationshipLike) => ({
       name: relationship.GetName(),
       path: relationship.GetPath(),
       targets: vectorToArray(relationship.GetTargets()),
       metadata: relationship.GetAllMetadata(),
-      stack: safe(() => relationship.GetPropertyStackWithLayerOffsets(Number.NaN), []),
+      stack: safe(() => relationship.GetPropertyStackWithLayerOffsets(currentTime), []),
     }));
   }
 
@@ -188,6 +246,40 @@
       displayName: layer.displayName,
       realPath: layer.realPath,
     }));
+  }
+
+  function readStageTime(currentTime: number): StageTimeInfo {
+    const metadata = state.handle?.stageMetadata?.();
+    const startTimeCode = metadata?.startTimeCode ?? 0;
+    const endTimeCode = metadata?.endTimeCode ?? startTimeCode;
+    const timeCodesPerSecond = metadata?.timeCodesPerSecond ?? 24;
+    const hasRange = endTimeCode > startTimeCode;
+    return {
+      startTimeCode,
+      endTimeCode,
+      timeCodesPerSecond,
+      currentTime: Number.isFinite(currentTime) ? currentTime : startTimeCode,
+      hasRange,
+      step: 1,
+    };
+  }
+
+  function specToLayerRow(source: LayerTableRow["source"]) {
+    return (spec: USDSpecStackEntry): LayerTableRow => ({
+      identifier: spec.layer.identifier,
+      displayName: spec.layer.displayName,
+      realPath: spec.layer.realPath,
+      source,
+      path: spec.path,
+      value: spec.typeName || spec.specifier || "",
+      metadata: spec.metadata,
+      offset: formatLayerOffset(spec.layerOffset),
+    });
+  }
+
+  function formatLayerOffset(offset: USDSpecStackEntry["layerOffset"]) {
+    if (!offset || offset.isIdentity) return "";
+    return `${offset.offset}, scale ${offset.scale}`;
   }
 
   function vectorToArray<T>(vector: USDVectorLike<T> | null | undefined): T[] {
@@ -219,6 +311,29 @@
   function changedFieldEntries(fields: Record<string, string[]>) {
     return Object.entries(fields).sort(([a], [b]) => a.localeCompare(b));
   }
+
+  function selectProperty(path: string) {
+    state.selectProperty(path);
+  }
+
+  function selectLayer(row: LayerTableRow) {
+    state.selectLayer(row.identifier, row.source);
+  }
+
+  async function setTimelineValue(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    state.setPlaying(false);
+    await state.setTime(Number(input.value));
+  }
+
+  function togglePlayback() {
+    state.setPlaying(!state.isPlaying);
+  }
+
+  async function copyText(text: string) {
+    if (!text) return;
+    await navigator.clipboard?.writeText(text);
+  }
 </script>
 
 <aside class="usdview-panel" data-testid="usdview-panel">
@@ -227,13 +342,48 @@
     <span>{state.stage ? `rev ${state.revision}` : "no stage"}</span>
   </header>
 
-  {#if !state.stage || !model.tree}
+  {#if !state.stage}
     <p class="empty">Load a USD stage.</p>
+  {:else if !model.tree}
+    <p class="empty">Inspection API unavailable for this stage.</p>
   {:else}
     <div class="panel-grid">
       <section class="hierarchy">
         <h3>Prim Browser</h3>
         {@render TreeView({ node: model.tree, selectedPath: state.selectedPath })}
+      </section>
+
+      <section>
+        <h3>Timeline</h3>
+        <div class="timeline">
+          <button type="button" onclick={togglePlayback} data-testid="usdview-timeline-play">
+            {state.isPlaying ? "Pause" : "Play"}
+          </button>
+          <input
+            data-testid="usdview-timeline-slider"
+            type="range"
+            min={model.stageTime.startTimeCode}
+            max={model.stageTime.endTimeCode}
+            step={model.stageTime.step}
+            value={model.stageTime.currentTime}
+            disabled={!model.stageTime.hasRange}
+            oninput={setTimelineValue}
+          />
+          <input
+            data-testid="usdview-timeline-frame"
+            type="number"
+            min={model.stageTime.startTimeCode}
+            max={model.stageTime.endTimeCode}
+            step={model.stageTime.step}
+            value={Number(model.stageTime.currentTime.toFixed(3))}
+            disabled={!model.stageTime.hasRange}
+            onchange={setTimelineValue}
+          />
+        </div>
+        <dl class="kv">
+          <dt>Range</dt><dd>{model.stageTime.startTimeCode} - {model.stageTime.endTimeCode}</dd>
+          <dt>FPS</dt><dd>{model.stageTime.timeCodesPerSecond}</dd>
+        </dl>
       </section>
 
       <section>
@@ -274,6 +424,14 @@
         {#each model.attributes as attribute}
           <details class="property">
             <summary>{attribute.name} <small>{attribute.typeName}</small></summary>
+            <button
+              class:selected={state.selectedPropertyPath === attribute.path}
+              class="select-property"
+              type="button"
+              onclick={() => selectProperty(attribute.path)}
+            >
+              {attribute.path}
+            </button>
             <dl class="kv">
               <dt>Value</dt><dd>{attribute.value}</dd>
               <dt>Resolve</dt><dd>{attribute.resolveSource}</dd>
@@ -286,6 +444,14 @@
         {#each model.relationships as relationship}
           <details class="property">
             <summary>{relationship.name} <small>relationship</small></summary>
+            <button
+              class:selected={state.selectedPropertyPath === relationship.path}
+              class="select-property"
+              type="button"
+              onclick={() => selectProperty(relationship.path)}
+            >
+              {relationship.path}
+            </button>
             <dl class="kv">
               <dt>Targets</dt><dd>{relationship.targets.join(", ") || "-"}</dd>
             </dl>
@@ -331,7 +497,29 @@
 
       <section>
         <h3>Layer Stack</h3>
-        {@render LayerList({ layers: model.layerStack })}
+        {@render LayerTable({ rows: model.layerRows })}
+        {#if model.selectedLayer}
+          <h4>Layer Details</h4>
+          <dl class="kv">
+            <dt>Layer</dt><dd>{model.selectedLayer.displayName}</dd>
+            <dt>Source</dt><dd>{model.selectedLayer.source}</dd>
+            <dt>Identifier</dt><dd>{model.selectedLayer.identifier}</dd>
+            <dt>Path</dt><dd>{model.selectedLayer.realPath || "-"}</dd>
+            <dt>Spec Path</dt><dd>{model.selectedLayer.path || "-"}</dd>
+            <dt>Offset</dt><dd>{model.selectedLayer.offset || "-"}</dd>
+          </dl>
+          <div class="layer-actions">
+            <button type="button" onclick={() => copyText(model.selectedLayer?.identifier ?? "")}>Copy Identifier</button>
+            <button type="button" onclick={() => copyText(model.selectedLayer?.realPath ?? "")}>Copy Path</button>
+            <button type="button" onclick={() => copyText(model.selectedLayer?.path ?? "")}>Copy Spec</button>
+          </div>
+          {#if model.selectedLayer.metadata && metadataEntries(model.selectedLayer.metadata).length}
+            <h4>Layer Opinion Metadata</h4>
+            {#each metadataEntries(model.selectedLayer.metadata) as [key, value]}
+              <dl class="kv"><dt>{key}</dt><dd>{value}</dd></dl>
+            {/each}
+          {/if}
+        {/if}
         <h3>Used Layers</h3>
         {@render LayerList({ layers: model.usedLayers })}
       </section>
@@ -395,6 +583,37 @@
         </li>
       {/each}
     </ol>
+  {/if}
+{/snippet}
+
+{#snippet LayerTable({ rows }: { rows: LayerTableRow[] })}
+  {#if rows.length === 0}
+    <p class="empty">No layers.</p>
+  {:else}
+    <div class="layer-table">
+      <div class="layer-table-header">
+        <span>Layer</span>
+        <span>Source</span>
+        <span>Offset</span>
+        <span>Path</span>
+        <span>Value</span>
+      </div>
+      {#each rows as row}
+        <button
+          class:selected={state.selectedLayerIdentifier === row.identifier && state.selectedLayerSource === row.source}
+          class="layer-row"
+          data-testid="usdview-layer-row"
+          type="button"
+          onclick={() => selectLayer(row)}
+        >
+          <span>{row.displayName}</span>
+          <span>{row.source}</span>
+          <span>{row.offset || "-"}</span>
+          <span>{row.path || row.realPath || row.identifier}</span>
+          <span>{row.value || "-"}</span>
+        </button>
+      {/each}
+    </div>
   {/if}
 {/snippet}
 
@@ -516,8 +735,45 @@
     cursor: pointer;
   }
 
+  .timeline {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 72px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .timeline button,
+  .timeline input,
+  .select-property,
+  .layer-actions button,
+  .layer-row {
+    color: inherit;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 3px;
+    font: inherit;
+  }
+
+  .timeline button,
+  .select-property,
+  .layer-actions button,
+  .layer-row {
+    cursor: pointer;
+  }
+
+  .timeline input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    padding: 2px 4px;
+  }
+
   .tree-row:hover,
-  .tree-row.selected {
+  .tree-row.selected,
+  .select-property:hover,
+  .select-property.selected,
+  .layer-row:hover,
+  .layer-row.selected {
     background: rgba(94, 151, 246, 0.35);
   }
 
@@ -527,7 +783,9 @@
   .arc,
   .error,
   .stack li,
-  .layers li {
+  .layers li,
+  .layer-row span,
+  .layer-table-header span {
     min-width: 0;
     overflow-wrap: anywhere;
   }
@@ -587,6 +845,13 @@
     cursor: pointer;
   }
 
+  .select-property {
+    width: 100%;
+    margin: 5px 0;
+    padding: 3px 5px;
+    text-align: left;
+  }
+
   .stack,
   .layers {
     display: grid;
@@ -598,6 +863,39 @@
   .layers li {
     display: grid;
     gap: 1px;
+  }
+
+  .layer-table {
+    display: grid;
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+
+  .layer-table-header,
+  .layer-row {
+    display: grid;
+    grid-template-columns: minmax(72px, 1.1fr) minmax(68px, 0.8fr) minmax(38px, 0.45fr) minmax(86px, 1.35fr) minmax(42px, 0.45fr);
+    gap: 5px;
+    align-items: center;
+    padding: 3px 4px;
+    text-align: left;
+  }
+
+  .layer-table-header {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 11px;
+  }
+
+  .layer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 4px;
+  }
+
+  .layer-actions button,
+  .timeline button {
+    padding: 3px 6px;
   }
 
   .arc,
