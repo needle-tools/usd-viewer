@@ -148,7 +148,7 @@ npx vite build
 Expected current result:
 
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
-- `npm run test:bindings` passes 7 tests, including driver metadata helper checks and generated authoring/USDZ packaging.
+- `npm run test:bindings` passes 6 tests, including generated authoring/USDZ packaging.
 - The syntax checks and example build pass.
 
 ## Browser Matrix Status
@@ -163,7 +163,7 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 Current result on this machine:
 
 - The Three matrix cache is generated.
-- The manifest is written for 102 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with seventeen fixtures.
+- The manifest is written for 108 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with eighteen fixtures.
 - The test passes in headed Chromium.
 - The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
 
@@ -273,8 +273,8 @@ HTTPS References -> Loaded, resolver progress events=172, console errors=0
 HTTPS References -> USDZ Cube switch -> Loaded, console errors=0
 Gingerbread USDC -> Loaded
 Gingerbread USDA -> Loaded
-Headed WebGL matrix slice -> 34 passed, 0 failed
 Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmull-Clark cube refined to 36 positions from 8 authored control points
+Full headed matrix -> 108 cases, 72 passed, 36 unsupported, 0 failed
 ```
 
 Known caveat from that pass:
@@ -331,6 +331,10 @@ Build OpenSubdiv for wasm into the upstream wasm prefix:
 cd /Users/herbst/git/OpenUSD
 ./herbst/smoke/build-wasm-opensubdiv.sh
 ```
+
+By default this uses the OpenUSD 26.05 native build's vendored OpenSubdiv 3.6.1
+source zip. To intentionally test the checked-out OpenSubdiv repo instead, run
+with `OPENSUBDIV_SRC_DIR=/Users/herbst/git/OpenSubdiv`.
 
 Configure and build the non-MaterialX Hydra wasm bundle:
 
