@@ -40,21 +40,6 @@ function isUsdPackageUrl(url) {
 /**
  * @template T
  * @param {T | Promise<T>} value
- * @param {(value: T) => void} assign
- * @param {string} label
- */
-function assignMaybeAsync(value, assign, label) {
-    if (isPromiseLike(value)) {
-        value.then(assign).catch((error) => console.error(`Failed to read ${label}`, error));
-    }
-    else {
-        assign(/** @type {T} */ (value));
-    }
-}
-
-/**
- * @template T
- * @param {T | Promise<T>} value
  * @returns {Promise<T>}
  */
 async function waitMaybeAsync(value) {
@@ -268,22 +253,18 @@ export async function createThreeHydra(config) {
         return drawPromise;
     };
 
-    /** Draw once */
-    const initialDrawPromise = draw();
-
     /** Support for Y and Z up-axis in the root USD file */
-    let stageUpAxis = "y".charCodeAt(0);
-    let stageStartTimeCode = 0;
-    let stageEndTimeCode = 0;
-    let stageTimeCodesPerSecond = 24;
+    let stageUpAxis = await waitMaybeAsync(driver.GetStageUpAxis());
+    let stageStartTimeCode = await waitMaybeAsync(driver.GetStageStartTimeCode());
+    let stageEndTimeCode = await waitMaybeAsync(driver.GetStageEndTimeCode());
+    let stageTimeCodesPerSecond = await waitMaybeAsync(driver.GetStageTimeCodesPerSecond());
+    const stageUpAxisToken = String.fromCharCode(stageUpAxis).toLowerCase();
+    stageUpAxis = stageUpAxisToken.charCodeAt(0);
+    delegateConfig.usdRoot.rotation.x = stageUpAxisToken === 'z' ? -Math.PI / 2 : 0;
+    delegateConfig.usdRoot.updateMatrixWorld(true);
 
-    assignMaybeAsync(driver.GetStageUpAxis(), (value) => {
-        stageUpAxis = value;
-        delegateConfig.usdRoot.rotation.x = String.fromCharCode(stageUpAxis) === 'z' ? -Math.PI / 2 : 0;
-    }, "stage up axis");
-    assignMaybeAsync(driver.GetStageStartTimeCode(), (value) => stageStartTimeCode = value, "stage start time");
-    assignMaybeAsync(driver.GetStageEndTimeCode(), (value) => stageEndTimeCode = value, "stage end time");
-    assignMaybeAsync(driver.GetStageTimeCodesPerSecond(), (value) => stageTimeCodesPerSecond = value, "stage time codes per second");
+    /** Draw once, after stage metadata has been applied to the root scene. */
+    const initialDrawPromise = draw();
 
     let time = 0;
 
@@ -359,8 +340,14 @@ export async function createThreeHydra(config) {
         },
         materialsReady: () => renderInterface.waitForMaterialsReady(),
         diagnostics: () => renderInterface.getDiagnostics(),
+        stageMetadata: () => ({
+            upAxis: String.fromCharCode(stageUpAxis),
+            startTimeCode: stageStartTimeCode,
+            endTimeCode: stageEndTimeCode,
+            timeCodesPerSecond: stageTimeCodesPerSecond,
+        }),
         /**
-         * Dipoose the Three Hydra delegate.
+         * Dispose the Three Hydra delegate.
          * This does *not* clear the threejs scene but only dispose the USD delegate and loaded files
          */
         dispose: async () => {
