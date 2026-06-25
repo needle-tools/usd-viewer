@@ -15,7 +15,31 @@ This major prerelease uses upstream OpenUSD 26.05 and ships a Hydra imaging
 bridge for three.js. The wasm bundle includes Adobe `usdGltf`, MaterialX, and
 OpenSubdiv support.
 
+## Runtime Requirements
 
+This package ships a threaded Emscripten/OpenUSD wasm build. Browser pages that
+use it must be served in a cross-origin isolated context so `SharedArrayBuffer`
+and pthread workers are available:
+
+```js
+res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+```
+
+For Vite projects, use the package plugin to set these headers during local
+development:
+
+```js
+import { needleUSD } from "@needle-tools/usd/vite";
+
+export default {
+  plugins: [needleUSD()],
+};
+```
+
+The modern Emscripten output contains `emHdBindings.js` and
+`emHdBindings.wasm`. It does not ship a separate `emHdBindings.worker.js`; the
+pthread workers load the main generated JavaScript entrypoint directly.
 
 ## Use with Needle Engine
 

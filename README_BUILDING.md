@@ -89,7 +89,13 @@ Files:
 - `emHdBindings.wasm`
 - `openusd-build-info.json`
 
-Modern Emscripten does not emit `emHdBindings.worker.js` for this build, so the old worker import was removed from `usd-wasm/src/bindings/index.js`.
+Modern Emscripten does not emit `emHdBindings.worker.js` for this build, so the
+old worker import was removed from `usd-wasm/src/bindings/index.js`. This does
+not mean pthreads are disabled. The generated runtime creates `em-pthread`
+workers from the main generated JavaScript entrypoint (`emHdBindings.js`) via
+Emscripten's `mainScriptUrlOrBlob`/script URL path and shares the same
+`WebAssembly.Memory`. The checked-in bundle still requires COOP/COEP headers
+and still creates the configured pthread pool.
 
 Installed source bundle:
 
