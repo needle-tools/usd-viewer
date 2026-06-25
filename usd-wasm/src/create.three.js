@@ -220,6 +220,10 @@ export async function createThreeHydra(config) {
         throw new Error(`Failed to open USD stage: ${file}`);
     }
 
+    if (typeof driver.SetIncludedPurposes === "function") {
+        driver.SetIncludedPurposes(config.includedPurposes ?? ["default", "render"]);
+    }
+
     if (debug) console.log("DRIVER", driver);
 
     let disposed = false;

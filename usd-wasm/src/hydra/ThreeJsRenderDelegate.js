@@ -306,6 +306,8 @@ class HydraMesh {
     this._uvs = undefined;
     this._indices = undefined;
     this._materials = [];
+    this._visible = false;
+    this._renderTag = 'geometry';
 
     let material = new MeshPhysicalMaterial({
       side: DoubleSide,
@@ -315,6 +317,7 @@ class HydraMesh {
     this._ownedMaterial = material;
     this._materials.push(material);
     this._mesh = new Mesh(this._geometry, material);
+    this._mesh.visible = false;
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
 
@@ -389,6 +392,15 @@ class HydraMesh {
     this._mesh.matrixAutoUpdate = false;
   }
 
+  setVisibilityState(visible, renderTag = 'geometry') {
+    this._visible = Boolean(visible);
+    this._renderTag = String(renderTag || 'geometry');
+    if (this._mesh) {
+      this._mesh.visible = this._visible && this._renderTag !== 'hidden';
+      this._mesh.userData.usdRenderTag = this._renderTag;
+    }
+  }
+
   /**
    * Sets automatically generated normals on the mesh. Should only be used if there are no authored normals.
    * @param {} normals 
@@ -449,6 +461,7 @@ class HydraMesh {
       this._mesh.parent.remove(this._mesh);
     }
     this._mesh = new Mesh(this._geometry, this._materials);
+    this.setVisibilityState(this._visible, this._renderTag);
     this._interface.config.usdRoot.add(this._mesh);
 
     for (let i = 0; i < sections.length; i++) {

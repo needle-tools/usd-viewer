@@ -316,6 +316,18 @@ async function runFixtureChecks(handle, usdRoot, config) {
         };
     }
 
+    if (config.fixtureName === "local-purpose-render-intent-usda") {
+        checks.purposeRenderIntent = {
+            meshState: collectMeshMaterialState(usdRoot),
+            authoredState: collectStageAttributeValues(handle.driver.GetStage(), {
+                "/World/DefaultPurpose": ["purpose"],
+                "/World/RenderPurpose": ["purpose"],
+                "/World/ProxyPurpose": ["purpose"],
+                "/World/GuidePurpose": ["purpose"],
+            }),
+        };
+    }
+
     if (config.fixtureName === "local-camera-light-usda") {
         checks.cameraLight = {
             meshState: collectMeshMaterialState(usdRoot),
@@ -337,6 +349,17 @@ async function runFixtureChecks(handle, usdRoot, config) {
             before,
             after,
             stageMetadata: handle.stageMetadata?.() ?? null,
+        };
+    }
+
+    if (config.fixtureName === "local-usdz-nested-material") {
+        checks.usdzNestedMaterial = {
+            meshState: collectMeshMaterialState(usdRoot),
+            geometryState: collectMeshGeometryState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/World/NestedTexturedPanel",
+                "/World/Looks/NestedTextured",
+            ]),
         };
     }
 
@@ -418,6 +441,8 @@ function collectMeshMaterialState(root) {
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         meshes.push({
             name: object.name || "",
+            visible: Boolean(object.visible),
+            renderTag: object.userData?.usdRenderTag || "",
             materials: materials.filter(Boolean).map(material => ({
                 name: material.name || "",
                 color: material.color?.getHexString?.() || null,
@@ -430,9 +455,12 @@ function collectMeshMaterialState(root) {
     });
     return {
         meshCount: meshes.length,
+        visibleMeshCount: meshes.filter(mesh => mesh.visible).length,
         meshes,
         materialNames: meshes.flatMap(mesh => mesh.materials.map(material => material.name)),
+        visibleMaterialNames: meshes.filter(mesh => mesh.visible).flatMap(mesh => mesh.materials.map(material => material.name)),
         texturedMaterialCount: meshes.flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
+        visibleTexturedMaterialCount: meshes.filter(mesh => mesh.visible).flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
         textureCount: meshes.flatMap(mesh => mesh.materials).reduce((count, material) => count + material.textureCount, 0),
     };
 }

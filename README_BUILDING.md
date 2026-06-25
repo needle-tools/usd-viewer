@@ -54,6 +54,7 @@ Working now:
 - OpenSubdiv is built for wasm and linked into the Hydra bundle; the matrix includes a Catmull-Clark cube fixture that verifies the runtime geometry is refined beyond the authored 8-point control cage.
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
+- Hydra visibility and purpose/render-intent support is bridged from USD imaging. The default viewer pass includes USD `default` and `render` purposes; `proxy`, `guide`, and invisible rprims stay hidden unless a caller asks for those purposes through `createThreeHydra({ includedPurposes })`.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
 - Async USD APIs that can cross resolver fetches are registered with Embind `async()`, including `OpenStage`, `CreateUsdzPackage`, `Prim.Load`, `Prim.Unload`, `Prim.SetVariantSelection`, `HdWebSyncDriver.Draw`, and `HdWebSyncDriver.Repopulate`.
@@ -63,7 +64,7 @@ Working now:
 - `CesiumMan.glb.openusd.usdz` intentionally keeps the diffuse texture as a bracket-addressed GLB subasset, `@CesiumMan.glb[Cesium_Man-effect_diffuse.jpg]@`. OpenUSD commit `60936c01a` fixes nested package resolver dispatch so `USDZ[GLB[image]]` opens through the inner glTF package resolver; OpenUSD commit `ea0adc529` anchors hdEmscripten browser asset reads to the stage root layer.
 - The viewer texture bridge now falls through to Hydra's `driver.getFile()` for absolute package paths, so OpenUSD's resolver remains the authority for bracket-addressed images instead of JS rejecting them early.
 - The checked-in viewer opens the regression assets that previously broke during modernization: cube, teapot, Carbon Frame Bike USDA/USDZ, and McUsd.
-- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, MaterialX marble and procedural brick samples, mixed Preview Surface + MaterialX stages, raw GLB assets, regenerated CesiumMan USDZ, and API-constructed scenes.
+- The example viewer includes local buttons for MaterialX external references, nested MaterialX references, variant-authored MaterialX bindings, payloads, nested variants, texture/noise MaterialX, MaterialX marble and procedural brick samples, mixed Preview Surface + MaterialX stages, raw GLB assets, regenerated CesiumMan USDZ, USD concept fixtures, nested material-in-USDZ package resolution, and API-constructed scenes.
 
 Still to do before publishing a public package:
 
@@ -163,14 +164,14 @@ USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-m
 Current result on this machine:
 
 - The Three matrix cache is generated.
-- The manifest is written for 108 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with eighteen fixtures.
+- The manifest is written for 168 cases: local Three `^0.164.1` and cached Three `0.184.0`, each across WebGL, WebGPU forced-WebGL2, and WebGPU modes, with twenty-eight fixtures.
 - The test passes in headed Chromium.
 - The latest headed pass used a local `npm link` to `@needle-tools/materialx` from `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` at package version `1.7.0`.
 
-Observed result on 2026-06-24:
+Observed result on 2026-06-25:
 
 ```text
-summary: passed 68, unsupported 34, failed 0
+summary: passed 112, unsupported 56, failed 0
 ```
 
 To isolate a renderer backend while debugging, pass a comma-separated mode list
@@ -194,6 +195,17 @@ Renderable fixtures that pass with geometry and materials:
 - `tests/fixtures/payloads/payload_root.usda` plus `payload_payload.usda`
 - `tests/fixtures/variants/nested_variants.usda`
 - `tests/fixtures/variants/material_binding_overrides.usda`
+- `tests/fixtures/subdivision/catmull_clark_cube.usda`
+- `tests/fixtures/usd-concepts/native_instances.usda`
+- `tests/fixtures/usd-concepts/point_instancer.usda`
+- `tests/fixtures/usd-concepts/reference_override.usda` plus `reference_base.usda`
+- `tests/fixtures/usd-concepts/inherits_specializes.usda`
+- `tests/fixtures/usd-concepts/collection_binding.usda`
+- `tests/fixtures/usd-concepts/visibility_purpose.usda`
+- `tests/fixtures/usd-concepts/purpose_render_intent.usda`
+- `tests/fixtures/usd-concepts/camera_light.usda`
+- `tests/fixtures/usd-concepts/time_samples.usda`
+- `tests/fixtures/usdz-nested-material.usdz`, which contains a root reference, nested sublayered material, and package-internal texture
 - Asset Explorer `BoomBox.glb.three.usdz`
 - Asset Explorer `BoomBox.glb`
 - OpenUSD/Adobe `usdGltf` converted `CesiumMan.glb.openusd.usdz`
@@ -210,8 +222,11 @@ future regressions in bracket-addressed package extraction fail visibly.
 
 Variant-specific matrix assertions now verify that `material_binding_overrides.usda`
 switches from one `Painted` mesh to one `Metal` mesh, `nested_variants.usda`
-switches shape/finish without double-rendering stale geometry, and CesiumMan USDZ
-has at least one textured material.
+switches shape/finish without double-rendering stale geometry, CesiumMan USDZ
+has at least one textured material, `visibility_purpose.usda` keeps invisible
+geometry hidden, `purpose_render_intent.usda` shows only `default`/`render`
+purpose meshes by default, and `usdz-nested-material.usdz` resolves the internal
+texture on a material authored in a nested package layer.
 
 ## Headed Viewer Regression Pass
 
@@ -404,6 +419,7 @@ Expected result:
 - `usdMtlx` builds for wasm.
 - `hdMtlx` builds for wasm.
 - `emHdBindings` links with `PXR_ENABLE_MATERIALX_SUPPORT=ON`.
+- `HdWebSyncDriver.SetIncludedPurposes()` is exported and maps USD `default` to Hydra `geometry` while preserving `render`, `proxy`, and `guide` render tags.
 - `pxr/usdImaging/hdEmscripten/bindgen/generate_bindings.py` generates `emHdCoreBindings.inc` and `usd-core-bindings.d.ts`.
 - Node smoke passes against `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe`.
 - `emHdBindings.js`/`emHdBindings.wasm` embed USD resource files, including `usdShaders/resources/shaders/shaderDefs.usda` and the `usdMtlx/resources/libraries` MaterialX documents needed by the browser bundle.

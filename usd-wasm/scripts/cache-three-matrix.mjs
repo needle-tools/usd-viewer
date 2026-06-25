@@ -374,6 +374,17 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
     }, {
+        name: "local-purpose-render-intent-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "purpose_render_intent.usda")}`,
+        files: [{
+            path: "purpose_render_intent.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "purpose_render_intent.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/usd-concepts/purpose_render_intent.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
         name: "local-camera-light-usda",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "camera_light.usda")}`,
         files: [{
@@ -392,6 +403,13 @@ async function prepareFixtures({ cacheRoot, refresh }) {
             url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "time_samples.usda")}`,
         }],
         source: "usd-wasm/tests/fixtures/usd-concepts/time_samples.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
+        name: "local-usdz-nested-material",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usdz-nested-material.usdz")}`,
+        source: "usd-wasm/tests/fixtures/usdz-nested-material.usdz",
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
