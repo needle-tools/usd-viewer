@@ -468,6 +468,34 @@ Recommended next step:
 
 The practical target is not "every C++ symbol in OpenUSD" for the viewer package. The better target is "complete programmatic USD scene authoring and inspection from JS" with generated types, then explicit opt-in modules for advanced APIs such as `UsdGeom`, `UsdShade`, `UsdSkel`, `UsdLux`, `UsdUtils`, and `Sdf`.
 
+## Path To Production
+
+Concise checklist from the current modernization branch to a new `usd-viewer` deployment and `@needle-tools/usd` release:
+
+1. `OpenUSD`: keep `modernize-openusd-26-05-wasm` clean and record the final OpenUSD SHA used for the release.
+   Check with `git status --short`, `git rev-parse HEAD`, and `./herbst/smoke/wasm-hydra-bindings-node.sh`.
+
+2. `OpenUSD`: rebuild the MaterialX/OpenSubdiv/Adobe `usdGltf` Hydra wasm bundle from scripts, not manual copy steps.
+   Check that `/Users/herbst/OpenUSD-26.05-wasm-hydra-mtlx-probe/bin/emHdBindings.js`, `emHdBindings.wasm`, and `share/hdEmscripten/usd-core-bindings.d.ts` are regenerated and that the OpenUSD smoke scripts pass.
+
+3. `usd-viewer`: update the checked-in wasm sidecars and generated TypeScript declarations under `usd-wasm/src/bindings`.
+   Check with `cd usd-wasm && npm run test:bindings` plus `npm --prefix examples run build`.
+
+4. `needle-engine-dev/modules/needle-engine/modules/needle-tools/materialx`: publish the local `@needle-tools/materialx` fixes used by the Hydra MaterialX path.
+   Check by linking it into `usd-viewer/usd-wasm`, loading the MaterialX external/nested/variant/texture-noise/marble/bricks fixtures, and confirming shader generation comes only from Hydra-provided MaterialX documents.
+
+5. `usd-viewer/usd-wasm`: replace the local `npm link` with the published `@needle-tools/materialx` version and refresh package metadata/locks.
+   Check with a clean install, `npm run build`, `npm run test:bindings`, and the headed matrix below.
+
+6. `usd-viewer`: keep the production viewer menu shaped like the current public site while retaining the reusable OpenUSD test asset library for tests and examples.
+   Check that `public/index.js` leaves `SHOW_OPENUSD_TEST_ASSETS` disabled, while `usd-wasm/examples` still exposes the expanded test buttons.
+
+7. `usd-viewer/usd-wasm`: run browser validation before release.
+   Check with `USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.185.0 --renderer-modes webgl,webgpu` and `USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewer-visual`.
+
+8. `usd-viewer` and `usd-viewer/usd-wasm`: publish and deploy only after a clean fresh-consumer check.
+   Check by installing the packed `@needle-tools/usd` tarball in a clean app, loading cube, bike, teapot, McUsd, DamagedHelmet, BoomBox, CesiumMan, MaterialX fixtures, variants, payloads, purpose/visibility, native instances, point instancers, cameras, lights, and USDZ download/export.
+
 ## Remaining Work
 
 - Publish `@needle-tools/materialx@1.7.0` with the local ESM/Three import fixes, then refresh `usd-wasm/package-lock.json`.
