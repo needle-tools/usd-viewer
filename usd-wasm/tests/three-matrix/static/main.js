@@ -247,6 +247,10 @@ async function runFixtureChecks(handle, usdRoot, config) {
         checks.cesiumTexture = collectMeshMaterialState(usdRoot);
     }
 
+    if (config.fixtureName === "local-catmull-clark-subdivision-usda") {
+        checks.subdivision = collectMeshGeometryState(usdRoot);
+    }
+
     return checks;
 }
 
@@ -333,5 +337,22 @@ function collectMeshMaterialState(root) {
         meshes,
         materialNames: meshes.flatMap(mesh => mesh.materials.map(material => material.name)),
         texturedMaterialCount: meshes.flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
+    };
+}
+
+function collectMeshGeometryState(root) {
+    const meshes = [];
+    root.traverse?.(object => {
+        if (!object.isMesh) return;
+        meshes.push({
+            name: object.name || "",
+            positionCount: object.geometry?.attributes?.position?.count ?? 0,
+            indexCount: object.geometry?.index?.count ?? 0,
+        });
+    });
+    return {
+        meshCount: meshes.length,
+        meshes,
+        maxPositionCount: Math.max(0, ...meshes.map(mesh => mesh.positionCount)),
     };
 }

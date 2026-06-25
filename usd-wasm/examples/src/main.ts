@@ -61,6 +61,7 @@ const fixtureUrls = {
   "payloads/payload_payload.usda": new URL("../../tests/fixtures/payloads/payload_payload.usda", import.meta.url).href,
   "variants/nested_variants.usda": new URL("../../tests/fixtures/variants/nested_variants.usda", import.meta.url).href,
   "variants/material_binding_overrides.usda": new URL("../../tests/fixtures/variants/material_binding_overrides.usda", import.meta.url).href,
+  "subdivision/catmull_clark_cube.usda": new URL("../../tests/fixtures/subdivision/catmull_clark_cube.usda", import.meta.url).href,
 };
 
 type FixturePath = keyof typeof fixtureUrls;
@@ -92,6 +93,7 @@ const testAssets: TestAsset[] = [
   },
   { group: "Composition", label: "Nested Variants", files: [fixtureFile("variants/nested_variants.usda")] },
   { group: "Composition", label: "Binding Override Variants", files: [fixtureFile("variants/material_binding_overrides.usda")] },
+  { group: "Subdivision", label: "Catmull-Clark Cube", files: [fixtureFile("subdivision/catmull_clark_cube.usda")] },
   {
     group: "MaterialX",
     label: "MaterialX External Ref",

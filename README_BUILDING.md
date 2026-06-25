@@ -51,6 +51,7 @@ Working now:
 - The viewer branch now checks in the MaterialX-enabled OpenUSD 26.05 Hydra wasm sidecars with Adobe `usdGltf` statically linked.
 - The checked-in sidecars load in Node and expose the viewer runtime APIs, including `HdWebSyncDriver`, filesystem helpers, `driver.GetStage()`, stage authoring helpers, and USDZ packaging.
 - Browser matrix validation passes in headed Chromium for the supported cases listed below.
+- OpenSubdiv is built for wasm and linked into the Hydra bundle; the matrix includes a Catmull-Clark cube fixture that verifies the runtime geometry is refined beyond the authored 8-point control cage.
 - Variant and payload composition edits are applied through `HdWebSyncDriver.Repopulate()` so Hydra rebuilds the populated prim set after the USD stage changes.
 - Hydra deletion is mirrored through the official `HdRenderDelegate::DestroyRprim` and `DestroySprim` hooks; the wasm render delegate notifies the JS bridge before deleting the C++ prim so Three objects are removed instead of lingering through variant switches.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
@@ -273,6 +274,7 @@ HTTPS References -> USDZ Cube switch -> Loaded, console errors=0
 Gingerbread USDC -> Loaded
 Gingerbread USDA -> Loaded
 Headed WebGL matrix slice -> 34 passed, 0 failed
+Headed WebGL matrix slice with OpenSubdiv fixture -> 36 passed, 0 failed; Catmull-Clark cube refined to 36 positions from 8 authored control points
 ```
 
 Known caveat from that pass:

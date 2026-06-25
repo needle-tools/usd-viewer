@@ -232,4 +232,9 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.cesiumTexture.meshCount).toBeGreaterThan(0);
         expect(checks.cesiumTexture.texturedMaterialCount).toBeGreaterThan(0);
     }
+
+    if (fixtureName === 'local-catmull-clark-subdivision-usda') {
+        expect(checks.subdivision.meshCount).toBe(1);
+        expect(checks.subdivision.maxPositionCount).toBeGreaterThan(8);
+    }
 }
