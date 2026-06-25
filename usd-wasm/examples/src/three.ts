@@ -79,7 +79,7 @@ async function createRenderHost(config: {
         needleContext.mainCamera = camera;
         scene = needleContext.scene;
         runtimeLabel = "Needle Engine";
-        runtimeVersion = needleContext.version;
+        runtimeVersion = needleContext.version && needleContext.version !== "0.0.0" ? needleContext.version : null;
     }
     else {
         scene = new Scene();
