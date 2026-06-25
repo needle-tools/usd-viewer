@@ -95,16 +95,8 @@ export async function getUsdModule(opts) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
     }
 
-    /**
-     * We use a async import here because otherwise sveltekit vite complains about unknown file extensions (e.g. .wasm)
-     */
-    const bindingsPromise = await Promise.all([
-        /** @ts-ignore */
-        import(`./emHdBindings.js?url`),
-        /** @ts-ignore */
-        import(`./emHdBindings.wasm?url`),
-    ]);
-    const [bindings, wasm] = bindingsPromise;
+    const bindingsUrl = new URL("./emHdBindings.js", import.meta.url).href;
+    const wasmUrl = new URL("./emHdBindings.wasm", import.meta.url).href;
     const assetFetches = new Map();
 
     /**
@@ -144,7 +136,7 @@ export async function getUsdModule(opts) {
     }
 
     return usd_module_promise = getUsdModuleFn({
-        mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
+        mainScriptUrlOrBlob: bindingsUrl,
         ...opts,
         onAssetFetchProgress: handleAssetFetchProgress,
         setStatus: (status) => {
@@ -174,7 +166,7 @@ export async function getUsdModule(opts) {
             let res = null;
 
             if (file.includes("emHdBindings.wasm")) {
-                res = wasm.default;
+                res = wasmUrl;
             }
             // if (url?.startsWith("data:text/javascript;base64")) {
             //     // we're client side and Buffer and atob are not available

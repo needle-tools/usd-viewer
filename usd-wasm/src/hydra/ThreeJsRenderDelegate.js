@@ -1,6 +1,32 @@
-import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, InstancedMesh, Matrix4, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, CameraHelper, DirectionalLight, DirectionalLightHelper, HemisphereLight, OrthographicCamera, PerspectiveCamera, PointLight, PointLightHelper, MathUtils } from 'three';
+import * as THREE from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+
+const {
+  TextureLoader,
+  BufferGeometry,
+  MeshPhysicalMaterial,
+  DoubleSide,
+  Color,
+  Mesh,
+  InstancedMesh,
+  Matrix4,
+  Float32BufferAttribute,
+  SRGBColorSpace,
+  RGBAFormat,
+  RepeatWrapping,
+  LinearSRGBColorSpace,
+  Vector2,
+  CameraHelper,
+  DirectionalLight,
+  DirectionalLightHelper,
+  HemisphereLight,
+  OrthographicCamera,
+  PerspectiveCamera,
+  PointLight,
+  PointLightHelper,
+  MathUtils,
+} = THREE;
 
 const debugTextures = false;
 const debugMaterials = false;

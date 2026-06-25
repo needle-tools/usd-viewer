@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added generated TypeScript declarations and usdview-style inspection/change APIs for programmatic stage interaction.
 - Switched the client MaterialX shader path to `@needle-tools/materialx@1.7.0`.
 - Added explicit package entrypoints for `@needle-tools/usd/three`, `@needle-tools/usd/plugins`, and `@needle-tools/usd/vite`.
+- Added a Needle Engine browser matrix that validates the USD package through Engine `dist` and package-module runtime shapes.
 - Read stage metadata from the live `UsdStage` API so up-axis state remains stable across referenced asset reloads.
 - Changed the license to PolyForm Noncommercial 1.0.0.
 
