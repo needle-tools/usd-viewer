@@ -96,6 +96,23 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(typeof USD.CreateUsdzPackage, "function");
         assert.equal(typeof USD.ReadFile, "function");
         assert.equal(typeof USD.Stage.prototype.TraverseAll, "function");
+        assert.equal(typeof USD.Stage.prototype.GetLayerStack, "function");
+        assert.equal(typeof USD.Stage.prototype.GetUsedLayers, "function");
+        assert.equal(typeof USD.Stage.prototype.GetCompositionErrors, "function");
+        assert.equal(typeof USD.Stage.prototype.RegisterObjectsChanged, "function");
+        assert.equal(typeof USD.Stage.prototype.RevokeObjectsChanged, "function");
+        assert.equal(typeof USD.Layer.prototype.GetRealPath, "function");
+        assert.equal(typeof USD.Prim.prototype.GetAttributes, "function");
+        assert.equal(typeof USD.Prim.prototype.GetRelationships, "function");
+        assert.equal(typeof USD.Prim.prototype.GetPrimStack, "function");
+        assert.equal(typeof USD.Prim.prototype.GetPrimStackWithLayerOffsets, "function");
+        assert.equal(typeof USD.Prim.prototype.GetPrimIndex, "function");
+        assert.equal(typeof USD.Prim.prototype.GetCompositionArcs, "function");
+        assert.equal(typeof USD.Prim.prototype.GetAllMetadata, "function");
+        assert.equal(typeof USD.Attribute.prototype.GetResolveInfo, "function");
+        assert.equal(typeof USD.Attribute.prototype.GetPropertyStackWithLayerOffsets, "function");
+        assert.equal(typeof USD.Attribute.prototype.GetTimeSamples, "function");
+        assert.equal(typeof USD.Relationship.prototype.GetPropertyStackWithLayerOffsets, "function");
         assert.equal(typeof USD.Attribute.prototype.SetVec3f, "function");
         assert.equal(typeof USD.Attribute.prototype.SetVec3d, "function");
         assert.equal(typeof USD.Attribute.prototype.SetMatrix4d, "function");
@@ -153,6 +170,126 @@ def Xform "Root" {
         }
         assert.match(stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
         driver.delete();
+    });
+
+    it("exposes usdview-style composed inspection APIs and ObjectsChanged notices", async () => {
+        const USD = await loadUsdModuleFromTempCopy();
+        const encoder = new TextEncoder();
+
+        const baseLayer = `#usda 1.0
+(
+    defaultPrim = "Base"
+)
+
+def Xform "Base" (
+    kind = "component"
+)
+{
+    double size = 2
+    custom string userProperties:baseNote = "from-base"
+}
+`;
+        const rootLayer = `#usda 1.0
+(
+    defaultPrim = "World"
+)
+
+def Xform "World" (
+    prepend references = @inspect-base.usda@</Base>
+    variants = {
+        string look = "warm"
+    }
+    prepend variantSets = "look"
+)
+{
+    custom string userProperties:rootNote = "from-root"
+    rel material:binding = </Looks/Warm>
+
+    variantSet "look" = {
+        "cool" {
+            custom token userProperties:look = "cool"
+        }
+        "warm" {
+            custom token userProperties:look = "warm"
+        }
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "Warm"
+    {
+    }
+}
+`;
+
+        USD.FS_createDataFile("/", "inspect-base.usda", encoder.encode(baseLayer), true, true, true);
+        USD.FS_createDataFile("/", "inspect-root.usda", encoder.encode(rootLayer), true, true, true);
+        const stage = await USD.OpenStage("inspect-root.usda");
+        const world = stage.GetPrimAtPath("/World");
+
+        assert.equal(world.IsValid(), true);
+        assert.equal(world.GetTypeName(), "Xform");
+        assert.equal(world.GetSpecifier(), "SdfSpecifierDef");
+        assert.equal(world.HasAuthoredReferences(), true);
+        assert.equal(world.GetVariantSelection("look"), "warm");
+
+        const variantSetNames = vectorToArray(world.GetVariantSetNames());
+        assert.deepEqual(variantSetNames, ["look"]);
+        assert.deepEqual(vectorToArray(world.GetVariantNames("look")).sort(), ["cool", "warm"]);
+
+        const attributes = vectorToArray(world.GetAttributes());
+        assert.ok(attributes.some(attribute => attribute.GetName() === "size"), "composed referenced attributes should be inspectable");
+        const size = world.GetAttribute("size");
+        assert.equal(size.IsValid(), true);
+        assert.equal(size.GetValueString(), "2");
+        assert.equal(size.GetResolveInfo(Number.NaN).source, "Default");
+        assert.equal(size.GetPropertyStackWithLayerOffsets(Number.NaN).length, 1);
+
+        const rootNote = world.GetAttribute("userProperties:rootNote");
+        assert.equal(rootNote.GetAllMetadata().custom, "1");
+
+        const relationships = vectorToArray(world.GetRelationships());
+        assert.ok(relationships.some(relationship => relationship.GetName() === "material:binding"));
+        const binding = world.GetRelationship("material:binding");
+        assert.deepEqual(vectorToArray(binding.GetTargets()), ["/Looks/Warm"]);
+        assert.equal(binding.GetPropertyStackWithLayerOffsets(Number.NaN).length, 1);
+
+        const primStack = world.GetPrimStackWithLayerOffsets();
+        assert.ok(primStack.length >= 2, "referenced prim should expose root and referenced specs");
+        assert.ok(primStack.some(spec => spec.layer.displayName === "inspect-root.usda"));
+        assert.ok(primStack.some(spec => spec.layer.displayName === "inspect-base.usda"));
+
+        const primIndex = world.GetPrimIndex();
+        assert.equal(primIndex.isValid, true);
+        assert.equal(primIndex.rootNode.path, "/World");
+        assert.ok(primIndex.rootNode.children.some(node => node.arcType === "PcpArcTypeReference"));
+
+        const compositionArcs = world.GetCompositionArcs();
+        assert.ok(compositionArcs.some(arc => arc.arcType === "PcpArcTypeReference" && arc.targetPrimPath === "/Base"));
+
+        const layerStack = stage.GetLayerStack(true);
+        assert.ok(layerStack.some(layer => layer.displayName === "inspect-root.usda"));
+        const usedLayers = stage.GetUsedLayers(false);
+        assert.ok(usedLayers.some(layer => layer.displayName === "inspect-base.usda"));
+        assert.deepEqual(stage.GetCompositionErrors(), []);
+
+        const notices = [];
+        const listenerId = stage.RegisterObjectsChanged(notice => notices.push(notice));
+        assert.equal(typeof listenerId, "number");
+
+        assert.equal(await world.SetVariantSelection("look", "cool"), true);
+        await microtask();
+        assert.ok(notices.length > 0, "variant selection should send an ObjectsChanged notice");
+        assert.ok(notices.some(notice => notice.resyncedPaths.includes("/World") || notice.changedInfoOnlyPaths.includes("/World")));
+
+        assert.equal(stage.RevokeObjectsChanged(listenerId), true);
+        const noticeCountAfterRevoke = notices.length;
+        assert.equal(await world.SetVariantSelection("look", "warm"), true);
+        await microtask();
+        assert.equal(notices.length, noticeCountAfterRevoke, "revoked listeners should stop receiving ObjectsChanged notices");
+
+        USD.ReleaseStage(stage);
     });
 
     it("authors stages, variants, animated values, and USDZ packages through the generated API", async () => {
@@ -290,3 +427,19 @@ def Xform "Root" {
         USD.ReleaseStage(stage);
     });
 });
+
+function vectorToArray(vector) {
+    const values = [];
+    try {
+        for (let i = 0; i < vector.size(); i++) {
+            values.push(vector.get(i));
+        }
+    } finally {
+        vector.delete();
+    }
+    return values;
+}
+
+function microtask() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}

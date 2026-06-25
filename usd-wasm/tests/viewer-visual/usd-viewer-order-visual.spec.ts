@@ -54,6 +54,28 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(await renderAreaScreenshot(page)).toMatchSnapshot('materialx-procedural-bricks-after-order.png');
         expectForbiddenDiagnostics(diagnostics);
     });
+
+    test('Usdview panel follows stage selection and ObjectsChanged notices', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['Payload Root']);
+
+        await expect(page.getByTestId('usdview-panel')).toContainText('Layer Stack');
+        await expect(page.getByTestId('usdview-panel')).toContainText('Used Layers');
+        await page.getByRole('button', { name: 'PayloadHolder Xform', exact: true }).click();
+        await expect(page.getByTestId('usdview-panel')).toContainText('/World/PayloadHolder');
+
+        await page.getByRole('button', { name: 'Unload', exact: true }).click();
+        await expect(page.locator('.status')).toHaveText('Applied /World/PayloadHolder payload unloaded', { timeout: 45_000 });
+        await expect(page.getByTestId('usdview-panel')).toContainText('Resynced');
+        await expect(page.getByTestId('usdview-panel')).toContainText('/World/PayloadHolder');
+
+        const state = await getViewerState(page);
+        expect(state?.usdview?.hasStage).toBe(true);
+        expect(state?.usdview?.selectedPath).toBe('/World/PayloadHolder');
+        expect(state?.usdview?.lastNoticeResyncedPaths).toContain('/World/PayloadHolder');
+        expectForbiddenDiagnostics(diagnostics);
+    });
 });
 
 async function openViewer(page) {
@@ -94,6 +116,11 @@ async function getViewerState(page) {
                 childCount: number;
                 rootRotationX: number | null;
                 stageMetadata: { upAxis: string } | null;
+                usdview: {
+                    hasStage: boolean;
+                    selectedPath: string;
+                    lastNoticeResyncedPaths: string[];
+                };
             };
         };
         return testWindow.__usdViewerTestState?.();
