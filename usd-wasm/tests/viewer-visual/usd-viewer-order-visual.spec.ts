@@ -122,7 +122,7 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
     test('Needle Engine host loads representative technical samples', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page, 'needle-engine');
-        await expect(page.getByRole('button', { name: 'Needle Engine', exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByRole('button', { name: 'Needle Direct Hydra', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
         await loadAssetsInOrder(page, [
             'USDZ Cube',
@@ -152,6 +152,22 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         const state = await getViewerState(page);
         expect(state?.renderHost).toBe('needle-engine');
         expect(state?.usdview?.hasStage).toBe(true);
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('selected model deep-link survives render mode switches', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await page.goto('/?host=three&model=Payload+Root');
+        await expect(page.locator('.status')).toHaveText('Loaded Payload Root', { timeout: 45_000 });
+        expect((await getViewerState(page))?.renderMode).toBe('three');
+        expect((await getViewerState(page))?.model).toBe('Payload Root');
+
+        await page.getByRole('button', { name: 'Needle Loader', exact: true }).click();
+        await expect(page.locator('.status')).toHaveText('Loaded Payload Root', { timeout: 45_000 });
+        const state = await getViewerState(page);
+        expect(state?.renderMode).toBe('needle-loader');
+        expect(state?.model).toBe('Payload Root');
+        expect(new URL(page.url()).searchParams.get('model')).toBe('Payload Root');
         expectForbiddenDiagnostics(diagnostics);
     });
 
@@ -233,6 +249,8 @@ async function getViewerState(page) {
                 childCount: number;
                 renderHost: 'three' | 'needle-engine';
                 needleIntegration: NeedleIntegration;
+                renderMode: 'three' | 'needle-direct' | 'needle-loader';
+                model: string | null;
                 rootRotationX: number | null;
                 stageMetadata: { upAxis: string } | null;
                 usdview: {
