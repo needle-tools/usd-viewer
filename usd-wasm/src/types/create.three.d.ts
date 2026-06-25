@@ -51,7 +51,7 @@ export declare type createThreeHydraConfig = {
 
     /**
      * Add Three.js helper objects for USD cameras and lights.
-     * The cameras and lights themselves are created from the composed USD stage either way.
+     * The cameras and lights themselves are created through Hydra Sprim sync either way.
      */
     showScenePrimitiveHelpers?: boolean,
 
@@ -66,7 +66,7 @@ export declare type createThreeHydraConfig = {
     showLightHelpers?: boolean,
 
     /**
-     * Preview scale used when mirroring USD Lux intensity values into Three lights.
+     * Preview scale used when applying USD Lux intensity values to Three lights.
      * Defaults to 0.01. USD intensity and exposure are still authored values; this
      * only controls the helper/demo Three light brightness.
      */
