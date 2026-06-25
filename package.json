@@ -15,7 +15,8 @@
     "node": "22.x"
   },
   "repository": {
-    "url": "https://glitch.com/edit/#!/usd-viewer"
+    "type": "git",
+    "url": "git+https://github.com/needle-tools/usd-viewer.git"
   },
   "license": "PolyForm-Noncommercial-1.0.0",
   "keywords": [
