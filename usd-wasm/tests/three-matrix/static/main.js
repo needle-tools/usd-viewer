@@ -247,6 +247,13 @@ async function runFixtureChecks(handle, usdRoot, config) {
         checks.cesiumTexture = collectMeshMaterialState(usdRoot);
     }
 
+    if (
+        config.fixtureName === "local-materialx-texture-noise-usda" ||
+        config.fixtureName === "local-materialx-procedural-brick-usda"
+    ) {
+        checks.materialXTextures = collectMeshMaterialState(usdRoot);
+    }
+
     if (config.fixtureName === "local-catmull-clark-subdivision-usda") {
         checks.subdivision = collectMeshGeometryState(usdRoot);
     }
@@ -293,7 +300,9 @@ function collectSceneStats(root) {
         materials: 0,
         materialXMaterials: 0,
         meshPhysicalMaterials: 0,
+        materialTextures: 0,
         namedMaterials: [],
+        textureNames: [],
     };
 
     root.traverse?.(object => {
@@ -310,6 +319,10 @@ function collectSceneStats(root) {
             if (material.constructor?.name === "MaterialXMaterial") stats.materialXMaterials++;
             if (material.isMeshPhysicalMaterial) stats.meshPhysicalMaterials++;
             if (material.name && stats.namedMaterials.length < 20) stats.namedMaterials.push(material.name);
+            for (const texture of collectMaterialTextures(material)) {
+                stats.materialTextures++;
+                if (texture.name && stats.textureNames.length < 20) stats.textureNames.push(texture.name);
+            }
         }
     });
 
@@ -329,6 +342,7 @@ function collectMeshMaterialState(root) {
                 metalness: material.metalness ?? null,
                 roughness: material.roughness ?? null,
                 hasMap: Boolean(material.map),
+                textureCount: collectMaterialTextures(material).length,
             })),
         });
     });
@@ -337,6 +351,7 @@ function collectMeshMaterialState(root) {
         meshes,
         materialNames: meshes.flatMap(mesh => mesh.materials.map(material => material.name)),
         texturedMaterialCount: meshes.flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
+        textureCount: meshes.flatMap(mesh => mesh.materials).reduce((count, material) => count + material.textureCount, 0),
     };
 }
 
@@ -348,11 +363,41 @@ function collectMeshGeometryState(root) {
             name: object.name || "",
             positionCount: object.geometry?.attributes?.position?.count ?? 0,
             indexCount: object.geometry?.index?.count ?? 0,
+            bounds: object.geometry?.boundingBox ? {
+                min: object.geometry.boundingBox.min.toArray(),
+                max: object.geometry.boundingBox.max.toArray(),
+            } : null,
         });
     });
     return {
         meshCount: meshes.length,
         meshes,
         maxPositionCount: Math.max(0, ...meshes.map(mesh => mesh.positionCount)),
+        maxAbsBound: Math.max(
+            0,
+            ...meshes.flatMap(mesh => mesh.bounds ? [...mesh.bounds.min, ...mesh.bounds.max].map(Math.abs) : []),
+        ),
     };
+}
+
+function collectMaterialTextures(material) {
+    const textures = [];
+    const seen = new Set();
+    const visit = (value, depth) => {
+        if (!value || typeof value !== "object" || seen.has(value) || depth > 5) return;
+        seen.add(value);
+        if (value.isTexture) {
+            textures.push(value);
+            return;
+        }
+        if (value.value && typeof value.value === "object") visit(value.value, depth + 1);
+        if (value.uniforms && typeof value.uniforms === "object") {
+            for (const uniform of Object.values(value.uniforms)) visit(uniform, depth + 1);
+        }
+        if (depth < 2) {
+            for (const entry of Object.values(value)) visit(entry, depth + 1);
+        }
+    };
+    visit(material, 0);
+    return textures;
 }

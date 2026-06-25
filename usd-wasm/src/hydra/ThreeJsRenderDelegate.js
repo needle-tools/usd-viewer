@@ -86,6 +86,27 @@ class TextureRegistry {
     return (preserveLeadingSlash ? "/" : "") + parts.join("/");
   }
 
+  materialResourcePathCandidates(resourcePath) {
+    const rawPath = String(resourcePath ?? "").replace(/\\/g, "/");
+    const normalized = this.normalizeResourcePath(rawPath);
+    const withoutLeadingSlash = normalized.replace(/^\/+/, "");
+    const candidates = new Set([
+      rawPath,
+      normalized,
+      withoutLeadingSlash,
+      withoutLeadingSlash.replace(/^(?:\.\/)+/, ""),
+      withoutLeadingSlash.replace(/^(?:\.\.\/)+/, ""),
+    ]);
+
+    const pathParts = withoutLeadingSlash.split("/").filter(Boolean);
+    const texturesIndex = pathParts.lastIndexOf("textures");
+    if (texturesIndex >= 0) {
+      candidates.add(pathParts.slice(texturesIndex).join("/"));
+    }
+
+    return [...candidates].filter(Boolean);
+  }
+
   getResourceExtension(resourcePath) {
     const path = String(resourcePath ?? "").toLowerCase();
     const extensionMatches = [...path.matchAll(/\.([a-z0-9]+)(?=\]|$|[?#])/g)];
@@ -107,19 +128,27 @@ class TextureRegistry {
   }
 
   resolveResourcePath(resourcePath) {
-    const normalized = this.normalizeResourcePath(resourcePath);
-    if (!normalized) return normalized;
+    const candidates = this.materialResourcePathCandidates(resourcePath);
+    if (!candidates.length) return "";
 
     const knownPaths = Array.isArray(this.allPaths) ? this.allPaths : [];
-    for (const knownPath of knownPaths) {
-      const known = this.normalizeResourcePath(knownPath);
-      const knownWithoutRoot = known.replace(/^needle\//, "");
-      if (knownWithoutRoot === normalized || knownWithoutRoot.endsWith("/" + normalized)) {
-        return known;
+    for (const candidate of candidates) {
+      const candidateWithoutRoot = candidate.replace(/^needle\//, "");
+      for (const knownPath of knownPaths) {
+        const known = this.normalizeResourcePath(knownPath);
+        const knownWithoutRoot = known.replace(/^needle\//, "");
+        if (
+          known === candidate ||
+          knownWithoutRoot === candidate ||
+          knownWithoutRoot === candidateWithoutRoot ||
+          knownWithoutRoot.endsWith("/" + candidateWithoutRoot)
+        ) {
+          return known;
+        }
       }
     }
 
-    return normalized;
+    return candidates[0];
   }
 
   getTexture(resourcePath) {
@@ -673,7 +702,14 @@ class HydraMaterial {
 
     const authored = String(authoredPath);
     const canonical = HydraMaterial.canonicalAssetPath(authored);
-    for (const key of [authored, canonical, `./${canonical}`, `/./${canonical}`]) {
+    for (const key of [
+      authored,
+      canonical,
+      canonical.replace(/^\/+/, ""),
+      canonical.replace(/^\/?(?:\.\.\/)+/, ""),
+      `./${canonical}`,
+      `/./${canonical}`,
+    ]) {
       this._resolvedAssetPaths.set(key, String(resolvedPath));
     }
   }
@@ -688,9 +724,19 @@ class HydraMaterial {
       return authored;
     }
 
-    return this._resolvedAssetPaths.get(authored)
-      || this._resolvedAssetPaths.get(HydraMaterial.canonicalAssetPath(authored))
-      || "";
+    const candidates = this._interface.registry.materialResourcePathCandidates(authored);
+    for (const candidate of candidates) {
+      const resolved = this._resolvedAssetPaths.get(candidate)
+        || this._resolvedAssetPaths.get(HydraMaterial.canonicalAssetPath(candidate));
+      if (resolved) return resolved;
+    }
+
+    for (const candidate of candidates) {
+      const resolved = this._interface.registry.resolveResourcePath(candidate);
+      if (resolved) return resolved;
+    }
+
+    return "";
   }
 
   updateNode(networkId, path, parameters) {

@@ -13,14 +13,14 @@ def Xform "World"
         int[] faceVertexCounts = [3, 3]
         int[] faceVertexIndices = [0, 1, 2, 0, 2, 3]
         point3f[] points = [(-1.4, 0, -0.85), (1.4, 0, -0.85), (1.4, 0, 0.85), (-1.4, 0, 0.85)]
-        normal3f[] normals = [(0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0)] (
-            interpolation = "faceVarying"
+        normal3f[] normals = [(0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0)] (
+            interpolation = "vertex"
         )
-        vector3f[] primvars:tangents = [(1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0)] (
-            interpolation = "faceVarying"
+        vector3f[] primvars:tangents = [(1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0)] (
+            interpolation = "vertex"
         )
-        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] (
-            interpolation = "faceVarying"
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
         )
     }
 }
