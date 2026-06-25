@@ -61,6 +61,29 @@
       color: black;
     }
 
+    .render-host-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      align-items: center;
+      margin: 3px;
+    }
+
+    .render-host-toggle button {
+      margin: 0;
+      background-color: rgb(50, 50, 50);
+    }
+
+    .render-host-toggle button[data-active="true"] {
+      background-color: rgb(63, 107, 18);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+    }
+
+    .render-host-toggle .runtime-info {
+      flex-basis: 100%;
+      margin: 2px 0 0;
+    }
+
     .options button {
       background-color: rgb(75, 75, 75);
     }

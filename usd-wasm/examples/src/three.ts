@@ -2,6 +2,15 @@ import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, Perspe
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
+export type RenderHostRuntime = "three" | "needle-engine";
+
+export type DemoRenderHost = {
+    runtime: RenderHostRuntime,
+    runtimeLabel: string,
+    runtimeVersion: string | null,
+    scene: Scene,
+    fitCamera: () => void,
+};
 
 export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Texture | null> {
     return new Promise((resolve, _reject) => {
@@ -23,16 +32,24 @@ export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Textur
 
 export function run(config: {
     renderer: WebGLRenderer,
-    scene: Scene,
+    runtime: RenderHostRuntime,
     onRender: (dt: number) => void
-}) {
+}): Promise<DemoRenderHost> {
+    return createRenderHost(config);
+}
+
+async function createRenderHost(config: {
+    renderer: WebGLRenderer,
+    runtime: RenderHostRuntime,
+    onRender: (dt: number) => void
+}): Promise<DemoRenderHost> {
 
     const camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.x = 2;
     camera.position.y = 2;
     camera.position.z = 10;
 
-    const { renderer, onRender, scene } = config;
+    const { renderer, onRender } = config;
 
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -44,6 +61,29 @@ export function run(config: {
     renderer.shadowMap.type = VSMShadowMap;
     renderer.setClearColor(0x000000, 1); // the default
 
+    let scene: Scene;
+    let needleContext: import("@needle-tools/engine").Context | null = null;
+    let runtimeLabel = "three.js";
+    let runtimeVersion: string | null = null;
+
+    if (config.runtime === "needle-engine") {
+        const { Context } = await import("@needle-tools/engine");
+        needleContext = new Context({
+            name: "OpenUSD Demo",
+            alias: "openusd-demo",
+            domElement: renderer.domElement,
+            renderer,
+            runInBackground: true,
+        });
+        await needleContext.create({ files: [] });
+        needleContext.mainCamera = camera;
+        scene = needleContext.scene;
+        runtimeLabel = "Needle Engine";
+        runtimeVersion = needleContext.version;
+    }
+    else {
+        scene = new Scene();
+    }
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -65,17 +105,23 @@ export function run(config: {
         scene.add(new DirectionalLight(0xffffff, 1));
 
     const clock = new Clock();
-    function render() {
+    function render(timestamp = performance.now()) {
         const dt = clock.getDelta();
         requestAnimationFrame(render);
         controls.update(dt);
+        needleContext?.update(timestamp, null);
         onRender(dt);
-        renderer.render(scene, camera);
+        if (needleContext) needleContext.renderNow(camera);
+        else renderer.render(scene, camera);
     }
 
     window.requestAnimationFrame(render);
 
     return {
+        runtime: config.runtime,
+        runtimeLabel,
+        runtimeVersion,
+        scene,
         fitCamera: () => {
             setTimeout(() => {
                 const toRemove = [ gridhelper, ];

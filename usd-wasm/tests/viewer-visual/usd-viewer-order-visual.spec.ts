@@ -102,17 +102,37 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(state?.usdview?.isPlaying).toBe(false);
         expectForbiddenDiagnostics(diagnostics);
     });
+
+    test('Needle Engine host loads representative technical samples', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page, 'needle-engine');
+        await expect(page.getByRole('button', { name: 'Needle Engine', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+        await loadAssetsInOrder(page, [
+            'USDZ Cube',
+            'DamagedHelmet GLB',
+            'MaterialX Procedural Bricks',
+        ], 'needle-engine');
+
+        const state = await getViewerState(page);
+        expect(state?.renderHost).toBe('needle-engine');
+        expect(state?.childCount).toBeGreaterThan(0);
+        expect(await renderAreaScreenshot(page)).toMatchSnapshot('needle-engine-procedural-bricks.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
 });
 
-async function openViewer(page) {
-    await page.goto('/');
+async function openViewer(page, host: 'three' | 'needle-engine' = 'three') {
+    await page.goto(`/?host=${host}`);
     await expect(page.locator('.status')).toHaveText('Ready');
+    await expect.poll(async () => (await getViewerState(page))?.renderHost).toBe(host);
 }
 
-async function loadAssetsInOrder(page, assetNames: string[]) {
+async function loadAssetsInOrder(page, assetNames: string[], host: 'three' | 'needle-engine' = 'three') {
     for (const assetName of assetNames) {
         await page.getByRole('button', { name: assetName, exact: true }).click();
         await expect(page.locator('.status')).toHaveText(`Loaded ${assetName}`, { timeout: 45_000 });
+        expect((await getViewerState(page))?.renderHost).toBe(host);
         await waitForFrames(page, 4);
     }
 }
@@ -142,6 +162,7 @@ async function getViewerState(page) {
             __usdViewerTestState?: () => {
                 status: string;
                 childCount: number;
+                renderHost: 'three' | 'needle-engine';
                 rootRotationX: number | null;
                 stageMetadata: { upAxis: string } | null;
                 usdview: {
