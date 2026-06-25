@@ -9,7 +9,11 @@ import { allDroppedFiles } from './fileHandling';
 import { usdViewState } from './usdViewStore.svelte';
 import { testAssetLibrary } from '../../tests/fixtures/test-asset-library.js';
 
+globalThis.NEEDLE_MATERIALX_LOCATION ??= "package";
+
 declare global {
+  var NEEDLE_MATERIALX_LOCATION: string | undefined;
+
   interface Window {
     loadFile: (url: string, label?: string) => Promise<void>;
     __usdViewerTestState?: () => {

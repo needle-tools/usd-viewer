@@ -138,24 +138,20 @@ USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewe
 
 ## MaterialX Package
 
-The client shader-generation package lives at:
+The client shader-generation package source lives at:
 
 ```text
-/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-tools/materialx
+/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx
 ```
 
-During development, link it into `usd-wasm`:
+The release-candidate viewer uses the published package:
 
 ```sh
-cd /Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-tools/materialx
-npm link
-
 cd /Users/herbst/git/usd-viewer/usd-wasm
-npm link @needle-tools/materialx
+npm ls @needle-tools/materialx
 ```
 
-Before release, publish `@needle-tools/materialx`, remove the local link, and
-refresh `usd-wasm/package-lock.json`.
+Expected version: `@needle-tools/materialx@1.7.0-next.9ec2906`.
 
 ## Current Shape
 

@@ -1,9 +1,57 @@
-import "./emHdBindings.js";
-
 /**
  * @type {Promise<import("..").USD> | null}
  */
 let usd_module_promise = null;
+
+/**
+ * @type {Promise<import("..").getUsdModule> | null}
+ */
+let node_get_usd_module_promise = null;
+
+function isNodeRuntime() {
+    return !!globalThis.process?.versions?.node && globalThis.process?.type !== "renderer";
+}
+
+async function getNodeUsdModuleFn() {
+    if (node_get_usd_module_promise) {
+        return node_get_usd_module_promise;
+    }
+
+    node_get_usd_module_promise = (async () => {
+        const [
+            { createRequire },
+            { readFile, writeFile, mkdtemp },
+            { dirname, join },
+            { tmpdir },
+            { fileURLToPath },
+        ] = await Promise.all([
+            import(/* @vite-ignore */ "node:module"),
+            import(/* @vite-ignore */ "node:fs/promises"),
+            import(/* @vite-ignore */ "node:path"),
+            import(/* @vite-ignore */ "node:os"),
+            import(/* @vite-ignore */ "node:url"),
+        ]);
+
+        const sourcePath = fileURLToPath(new URL("./emHdBindings.js", import.meta.url));
+        const tempDir = await mkdtemp(join(tmpdir(), "needle-usd-bindings-"));
+        const cjsPath = join(tempDir, "emHdBindings.cjs");
+        await writeFile(cjsPath, await readFile(sourcePath));
+
+        const require = createRequire(import.meta.url);
+        const getUsdModuleFn = require(cjsPath);
+        getUsdModuleFn.__needleUsdBindingsDir = dirname(sourcePath);
+        return getUsdModuleFn;
+    })();
+
+    return node_get_usd_module_promise;
+}
+
+async function ensureBrowserBindingsImported() {
+    if (globalThis["NEEDLE:USD:GET"]) {
+        return;
+    }
+    await import("./emHdBindings.js");
+}
 
 
 /**
@@ -16,11 +64,33 @@ export async function getUsdModule(opts) {
     }
 
 
+    if (isNodeRuntime()) {
+        const [
+            { join },
+            getUsdModuleFn,
+        ] = await Promise.all([
+            import(/* @vite-ignore */ "node:path"),
+            getNodeUsdModuleFn(),
+        ]);
+
+        return usd_module_promise = getUsdModuleFn({
+            ...opts,
+            locateFile: (file) => {
+                const userResult = opts?.locateFile?.(file);
+                if (userResult) {
+                    return userResult;
+                }
+                return join(getUsdModuleFn.__needleUsdBindingsDir, file);
+            },
+        });
+    }
+
+    await ensureBrowserBindingsImported();
+
     /**
      * @type {import("..").getUsdModule}
      */
     const getUsdModuleFn = globalThis["NEEDLE:USD:GET"];
-
     if (!getUsdModuleFn) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
     }

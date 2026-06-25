@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@fastify/static": "^6.10.2",
+    "@needle-tools/materialx": "1.7.0-next.9ec2906",
     "fastify": "^4.22.0"
   },
   "engines": {

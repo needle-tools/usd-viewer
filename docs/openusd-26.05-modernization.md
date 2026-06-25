@@ -15,9 +15,9 @@ This note records the modernization pass that moves `usd-viewer` onto upstream O
 These are the source and dependency commits for this checkpoint.
 
 - `usd-viewer`: this branch commit; use `git rev-parse HEAD` after applying these docs, because a commit cannot embed its own final SHA.
-- `OpenUSD`: `4cc9b40d48b7c544d945d3f089cdf2b032bae98e`
+- `OpenUSD`: `091e1c02196d7bbda8b536ec745b36824da71589`
 - `USD-Fileformat-plugins`: `ca3c2de5553648ae280077ddde079b6f3362a830`
-- `needle-engine-materialx`: `4b56764aca58c1760037975c34cb748f4ff15f27`
+- `needle-engine-materialx`: `9ec2906c9c24635c46e0c376b12c7fbe063c88ae` (`@needle-tools/materialx@1.7.0-next.9ec2906`)
 - `MaterialX` sample source: `ab218c56f016a9a2d398e8d306f3aeb439ae9e9e`
 - `emsdk`: `af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f` (`emcc 4.0.23`, Emscripten `7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed`)
 
@@ -352,8 +352,8 @@ Client-side MaterialX status:
 - The matrix also includes MaterialX's standard surface marble sample (`standard_surface_marble_solid.mtlx`) and procedural brick sample (`standard_surface_brick_procedural.mtlx` with `brick_*.jpg` textures), wrapped by local USDA files that bind those materials through USD composition.
 - The MaterialX fixture now uses the golden Hydra path: OpenUSD composes the `.mtlx` reference, Hydra creates material sprims for `/Materials/MaterialX/Materials/Default_Smooth` and `/Materials/MaterialX/Materials/Default_Green`, `hdMtlx` serializes the material documents, and JS passes those documents to `@needle-tools/materialx`.
 - The matrix import map loads `@needle-tools/materialx` as raw browser ESM through `/__rawfs`, with `three` resolved by the selected matrix runtime.
-- `@needle-tools/materialx` was patched in `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` to avoid runtime `package.json` imports, `three/src/...` imports, and WebGL-only named imports from `three`.
-- The latest headed matrix pass used `npm link @needle-tools/materialx` against that package source. Publish `@needle-tools/materialx@1.7.0`, then refresh the usd-viewer lockfile before publishing `@needle-tools/usd`.
+- `@needle-tools/materialx` was patched in `/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx` to avoid `three/src/...` imports and WebGL-only named imports from `three`. Its package version is read from the exported `package.json`.
+- The viewer and `@needle-tools/usd` package metadata now use the published `@needle-tools/materialx@1.7.0-next.9ec2906` package, not a local `npm link`.
 
 ## usd-viewer Wiring
 
@@ -481,11 +481,11 @@ Concise checklist from the current modernization branch to a new `usd-viewer` de
 3. `usd-viewer`: update the checked-in wasm sidecars, build provenance JSON, and generated TypeScript declarations under `usd-wasm/src/bindings`.
    Check with `cd usd-wasm && npm run test:bindings` plus `npm --prefix examples run build`.
 
-4. `needle-engine-dev/modules/needle-engine/modules/needle-tools/materialx`: publish the local `@needle-tools/materialx` fixes used by the Hydra MaterialX path.
-   Check by linking it into `usd-viewer/usd-wasm`, loading the MaterialX external/nested/variant/texture-noise/marble/bricks fixtures, and confirming shader generation comes only from Hydra-provided MaterialX documents.
+4. `needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx`: publish the local `@needle-tools/materialx` fixes used by the Hydra MaterialX path.
+   Done for `@needle-tools/materialx@1.7.0-next.9ec2906`. Check by loading the MaterialX external/nested/variant/texture-noise/marble/bricks fixtures and confirming shader generation comes only from Hydra-provided MaterialX documents.
 
 5. `usd-viewer/usd-wasm`: replace the local `npm link` with the published `@needle-tools/materialx` version and refresh package metadata/locks.
-   Check with a clean install, `npm run build`, `npm run test:bindings`, and the headed matrix below.
+   Done with exact `@needle-tools/materialx@1.7.0-next.9ec2906` pins in root `usd-viewer` and `usd-wasm`. Check with a clean install, `npm --prefix usd-wasm/examples run build`, `cd usd-wasm && npm run test:bindings`, and the headed matrix below.
 
 6. `usd-viewer`: keep the production viewer menu shaped like the current public site while retaining the reusable OpenUSD test asset library for tests and examples.
    Check that `public/index.js` leaves `SHOW_OPENUSD_TEST_ASSETS` disabled, while `usd-wasm/examples` still exposes the expanded test buttons.
@@ -494,9 +494,9 @@ Concise checklist from the current modernization branch to a new `usd-viewer` de
    Check with `USD_THREE_MATRIX_BROWSER=chromium USD_THREE_MATRIX_HEADED=1 npm run test:three-matrix -- --versions 0.185.0 --renderer-modes webgl,webgpu` and `USD_VIEWER_VISUAL_BROWSER=chromium USD_VIEWER_VISUAL_HEADED=1 npm run test:viewer-visual`.
 
 8. `usd-viewer` and `usd-viewer/usd-wasm`: publish and deploy only after a clean fresh-consumer check.
-   Check by installing the packed `@needle-tools/usd` tarball in a clean app, loading cube, bike, teapot, McUsd, DamagedHelmet, BoomBox, CesiumMan, MaterialX fixtures, variants, payloads, purpose/visibility, native instances, point instancers, cameras, lights, and USDZ download/export.
+   Done for the current `@needle-tools/usd@0.0.2` tarball: installed `/tmp/needle-tools-usd-0.0.2.tgz` into a clean app, verified the public ESM entrypoint and plugin subpath import, and verified build info reports OpenUSD `0.26.5` with MaterialX, `usdGltf`, and OpenSubdiv enabled.
 
 ## Remaining Work
 
-- Publish `@needle-tools/materialx@1.7.0` with the local ESM/Three import fixes, then refresh `usd-wasm/package-lock.json`.
+- Publish/deploy from the checked `@needle-tools/usd` artifacts.
 - Keep expanding fixture coverage for more production MaterialX networks and texture-heavy glTF/glb assets before publishing a new `@needle-tools/usd` release.

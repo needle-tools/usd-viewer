@@ -1,7 +1,6 @@
 import { TextureLoader, BufferGeometry, MeshPhysicalMaterial, DoubleSide, Color, Mesh, InstancedMesh, Matrix4, Float32BufferAttribute, SRGBColorSpace, RGBAFormat, RepeatWrapping, LinearSRGBColorSpace, Vector2, CameraHelper, DirectionalLight, DirectionalLightHelper, HemisphereLight, OrthographicCamera, PerspectiveCamera, PointLight, PointLightHelper, MathUtils } from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-import { Experimental_API as MaterialX, MaterialXMaterial } from '@needle-tools/materialx';
 
 const debugTextures = false;
 const debugMaterials = false;
@@ -9,6 +8,16 @@ const debugMeshes = false;
 const debugPrims = false;
 const disableTextures = false;
 const disableMaterials = false;
+
+let materialXModulePromise = null;
+
+async function getMaterialXModule() {
+  materialXModulePromise ??= import('@needle-tools/materialx').then(module => ({
+    MaterialX: module.Experimental_API,
+    MaterialXMaterial: module.MaterialXMaterial,
+  }));
+  return materialXModulePromise;
+}
 
 function disposeTexture(texture, disposed = new Set()) {
   if (!texture || disposed.has(texture) || typeof texture.dispose !== 'function') return;
@@ -1531,6 +1540,7 @@ class HydraMaterial {
     }
 
     try {
+      const { MaterialX, MaterialXMaterial } = await getMaterialXModule();
       const materialName = this._id.split('/').pop() || this._id;
       const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
@@ -1545,7 +1555,7 @@ class HydraMaterial {
         },
       }, {});
 
-      if (!(material instanceof MaterialXMaterial)) {
+      if (typeof MaterialXMaterial === 'function' && !(material instanceof MaterialXMaterial)) {
         this._interface.diagnostics.materialXCreateFailures++;
         if (debugMaterials) console.debug('MaterialX shader generation returned a non-MaterialX material.', {
           materialId: this._id,
