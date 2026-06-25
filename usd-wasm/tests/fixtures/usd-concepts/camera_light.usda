@@ -24,6 +24,31 @@ def Xform "World"
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
+    def DistantLight "SunLight"
+    {
+        float inputs:intensity = 250
+        float inputs:angle = 0.53
+        double3 xformOp:translate = (1.2, -1.4, 2.2)
+        float3 xformOp:rotateXYZ = (45, 25, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+
+    def DomeLight "SkyLight"
+    {
+        float inputs:intensity = 80
+        color3f inputs:color = (0.55, 0.65, 1)
+    }
+
+    def Xform "ApiLight" (
+        prepend apiSchemas = ["LightAPI"]
+    )
+    {
+        float inputs:intensity = 25
+        color3f inputs:color = (0.8, 0.9, 1)
+        double3 xformOp:translate = (-1.2, -1.0, 1.3)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
     def Cube "LitCube" (
         prepend apiSchemas = ["MaterialBindingAPI"]
     )

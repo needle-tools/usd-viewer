@@ -203,6 +203,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         expect(suite.diagnostics.warnings.filter(warning => warning.includes('Failed to load texture'))).toEqual([]);
     }
     expect(suite.diagnostics.warnings.filter(warning => warning.includes('separate metalness and roughness textures'))).toEqual([]);
+    expect(suite.diagnostics.warnings.filter(warning => warning.includes("Selected hydra renderer doesn't support prim type"))).toEqual([]);
     expect(suite.diagnostics.errors).toEqual([]);
 
     return {
@@ -350,11 +351,16 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
     if (fixtureName === 'local-camera-light-usda') {
         expect(checks.cameraLight.stageTypes['/World/ShotCam'].typeName).toBe('Camera');
         expect(checks.cameraLight.stageTypes['/World/KeyLight'].typeName).toBe('SphereLight');
+        expect(checks.cameraLight.stageTypes['/World/SunLight'].typeName).toBe('DistantLight');
+        expect(checks.cameraLight.stageTypes['/World/SkyLight'].typeName).toBe('DomeLight');
+        expect(checks.cameraLight.stageTypes['/World/ApiLight'].typeName).toBe('Xform');
         expect(checks.cameraLight.stageTypes['/World/LitCube'].typeName).toBe('Cube');
         expect(checks.cameraLight.meshState.meshCount).toBe(1);
         expect(checks.cameraLight.meshState.materialNames).toContain('Neutral');
         expect(checks.cameraLight.scenePrimitives.cameras.map((camera: any) => camera.name)).toContain('ShotCam');
         expect(checks.cameraLight.scenePrimitives.lights.map((light: any) => light.name)).toContain('KeyLight');
+        expect(checks.cameraLight.scenePrimitives.lights.map((light: any) => light.name)).toContain('SunLight');
+        expect(checks.cameraLight.scenePrimitives.lights.map((light: any) => light.name)).toContain('SkyLight');
         expect(checks.cameraLight.scenePrimitives.lights.find((light: any) => light.name === 'KeyLight').intensity).toBeCloseTo(4.5);
         expect(checks.cameraLight.scenePrimitives.helpers.length).toBeGreaterThanOrEqual(2);
     }

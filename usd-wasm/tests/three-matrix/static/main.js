@@ -1,6 +1,7 @@
 const config = window.__USD_THREE_MATRIX_CONFIG__;
 const errors = [];
 const warnings = [];
+const originalError = console.error.bind(console);
 const originalWarn = console.warn.bind(console);
 
 window.__USD_THREE_MATRIX_ERRORS__ = errors;
@@ -10,6 +11,11 @@ setPhase("boot");
 console.warn = (...args) => {
     warnings.push(args.map(value => typeof value === "string" ? value : value?.message || String(value)).join(" "));
     originalWarn(...args);
+};
+
+console.error = (...args) => {
+    warnings.push(args.map(value => typeof value === "string" ? value : value?.message || String(value)).join(" "));
+    originalError(...args);
 };
 
 window.addEventListener("error", event => {
@@ -349,6 +355,9 @@ async function runFixtureChecks(handle, usdRoot, config) {
             stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
                 "/World/ShotCam",
                 "/World/KeyLight",
+                "/World/SunLight",
+                "/World/SkyLight",
+                "/World/ApiLight",
                 "/World/LitCube",
             ]),
         };
