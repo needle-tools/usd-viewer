@@ -33,6 +33,9 @@ export function addUsdPlugin() {
 See full example in [examples](/usd-wasm/examples/src/main.ts)
 
 ```js
+import { getUsdModule } from "@needle-tools/usd";
+import { createThreeHydra } from "@needle-tools/usd/three";
+
 // Load the USD module
 const usd = await getUsdModule();
 // Load a USD file to be rendered by threejs
@@ -98,4 +101,3 @@ https://emscripten.org/docs/porting/asyncify.html
 [Discord](https://discord.needle.tools) • 
 [Forum](https://forum.needle.tools) • 
 [Youtube](https://www.youtube.com/@needle-tools)
-

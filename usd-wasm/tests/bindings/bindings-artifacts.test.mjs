@@ -190,12 +190,16 @@ def Xform "Root" {
 
     it("imports the public ESM package entrypoints in Node", async () => {
         const usd = await import("@needle-tools/usd");
+        const three = await import("@needle-tools/usd/three");
         const plugins = await import("@needle-tools/usd/plugins");
+        const vite = await import("@needle-tools/usd/vite");
 
         assert.equal(typeof usd.getUsdModule, "function");
         assert.equal(typeof usd.loadOpenUsdBuildInfo, "function");
         assert.equal(typeof usd.createThreeHydra, "function");
+        assert.equal(typeof three.createThreeHydra, "function");
         assert.equal(typeof plugins.addPluginForNeedleEngine, "function");
+        assert.equal(typeof vite.needleUSD, "function");
 
         const buildInfo = await usd.loadOpenUsdBuildInfo({
             print() {},

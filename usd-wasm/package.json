@@ -9,9 +9,17 @@
       "types": "./src/index.d.ts",
       "import": "./src/index.js"
     },
+    "./three": {
+      "types": "./src/types/create.three.d.ts",
+      "import": "./src/create.three.js"
+    },
     "./plugins": {
       "types": "./src/types/plugins.d.ts",
       "import": "./src/plugins/index.js"
+    },
+    "./vite": {
+      "types": "./src/types/vite.d.ts",
+      "import": "./src/vite/index.js"
     }
   },
   "files": [
