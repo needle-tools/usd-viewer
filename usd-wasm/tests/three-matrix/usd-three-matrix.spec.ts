@@ -202,6 +202,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     ) {
         expect(suite.diagnostics.warnings.filter(warning => warning.includes('Failed to load texture'))).toEqual([]);
     }
+    expect(suite.diagnostics.warnings.filter(warning => warning.includes('separate metalness and roughness textures'))).toEqual([]);
     expect(suite.diagnostics.errors).toEqual([]);
 
     return {
@@ -251,6 +252,16 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.materialXTextures.textureCount).toBeGreaterThan(0);
         expect(checks.materialXPanelGeometry.meshCount).toBe(1);
         expect(checks.materialXPanelGeometry.maxPositionCount).toBeLessThanOrEqual(8);
+    }
+
+    if (fixtureName === 'local-preview-separate-metal-rough-usda') {
+        expect(checks.separateMetalRoughTextures.meshCount).toBe(1);
+        const material = checks.separateMetalRoughTextures.meshes[0].materials[0];
+        expect(material.hasRoughnessMap).toBe(true);
+        expect(material.hasMetalnessMap).toBe(true);
+        expect(material.roughnessAndMetalnessShareMap).toBe(true);
+        expect(material.roughnessMapName).toContain('packed-orm');
+        expect(material.metalnessMapName).toBe(material.roughnessMapName);
     }
 
     if (fixtureName === 'local-catmull-clark-subdivision-usda') {

@@ -258,6 +258,10 @@ async function runFixtureChecks(handle, usdRoot, config) {
         checks.materialXPanelGeometry = collectMeshGeometryState(usdRoot);
     }
 
+    if (config.fixtureName === "local-preview-separate-metal-rough-usda") {
+        checks.separateMetalRoughTextures = collectMeshMaterialState(usdRoot);
+    }
+
     if (config.fixtureName === "local-catmull-clark-subdivision-usda") {
         checks.subdivision = collectMeshGeometryState(usdRoot);
     }
@@ -472,6 +476,13 @@ function collectMeshMaterialState(root) {
                 metalness: material.metalness ?? null,
                 roughness: material.roughness ?? null,
                 hasMap: Boolean(material.map),
+                hasRoughnessMap: Boolean(material.roughnessMap),
+                hasMetalnessMap: Boolean(material.metalnessMap),
+                hasAoMap: Boolean(material.aoMap),
+                roughnessMapName: material.roughnessMap?.name || "",
+                metalnessMapName: material.metalnessMap?.name || "",
+                aoMapName: material.aoMap?.name || "",
+                roughnessAndMetalnessShareMap: Boolean(material.roughnessMap && material.roughnessMap === material.metalnessMap),
                 textureCount: collectMaterialTextures(material).length,
             })),
         });

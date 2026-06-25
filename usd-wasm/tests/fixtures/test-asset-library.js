@@ -21,6 +21,16 @@ export const testAssetLibrary = [
   { group: "USD Concepts", label: "Render Intent Purposes", root: "usd-concepts/purpose_render_intent.usda", files: ["usd-concepts/purpose_render_intent.usda"] },
   { group: "USD Concepts", label: "Camera + Light", root: "usd-concepts/camera_light.usda", files: ["usd-concepts/camera_light.usda"] },
   { group: "USD Concepts", label: "Time Samples", root: "usd-concepts/time_samples.usda", files: ["usd-concepts/time_samples.usda"] },
+  {
+    group: "USD Concepts",
+    label: "Separate Metal/Rough Textures",
+    root: "usd-concepts/preview_separate_metal_rough.usda",
+    files: [
+      "usd-concepts/preview_separate_metal_rough.usda",
+      "materialx/textures/brick_roughness.jpg",
+      "materialx/textures/brick_mask.jpg",
+    ],
+  },
   { group: "USD Concepts", label: "Nested Material USDZ", root: "usdz-nested-material.usdz" },
 
   { group: "Subdivision", label: "Catmull-Clark Cube", root: "subdivision/catmull_clark_cube.usda", files: ["subdivision/catmull_clark_cube.usda"] },
