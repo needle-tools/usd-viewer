@@ -1,5 +1,5 @@
 
-import { getUsdModule, getOpenUsdBuildInfo, createThreeHydra, type USD, type NeedleThreeHydraHandle, type OpenUsdBuildInfo } from '@needle-tools/usd';
+import { getUsdModule, getOpenUsdBuildInfo, createThreeHydra, type USD, type HydraFile, type NeedleThreeHydraHandle, type OpenUsdBuildInfo } from '@needle-tools/usd';
 import { loadEnvMap, run, type DemoRenderHost, type RenderHostRuntime } from './three';
 import { Object3D, Scene, WebGLRenderer } from 'three';
 import { mount } from 'svelte';
@@ -20,6 +20,7 @@ declare global {
       status: string,
       childCount: number,
       renderHost: RenderHostRuntime,
+      needleIntegration: NeedleIntegrationMode,
       rootRotationX: number | null,
       rootMatrixWorld: number[] | null,
       stageMetadata: ReturnType<NeedleThreeHydraHandle["stageMetadata"]> | null,
@@ -50,12 +51,17 @@ let statusElement: HTMLElement | null = null;
 let variantControlsElement: HTMLElement | null = null;
 let lastApiKind: ApiSceneKind = "preview";
 const renderHostRuntime = getRenderHostRuntime();
+const needleIntegrationMode = getNeedleIntegrationMode();
 const debugUsd = false;
+let assetFetchStatusEnabled = false;
+let removeNeedleLoaderPlugin: (() => void) | null = null;
+let needleLoaderFiles: HydraFile[] = [];
 
 type TestFile = { path: string, url: string };
-type TestAsset = { label: string, url?: string, files?: TestFile[], group: string };
+type TestAsset = { label: string, root?: string, url?: string, files?: TestFile[], group: string };
 type TestAssetLibraryEntry = { label: string, root: string, files?: string[], group: string };
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
+type NeedleIntegrationMode = "direct" | "loader";
 type AssetFetchProgress = {
   state: string,
   active: number,
@@ -79,6 +85,7 @@ const fixtureFile = (path: string): TestFile => ({ path, url: fixtureUrl(path) }
 const catalogAsset = (asset: TestAssetLibraryEntry): TestAsset => ({
   group: asset.group,
   label: asset.label,
+  root: asset.root,
   files: asset.files?.map(fixtureFile),
   url: asset.files ? undefined : fixtureUrl(asset.root),
 });
@@ -98,6 +105,7 @@ const testAssets: TestAsset[] = [
 getUsdModule({
   debug: debugUsd,
   onAssetFetchProgress: (progress: AssetFetchProgress) => {
+    if (!assetFetchStatusEnabled) return;
     if (progress.state === "error") {
       status(`USD asset download failed: ${progress.error ?? "unknown error"}`);
       return;
@@ -296,6 +304,18 @@ function createRenderHostControl() {
   label.innerText = `Viewing via ${app.runtimeLabel}${version}`;
   container.appendChild(label);
 
+  if (renderHostRuntime === "needle-engine") {
+    const mode = document.createElement("div");
+    mode.className = "render-host-toggle";
+    mode.setAttribute("role", "group");
+    mode.setAttribute("aria-label", "Needle Engine integration");
+    mode.append(
+      createNeedleIntegrationButton("direct", "Direct Hydra"),
+      createNeedleIntegrationButton("loader", "Needle Loader"),
+    );
+    container.appendChild(mode);
+  }
+
   return container;
 }
 
@@ -314,7 +334,27 @@ function createRenderHostButton(runtime: RenderHostRuntime, label: string) {
   return button;
 }
 
+function createNeedleIntegrationButton(mode: NeedleIntegrationMode, label: string) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.innerText = label;
+  button.setAttribute("aria-pressed", String(needleIntegrationMode === mode));
+  button.dataset.active = String(needleIntegrationMode === mode);
+  button.onclick = () => {
+    if (needleIntegrationMode === mode) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("host", "needle-engine");
+    url.searchParams.set("needle", mode);
+    window.location.href = url.href;
+  };
+  return button;
+}
+
 async function loadAsset(asset: TestAsset) {
+  if (shouldUseNeedleLoader()) {
+    await loadAssetWithNeedleLoader(asset);
+    return;
+  }
   if (asset.files) {
     await loadFiles(asset.files, asset.label);
     return;
@@ -331,6 +371,12 @@ async function resetScene() {
 
   if (oldDelegate)
     await oldDelegate.dispose();
+
+  if (removeNeedleLoaderPlugin) {
+    removeNeedleLoaderPlugin();
+    removeNeedleLoaderPlugin = null;
+    needleLoaderFiles = [];
+  }
 
   if (usdContent) {
     scene.remove(usdContent);
@@ -359,27 +405,32 @@ function disposeObject3D(root: Object3D) {
 
 async function loadFile(url: string, label = url) {
   status(`Loading ${label}`);
+  assetFetchStatusEnabled = true;
   await resetScene();
 
-  const delegate = await createThreeHydra({
-    debug: debugUsd,
-    USD: usd,
-    url: url,
-    showScenePrimitiveHelpers: true,
-    // @ts-ignore
-    scene: usdContent,
-  })
+  try {
+    const delegate = await createThreeHydra({
+      debug: debugUsd,
+      USD: usd,
+      url: url,
+      showScenePrimitiveHelpers: true,
+      // @ts-ignore
+      scene: usdContent,
+    })
 
-  hydraDelegate = delegate;
-  usdViewState.setStage(await getDelegateStage(delegate), delegate);
-
-  console.log("Scene content", usdContent);
-  await waitForReadyForStatus(delegate, label);
-  await waitForMaterialsForStatus(delegate, label);
-  updateSceneControls();
-  usdViewState.refresh();
-  app.fitCamera();
-  status(`Loaded ${label}`);
+    hydraDelegate = delegate;
+    console.log("Scene content", usdContent);
+    await waitForReadyForStatus(delegate, label);
+    await waitForMaterialsForStatus(delegate, label);
+    usdViewState.setStage(await getDelegateStage(delegate), delegate);
+    updateSceneControls();
+    usdViewState.refresh();
+    app.fitCamera();
+    status(`Loaded ${label}`);
+  }
+  finally {
+    assetFetchStatusEnabled = false;
+  }
 }
 
 async function waitForMaterialsForStatus(delegate: NeedleThreeHydraHandle, label: string) {
@@ -418,8 +469,49 @@ async function waitForReadyForStatus(delegate: NeedleThreeHydraHandle, label: st
 
 async function loadFiles(files: TestFile[], label: string) {
   status(`Loading ${label}`);
+  assetFetchStatusEnabled = true;
   await resetScene();
-  const hydraFiles = await Promise.all(files.map(async file => {
+  try {
+    const hydraFiles = await Promise.all(files.map(async file => {
+      const response = await fetch(file.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${file.url}: ${response.status} ${response.statusText}`);
+      }
+      const buffer = await response.arrayBuffer();
+      return {
+        name: file.path.split('/').pop() || file.path,
+        path: file.path,
+        arrayBuffer: async () => buffer,
+      };
+    }));
+
+    const delegate = await createThreeHydra({
+      debug: debugUsd,
+      USD: usd,
+      // @ts-ignore
+      files: hydraFiles,
+      showScenePrimitiveHelpers: true,
+      // @ts-ignore
+      scene: usdContent,
+    });
+
+    hydraDelegate = delegate;
+    console.log("Scene content", usdContent);
+    await waitForReadyForStatus(delegate, label);
+    await waitForMaterialsForStatus(delegate, label);
+    usdViewState.setStage(await getDelegateStage(delegate), delegate);
+    updateSceneControls();
+    usdViewState.refresh();
+    app.fitCamera();
+    status(`Loaded ${label}`);
+  }
+  finally {
+    assetFetchStatusEnabled = false;
+  }
+}
+
+async function buildHydraFiles(files: TestFile[]) {
+  return await Promise.all(files.map(async file => {
     const response = await fetch(file.url);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${file.url}: ${response.status} ${response.statusText}`);
@@ -429,43 +521,82 @@ async function loadFiles(files: TestFile[], label: string) {
       name: file.path.split('/').pop() || file.path,
       path: file.path,
       arrayBuffer: async () => buffer,
-    };
+    } as HydraFile;
   }));
+}
 
-  const delegate = await createThreeHydra({
-    debug: debugUsd,
-    USD: usd,
-    // @ts-ignore
-    files: hydraFiles,
-    showScenePrimitiveHelpers: true,
-    // @ts-ignore
-    scene: usdContent,
-  });
+async function loadAssetWithNeedleLoader(asset: TestAsset) {
+  const files = asset.files ? await buildHydraFiles(asset.files) : [];
+  const url = asset.root ? fixtureUrl(asset.root) : asset.url;
+  if (!url) return;
+  await loadNeedleLoaderUrl(url, asset.label, files);
+}
 
-  hydraDelegate = delegate;
-  usdViewState.setStage(await getDelegateStage(delegate), delegate);
-  console.log("Scene content", usdContent);
-  await waitForReadyForStatus(delegate, label);
-  await waitForMaterialsForStatus(delegate, label);
-  updateSceneControls();
-  usdViewState.refresh();
-  app.fitCamera();
-  status(`Loaded ${label}`);
+async function loadNeedleLoaderUrl(url: string, label: string, files: HydraFile[], reset = true) {
+  if (!app.needleContext) {
+    throw new Error("Needle loader mode requires the Needle Engine render host.");
+  }
+
+  status(`Loading ${label}`);
+  assetFetchStatusEnabled = true;
+  if (reset) await resetScene();
+
+  try {
+    const { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } = await import("@needle-tools/usd/plugins");
+    const NEEDLE = await import("@needle-tools/engine");
+    needleLoaderFiles = files;
+    removeNeedleLoaderPlugin = await addPluginForNeedleEngine({
+      debug: debugUsd,
+      getFiles: () => needleLoaderFiles,
+    });
+
+    const loaded = await NEEDLE.loadAsset(url, { context: app.needleContext });
+    const loadedRoot = findObject3D(loaded);
+    if (!loadedRoot) {
+      throw new Error(`Needle loader did not return a Three object for ${label}.`);
+    }
+
+    if (usdContent && usdContent !== loadedRoot) {
+      scene.remove(usdContent);
+      disposeObject3D(usdContent);
+    }
+    usdContent = loadedRoot;
+    if (!usdContent.parent) scene.add(usdContent);
+
+    const delegate = getHydraHandleFromNeedleEngineAsset(loadedRoot);
+    if (!delegate) {
+      throw new Error(`Needle loader did not expose a Hydra handle for ${label}.`);
+    }
+
+    hydraDelegate = delegate;
+    await waitForReadyForStatus(delegate, label);
+    await waitForMaterialsForStatus(delegate, label);
+    usdViewState.setStage(await getDelegateStage(delegate), delegate);
+    updateSceneControls();
+    usdViewState.refresh();
+    app.fitCamera();
+    status(`Loaded ${label}`);
+  }
+  finally {
+    assetFetchStatusEnabled = false;
+  }
 }
 
 async function loadApiScene(kind: ApiSceneKind) {
   status(`Constructing ${kind}`);
+  assetFetchStatusEnabled = false;
   lastApiKind = kind;
+  await resetScene();
   const path = `/tmp/${kind}.usda`;
-  const stage = createApiStage(kind, path);
+  const stage = await createApiStage(kind, path);
   stage.GetRootLayer().Export(path);
   const bytes = usd.ReadFile(path);
   usd.ReleaseStage(stage);
-  await loadBuffer(bytes, `${kind}.usda`, `API ${kind}`);
+  await loadBuffer(bytes, `${kind}.usda`, `API ${kind}`, false);
 }
 
-function createApiStage(kind: string, path: string) {
-  const stage = usd.CreateStage(path);
+async function createApiStage(kind: string, path: string) {
+  const stage = await usd.CreateStage(path);
   stage.SetUpAxis("Z");
   stage.SetStartTimeCode(1);
   stage.SetEndTimeCode(48);
@@ -508,30 +639,52 @@ function createApiStage(kind: string, path: string) {
   return stage;
 }
 
-async function loadBuffer(bytes: Uint8Array, filename: string, label: string) {
-  await resetScene();
+async function loadBuffer(bytes: Uint8Array, filename: string, label: string, reset = true) {
+  assetFetchStatusEnabled = false;
+  if (reset) await resetScene();
   const buffer = copyToArrayBuffer(bytes);
+  const hydraFiles = [{
+    name: filename,
+    path: `generated/${filename}`,
+    arrayBuffer: async () => buffer,
+  }, {
+    name: filename,
+    path: filename,
+    arrayBuffer: async () => buffer,
+  }] as HydraFile[];
+
+  if (shouldUseNeedleLoader()) {
+    const blob = new Blob([buffer], { type: "application/vnd.usd" });
+    const url = URL.createObjectURL(blob);
+    try {
+      await loadNeedleLoaderUrl(url, label, hydraFiles, false);
+    }
+    finally {
+      URL.revokeObjectURL(url);
+    }
+    return;
+  }
+
   const delegate = await createThreeHydra({
     debug: debugUsd,
     USD: usd,
-    url: filename,
-    buffer,
+    files: hydraFiles,
     showScenePrimitiveHelpers: true,
     // @ts-ignore
     scene: usdContent,
   });
   hydraDelegate = delegate;
-  usdViewState.setStage(await getDelegateStage(delegate), delegate);
   await waitForReadyForStatus(delegate, label);
   await waitForMaterialsForStatus(delegate, label);
+  usdViewState.setStage(await getDelegateStage(delegate), delegate);
   updateSceneControls();
   usdViewState.refresh();
   app.fitCamera();
   status(`Loaded ${label}`);
 }
 
-function downloadApiUsdz() {
-  const stage = createApiStage(lastApiKind, "/tmp/api-download.usda");
+async function downloadApiUsdz() {
+  const stage = await createApiStage(lastApiKind, "/tmp/api-download.usda");
   stage.GetRootLayer().Export("/tmp/api-download.usda");
   usd.CreateUsdzPackage("/tmp/api-download.usda", "/tmp/api-download.usdz");
   const bytes = usd.ReadFile("/tmp/api-download.usdz");
@@ -712,6 +865,22 @@ function getRenderHostRuntime(): RenderHostRuntime {
   return host === "needle-engine" ? "needle-engine" : "three";
 }
 
+function getNeedleIntegrationMode(): NeedleIntegrationMode {
+  const mode = new URLSearchParams(window.location.search).get("needle");
+  return mode === "loader" ? "loader" : "direct";
+}
+
+function shouldUseNeedleLoader() {
+  return renderHostRuntime === "needle-engine" && needleIntegrationMode === "loader";
+}
+
+function findObject3D(value: unknown): Object3D | null {
+  if (!value) return null;
+  const candidate = value as { isObject3D?: boolean, scene?: unknown, root?: unknown };
+  if (candidate?.isObject3D) return candidate as Object3D;
+  return findObject3D(candidate?.scene) ?? findObject3D(candidate?.root);
+}
+
 window.loadFile = loadFile;
 window.__usdViewerTestState = () => {
   const usdview = usdViewState.snapshot();
@@ -719,6 +888,7 @@ window.__usdViewerTestState = () => {
     status: statusElement?.innerText ?? "",
     childCount: usdContent?.children?.length ?? 0,
     renderHost: app?.runtime ?? renderHostRuntime,
+    needleIntegration: needleIntegrationMode,
     rootRotationX: usdContent?.rotation?.x ?? null,
     rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
     stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,

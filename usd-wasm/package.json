@@ -49,7 +49,13 @@
     "url": "https://github.com/needle-tools/usd-viewer/issues"
   },
   "peerDependencies": {
+    "@needle-tools/engine": ">=5.0.0",
     "three": ">=0.160.0"
+  },
+  "peerDependenciesMeta": {
+    "@needle-tools/engine": {
+      "optional": true
+    }
   },
   "scripts": {
     "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
@@ -60,6 +66,7 @@
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
   "devDependencies": {
+    "@needle-tools/engine": "^5.1.2",
     "@needle-tools/three-test-matrix": "^0.1.0",
     "@playwright/test": "^1.60.0",
     "@types/three": "^0.164.1",

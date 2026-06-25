@@ -5,6 +5,7 @@ const orderStressAssets = [
     'Payload Root',
     'Nested Variants',
     'Binding Override Variants',
+    'Parent Folder References',
     'DamagedHelmet GLB',
     'BoomBox USDZ',
     'CesiumMan USDZ',
@@ -13,6 +14,8 @@ const orderStressAssets = [
 
 const forbiddenConsolePatterns = [
     /Failed to load texture/i,
+    /Error in fetch_asset/i,
+    /Failed to load resource/i,
     /out of memory/i,
     /RuntimeError/i,
     /Cannot enlarge memory/i,
@@ -82,6 +85,19 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
+    test('parent-folder references resolve for mounted and URL roots', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+
+        for (const assetName of ['Parent Folder References', 'Parent Folder References URL']) {
+            await loadAssetsInOrder(page, [assetName]);
+            await page.getByRole('button', { name: 'Shape Cube', exact: true }).click();
+            await expect(page.getByTestId('usdview-panel')).toContainText('/World/Shape');
+        }
+
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
     test('Usdview timeline pauses and seeks animated stages', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page);
@@ -120,21 +136,74 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(await renderAreaScreenshot(page)).toMatchSnapshot('needle-engine-procedural-bricks.png');
         expectForbiddenDiagnostics(diagnostics);
     });
+
+    test('Needle Engine host completes USDA and API scene loads after prior assets', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page, 'needle-engine');
+
+        await loadAssetsInOrder(page, [
+            'Gingerbread USDC',
+            'Gingerbread USDA',
+        ], 'needle-engine');
+
+        await loadApiScene(page, 'Preview Material', 'Loaded API preview');
+        await loadApiScene(page, 'Variant Cube', 'Loaded API variant-cube');
+
+        const state = await getViewerState(page);
+        expect(state?.renderHost).toBe('needle-engine');
+        expect(state?.usdview?.hasStage).toBe(true);
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('Needle Engine loader mode exposes usdview inspection state', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page, 'needle-engine', 'loader');
+        await expect(page.getByRole('button', { name: 'Needle Loader', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+        await loadAssetsInOrder(page, [
+            'DamagedHelmet GLB',
+            'BoomBox GLB',
+            'CesiumMan GLB',
+            'Payload Root',
+        ], 'needle-engine', 'loader');
+
+        await expect(page.getByTestId('usdview-panel')).toBeVisible();
+        await expect(page.getByTestId('usdview-panel')).toContainText('Layer Stack');
+        await page.getByRole('button', { name: 'PayloadHolder Xform', exact: true }).click();
+        await expect(page.getByTestId('usdview-panel')).toContainText('/World/PayloadHolder');
+        const state = await getViewerState(page);
+        expect(state?.renderHost).toBe('needle-engine');
+        expect(state?.needleIntegration).toBe('loader');
+        expect(state?.usdview?.hasStage).toBe(true);
+        expectForbiddenDiagnostics(diagnostics);
+    });
 });
 
-async function openViewer(page, host: 'three' | 'needle-engine' = 'three') {
-    await page.goto(`/?host=${host}`);
+type NeedleIntegration = 'direct' | 'loader';
+
+async function openViewer(page, host: 'three' | 'needle-engine' = 'three', needle: NeedleIntegration = 'direct') {
+    const query = new URLSearchParams({ host });
+    if (host === 'needle-engine') query.set('needle', needle);
+    await page.goto(`/?${query.toString()}`);
     await expect(page.locator('.status')).toHaveText('Ready');
     await expect.poll(async () => (await getViewerState(page))?.renderHost).toBe(host);
+    await expect.poll(async () => (await getViewerState(page))?.needleIntegration).toBe(needle);
 }
 
-async function loadAssetsInOrder(page, assetNames: string[], host: 'three' | 'needle-engine' = 'three') {
+async function loadAssetsInOrder(page, assetNames: string[], host: 'three' | 'needle-engine' = 'three', needle: NeedleIntegration = 'direct') {
     for (const assetName of assetNames) {
         await page.getByRole('button', { name: assetName, exact: true }).click();
         await expect(page.locator('.status')).toHaveText(`Loaded ${assetName}`, { timeout: 45_000 });
         expect((await getViewerState(page))?.renderHost).toBe(host);
+        expect((await getViewerState(page))?.needleIntegration).toBe(needle);
         await waitForFrames(page, 4);
     }
+}
+
+async function loadApiScene(page, buttonName: string, loadedStatus: string) {
+    await page.getByRole('button', { name: buttonName, exact: true }).click();
+    await expect(page.locator('.status')).toHaveText(loadedStatus, { timeout: 45_000 });
+    await waitForFrames(page, 4);
 }
 
 async function renderAreaScreenshot(page) {
@@ -163,6 +232,7 @@ async function getViewerState(page) {
                 status: string;
                 childCount: number;
                 renderHost: 'three' | 'needle-engine';
+                needleIntegration: NeedleIntegration;
                 rootRotationX: number | null;
                 stageMetadata: { upAxis: string } | null;
                 usdview: {

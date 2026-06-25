@@ -199,6 +199,7 @@ def Xform "Root" {
         assert.equal(typeof usd.createThreeHydra, "function");
         assert.equal(typeof three.createThreeHydra, "function");
         assert.equal(typeof plugins.addPluginForNeedleEngine, "function");
+        assert.equal(typeof plugins.getHydraHandleFromNeedleEngineAsset, "function");
         assert.equal(typeof vite.needleUSD, "function");
 
         const buildInfo = await usd.loadOpenUsdBuildInfo({
@@ -213,6 +214,46 @@ def Xform "Root" {
         assert.equal(buildInfo.openusd.version, "0.26.5");
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);
+    });
+
+    it("resolves parent-folder references from mounted file trees", async () => {
+        const USD = await loadUsdModuleFromTempCopy();
+        const rootPath = "/resolver-parent/assets/models/parent_ref_root.usda";
+        const referencedPath = "/resolver-parent/shared/geometry/referenced_cube.usda";
+
+        USD.FS_createPath("/", "resolver-parent/assets/models", true, true);
+        USD.FS_createPath("/", "resolver-parent/shared/geometry", true, true);
+        USD.FS_createDataFile(
+            "/resolver-parent/assets/models",
+            "parent_ref_root.usda",
+            await readFile("tests/fixtures/resolver-parent/assets/models/parent_ref_root.usda"),
+            true,
+            true,
+            true,
+        );
+        USD.FS_createDataFile(
+            "/resolver-parent/shared/geometry",
+            "referenced_cube.usda",
+            await readFile("tests/fixtures/resolver-parent/shared/geometry/referenced_cube.usda"),
+            true,
+            true,
+            true,
+        );
+
+        const stage = await USD.OpenStage(rootPath);
+        assert.deepEqual(stage.GetCompositionErrors(), []);
+        assert.equal(stage.GetPrimAtPath("/World/Shape").IsValid(), true);
+        assert.equal(stage.GetPrimAtPath("/World/Looks/Green").IsValid(), true);
+        const world = stage.GetPrimAtPath("/World");
+        assert.equal(world.HasAuthoredReferences(), true);
+        assert.ok(world.GetCompositionArcs().some(arc =>
+            arc.arcType === "PcpArcTypeReference" &&
+            arc.targetLayer.realPath === referencedPath &&
+            arc.introducingLayer.realPath === rootPath
+        ));
+        assert.ok(stage.GetUsedLayers(false).some(layer => layer.realPath === referencedPath));
+
+        USD.ReleaseStage(stage);
     });
 
     it("exposes usdview-style composed inspection APIs and ObjectsChanged notices", async () => {

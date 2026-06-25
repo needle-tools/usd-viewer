@@ -8,6 +8,7 @@ export type DemoRenderHost = {
     runtime: RenderHostRuntime,
     runtimeLabel: string,
     runtimeVersion: string | null,
+    needleContext: import("@needle-tools/engine").Context | null,
     scene: Scene,
     fitCamera: () => void,
 };
@@ -121,6 +122,7 @@ async function createRenderHost(config: {
         runtime: config.runtime,
         runtimeLabel,
         runtimeVersion,
+        needleContext,
         scene,
         fitCamera: () => {
             setTimeout(() => {

@@ -1,2 +1,1 @@
-export { addPluginForNeedleEngine } from "./needle.js";
-
+export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from "./needle.js";
