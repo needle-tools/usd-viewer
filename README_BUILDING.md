@@ -61,6 +61,7 @@ Working now:
 - USD `Camera` and USD Lux light prims are bridged as Hydra Sprims. The wasm render delegate pulls composed camera/light state through Hydra `Sync()` and the JS render delegate owns the corresponding Three objects. `createThreeHydra({ showScenePrimitiveHelpers: true })`, or the camera/light-specific helper flags, add visible Three helpers for inspection; the default renderer path does not add helper geometry. USD Lux `inputs:intensity` and `inputs:exposure` are applied when creating preview Three lights, with `scenePrimitiveLightIntensityScale` defaulting to `0.01` so authored Lux values do not overexpose the demo scene.
 - MaterialX shader generation is enabled through Hydra-provided documents only. There is no sidecar-harvesting fallback path.
 - HTTP/browser asset loading in the hdEmscripten resolver now uses Asyncify-backed `fetch()` instead of synchronous `XMLHttpRequest`. The resolver emits `needle-usd-asset-fetch-progress` browser events and the package-level `getUsdModule({ onAssetFetchProgress })` callback reports active downloads and byte progress.
+- Resolver policy: OpenUSD/Ar remains the authority for asset paths. Browser file-list assets are mounted under one private absolute FS root while preserving the supplied relative tree; the JS package must not register basename aliases or guess alternate `/needle/...` paths. HTTP assets are fetched into the resolver's deep `/tmp/1/1/1/1/1/1/` root so authored `../..` references can move upward while still staying inside the resolver temp root. Tests cover both mounted and URL-loaded parent-folder references.
 - Async USD APIs that can cross resolver fetches are registered with Embind `async()`, including `OpenStage`, `CreateUsdzPackage`, `Prim.Load`, `Prim.Unload`, `Prim.SetVariantSelection`, `HdWebSyncDriver.Draw`, and `HdWebSyncDriver.Repopulate`.
 - The viewer pauses Hydra draw calls while an async USD edit is in flight, then repopulates and draws once after the edit. This avoids re-entering Hydra during variant/payload composition changes.
 - Raw `.glb` opens are validated for BoomBox, CesiumMan, and DamagedHelmet through Adobe's glTF plugin.
@@ -161,7 +162,7 @@ npx vite build
 Expected current result:
 
 - Both OpenUSD Node smoke tests pass and expose `HdWebSyncDriver`, filesystem helpers, and `ready.then`.
-- `npm run test:bindings` passes 7 tests, including generated authoring/USDZ packaging and usdview-style inspection/notice APIs.
+- `npm run test:bindings` passes 9 tests, including generated authoring/USDZ packaging, usdview-style inspection/notice APIs, and mounted parent-folder reference composition.
 - The syntax checks and example build pass.
 - The `usd-wasm/examples` build runs on Vite 8/Svelte 5 with rune-backed inspector state.
 

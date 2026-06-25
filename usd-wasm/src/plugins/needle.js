@@ -1,6 +1,39 @@
 import { Loader, Object3D } from "three";
 import { createThreeHydra, getUsdModule } from "../index.js";
 
+const hydraHandlesByRoot = new WeakMap();
+
+/**
+ * Return the Hydra handle created by the Needle Engine USD plugin for a loaded asset.
+ * The argument can be the value returned by `NEEDLE.loadAsset(...)` or any Object3D
+ * within that loaded hierarchy.
+ *
+ * @param {unknown} asset
+ * @returns {import("..").NeedleThreeHydraHandle | null}
+ */
+export function getHydraHandleFromNeedleEngineAsset(asset) {
+    const root = findObject3D(asset);
+    if (!root) return null;
+
+    let handle = hydraHandlesByRoot.get(root) || null;
+    if (handle) return handle;
+
+    root.traverse?.((object) => {
+        handle ??= hydraHandlesByRoot.get(object) || null;
+    });
+    return handle;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {Object3D | null}
+ */
+function findObject3D(value) {
+    if (!value) return null;
+    if (value instanceof Object3D || value.isObject3D === true) return value;
+    return findObject3D(value.scene) || findObject3D(value.root);
+}
+
 
 /** @type {import("../types").addPluginForNeedleEngine} */
 export async function addPluginForNeedleEngine(options) {
@@ -37,6 +70,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 void this.handle.dispose();
                 this.handle = null;
             }
+            hydraHandlesByRoot.delete(this.root);
         }
     }
 
@@ -97,6 +131,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 files: files,
             });
             this.comp.handle = handle;
+            hydraHandlesByRoot.set(this.comp.root, handle);
 
             if (debug) console.debug("Loaded", this.comp);
 

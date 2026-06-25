@@ -22,6 +22,13 @@ type NeedleEngineResult = {
         materials: number;
         materialTextures: number;
     };
+    pluginStats: {
+        objects: number;
+        meshes: number;
+        geometriesWithPosition: number;
+        materials: number;
+        materialTextures: number;
+    };
 };
 
 test('USD package loads through Needle Engine runtime shapes', async ({ page }) => {
@@ -95,6 +102,8 @@ async function runNeedleEnginePage(page, matrixPage: NeedleEnginePage): Promise<
     expect(state.addonExports.OrbitControls).toBe('function');
     expect(state.usdExports.getUsdModule).toBe('function');
     expect(state.usdExports.createThreeHydra).toBe('function');
+    expect(state.usdExports.addPluginForNeedleEngine).toBe('function');
+    expect(state.usdExports.getHydraHandleFromNeedleEngineAsset).toBe('function');
     expect(state.usdExports.hdWebSyncDriver).toBe('function');
     expect(state.usdExports.stageGetUpAxis).toBe('function');
     expect(state.openusd).toBe('0.26.5');
@@ -104,6 +113,12 @@ async function runNeedleEnginePage(page, matrixPage: NeedleEnginePage): Promise<
     expect(state.sceneStats.meshes).toBeGreaterThan(0);
     expect(state.sceneStats.geometriesWithPosition).toBeGreaterThan(0);
     expect(state.sceneStats.materials).toBeGreaterThan(0);
+    expect(state.pluginStats.meshes).toBeGreaterThan(0);
+    expect(state.pluginHydraHandle.available).toBe(true);
+    expect(state.pluginHydraHandle.update).toBe('function');
+    expect(state.pluginHydraHandle.dispose).toBe('function');
+    expect(state.pluginStats.geometriesWithPosition).toBeGreaterThan(0);
+    expect(state.pluginStats.materials).toBeGreaterThan(0);
     expect(state.diagnostics.errors).toEqual([]);
     expect(state.diagnostics.warnings.filter((warning: string) => warning.includes("Selected hydra renderer doesn't support prim type"))).toEqual([]);
 
@@ -113,5 +128,6 @@ async function runNeedleEnginePage(page, matrixPage: NeedleEnginePage): Promise<
         runtimeVersion: matrixPage.runtimeVersion,
         threeRevision: state.threeRevision,
         sceneStats: state.sceneStats,
+        pluginStats: state.pluginStats,
     };
 }

@@ -137,7 +137,7 @@
     const relationships = readRelationships(selectedPrim, currentTime);
     const selectedProperty = [...attributes, ...relationships].find((property) => property.path === selectedPropertyPath) ?? null;
     const selectedPropertyStack = selectedProperty?.stack ?? [];
-    const primStack = safe(() => selectedPrim.GetPrimStackWithLayerOffsets(), []);
+    const primStack = vectorToArray(safe(() => selectedPrim.GetPrimStackWithLayerOffsets?.(), []));
     const layerStack = readLayers(safe(() => stage.GetLayerStack?.(true) ?? [], []));
     const usedLayers = readLayers(safe(() => stage.GetUsedLayers?.(false) ?? [], []));
     const stageTime = readStageTime(currentTime);
@@ -151,7 +151,7 @@
       row.identifier === selectedLayerIdentifier && row.source === selectedLayerSource) ?? null;
 
     return {
-      tree: buildTreeNode(pseudoRoot),
+      tree: safe(() => buildTreeNode(pseudoRoot), null),
       selectedPrim: readPrimDetails(selectedPrim),
       attributes,
       relationships,
@@ -160,17 +160,25 @@
       selectedProperty,
       selectedPropertyStack,
       primIndex: safe(() => selectedPrim.GetPrimIndex().rootNode ?? null, null),
-      compositionArcs: safe(() => selectedPrim.GetCompositionArcs(), []),
+      compositionArcs: vectorToArray(safe(() => selectedPrim.GetCompositionArcs?.(), [])),
       layerStack,
       usedLayers,
       layerRows,
       selectedLayer,
       stageTime,
-      compositionErrors: safe(() => stage.GetCompositionErrors?.() ?? [], []),
+      compositionErrors: vectorToArray(safe(() => stage.GetCompositionErrors?.() ?? [], [])),
     };
   }
 
   function buildTreeNode(prim: USDPrimLike): TreeNode {
+    if (!prim?.GetPath || !prim?.GetChildren) {
+      return {
+        name: "Unavailable",
+        path: "",
+        typeName: "",
+        children: [],
+      };
+    }
     return {
       name: prim.GetPath() === "/" ? "PseudoRoot" : prim.GetName(),
       path: prim.GetPath(),
@@ -214,7 +222,7 @@
       timeSamples: vectorToArray(attribute.GetTimeSamples()),
       connections: vectorToArray(attribute.GetConnections()),
       metadata: attribute.GetAllMetadata(),
-      stack: safe(() => attribute.GetPropertyStackWithLayerOffsets(currentTime), []),
+      stack: vectorToArray(safe(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
     }));
   }
 
@@ -225,7 +233,7 @@
       path: relationship.GetPath(),
       targets: vectorToArray(relationship.GetTargets()),
       metadata: relationship.GetAllMetadata(),
-      stack: safe(() => relationship.GetPropertyStackWithLayerOffsets(currentTime), []),
+      stack: vectorToArray(safe(() => relationship.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
     }));
   }
 
@@ -238,8 +246,8 @@
     }));
   }
 
-  function readLayers(layers: USDLayerInfo[]): LayerRow[] {
-    return layers.map((layer) => ({
+  function readLayers(layers: USDLayerInfo[] | USDVectorLike<USDLayerInfo>): LayerRow[] {
+    return vectorToArray(layers).map((layer) => ({
       identifier: layer.identifier,
       displayName: layer.displayName,
       realPath: layer.realPath,
@@ -280,15 +288,17 @@
     return `${offset.offset}, scale ${offset.scale}`;
   }
 
-  function vectorToArray<T>(vector: USDVectorLike<T> | null | undefined): T[] {
+  function vectorToArray<T>(vector: USDVectorLike<T> | T[] | null | undefined): T[] {
     if (!vector) return [];
+    if (Array.isArray(vector)) return vector;
+    if (typeof vector.size !== "function" || typeof vector.get !== "function") return [];
     const values: T[] = [];
     try {
       for (let i = 0; i < vector.size(); i++) {
         values.push(vector.get(i));
       }
     } finally {
-      vector.delete();
+      vector.delete?.();
     }
     return values;
   }

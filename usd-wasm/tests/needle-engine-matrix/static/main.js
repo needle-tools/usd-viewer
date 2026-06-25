@@ -26,11 +26,12 @@ window.addEventListener("unhandledrejection", event => {
 
 try {
     setPhase("import-runtime");
-    const [NEEDLE, THREE, usd, usdThree] = await Promise.all([
+    const [NEEDLE, THREE, usd, usdThree, usdPlugins] = await Promise.all([
         import("@needle-tools/engine"),
         import("three"),
         import("@needle-tools/usd"),
         import("@needle-tools/usd/three"),
+        import("@needle-tools/usd/plugins"),
     ]);
     const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
 
@@ -65,6 +66,33 @@ try {
     const buildInfo = usd.getOpenUsdBuildInfo(USD);
     handle?.dispose?.();
 
+    setPhase("needle-plugin-load");
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    document.body.appendChild(canvas);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    const pluginContext = new NEEDLE.Context({
+        name: "usd-needle-plugin-matrix",
+        domElement: canvas,
+        renderer,
+    });
+    await pluginContext.create({ files: [] });
+    const removeUsdPlugin = await usdPlugins.addPluginForNeedleEngine({
+        debug: false,
+        getFiles: () => [],
+    });
+    const pluginModel = await NEEDLE.loadAsset(config.fixtureUrl, { context: pluginContext });
+    const pluginHydraHandle = usdPlugins.getHydraHandleFromNeedleEngineAsset(pluginModel);
+    for (let i = 0; i < 4; i++) {
+        pluginContext.update(i / 60, null);
+    }
+    const pluginRoot = pluginModel?.scene ?? pluginModel?.root ?? pluginModel ?? pluginContext.scene;
+    const pluginStats = collectSceneStats(pluginRoot);
+    removeUsdPlugin();
+    renderer.dispose();
+    canvas.remove();
+
     setPhase("complete");
     window.__USD_NEEDLE_ENGINE_MATRIX__ = {
         status: "ready",
@@ -83,12 +111,20 @@ try {
         usdExports: {
             getUsdModule: typeof usd.getUsdModule,
             createThreeHydra: typeof usdThree.createThreeHydra,
+            addPluginForNeedleEngine: typeof usdPlugins.addPluginForNeedleEngine,
+            getHydraHandleFromNeedleEngineAsset: typeof usdPlugins.getHydraHandleFromNeedleEngineAsset,
             hdWebSyncDriver: typeof USD.HdWebSyncDriver,
             stageGetUpAxis: typeof USD.Stage?.prototype?.GetUpAxis,
         },
         openusd: buildInfo.openusd.version,
         modules: buildInfo.modules,
         sceneStats,
+        pluginStats,
+        pluginHydraHandle: {
+            available: Boolean(pluginHydraHandle),
+            update: typeof pluginHydraHandle?.update,
+            dispose: typeof pluginHydraHandle?.dispose,
+        },
         diagnostics: {
             errors: [...errors],
             warnings: [...warnings],
