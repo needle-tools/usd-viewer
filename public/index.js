@@ -8,6 +8,7 @@ import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 import './usd/bindings/emHdBindings.js';
 
+const SHOW_OPENUSD_TEST_ASSETS = false;
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
 // --- Upload-to-Needle-Cloud capture ---------------------------------------
@@ -1175,7 +1176,7 @@ async function init() {
     }
   }
 
-  addOpenUsdTestAssets();
+  if (SHOW_OPENUSD_TEST_ASSETS) addOpenUsdTestAssets();
 
   async function loadGalleryModels() {
     if (galleryFetchStarted) return; // fetch once, then reuse the cards
