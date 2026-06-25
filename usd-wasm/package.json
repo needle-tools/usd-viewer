@@ -60,6 +60,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.7.0-next.9ec2906"
+    "@needle-tools/materialx": "1.7.0-next.57183d6"
   }
 }

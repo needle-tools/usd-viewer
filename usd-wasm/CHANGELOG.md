@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Modernized the wasm runtime to upstream OpenUSD 26.05 with Hydra imaging enabled for the three.js render delegate.
 - Added the Adobe glTF file-format plugin, MaterialX support through Hydra material documents, and OpenSubdiv-enabled builds.
 - Added generated TypeScript declarations and usdview-style inspection/change APIs for programmatic stage interaction.
-- Switched the client MaterialX shader path to `@needle-tools/materialx@1.7.0-next.9ec2906`.
+- Switched the client MaterialX shader path to `@needle-tools/materialx@1.7.0`.
+- Read stage metadata from the live `UsdStage` API first so up-axis state remains stable across referenced asset reloads.
 
 ## [0.0.1-alpha] - 2025-05-14
 - initial release

@@ -151,7 +151,7 @@ cd /Users/herbst/git/usd-viewer/usd-wasm
 npm ls @needle-tools/materialx
 ```
 
-Expected version: `@needle-tools/materialx@1.7.0-next.9ec2906`.
+Expected version: `@needle-tools/materialx@1.7.0`.
 
 ## Current Shape
 
