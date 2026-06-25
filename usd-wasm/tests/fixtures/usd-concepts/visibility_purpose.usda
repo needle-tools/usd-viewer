@@ -1,0 +1,53 @@
+#usda 1.0
+(
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Cube "VisibleRender" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 0.7
+        rel material:binding = </Looks/VisibleMat>
+    }
+
+    def Cube "InvisibleGuide" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 1.2
+        token visibility = "invisible"
+        uniform token purpose = "guide"
+        rel material:binding = </Looks/HiddenMat>
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "VisibleMat"
+    {
+        token outputs:surface.connect = </Looks/VisibleMat/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.15, 0.75, 0.95)
+            float inputs:roughness = 0.38
+            token outputs:surface
+        }
+    }
+
+    def Material "HiddenMat"
+    {
+        token outputs:surface.connect = </Looks/HiddenMat/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (1, 0, 0)
+            token outputs:surface
+        }
+    }
+}

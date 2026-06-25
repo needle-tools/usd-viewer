@@ -259,6 +259,87 @@ async function runFixtureChecks(handle, usdRoot, config) {
         checks.subdivision = collectMeshGeometryState(usdRoot);
     }
 
+    if (config.fixtureName === "local-native-instances-usda") {
+        checks.nativeInstances = {
+            meshState: collectMeshMaterialState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/Prototype/Shape",
+                "/World/InstanceA",
+                "/World/InstanceB",
+            ]),
+        };
+    }
+
+    if (config.fixtureName === "local-point-instancer-usda") {
+        checks.pointInstancer = {
+            geometryState: collectMeshGeometryState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/World/Scatter",
+                "/World/Prototypes/CubeProto",
+                "/World/Prototypes/SphereProto",
+            ]),
+        };
+    }
+
+    if (config.fixtureName === "local-reference-override-usda") {
+        checks.referenceOverride = {
+            meshState: collectMeshMaterialState(usdRoot),
+            geometryState: collectMeshGeometryState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/World/Referenced",
+                "/World/Referenced/Shape",
+            ]),
+        };
+    }
+
+    if (config.fixtureName === "local-inherits-specializes-usda") {
+        checks.inheritsSpecializes = {
+            meshState: collectMeshMaterialState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/World/InheritedCube/Shape",
+                "/World/SpecializedBall/Shape",
+            ]),
+        };
+    }
+
+    if (config.fixtureName === "local-collection-binding-usda") {
+        checks.collectionBinding = collectMeshMaterialState(usdRoot);
+    }
+
+    if (config.fixtureName === "local-visibility-purpose-usda") {
+        checks.visibilityPurpose = {
+            meshState: collectMeshMaterialState(usdRoot),
+            authoredState: collectStageAttributeValues(handle.driver.GetStage(), {
+                "/World/VisibleRender": ["visibility", "purpose"],
+                "/World/InvisibleGuide": ["visibility", "purpose"],
+            }),
+        };
+    }
+
+    if (config.fixtureName === "local-camera-light-usda") {
+        checks.cameraLight = {
+            meshState: collectMeshMaterialState(usdRoot),
+            stageTypes: collectStagePrimTypes(handle.driver.GetStage(), [
+                "/World/ShotCam",
+                "/World/KeyLight",
+                "/World/LitCube",
+            ]),
+        };
+    }
+
+    if (config.fixtureName === "local-time-samples-usda") {
+        const before = collectMeshWorldState(usdRoot);
+        handle.update?.(1);
+        await handle.refresh?.();
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const after = collectMeshWorldState(usdRoot);
+        checks.timeSamples = {
+            before,
+            after,
+            stageMetadata: handle.stageMetadata?.() ?? null,
+        };
+    }
+
     return checks;
 }
 
@@ -379,6 +460,50 @@ function collectMeshGeometryState(root) {
             ...meshes.flatMap(mesh => mesh.bounds ? [...mesh.bounds.min, ...mesh.bounds.max].map(Math.abs) : []),
         ),
     };
+}
+
+function collectMeshWorldState(root) {
+    root.updateMatrixWorld?.(true);
+    const meshes = [];
+    root.traverse?.(object => {
+        if (!object.isMesh) return;
+        const elements = object.matrixWorld?.elements ?? [];
+        const position = [elements[12] ?? 0, elements[13] ?? 0, elements[14] ?? 0];
+        meshes.push({
+            name: object.name || "",
+            worldPosition: position,
+        });
+    });
+    return {
+        meshCount: meshes.length,
+        meshes,
+        maxAbsX: Math.max(0, ...meshes.map(mesh => Math.abs(mesh.worldPosition[0]))),
+    };
+}
+
+function collectStagePrimTypes(stage, paths) {
+    const types = {};
+    for (const path of paths) {
+        const prim = stage.GetPrimAtPath(path);
+        types[path] = {
+            valid: Boolean(prim?.IsValid?.()),
+            typeName: prim?.IsValid?.() ? prim.GetTypeName() : "",
+        };
+    }
+    return types;
+}
+
+function collectStageAttributeValues(stage, primAttributeMap) {
+    const values = {};
+    for (const [path, attributes] of Object.entries(primAttributeMap)) {
+        const prim = stage.GetPrimAtPath(path);
+        values[path] = {};
+        for (const attributeName of attributes) {
+            const attribute = prim?.IsValid?.() ? prim.GetAttribute(attributeName) : null;
+            values[path][attributeName] = attribute?.IsValid?.() ? attribute.GetValueString() : "";
+        }
+    }
+    return values;
 }
 
 function collectMaterialTextures(material) {
