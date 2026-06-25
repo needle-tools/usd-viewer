@@ -471,6 +471,25 @@ export async function createThreeHydra(config) {
     const initialDrawPromise = draw();
 
     let time = 0;
+    let currentTimeCode = stageStartTimeCode;
+    let playing = true;
+
+    const stageDuration = () => stageEndTimeCode - stageStartTimeCode;
+
+    const clampStageTimeCode = (timeCode) => {
+        if (!Number.isFinite(timeCode)) return stageStartTimeCode;
+        const duration = stageDuration();
+        if (duration <= 0) return stageStartTimeCode;
+        return Math.min(stageEndTimeCode, Math.max(stageStartTimeCode, timeCode));
+    };
+
+    const setHydraTime = (timeCode) => {
+        currentTimeCode = clampStageTimeCode(timeCode);
+        time = stageTimeCodesPerSecond > 0
+            ? (currentTimeCode - stageStartTimeCode) / stageTimeCodesPerSecond
+            : 0;
+        driver.SetTime(currentTimeCode);
+    };
 
     if (debug) {
         console.log("STAGE", {
@@ -495,17 +514,32 @@ export async function createThreeHydra(config) {
                 }
                 return;
             }
-            time += dt;
-            const startTimeCode = stageStartTimeCode;
-            const endTimeCode = stageEndTimeCode;
-            const duration = endTimeCode - startTimeCode;
-            let timecode = startTimeCode + time * stageTimeCodesPerSecond;
-            if (duration > 0) {
-                timecode = startTimeCode + ((timecode - startTimeCode) % duration);
-                driver.SetTime(timecode);
+            if (playing) {
+                time += dt;
+                const startTimeCode = stageStartTimeCode;
+                const duration = stageDuration();
+                let timecode = startTimeCode + time * stageTimeCodesPerSecond;
+                if (duration > 0) {
+                    timecode = startTimeCode + ((timecode - startTimeCode) % duration);
+                    currentTimeCode = timecode;
+                    driver.SetTime(timecode);
+                }
             }
             draw();
         },
+        setTime: async (timeCode) => {
+            if (disposed || driver.isDeleted()) {
+                return Promise.resolve();
+            }
+            await drawPromise;
+            setHydraTime(timeCode);
+            return draw(true);
+        },
+        getTime: () => currentTimeCode,
+        setPlaying: (value) => {
+            playing = Boolean(value);
+        },
+        isPlaying: () => playing,
         refresh: () => draw(),
         setIncludedPurposes: async (includedPurposes) => {
             if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {

@@ -64,6 +64,10 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         await expect(page.getByTestId('usdview-panel')).toContainText('Used Layers');
         await page.getByRole('button', { name: 'PayloadHolder Xform', exact: true }).click();
         await expect(page.getByTestId('usdview-panel')).toContainText('/World/PayloadHolder');
+        const payloadLayer = page.getByTestId('usdview-layer-row').filter({ hasText: 'payload_payload.usda' }).first();
+        await expect(payloadLayer).toBeVisible();
+        await payloadLayer.click();
+        await expect(page.getByTestId('usdview-panel')).toContainText('Layer Details');
 
         await page.getByRole('button', { name: 'Unload', exact: true }).click();
         await expect(page.locator('.status')).toHaveText('Applied /World/PayloadHolder payload unloaded', { timeout: 45_000 });
@@ -73,7 +77,29 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         const state = await getViewerState(page);
         expect(state?.usdview?.hasStage).toBe(true);
         expect(state?.usdview?.selectedPath).toBe('/World/PayloadHolder');
+        expect(state?.usdview?.selectedLayerIdentifier).toContain('payload_payload.usda');
         expect(state?.usdview?.lastNoticeResyncedPaths).toContain('/World/PayloadHolder');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('Usdview timeline pauses and seeks animated stages', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['Time Samples']);
+
+        await expect(page.getByTestId('usdview-panel')).toContainText('Timeline');
+        await page.getByTestId('usdview-timeline-play').click();
+        await page.getByTestId('usdview-timeline-slider').evaluate((element) => {
+            const input = element as HTMLInputElement;
+            input.value = '24';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await expect.poll(async () => (await getViewerState(page))?.usdview?.currentTime).toBe(24);
+
+        const state = await getViewerState(page);
+        expect(state?.stageMetadata?.startTimeCode).toBe(1);
+        expect(state?.stageMetadata?.endTimeCode).toBe(48);
+        expect(state?.usdview?.isPlaying).toBe(false);
         expectForbiddenDiagnostics(diagnostics);
     });
 });
@@ -92,7 +118,9 @@ async function loadAssetsInOrder(page, assetNames: string[]) {
 }
 
 async function renderAreaScreenshot(page) {
-    await page.addStyleTag({ content: '.test-buttons { visibility: hidden !important; }' });
+    await page.getByRole('button', { name: 'Fit Camera', exact: true }).click();
+    await waitForFrames(page, 4);
+    await page.addStyleTag({ content: '.test-buttons, .usdview-panel { visibility: hidden !important; }' });
     await waitForFrames(page, 4);
     return page.screenshot({
         animations: 'disabled',
@@ -119,6 +147,9 @@ async function getViewerState(page) {
                 usdview: {
                     hasStage: boolean;
                     selectedPath: string;
+                    selectedLayerIdentifier: string;
+                    currentTime: number;
+                    isPlaying: boolean;
                     lastNoticeResyncedPaths: string[];
                 };
             };
