@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>Uploading to Needle Cloud…</title>
+  <!-- Privacy-friendly analytics (Rybbit), proxied same-origin via server.js — same as index.html. -->
+  <script src="/api/script.js" data-site-id="6bc313ba3488" defer></script>
   <!-- NOTE: served WITHOUT cross-origin isolation (server.js only sets COOP/COEP for
        index.html + the emHd WASM). It must stay non-isolated AND top-level so it can
        open + postMessage the cloud popup and read the viewer's (un-partitioned) stash. -->
@@ -29,8 +31,19 @@
       animation: nc-spin 1s linear infinite;
     }
     @keyframes nc-spin { to { transform: rotate(360deg); } }
-    .nc-check { display: none; font-size: 36px; line-height: 1; margin-bottom: 14px; color: var(--color-green-dark); }
-    .nc-check.error { color: #c0392b; }
+
+    /* Animated status marks (shown by JS in place of the spinner). */
+    .nc-status-svg {
+      display: none; width: 56px; height: 56px; margin: 0 auto 16px;
+      transform-origin: center;
+      animation: nc-breathe 2.6s ease-in-out 0.9s infinite; /* gentle loop once drawn */
+    }
+    .nc-check-svg .nc-anim-circle, .nc-check-svg .nc-anim-mark { stroke: var(--color-green-dark); }
+    .nc-cross-svg .nc-anim-circle, .nc-cross-svg .nc-anim-mark { stroke: #c0392b; }
+    .nc-anim-circle { stroke-width: 3; stroke-dasharray: 145; stroke-dashoffset: 145; animation: nc-draw 0.5s ease forwards; }
+    .nc-anim-mark { stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: nc-draw 0.35s 0.42s ease forwards; }
+    @keyframes nc-draw { to { stroke-dashoffset: 0; } }
+    @keyframes nc-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
     /* Logo inline before the title, vertically centered with the text. */
     .nc-title {
       display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -42,6 +55,9 @@
     #detail { margin: 0; font-weight: 600; color: var(--color-text-muted); min-height: 1.2em; } /* muted grey filename */
     #view-link { display: none; margin-top: 18px; color: var(--color-link); text-decoration: none; font-weight: 600; }
     #view-link:hover { text-decoration: underline; }
+    #retry-link { display: none; margin-top: 18px; color: var(--color-green-dark); text-decoration: none; font-weight: 700; }
+    #retry-link:hover { text-decoration: underline; }
+    .nc-retry-icon { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 5px; }
     /* Page footer: back link, muted grey, small. */
     .nc-footer { margin-top: 28px; }
     .nc-footer a { color: var(--color-text-muted); text-decoration: none; font-size: 0.8rem; }
@@ -52,7 +68,14 @@
   <div class="nc-wrap">
     <div class="nc-card">
       <div class="nc-spinner" id="spinner" aria-hidden="true"></div>
-      <div class="nc-check" id="check" aria-hidden="true"></div>
+      <svg id="check-svg" class="nc-status-svg nc-check-svg" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="nc-anim-circle" cx="26" cy="26" r="23" fill="none" />
+        <path class="nc-anim-mark" fill="none" d="M15 27 l7 7 l15 -16" />
+      </svg>
+      <svg id="cross-svg" class="nc-status-svg nc-cross-svg" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="nc-anim-circle" cx="26" cy="26" r="23" fill="none" />
+        <path class="nc-anim-mark" fill="none" d="M18 18 L34 34 M34 18 L18 34" />
+      </svg>
       <h1 class="nc-title">
         <img class="nc-logo" src="/usd-logo.png" alt="" />
         <span id="title">Uploading to Needle Cloud</span>
@@ -60,6 +83,7 @@
       <p id="status">Preparing your model…</p>
       <p id="detail"></p>
       <a id="view-link" href="#" target="_blank" rel="noopener">View on Needle Cloud →</a>
+      <a id="retry-link" href="#"><svg class="nc-retry-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>Try again</a>
     </div>
     <div class="nc-footer"><a id="back-link" href="/">← Back to the viewer</a></div>
   </div>

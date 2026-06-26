@@ -23,6 +23,10 @@
     --color-green-dark: #74AF52;
     --color-green-light: #D7DB0A;
 
+    /* USD brand blue (matches usd-logo.png) */
+    --color-usd-blue: #2C8FD0;
+    --color-usd-blue-dark: #1F7BB5;
+
     /* Text */
     --color-text: #1A1A1A;
     --color-text-secondary: #4A4E4A;
@@ -529,15 +533,56 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 
 .dialog-content p {
     margin: 0 0 16px 0;
+    text-wrap: balance;
 }
 
 .dialog-content p:last-child {
     margin-bottom: 0;
 }
 
+.dialog-list {
+    margin: 0 0 4px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dialog-list li {
+    position: relative;
+    padding-left: 26px;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.dialog-list li:last-child {
+    margin-bottom: 0;
+}
+
+.dialog-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color-green-dark);
+    font-weight: 800;
+}
+
 .dialog-content a {
     color: var(--color-link);
     text-decoration: none;
+}
+
+/* Needle Cloud mentions use the brand green rather than the generic link purple. */
+.dialog-content a.cloud-link {
+    color: var(--color-green-dark);
+    font-weight: 700;
+    white-space: nowrap; /* keep the logo glued to "Needle Cloud" */
+}
+
+.needle-logo-inline {
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.22em; /* center the mark against the text */
+    margin-right: 5px;
 }
 
 .dialog-content a:hover {
@@ -577,15 +622,38 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     cursor: pointer;
 }
 
+/* The export dialog carries a wider CTA row (Download GLB + the long Upload button),
+   so give it more room than the default 500px clamp to keep them on one line. */
+#export-dialog .dialog {
+    max-width: 560px;
+}
+
 /* Export dialog call-to-action: Needle Cloud primary, browser download secondary. */
 .dialog-cta {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-subtle);
+    margin-top: 24px;
     display: flex;
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
+}
+
+/* Secondary action on the left of the CTA row: a soft neutral-grey pill button —
+   clearly clickable, but visually subordinate to the blue Upload primary. */
+#export-download-direct {
+    padding: 9px 18px;
+    border: 1px solid rgba(26, 26, 26, 0.09);
+    border-radius: 999px;
+    background-color: rgba(26, 26, 26, 0.06);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+#export-download-direct:hover {
+    background-color: rgba(26, 26, 26, 0.12);
+    border-color: rgba(26, 26, 26, 0.16);
+    color: var(--color-text);
+    text-decoration: none;
 }
 
 /* Scoped under .dialog-cta to out-specify ".dialog-content a" (0,1,1), which
@@ -593,7 +661,9 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 .dialog-cta .cta-primary {
     display: inline-flex;
     align-items: center;
-    background-color: var(--color-green-dark);
+    gap: 8px;
+    margin-left: auto; /* push the primary action to the right; secondary stays left */
+    background-color: var(--color-usd-blue);
     color: #fff;
     text-decoration: none;
     font-weight: 700;
@@ -602,8 +672,12 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     transition: background-color 0.15s;
 }
 
+.dialog-cta .cta-primary svg {
+    flex: none;
+}
+
 .dialog-cta .cta-primary:hover {
-    background-color: var(--color-text);
+    background-color: var(--color-usd-blue-dark);
     color: #fff;
     text-decoration: none;
 }
