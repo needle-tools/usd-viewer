@@ -30,8 +30,10 @@ const backLink = document.getElementById("back-link");
 const retryLink = document.getElementById("retry-link");
 
 function setTitle(t) { if (titleEl) titleEl.textContent = t; }
-function setStatus(t) { if (statusEl) statusEl.textContent = t; }
-function setStatusLines(...lines) { if (statusEl) statusEl.innerHTML = lines.map(escapeHtml).join("<br>"); }
+function setStatus(t) { if (statusEl) { statusEl.textContent = t; statusEl.classList.remove("status-alert"); } }
+function setStatusLines(...lines) { if (statusEl) { statusEl.innerHTML = lines.map(escapeHtml).join("<br>"); statusEl.classList.remove("status-alert"); } }
+// Like setStatus, but renders the message as a soft-red, bold alert banner.
+function setStatusAlert(t) { if (statusEl) { statusEl.textContent = t; statusEl.classList.add("status-alert"); } }
 function setDetail(t) { if (detailEl) detailEl.textContent = t || ""; }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -114,7 +116,7 @@ function openAndSend() {
   if (retryLink) retryLink.style.display = "none";
   popup = openCentered(connectUrl, "needle-cloud-connect", 520, 860);
   if (!popup) {
-    setStatus("Please allow pop-ups for this site, then try again.");
+    setStatusAlert("Please allow pop-ups for this site, then try again.");
     if (retryLink) retryLink.style.display = "inline-block";
     return;
   }

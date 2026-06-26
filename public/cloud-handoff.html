@@ -52,6 +52,18 @@
     }
     .nc-logo { height: 1.15em; width: auto; display: block; }
     #status { margin: 0 0 6px; color: var(--color-text-secondary); line-height: 1.55; text-wrap: balance; }
+    /* Alert variant — used for actionable warnings (e.g. blocked pop-ups):
+       bold text on a soft red, rounded banner. Toggled via the .status-alert
+       class in cloud-handoff.js. */
+    #status.status-alert {
+      font-weight: 700;
+      color: #b3261e;
+      background: rgba(179, 38, 30, 0.08);
+      border: 1px solid rgba(179, 38, 30, 0.18);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin: 4px 0 6px;
+    }
     #detail { margin: 0; font-weight: 600; color: var(--color-text-muted); min-height: 1.2em; } /* muted grey filename */
     #view-link { display: none; margin-top: 18px; color: var(--color-link); text-decoration: none; font-weight: 600; }
     #view-link:hover { text-decoration: underline; }
