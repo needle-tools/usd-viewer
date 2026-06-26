@@ -335,6 +335,109 @@ function extOf(name) {
   return String(name || "").split("#")[0].split("?")[0].split(".").pop().toLowerCase();
 }
 
+function isUsdFileName(name) {
+  return ['usd', 'usdz', 'usda', 'usdc'].includes(extOf(name));
+}
+
+function isGltfFileName(name) {
+  return ['glb', 'gltf'].includes(extOf(name));
+}
+
+function isMaterialXFileName(name) {
+  return extOf(name) === 'mtlx';
+}
+
+function usdStringFile(content, name) {
+  return new File([new TextEncoder().encode(content)], name, { type: "model/vnd.usda" });
+}
+
+function makeGltfReferenceUsda(referencePath) {
+  const normalized = String(referencePath || "").replaceAll("\\", "/");
+  const fileName = normalized.split("/").pop() || "asset.glb";
+  const directory = normalized.includes("/") ? normalized.slice(0, normalized.length - fileName.length) : "";
+  const wrapperName = `${fileName.replace(/\.[^/.]+$/, "") || "asset"}.usda`;
+  const wrapperPath = `${directory}${wrapperName}`;
+  const content = `#usda 1.0
+(
+    defaultPrim = "Asset"
+    upAxis = "Y"
+)
+
+def Xform "Asset" (
+    prepend references = @./${fileName}@
+)
+{
+}
+`;
+  return { file: usdStringFile(content, wrapperName), path: wrapperPath };
+}
+
+function inferMaterialXMaterialName(content) {
+  try {
+    const document = new DOMParser().parseFromString(content, "application/xml");
+    const parserError = document.querySelector("parsererror");
+    if (parserError) {
+      console.warn("Failed to parse MaterialX document for material preview", parserError.textContent);
+      return "";
+    }
+
+    const surfaceMaterials = document.getElementsByTagName("surfacematerial");
+    for (const material of surfaceMaterials) {
+      const name = material.getAttribute("name");
+      if (name) return name;
+    }
+
+    const materials = document.querySelectorAll('[type="material"][name]');
+    for (const material of materials) {
+      const name = material.getAttribute("name");
+      if (name) return name;
+    }
+  } catch (error) {
+    console.warn("Failed to inspect MaterialX document for material preview", error);
+  }
+
+  return "";
+}
+
+function makeMaterialXReferenceUsda(referencePath, materialName) {
+  const normalized = String(referencePath || "").replaceAll("\\", "/");
+  const fileName = normalized.split("/").pop() || "material.mtlx";
+  const directory = normalized.includes("/") ? normalized.slice(0, normalized.length - fileName.length) : "";
+  const wrapperName = `${fileName.replace(/\.[^/.]+$/, "") || "material"}.usda`;
+  const wrapperPath = `${directory}${wrapperName}`;
+  const content = `#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Sphere "PreviewSphere" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Materials/MaterialX/Materials/${materialName}>
+        color3f[] primvars:displayColor = [(0.8, 0.8, 0.8)]
+        double radius = 1
+    }
+}
+
+def Scope "Materials"
+{
+    def "MaterialX" (
+        references = [
+            @./${fileName}@</MaterialX>
+        ]
+    )
+    {
+    }
+}
+`;
+  return { file: usdStringFile(content, wrapperName), path: wrapperPath };
+}
+
 // Basename truncated for analytics: directory segments stripped, only the last
 // 40 chars kept (so the extension survives). Filenames in a pro 3D tool are low
 // sensitivity, but stripping paths + truncating keeps long/identifying paths
@@ -1472,9 +1575,8 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
 }
 
 function testAndLoadFile(file) {
-  let ext = file.name.split('.').pop();
-  if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + ext);
-  if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
+  if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + extOf(file.name));
+  if(isUsdFileName(file.name)) {
     track('load_file', {
       method: 'drop',
       files: 1,
@@ -1488,10 +1590,57 @@ function testAndLoadFile(file) {
       window.clearMessageLog();
     }
     loadFile(file);
+  } else if (isGltfFileName(file.name)) {
+    track('load_file', {
+      method: 'drop',
+      files: 2,
+      bytes: file.size,
+      types: extOf(file.name) + ',usda',
+      name: safeName(file.name),
+    });
+    clearStage();
+    if (window.clearMessageLog) {
+      window.clearMessageLog();
+    }
+    loadGltfFileAsUsd(file, `/${file.name}`);
+  } else if (isMaterialXFileName(file.name)) {
+    track('load_file', {
+      method: 'drop',
+      files: 2,
+      bytes: file.size,
+      types: extOf(file.name) + ',usda',
+      name: safeName(file.name),
+    });
+    clearStage();
+    if (window.clearMessageLog) {
+      window.clearMessageLog();
+    }
+    loadMaterialXFileAsUsd(file, `/${file.name}`);
   } else {
     // Surface attempts to view a format we don't support.
     track('load_unsupported', { method: 'drop', type: extOf(file.name), name: safeName(file.name) });
   }
+}
+
+async function loadGltfFileAsUsd(file, fullPath) {
+  await loadFile(file, false, fullPath);
+  const wrapper = makeGltfReferenceUsda(fullPath);
+  await loadFile(wrapper.file, true, wrapper.path);
+}
+
+async function loadMaterialXFileAsUsd(file, fullPath) {
+  const content = await file.text();
+  const materialName = inferMaterialXMaterialName(content);
+  if (!materialName) {
+    const error = new Error(`Could not find a MaterialX material in ${file.name}`);
+    console.error(error.message);
+    trackError('materialx_preview', error, { type: extOf(file.name), name: safeName(file.name) });
+    return;
+  }
+
+  await loadFile(file, false, fullPath);
+  const wrapper = makeMaterialXReferenceUsda(fullPath, materialName);
+  await loadFile(wrapper.file, true, wrapper.path);
 }
 
 /**
@@ -1591,6 +1740,8 @@ async function handleFilesystemEntries(entries) {
   // determine which of these is likely the root file
   let rootFileCandidates = [];
   let usdaCandidates = [];
+  let materialXCandidates = [];
+  let gltfCandidates = [];
   
   // sort so shorter paths come first
   allFiles.sort((a, b) => {
@@ -1604,11 +1755,16 @@ async function handleFilesystemEntries(entries) {
   for (const file of allFiles) {
     if (debugFileHandling) console.log(file);
     // fullPath should only contain one slash, and should contain a valid USD extension
-    let ext = file.name.split('.').pop();
-    if(ext == 'usd' || ext == 'usdz' || ext == 'usda' || ext == 'usdc') {
+    if(isUsdFileName(file.name)) {
       rootFileCandidates.push(file);
     }
-    if(ext == 'usda') {
+    if(isMaterialXFileName(file.name)) {
+      materialXCandidates.push(file);
+    }
+    if(isGltfFileName(file.name)) {
+      gltfCandidates.push(file);
+    }
+    if(extOf(file.name) == 'usda') {
       usdaCandidates.push(file);
     }
   }
@@ -1627,8 +1783,7 @@ async function handleFilesystemEntries(entries) {
   else {
     // find the first usda file
     for (const file of allFiles) {
-      let ext = file.name.split('.').pop();
-      if(ext == 'usda' || ext == 'usdc' || ext == 'usdz' || ext == 'usd') {
+      if(isUsdFileName(file.name)) {
         rootFile = file;
         break;
       }
@@ -1636,8 +1791,8 @@ async function handleFilesystemEntries(entries) {
   }
 
   if (!rootFile && allFiles.length > 0) {
-    // use first file
-    rootFile = allFiles[0];
+    // Prefer generated-preview roots before falling back to the first sidecar.
+    rootFile = materialXCandidates[0] || gltfCandidates[0] || allFiles[0];
   }
 
   // TODO if there are still multiple candidates we should ask the user which one to use
@@ -1659,10 +1814,12 @@ async function handleFilesystemEntries(entries) {
   // Sort so that USD files come last and all references are already there.
   // As long as the root file is the last one this actually shouldn't matter
   allFiles.sort((a, b) => {
-    let extA = a.name.split('.').pop();
-    let extB = b.name.split('.').pop();
-    if (extA == 'usd' || extA == 'usdz' || extA == 'usda' || extA == 'usdc') return 1;
-    if (extB == 'usd' || extB == 'usdz' || extB == 'usda' || extB == 'usdc') return -1;
+    if (isUsdFileName(a.name)) return 1;
+    if (isUsdFileName(b.name)) return -1;
+    if (isMaterialXFileName(a.name)) return 1;
+    if (isMaterialXFileName(b.name)) return -1;
+    if (isGltfFileName(a.name)) return 1;
+    if (isGltfFileName(b.name)) return -1;
     return 0;
   });
 
@@ -1689,10 +1846,38 @@ async function handleFilesystemEntries(entries) {
   // THEN load the root file if it's a supported format
 
   if (rootFile) {
-    const isSupportedFormat = ['usd', 'usdz', 'usda', 'usdc'].includes(rootFile.name.split('.').pop());
+    const isSupportedFormat = isUsdFileName(rootFile.name);
+    const isGltfRoot = isGltfFileName(rootFile.name);
+    const isMaterialXRoot = isMaterialXFileName(rootFile.name);
     if (!isSupportedFormat) {
-      console.error("Not a supported file format: ", rootFile.name);
-      track('load_unsupported', { method: 'drop', type: extOf(rootFile.name), name: safeName(rootFile.name) });
+      if (!isGltfRoot && !isMaterialXRoot) {
+        console.error("Not a supported file format: ", rootFile.name);
+        track('load_unsupported', { method: 'drop', type: extOf(rootFile.name), name: safeName(rootFile.name) });
+      }
+      else if (isGltfRoot) {
+        const resolvedRoot = await getFile(rootFile);
+        tallyDropped(resolvedRoot, rootFile.name);
+        track('load_file', {
+          method: 'drop',
+          files: allFiles.length + 2, // sidecars + glTF root + generated USDA wrapper
+          bytes: droppedBytes,
+          types: [...droppedExts, 'usda'].sort().join(','),
+          name: safeName(rootFile.name),
+        });
+        await loadGltfFileAsUsd(resolvedRoot, rootFile.fullPath);
+      }
+      else {
+        const resolvedRoot = await getFile(rootFile);
+        tallyDropped(resolvedRoot, rootFile.name);
+        track('load_file', {
+          method: 'drop',
+          files: allFiles.length + 2, // sidecars + MaterialX root + generated USDA wrapper
+          bytes: droppedBytes,
+          types: [...droppedExts, 'usda'].sort().join(','),
+          name: safeName(rootFile.name),
+        });
+        await loadMaterialXFileAsUsd(resolvedRoot, rootFile.fullPath);
+      }
     }
     else {
       const resolvedRoot = await getFile(rootFile);
@@ -1746,7 +1931,7 @@ function dropHandler(ev) {
       let item = ev.dataTransfer.items[i];
       
       // API when there's no "getAsEntry" support
-      console.log(item.kind, item, entry);
+      console.log(item.kind, item);
       if (item.kind === 'file')
       {
         var file = item.getAsFile();
