@@ -43,19 +43,11 @@ context.
 The public viewer entrypoint lives in `public/`. The package and the three.js
 Hydra bridge live under `usd-wasm/`.
 
-## Building OpenUSD Wasm
+## OpenUSD Wasm Runtime
 
-The historical build notes have been replaced by the reproducible
-OpenUSD 26.05 build flow in [README_BUILDING.md](README_BUILDING.md).
-
-At a high level, the current build uses:
-
-- OpenUSD 26.05 on branch `modernize-openusd-26-05-wasm`.
-- Emscripten 4.0.23.
-- OpenSubdiv built for wasm.
-- OpenUSD MaterialX and `hdMtlx`.
-- Adobe USD file-format plugins for glTF/GLB.
-- The Needle `hdEmscripten` Hydra bridge in the OpenUSD tree.
+The checked-in OpenUSD wasm runtime is maintained by Needle. Internal rebuild
+and deployment instructions live in the Needle team wiki, not in this public
+source repository.
 
 ## Tests
 
