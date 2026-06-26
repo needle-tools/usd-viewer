@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "prepare:public": "node scripts/prepare-public-runtime.mjs"
   },
   "dependencies": {
     "@fastify/static": "^6.10.2",
