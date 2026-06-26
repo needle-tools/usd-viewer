@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Uploading to Needle Cloud…</title>
+  <!-- NOTE: served WITHOUT cross-origin isolation (server.js only sets COOP/COEP for
+       index.html + the emHd WASM). It must stay non-isolated AND top-level so it can
+       open + postMessage the cloud popup and read the viewer's (un-partitioned) stash. -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800&display=swap" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .nc-wrap {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 24px; box-sizing: border-box;
+    }
+    .nc-card {
+      background: var(--color-surface); border: 1px solid var(--border-subtle);
+      border-radius: 12px; box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+      max-width: 460px; width: 100%; padding: 34px 28px; text-align: center;
+    }
+    .nc-spinner {
+      width: 34px; height: 34px; margin: 0 auto 18px; border-radius: 50%;
+      border: 3px solid var(--border-subtle); border-top-color: var(--color-green-dark);
+      animation: nc-spin 1s linear infinite;
+    }
+    @keyframes nc-spin { to { transform: rotate(360deg); } }
+    .nc-check { display: none; font-size: 36px; line-height: 1; margin-bottom: 14px; color: var(--color-green-dark); }
+    .nc-check.error { color: #c0392b; }
+    /* Logo inline before the title, vertically centered with the text. */
+    .nc-title {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin: 0 0 10px; font-size: 1.4em; font-weight: 800; color: var(--color-text);
+      text-wrap: balance;
+    }
+    .nc-logo { height: 1.15em; width: auto; display: block; }
+    #status { margin: 0 0 6px; color: var(--color-text-secondary); line-height: 1.55; text-wrap: balance; }
+    #detail { margin: 0; font-weight: 600; color: var(--color-text-muted); min-height: 1.2em; } /* muted grey filename */
+    #view-link { display: none; margin-top: 18px; color: var(--color-link); text-decoration: none; font-weight: 600; }
+    #view-link:hover { text-decoration: underline; }
+    /* Page footer: back link, muted grey, small. */
+    .nc-footer { margin-top: 28px; }
+    .nc-footer a { color: var(--color-text-muted); text-decoration: none; font-size: 0.8rem; }
+    .nc-footer a:hover { text-decoration: underline; color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+  <div class="nc-wrap">
+    <div class="nc-card">
+      <div class="nc-spinner" id="spinner" aria-hidden="true"></div>
+      <div class="nc-check" id="check" aria-hidden="true"></div>
+      <h1 class="nc-title">
+        <img class="nc-logo" src="/usd-logo.png" alt="" />
+        <span id="title">Uploading to Needle Cloud</span>
+      </h1>
+      <p id="status">Preparing your model…</p>
+      <p id="detail"></p>
+      <a id="view-link" href="#" target="_blank" rel="noopener">View on Needle Cloud →</a>
+    </div>
+    <div class="nc-footer"><a id="back-link" href="/">← Back to the viewer</a></div>
+  </div>
+  <script type="module" src="/cloud-handoff.js"></script>
+</body>
+</html>

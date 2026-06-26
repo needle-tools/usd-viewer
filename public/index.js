@@ -4,9 +4,90 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { track, trackError } from './analytics.js';
+import { stashHandoffPayload } from './cloud-handoff-store.js';
 import './usd/bindings/emHdBindings.js';
 
 const getUsdModule = globalThis["NEEDLE:USD:GET"];
+
+// --- Upload-to-Needle-Cloud capture ---------------------------------------
+// As files are loaded we keep the ORIGINAL bytes + their relative paths so the
+// user can upload the exact USD set (a USD can reference external layers/textures)
+// to Needle Cloud — where it's converted to glTF and hosted. Reset whenever the
+// stage is cleared (i.e. a new model is loaded).
+let capturedFiles = [];          // [{ relativePath, bytes: ArrayBuffer }] — drag-drop loads
+let capturedRootFilename = null; // the entrypoint USD's relative path
+// URL / sample loads (?file=…) are downloaded INSIDE the USD WASM runtime, so JS
+// never sees the bytes. We remember the source URL + name and re-fetch on upload.
+let loadedSourceUrl = null;
+let loadedSourceFilename = null;
+
+// Where the Needle Cloud upload flow lives. Localhost dev points at the cloud dev
+// server so the whole flow can be tested locally; an explicit `?cloud=` query or a
+// `needle_cloud_base` localStorage value overrides it.
+function needleCloudBase() {
+  const override = new URLSearchParams(location.search).get('cloud')
+    || (typeof localStorage !== 'undefined' && localStorage.getItem('needle_cloud_base'));
+  if (override) return override.replace(/\/+$/, '');
+  const host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return 'https://localhost:5173';
+  return 'https://cloud.needle.tools';
+}
+
+// Stash the captured USD set and hand off to the (non-isolated) /cloud-handoff
+// page, which postMessages it to Needle Cloud. Returns false if nothing is loaded.
+async function uploadToNeedleCloud() {
+  let files = capturedFiles;
+  let rootFilename = capturedRootFilename;
+
+  // URL / sample load: no captured drop bytes — re-fetch the original source.
+  if (!files.length && loadedSourceUrl) {
+    try {
+      const resp = await fetch(loadedSourceUrl);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const bytes = await resp.arrayBuffer();
+      // Must be a PLAIN filename — the upload SDK rejects names with slashes/URLs.
+      rootFilename = cloudUploadBasename(loadedSourceUrl, loadedSourceFilename);
+      files = [{ relativePath: rootFilename, bytes }];
+    } catch (err) {
+      console.error('[needle-cloud] could not fetch source for upload', err);
+      trackError('upload_to_cloud_fetch', err);
+      return false;
+    }
+  }
+
+  if (!files.length || !rootFilename) return false;
+  const payload = {
+    type: 'needle-cloud-import',
+    source: 'usd-viewer',
+    rootFilename,
+    files: files.map(f => ({ relativePath: f.relativePath, bytes: f.bytes })),
+  };
+  await stashHandoffPayload(payload);
+  track('upload_to_cloud', { file: rootFilename || undefined, files: files.length });
+  return true;
+}
+
+// Is there anything to upload right now (a drop set or a URL/sample load)?
+function hasUploadableAsset() {
+  return (capturedFiles.length > 0 && !!capturedRootFilename) || !!loadedSourceUrl;
+}
+
+// Reduce a URL (or a possibly-dirty name) to a plain filename like "Avocado.usdz".
+// The upload SDK rejects filenames containing slashes or a full URL.
+function cloudUploadBasename(url, fallbackName) {
+  let name = '';
+  try { name = decodeURIComponent(new URL(url).pathname.split('/').pop() || ''); } catch {}
+  if (!name && fallbackName) name = String(fallbackName).split(/[\\/]/).pop().split('?')[0];
+  name = name || 'model.usdz';
+  // Collapse a pipeline-style compound extension to a single clean one
+  // (e.g. "Avocado.glb.three.usdz" → "Avocado.usdz"). The intermediate ".glb"/
+  // ".three" parts confuse cloud type detection and the converted-GLB naming.
+  // Only safe here because this is a single, self-contained file (a .usdz / .usd);
+  // multi-file drops keep their exact relative paths (USD references depend on them).
+  const parts = name.split('.');
+  if (parts.length > 2) name = parts[0] + '.' + parts[parts.length - 1];
+  return name;
+}
 
 // Show / hide a .dialog-overlay with a quick fade + lift. The dialogs default to
 // display:none in CSS; we set display first, force a reflow so the opacity/
@@ -439,11 +520,29 @@ if (exportDialog) exportDialog.addEventListener('click', (event) => {
 });
 if (exportCloudCta) {
   exportCloudCta.addEventListener('mouseenter', () => trackExportHover('cloud'));
-  exportCloudCta.addEventListener('click', () => {
-    // Opens Needle Cloud in a new tab (normal link); record the conversion + close.
+  exportCloudCta.addEventListener('click', async (evt) => {
+    evt.preventDefault();
     exportDialogResolved = true;
-    track('export_cloud_cta', { file: currentDisplayFilename || undefined });
     closeExportDialog('cloud');
+
+    // Nothing loaded → just open Needle Cloud (dev-aware).
+    if (!hasUploadableAsset()) {
+      track('export_cloud_cta', { mode: 'open' });
+      window.open(needleCloudBase(), '_blank', 'noopener');
+      return;
+    }
+
+    // Stash the asset, then navigate to our top-level /cloud-handoff page. It opens
+    // the cloud /connect popup and postMessages the asset up. We navigate (not a
+    // popup) because the bridge must be TOP-LEVEL same-origin to read the stash —
+    // a cross-site iframe gets partitioned storage and sees nothing.
+    track('export_cloud_cta', { mode: 'upload' });
+    try { sessionStorage.setItem('needle_cloud_base', needleCloudBase()); } catch {}
+    // Preserve the current viewer URL (e.g. ?file=…) so the handoff's "Back to the
+    // viewer" link returns to the same loaded asset.
+    const returnUrl = location.href;
+    const ok = await uploadToNeedleCloud();
+    if (ok) location.assign('/cloud-handoff.html?return=' + encodeURIComponent(returnUrl));
   });
 }
 if (exportDownloadDirectBtn) {
@@ -604,6 +703,12 @@ function getAllLoadedFilePaths(currentPath, paths) {
 
 function clearStage() {
 
+  // A new model is being loaded — drop any previously captured upload set.
+  capturedFiles = [];
+  capturedRootFilename = null;
+  loadedSourceUrl = null;
+  loadedSourceFilename = null;
+
   var allFilePaths = getAllLoadedFiles();
   console.log("Clearing stage.", allFilePaths)
 
@@ -642,6 +747,13 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   setFilenameText(filename);
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
+
+  // Remember a URL/sample source (no directory) so "Upload to Needle Cloud" can
+  // re-fetch it — drag-drop loads are captured separately in loadFile.
+  if (isRootFile && directory === undefined && path) {
+    loadedSourceUrl = path;
+    loadedSourceFilename = filename;
+  }
 
   // should be loaded last
   if (!isRootFile) return;
@@ -1209,6 +1321,12 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
       }
       USD.FS_createPath("", directory, true, true);
       USD.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
+
+      // Keep the original bytes + relative path so the user can upload this exact
+      // USD set to Needle Cloud (see uploadToNeedleCloud).
+      const relPath = (fullPath !== undefined ? fullPath : file.name).replace(/^\/+/, "");
+      capturedFiles.push({ relativePath: relPath, bytes: event.target.result });
+      if (isRootFile) capturedRootFilename = relPath;
 
       loadUsdFile(directory, fileName, fullPath, isRootFile);
     };
