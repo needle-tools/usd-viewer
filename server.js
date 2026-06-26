@@ -9,6 +9,7 @@ function setHeaders(res, path, stat) {
   const normalizedPath = path.replaceAll("\\", '/');
   const needsHeaders = normalizedPath.includes('/emHd') ||
     normalizedPath.includes('/materialx/') ||
+    normalizedPath.includes('/needle-engine/') ||
     path.endsWith('index.html');
   if (!needsHeaders) return;
 
@@ -244,6 +245,20 @@ fastify.register(require('@fastify/static'), {
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'node_modules/@needle-tools/materialx'),
   prefix: '/materialx',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/@needle-tools/engine'),
+  prefix: '/needle-engine',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/@needle-tools/engine/node_modules/three'),
+  prefix: '/needle-three',
   setHeaders,
   decorateReply: false,
 });

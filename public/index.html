@@ -72,9 +72,11 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/",
-        "three/examples/jsm/": "https://unpkg.com/three@0.163.0/examples/jsm/",
+        "three": "/needle-engine/dist/three.min.js",
+        "three-examples": "/needle-engine/dist/three-examples.min.js",
+        "three/addons/": "/needle-three/examples/jsm/",
+        "three/examples/jsm/": "/needle-three/examples/jsm/",
+        "@needle-tools/engine": "/needle-engine/dist/needle-engine.min.js",
         "@needle-tools/materialx": "/materialx/index.js"
       }
     }
@@ -82,7 +84,6 @@
   <script>
     globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";
   </script>
-  <script type="module" src="https://unpkg.com/three@0.163.0/build/three.module.js"></script>
   <script type="module" src ="index.js"></script>
   <script type="module">
     import { init } from './index.js';
@@ -165,6 +166,11 @@
     </div>
 
     <a href="#" id="feedback-link" class="feedback-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
+
+    <div class="viewer-mode-toggle" id="viewer-mode-toggle" role="group" aria-label="Viewer renderer">
+      <button type="button" data-viewer-mode="three" class="active">three.js</button>
+      <button type="button" data-viewer-mode="needle-loader">Needle Loader</button>
+    </div>
 
     <a id="export-gltf" class="export-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Export glTF</a>
   </div>

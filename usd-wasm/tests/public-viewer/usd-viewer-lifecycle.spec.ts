@@ -60,6 +60,27 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(states[2].rendererMemory).toEqual(states[4].rendererMemory);
         expect(diagnostics).toEqual([]);
     });
+
+    test('loads a public viewer sample through the Needle Engine loader element', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${publicSamples.helmet.url}`);
+        await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
+
+        await page.click('[data-viewer-mode="needle-loader"]');
+        const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
+
+        expect(state.filename).toBe(publicSamples.helmet.filename);
+        expect(state.activeButton).toBe('needle-loader');
+        expect(state.hasHydraHandle).toBe(true);
+        expect(state.driverAlive).toBe(true);
+        expect(state.hasNeedleContext).toBe(true);
+        expect(state.needleChildren).toBeGreaterThan(0);
+        expect(state.elementSrc).toContain(publicSamples.helmet.url);
+        expect(state.threeCanvasDisplay).toBe('none');
+        expect(state.needleDisplay).toBe('block');
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        expect(diagnostics).toEqual([]);
+    });
 });
 
 async function addLocalLifecycleSamples(page: Page) {
@@ -114,5 +135,33 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
         rendererMemory: window.renderer?.info?.memory ? { ...window.renderer.info.memory } : { geometries: -1, textures: -1 },
+    }));
+}
+
+async function waitForNeedleLoaderMode(page: Page, filename: string) {
+    await page.waitForFunction(expectedFilename => {
+        const element = document.querySelector('needle-engine');
+        const driver = window.driver;
+        const driverAlive = Boolean(driver) && (typeof driver.isDeleted !== 'function' || !driver.isDeleted());
+        const actualFilename = document.querySelector('.filename-text')?.textContent || '';
+        return document.body.classList.contains('viewer-mode-needle-loader')
+            && actualFilename === expectedFilename
+            && Boolean(element?.context)
+            && Boolean(window.needleEngineContext)
+            && Boolean(window.usdHydra)
+            && driverAlive;
+    }, filename);
+    await page.waitForTimeout(1000);
+    return await page.evaluate(() => ({
+        href: location.href,
+        filename: document.querySelector('.filename-text')?.textContent || '',
+        activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
+        elementSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
+        driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
+        hasHydraHandle: Boolean(window.usdHydra),
+        hasNeedleContext: Boolean(window.needleEngineContext),
+        needleChildren: window.needleEngineContext?.scene?.children?.length ?? -1,
+        threeCanvasDisplay: getComputedStyle(document.querySelector('.usd-viewer-three-canvas')!).display,
+        needleDisplay: getComputedStyle(document.querySelector('needle-engine')!).display,
     }));
 }

@@ -1,8 +1,7 @@
-import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, VSMShadowMap, PMREMGenerator, EquirectangularReflectionMapping } from 'three';
+import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, PMREMGenerator$1 as PMREMGenerator, EquirectangularReflectionMapping } from 'three';
 import { createThreeHydra, getUsdModule } from './usd/index.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
+import { RGBELoader, OrbitControls, GLTFExporter } from 'three-examples';
 import { track, trackError } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
@@ -326,6 +325,21 @@ let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386
 let messageLog = document.querySelector("#message-log");
 let currentDisplayFilename = "";
 const testFixtureBaseUrl = testFixtureUrl("");
+const VIEWER_MODE_THREE = "three";
+const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
+const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
+let viewerMode = normalizeViewerMode(params.get("viewer") || safeLocalStorageGet(VIEWER_MODE_STORAGE_KEY));
+var currentRootFileName = undefined;
+var timeout = 40;
+var endTimeCode = 1;
+var ready = false;
+var loadGeneration = 0;
+var currentHydraHandle = null;
+var pendingHydraFiles = [];
+var lastAnimationTimeSeconds = performance.now() / 1000;
+let needleEngineElement = null;
+let removeNeedleEngineUsdPlugin = null;
+let needleLoaderFiles = [];
 
 // Lowercase file extension from a name or URL, with any query/hash stripped.
 // Used only for analytics — extensions are not sensitive (unlike names/paths).
@@ -459,6 +473,41 @@ function catalogAssetForUrlPath(urlPath) {
   const root = decodeURIComponent(urlPath.substring(testFixtureBaseUrl.length));
   return testAssetLibrary.find(asset => asset.root === root);
 }
+
+function safeLocalStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // localStorage may be blocked in private/cross-origin contexts.
+  }
+}
+
+function normalizeViewerMode(value) {
+  return value === VIEWER_MODE_NEEDLE_LOADER ? VIEWER_MODE_NEEDLE_LOADER : VIEWER_MODE_THREE;
+}
+
+function setViewerModeUrlParam(url) {
+  if (viewerMode === VIEWER_MODE_THREE) url.searchParams.delete("viewer");
+  else url.searchParams.set("viewer", viewerMode);
+}
+
+function applyViewerModeUi() {
+  document.body.classList.toggle("viewer-mode-three", viewerMode === VIEWER_MODE_THREE);
+  document.body.classList.toggle("viewer-mode-needle-loader", viewerMode === VIEWER_MODE_NEEDLE_LOADER);
+  for (const button of document.querySelectorAll("[data-viewer-mode]")) {
+    const active = button.getAttribute("data-viewer-mode") === viewerMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+}
   
 if (filename) {
   /** @type {HTMLElement | null} */
@@ -467,6 +516,8 @@ if (filename) {
   // get filename from URL
   setFilenameText(filename);
 }  
+
+applyViewerModeUi();
   
 function updateUrl() {
 
@@ -491,7 +542,30 @@ function updateUrl() {
   const currentUrl = new URL(window.location.href);
   // set the file query parameter
   currentUrl.searchParams.set("file", filename);
+  setViewerModeUrlParam(currentUrl);
   window.history.pushState({}, filename, currentUrl);
+}
+
+async function loadCurrentUrlFile() {
+  const currentFile = new URL(document.location.href).searchParams.get("file");
+  if (!currentFile) return;
+  filename = currentFile;
+  setFilenameText(filename);
+  const containerEl = document.querySelector("#container");
+  if (containerEl) containerEl.classList.add("have-custom-file");
+  if (messageLog) messageLog.textContent = "Downloading File " + filename + "...";
+  if (window.setViewerLoading) window.setViewerLoading(true);
+
+  await clearStage();
+  updateUrl();
+
+  const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
+  const catalogAsset = catalogAssetForUrlPath(urlPath);
+  if (catalogAsset?.files?.length) {
+    await loadCatalogAssetBundle(catalogAsset, filename);
+    return;
+  }
+  await loadUsdFile(undefined, filename.split('/').pop(), urlPath, true);
 }
 
 if (messageLog) messageLog.textContent = "Initializing...";
@@ -557,15 +631,6 @@ catch (error) {
     trackError('init', error);
   }
 }
-
-var currentRootFileName = undefined;
-var timeout = 40;
-var endTimeCode = 1;
-var ready = false;
-var loadGeneration = 0;
-var currentHydraHandle = null;
-var pendingHydraFiles = [];
-var lastAnimationTimeSeconds = performance.now() / 1000;
 
 const usdzExportBtn = document.getElementById('export-usdz');
 if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
@@ -824,12 +889,23 @@ async function clearStage() {
   window.driver = undefined;
   window.usdStage = undefined;
   window.renderInterface = undefined;
+  window.needleEngineContext = undefined;
   pendingHydraFiles = [];
+  needleLoaderFiles = [];
 
   try {
     await handle?.dispose?.();
   } catch (error) {
     console.warn("Failed to dispose Hydra handle", error);
+  }
+
+  try {
+    if (needleEngineElement) {
+      needleEngineElement.setAttribute("src", "");
+      needleEngineElement.context?.clear?.();
+    }
+  } catch (error) {
+    console.warn("Failed to clear Needle Engine scene", error);
   }
 
   // A new model is being loaded — drop any previously captured upload set.
@@ -883,6 +959,90 @@ async function waitMaybeAsync(value) {
   return value && typeof value.then === "function" ? await value : value;
 }
 
+async function ensureNeedleEngineLoader() {
+  await import("@needle-tools/engine");
+  if (!removeNeedleEngineUsdPlugin) {
+    removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
+      getFiles: () => needleLoaderFiles,
+    });
+  }
+  if (!needleEngineElement) {
+    needleEngineElement = document.createElement("needle-engine");
+    needleEngineElement.className = "usd-viewer-needle-engine";
+    needleEngineElement.setAttribute("camera-controls", "true");
+    needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
+    needleEngineElement.addEventListener("loadstart", () => {
+      ready = false;
+    });
+    needleEngineElement.addEventListener("progress", event => {
+      const progress = event.detail?.totalProgress01;
+      if (typeof progress === "number" && messageLog) {
+        messageLog.textContent = `Loading ${currentDisplayFilename || "file"} ${Math.round(progress * 100)}%`;
+      }
+    });
+    needleEngineElement.addEventListener("drop", dropHandler);
+    needleEngineElement.addEventListener("dragover", dragOverHandler);
+    document.body.appendChild(needleEngineElement);
+  }
+  return needleEngineElement;
+}
+
+function sourceForNeedleEngine(path, filesForHydra) {
+  if (!filesForHydra?.length) return path;
+  const rootFile = filesForHydra[0];
+  return rootFile?.path || path || rootFile?.name || "";
+}
+
+async function waitForNeedleHydraHandle(context) {
+  const started = performance.now();
+  let handle = null;
+  while (!handle && performance.now() - started < 10_000) {
+    handle = getHydraHandleFromNeedleEngineAsset(context?.scene);
+    if (handle) break;
+    await new Promise(resolve => requestAnimationFrame(resolve));
+  }
+  return handle;
+}
+
+async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
+  const element = await ensureNeedleEngineLoader();
+  needleLoaderFiles = filesForHydra || [];
+  const source = sourceForNeedleEngine(path, filesForHydra);
+  if (!source) throw new Error("Needle Engine USD load requires a source path");
+
+  const loadPromise = new Promise((resolve, reject) => {
+    const cleanup = () => {
+      element.removeEventListener("loadfinished", onLoadFinished);
+      element.removeEventListener("error", onError);
+    };
+    const onLoadFinished = event => {
+      cleanup();
+      resolve(event.detail?.context || element.context);
+    };
+    const onError = event => {
+      cleanup();
+      reject(event.detail || new Error("Needle Engine failed to load " + source));
+    };
+    element.addEventListener("loadfinished", onLoadFinished, { once: true });
+    element.addEventListener("error", onError, { once: true });
+  });
+
+  element.setAttribute("src", source);
+  const context = await loadPromise;
+  if (generation !== loadGeneration) return null;
+
+  const handle = await waitForNeedleHydraHandle(context);
+  if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
+
+  await handle.ready?.();
+  await handle.materialsReady?.();
+  if (generation !== loadGeneration) {
+    await handle.dispose?.();
+    return null;
+  }
+  return { handle, context };
+}
+
 async function loadUsdFile(directory, filename, path, isRootFile = true, filesForHydra = undefined) {
   setFilenameText(filename);
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
@@ -906,21 +1066,29 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
 
   let handle = null;
+  let needleContext = null;
   try {
-    handle = await createThreeHydra({
-      USD,
-      scene: window.usdRoot,
-      url: filesForHydra?.length ? undefined : path,
-      files: filesForHydra,
-    });
+    if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
+      const result = await loadNeedleEngineFile(filename, path, filesForHydra, generation);
+      if (!result) return;
+      handle = result.handle;
+      needleContext = result.context;
+    } else {
+      handle = await createThreeHydra({
+        USD,
+        scene: window.usdRoot,
+        url: filesForHydra?.length ? undefined : path,
+        files: filesForHydra,
+      });
 
-    if (generation !== loadGeneration) {
-      await handle.dispose();
-      return;
+      if (generation !== loadGeneration) {
+        await handle.dispose();
+        return;
+      }
+
+      await handle.ready();
+      await handle.materialsReady?.();
     }
-
-    await handle.ready();
-    await handle.materialsReady?.();
 
     if (generation !== loadGeneration) {
       await handle.dispose();
@@ -936,6 +1104,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     window.usdHydra = handle;
     window.driver = handle.driver;
     window.usdStage = stage;
+    window.needleEngineContext = needleContext || undefined;
     window.renderInterface = undefined;
 
     const metadata = handle.stageMetadata?.();
@@ -944,7 +1113,9 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       timeout = 1000 / metadata.timeCodesPerSecond;
     }
 
-    fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+    if (viewerMode === VIEWER_MODE_THREE) {
+      fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+    }
     console.log("Loading done. Scene: ", window.usdRoot);
     ready = true;
 
@@ -1139,7 +1310,6 @@ async function init() {
   renderer.toneMapping = NeutralToneMapping;
   console.log("tonemapping", renderer.toneMapping)
   renderer.shadowMap.enabled = false;
-  renderer.shadowMap.type = VSMShadowMap;
   renderer.setClearColor( 0x000000, 0 ); // the default
 
   const envMapPromise = new Promise(resolve => {
@@ -1160,6 +1330,7 @@ async function init() {
   });
 
   document.body.appendChild( renderer.domElement );
+  renderer.domElement.classList.add("usd-viewer-three-canvas");
   const controls = window._controls = new OrbitControls( camera, renderer.domElement );
   controls.enableDamping = true;
   controls.dampingFactor = 0.2;
@@ -1169,6 +1340,26 @@ async function init() {
   
   renderer.domElement.addEventListener("drop", dropHandler);
   renderer.domElement.addEventListener("dragover", dragOverHandler);
+
+  const viewerModeToggle = document.getElementById("viewer-mode-toggle");
+  if (viewerModeToggle) {
+    viewerModeToggle.addEventListener("click", event => {
+      const button = event.target.closest?.("[data-viewer-mode]");
+      if (!button) return;
+      const nextMode = normalizeViewerMode(button.getAttribute("data-viewer-mode"));
+      if (nextMode === viewerMode) return;
+      viewerMode = nextMode;
+      safeLocalStorageSet(VIEWER_MODE_STORAGE_KEY, viewerMode);
+      applyViewerModeUi();
+      const currentUrl = new URL(window.location.href);
+      setViewerModeUrlParam(currentUrl);
+      window.history.pushState({}, "USD Viewer", currentUrl);
+      loadCurrentUrlFile().catch(error => {
+        console.error("Failed to reload USD file after viewer mode change", error);
+        trackError("viewer_mode_reload", error, { mode: viewerMode });
+      });
+    });
+  }
 
   // Highlight the centered drop hint while a file is dragged over the window.
   // Use an enter/leave depth counter so child elements don't cause flicker.
@@ -1465,6 +1656,7 @@ async function init() {
       // Clear the URL when no file is selected (Clear button clicked)
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete("file");
+      setViewerModeUrlParam(currentUrl);
       window.history.pushState({}, "USD Viewer", currentUrl);
     }
   }
@@ -1511,7 +1703,7 @@ async function animate() {
   const now = performance.now() / 1000;
   const dt = Math.min(0.1, Math.max(0, now - lastAnimationTimeSeconds));
   lastAnimationTimeSeconds = now;
-  if (currentHydraHandle && ready) currentHydraHandle.update(dt);
+  if (viewerMode === VIEWER_MODE_THREE && currentHydraHandle && ready) currentHydraHandle.update(dt);
   render();
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
 }

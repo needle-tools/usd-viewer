@@ -378,6 +378,64 @@ body.drag-active .dropzone-title {
     color: var(--color-text);
 }
 
+.viewer-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    margin: 0 4px;
+    padding: 2px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.viewer-mode-toggle button {
+    min-width: 72px;
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 0.86em;
+    cursor: pointer;
+}
+
+.viewer-mode-toggle button.active {
+    background: var(--color-green);
+    color: #fff;
+}
+
+.viewer-mode-toggle button:not(.active):hover {
+    color: var(--color-text);
+}
+
+.usd-viewer-three-canvas,
+.usd-viewer-needle-engine {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.usd-viewer-three-canvas {
+    z-index: 0;
+}
+
+.usd-viewer-needle-engine {
+    z-index: 0;
+    display: none;
+}
+
+body.viewer-mode-needle-loader .usd-viewer-three-canvas {
+    display: none !important;
+}
+
+body.viewer-mode-needle-loader .usd-viewer-needle-engine {
+    display: block;
+}
+
 .dropdown-content {
     display: none;
     position: absolute;
