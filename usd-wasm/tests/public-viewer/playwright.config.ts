@@ -16,7 +16,7 @@ export default defineConfig({
         deviceScaleFactor: 1,
     },
     webServer: {
-        command: 'npm run start',
+        command: 'PORT=5199 npm run start',
         cwd: '../../..',
         port: 5199,
         reuseExistingServer: true,

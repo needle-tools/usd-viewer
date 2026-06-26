@@ -1,15 +1,13 @@
 import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, VSMShadowMap, PMREMGenerator, EquirectangularReflectionMapping } from 'three';
-import { ThreeRenderDelegateInterface } from "./usd/hydra/ThreeJsRenderDelegate.js"
+import { createThreeHydra, getUsdModule } from './usd/index.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { track, trackError } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
-import './usd/bindings/emHdBindings.js';
 
 const SHOW_OPENUSD_TEST_ASSETS = false;
-const getUsdModule = globalThis["NEEDLE:USD:GET"];
 
 // --- Upload-to-Needle-Cloud capture ---------------------------------------
 // As files are loaded we keep the ORIGINAL bytes + their relative paths so the
@@ -527,7 +525,7 @@ try {
       try { host = new URL(filename).hostname; } catch { /* relative/odd URL */ }
       track('load_url', { method: 'url', type: extOf(filename), host });
 
-      clearStage();
+      await clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
       if (catalogAsset?.files?.length) {
@@ -565,6 +563,9 @@ var timeout = 40;
 var endTimeCode = 1;
 var ready = false;
 var loadGeneration = 0;
+var currentHydraHandle = null;
+var pendingHydraFiles = [];
+var lastAnimationTimeSeconds = performance.now() / 1000;
 
 const usdzExportBtn = document.getElementById('export-usdz');
 if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
@@ -813,141 +814,23 @@ if (feedbackForm) {
   });
 }
 
-function getAllLoadedFiles(){
-  const filePaths = [];
-
-  getAllLoadedFilePaths("/", filePaths);
-
-  return filePaths;
-}
-
-function getAllLoadedFilePaths(currentPath, paths) {
-  const files = USD.FS_readdir(currentPath);
-  for (const file of files) {
-    // skip self and parent
-    if (file === "." || file === "..") continue;
-    const newPath = currentPath + file + "/";
-    const data = USD.FS_analyzePath(currentPath + file + "/");
-    if (data.object.node_ops.readdir) {
-      // default directories we're not interested in
-      if (newPath == "/dev/" || newPath == "/proc/" || newPath== "/home/" || newPath== "/tmp/" || newPath== "/usd/") continue;
-      getAllLoadedFilePaths(newPath, paths);
-    }
-    else {
-      paths.push(data.path);
-    }
-  }
-}
-
-function disposeMaterial(material, disposedMaterials, disposedTextures) {
-  if (!material) return;
-  if (Array.isArray(material)) {
-    for (const entry of material) disposeMaterial(entry, disposedMaterials, disposedTextures);
-    return;
-  }
-  if (disposedMaterials.has(material)) return;
-  disposedMaterials.add(material);
-
-  for (const value of Object.values(material)) {
-    if (value && typeof value === "object" && value.isTexture && typeof value.dispose === "function" && !disposedTextures.has(value)) {
-      disposedTextures.add(value);
-      value.dispose();
-    }
-  }
-
-  material.dispose?.();
-}
-
-function disposeObjectTree(root) {
-  const disposedMaterials = new Set();
-  const disposedTextures = new Set();
-  root?.traverse?.((object) => {
-    object.geometry?.dispose?.();
-    disposeMaterial(object.material, disposedMaterials, disposedTextures);
-  });
-}
-
-function disposeCurrentHydra() {
-  ready = false;
-  window.usdStage = undefined;
-
-  const renderInterface = window.renderInterface;
-  window.renderInterface = undefined;
-  try {
-    renderInterface?.dispose?.();
-  } catch (error) {
-    console.warn("Failed to dispose Hydra render delegate", error);
-  }
-
-  const driver = window.driver;
-  window.driver = undefined;
-  try {
-    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) {
-      driver.delete?.();
-    }
-  } catch (error) {
-    console.warn("Failed to delete Hydra driver", error);
-  }
-}
-
-function removeVirtualFilesystemTree(path) {
-  const data = USD?.FS_analyzePath?.(path);
-  if (!data?.exists || !data.object?.node_ops?.readdir) return;
-
-  for (const file of USD.FS_readdir(path)) {
-    if (file === "." || file === "..") continue;
-    const childPath = (path.endsWith("/") ? path : path + "/") + file;
-    const child = USD.FS_analyzePath(childPath);
-    if (!child?.exists) continue;
-
-    if (child.object?.node_ops?.readdir) {
-      removeVirtualFilesystemTree(childPath);
-      try {
-        USD.FS_rmdir(childPath);
-      } catch (error) {
-        if (debugFileHandling) console.debug("Skipping FS_rmdir", childPath, error);
-      }
-    } else {
-      try {
-        USD.FS_unlink(childPath);
-      } catch (error) {
-        if (debugFileHandling) console.debug("Skipping FS_unlink", childPath, error);
-      }
-    }
-  }
-}
-
-function clearLoadedVirtualFilesystemEntries() {
-  const rootEntriesToKeep = new Set(["dev", "proc", "home", "tmp", "usd"]);
-  const root = USD?.FS_analyzePath?.("/");
-  if (!root?.exists) return;
-
-  for (const entry of USD.FS_readdir("/")) {
-    if (entry === "." || entry === ".." || rootEntriesToKeep.has(entry)) continue;
-    const path = "/" + entry;
-    const data = USD.FS_analyzePath(path);
-    if (!data?.exists) continue;
-
-    if (data.object?.node_ops?.readdir) {
-      removeVirtualFilesystemTree(path);
-      try {
-        USD.FS_rmdir(path);
-      } catch (error) {
-        if (debugFileHandling) console.debug("Skipping root FS_rmdir", path, error);
-      }
-    } else {
-      try {
-        USD.FS_unlink(path);
-      } catch (error) {
-        if (debugFileHandling) console.debug("Skipping root FS_unlink", path, error);
-      }
-    }
-  }
-}
-
-function clearStage() {
+async function clearStage() {
   loadGeneration++;
-  disposeCurrentHydra();
+  ready = false;
+
+  const handle = currentHydraHandle;
+  currentHydraHandle = null;
+  window.usdHydra = undefined;
+  window.driver = undefined;
+  window.usdStage = undefined;
+  window.renderInterface = undefined;
+  pendingHydraFiles = [];
+
+  try {
+    await handle?.dispose?.();
+  } catch (error) {
+    console.warn("Failed to dispose Hydra handle", error);
+  }
 
   // A new model is being loaded — drop any previously captured upload set.
   capturedFiles = [];
@@ -955,10 +838,6 @@ function clearStage() {
   loadedSourceUrl = null;
   loadedSourceFilename = null;
 
-  console.log("Clearing stage.", getAllLoadedFiles());
-
-  clearLoadedVirtualFilesystemEntries();
-  disposeObjectTree(window.usdRoot);
   window.usdRoot.clear();
   window.usdRoot.rotation.set(0, 0, 0);
   
@@ -987,7 +866,24 @@ function addPath(root, path) {
     }
 }
 
-async function loadUsdFile(directory, filename, path, isRootFile = true) {
+function toHydraFile(file, path) {
+  const hydraPath = (path || file.name).replace(/^\/+/, "");
+  try {
+    Object.defineProperty(file, "path", {
+      value: hydraPath,
+      configurable: true,
+    });
+  } catch {
+    file.path = hydraPath;
+  }
+  return file;
+}
+
+async function waitMaybeAsync(value) {
+  return value && typeof value.then === "function" ? await value : value;
+}
+
+async function loadUsdFile(directory, filename, path, isRootFile = true, filesForHydra = undefined) {
   setFilenameText(filename);
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
@@ -1009,90 +905,73 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   if (containerEl) containerEl.classList.add("have-custom-file");
   if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
 
-  let driver = null;
-  let renderInterface = null;
+  let handle = null;
   try {
-  const delegateConfig = {
-    usdRoot: window.usdRoot,
-    paths: new Array(),
-    driver: () => (driver),
-};
-
-  renderInterface = new ThreeRenderDelegateInterface(delegateConfig);
-  driver = new USD.HdWebSyncDriver(renderInterface, path);
-  if (driver instanceof Promise) {
-    driver = await driver;
-  }
-  if (generation !== loadGeneration) {
-    renderInterface.dispose?.();
-    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
-    return;
-  }
-  let drawResult = driver.Draw();
-  if (drawResult instanceof Promise) {
-    await drawResult;
-  }
-  if (generation !== loadGeneration) {
-    renderInterface.dispose?.();
-    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
-    return;
-  }
-  if (window.setViewerLoading) window.setViewerLoading(false);
-  if (window.hideLoadingOverlay) window.hideLoadingOverlay();
-  messageLog.textContent = "";
-
-  let stage = driver.GetStage();
-  if (stage instanceof Promise) {
-    stage = await stage;
-  }
-  if (generation !== loadGeneration) {
-    renderInterface.dispose?.();
-    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
-    return;
-  }
-  if (!stage) {
-    throw new Error("USD did not create a stage for " + (path || filename));
-  }
-  window.renderInterface = renderInterface;
-  window.driver = driver;
-  window.usdStage = stage
-  if (stage.GetEndTimeCode){
-    endTimeCode = stage.GetEndTimeCode();
-    timeout = 1000 / stage.GetTimeCodesPerSecond();
-  }
-
-  // if up axis is z, rotate, otherwise make sure rotation is 0, in case we rotated in the past and need to undo it
-  window.usdRoot.rotation.x = String.fromCharCode(stage.GetUpAxis()) === 'z' ? -Math.PI / 2 : 0;
-
-  fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
-  console.log("Loading done. Scene: ", window.usdRoot);
-  ready = true;
-
-  try {
-    console.log("Currently Exposed API", {
-      "Stage": Object.getPrototypeOf(stage),
-      "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-      "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+    handle = await createThreeHydra({
+      USD,
+      scene: window.usdRoot,
+      url: filesForHydra?.length ? undefined : path,
+      files: filesForHydra,
     });
-  } catch(e) {
-    console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
-  }
 
-  // TODO show file hierarchy in sidebar
-  // better: object has "content" that contains child files, no multiple
-  // calls to analyzePath necessary
-  // TODO USDZ is resolved internally in Usd, if we want to make that useful
-  // we need to unpack on the fly so that the directory can be traversed
-  // OR we traverse the USD data directly, but that means we can't edit stuff.
-  // So when content in a USDZ is changed > update the USDZ file and then reload
-  // This might be recursive (USDZ in USDZ in USDZ)
-  const root = {};
-  addPath(root, "/");
-  console.log("File system", root, USD.FS_analyzePath("/"));
+    if (generation !== loadGeneration) {
+      await handle.dispose();
+      return;
+    }
+
+    await handle.ready();
+    await handle.materialsReady?.();
+
+    if (generation !== loadGeneration) {
+      await handle.dispose();
+      return;
+    }
+
+    const stage = await waitMaybeAsync(handle.driver.GetStage());
+    if (!stage) {
+      throw new Error("USD did not create a stage for " + (path || filename));
+    }
+
+    currentHydraHandle = handle;
+    window.usdHydra = handle;
+    window.driver = handle.driver;
+    window.usdStage = stage;
+    window.renderInterface = undefined;
+
+    const metadata = handle.stageMetadata?.();
+    if (metadata) {
+      endTimeCode = metadata.endTimeCode;
+      timeout = 1000 / metadata.timeCodesPerSecond;
+    }
+
+    fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
+    console.log("Loading done. Scene: ", window.usdRoot);
+    ready = true;
+
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    messageLog.textContent = "";
+
+    try {
+      console.log("Currently Exposed API", {
+        "Stage": Object.getPrototypeOf(stage),
+        "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+        "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+      });
+    } catch(e) {
+      console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
+    }
+
+    const root = {};
+    addPath(root, "/");
+    console.log("File system", root, USD.FS_analyzePath("/"));
   } catch (err) {
     try {
-      renderInterface?.dispose?.();
-      if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
+      await handle?.dispose?.();
+      if (generation === loadGeneration) currentHydraHandle = null;
+      window.usdHydra = undefined;
+      window.driver = undefined;
+      window.usdStage = undefined;
     } catch (disposeError) {
       console.warn("Failed to clean up failed USD load", disposeError);
     }
@@ -1565,7 +1444,7 @@ async function init() {
     const el = document.querySelector("#container");
     el.classList.remove("have-custom-file");
 
-    clearStage();
+    await clearStage();
 
     if (filename) {
       el.classList.add("have-custom-file");
@@ -1605,7 +1484,7 @@ async function init() {
       }
       menuScheduleClose();
     }
-    loadFromFileLink(link);
+    loadFromFileLink(link).catch(error => console.error("Failed to load linked USD file", error));
   });
   
   render();
@@ -1629,14 +1508,11 @@ async function animate() {
   }
 
   window._controls.update();
-  let secs = new Date().getTime() / 1000;
-  await new Promise(resolve => setTimeout(resolve, 10));
-  const time = secs * (1000 / timeout) % endTimeCode;
-  if (window.driver && window.driver.SetTime && window.driver.Draw && ready) {
-    window.driver.SetTime(time);
-    window.driver.Draw();
-    render();
-  }
+  const now = performance.now() / 1000;
+  const dt = Math.min(0.1, Math.max(0, now - lastAnimationTimeSeconds));
+  lastAnimationTimeSeconds = now;
+  if (currentHydraHandle && ready) currentHydraHandle.update(dt);
+  render();
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
 }
 
@@ -1679,8 +1555,6 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
           directory = fullPath.substring(0, fullPath.length - fileName.length);
           if (debugFileHandling) console.warn("directory", directory, "fileName", fileName);
         }
-        USD.FS_createPath("", directory, true, true);
-        USD.FS_createDataFile(directory, fileName, new Uint8Array(event.target.result), true, true, true);
 
         // Keep the original bytes + relative path so the user can upload this exact
         // USD set to Needle Cloud (see uploadToNeedleCloud).
@@ -1693,7 +1567,19 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
             resolve();
             return;
           }
-          await loadUsdFile(directory, fileName, fullPath, isRootFile);
+          const hydraFile = toHydraFile(file, relPath);
+          if (!isRootFile) {
+            pendingHydraFiles.push(hydraFile);
+            resolve();
+            return;
+          }
+
+          const filesForHydra = [
+            hydraFile,
+            ...pendingHydraFiles.filter(entry => entry.path !== hydraFile.path),
+          ];
+          pendingHydraFiles = [];
+          await loadUsdFile(directory, fileName, fullPath, isRootFile, filesForHydra);
           resolve();
         } catch (err) {
           reject(err);
@@ -1715,7 +1601,7 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
   }
 }
 
-function testAndLoadFile(file) {
+async function testAndLoadFile(file) {
   if (debugFileHandling) console.log(file.name + ", " + file.size + ", " + extOf(file.name));
   if(isUsdFileName(file.name)) {
     track('load_file', {
@@ -1725,12 +1611,12 @@ function testAndLoadFile(file) {
       types: extOf(file.name),
       name: safeName(file.name),
     });
-    clearStage();
+    await clearStage();
     // Clear console output when loading a new file
     if (window.clearMessageLog) {
       window.clearMessageLog();
     }
-    loadFile(file);
+    await loadFile(file);
   } else if (isGltfFileName(file.name)) {
     track('load_file', {
       method: 'drop',
@@ -1739,11 +1625,11 @@ function testAndLoadFile(file) {
       types: extOf(file.name) + ',usda',
       name: safeName(file.name),
     });
-    clearStage();
+    await clearStage();
     if (window.clearMessageLog) {
       window.clearMessageLog();
     }
-    loadGltfFileAsUsd(file, `/${file.name}`);
+    await loadGltfFileAsUsd(file, `/${file.name}`);
   } else if (isMaterialXFileName(file.name)) {
     track('load_file', {
       method: 'drop',
@@ -1752,11 +1638,11 @@ function testAndLoadFile(file) {
       types: extOf(file.name) + ',usda',
       name: safeName(file.name),
     });
-    clearStage();
+    await clearStage();
     if (window.clearMessageLog) {
       window.clearMessageLog();
     }
-    loadMaterialXFileAsUsd(file, `/${file.name}`);
+    await loadMaterialXFileAsUsd(file, `/${file.name}`);
   } else {
     // Surface attempts to view a format we don't support.
     track('load_unsupported', { method: 'drop', type: extOf(file.name), name: safeName(file.name) });
@@ -1876,7 +1762,7 @@ async function handleFilesystemEntries(entries) {
   }
 
   // clear current set of files
-  clearStage();
+  await clearStage();
 
   // determine which of these is likely the root file
   let rootFileCandidates = [];
@@ -2032,7 +1918,7 @@ async function handleFilesystemEntries(entries) {
         types: [...droppedExts].sort().join(','),
         name: safeName(rootFile.name),
       });
-      loadFile(resolvedRoot, true, rootFile.fullPath);
+      await loadFile(resolvedRoot, true, rootFile.fullPath);
     }
   }
 }
@@ -2076,7 +1962,7 @@ function dropHandler(ev) {
       if (item.kind === 'file')
       {
         var file = item.getAsFile();
-        testAndLoadFile(file);
+        testAndLoadFile(file).catch(error => console.error("Failed to load dropped USD file", error));
       }
       // could also be a directory
       else if (item.kind === 'directory')
@@ -2088,7 +1974,7 @@ function dropHandler(ev) {
             var entry = entries[i];
             if (entry.isFile) {
               entry.file(function(file) {
-                testAndLoadFile(file);
+                testAndLoadFile(file).catch(error => console.error("Failed to load dropped USD file", error));
               });
             }
           }
@@ -2098,7 +1984,7 @@ function dropHandler(ev) {
   } else {
     for (var i = 0; i < ev.dataTransfer.files.length; i++) {
       let file = ev.dataTransfer.files[i];
-      testAndLoadFile(file);
+      testAndLoadFile(file).catch(error => console.error("Failed to load dropped USD file", error));
     }
   }
 }

@@ -49,7 +49,7 @@ test.describe('public usd-viewer lifecycle', () => {
             const state = await waitForPublicViewerLoad(page, sample.filename);
             expect(state.filename).toBe(sample.filename);
             expect(state.driverAlive).toBe(true);
-            expect(state.hasRenderInterface).toBe(true);
+            expect(state.hasHydraHandle).toBe(true);
             expect(state.children).toBeGreaterThan(0);
             expect(state.rendererMemory.geometries).toBeLessThanOrEqual(sample.maxGeometries);
             expect(state.rendererMemory.textures).toBeLessThanOrEqual(sample.maxTextures);
@@ -112,7 +112,7 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
         filename: document.querySelector('.filename-text')?.textContent || '',
         children: window.usdRoot?.children?.length ?? -1,
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
-        hasRenderInterface: Boolean(window.renderInterface),
+        hasHydraHandle: Boolean(window.usdHydra),
         rendererMemory: window.renderer?.info?.memory ? { ...window.renderer.info.memory } : { geometries: -1, textures: -1 },
     }));
 }
