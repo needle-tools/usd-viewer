@@ -564,6 +564,7 @@ var currentRootFileName = undefined;
 var timeout = 40;
 var endTimeCode = 1;
 var ready = false;
+var loadGeneration = 0;
 
 const usdzExportBtn = document.getElementById('export-usdz');
 if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
@@ -838,7 +839,115 @@ function getAllLoadedFilePaths(currentPath, paths) {
   }
 }
 
+function disposeMaterial(material, disposedMaterials, disposedTextures) {
+  if (!material) return;
+  if (Array.isArray(material)) {
+    for (const entry of material) disposeMaterial(entry, disposedMaterials, disposedTextures);
+    return;
+  }
+  if (disposedMaterials.has(material)) return;
+  disposedMaterials.add(material);
+
+  for (const value of Object.values(material)) {
+    if (value && typeof value === "object" && value.isTexture && typeof value.dispose === "function" && !disposedTextures.has(value)) {
+      disposedTextures.add(value);
+      value.dispose();
+    }
+  }
+
+  material.dispose?.();
+}
+
+function disposeObjectTree(root) {
+  const disposedMaterials = new Set();
+  const disposedTextures = new Set();
+  root?.traverse?.((object) => {
+    object.geometry?.dispose?.();
+    disposeMaterial(object.material, disposedMaterials, disposedTextures);
+  });
+}
+
+function disposeCurrentHydra() {
+  ready = false;
+  window.usdStage = undefined;
+
+  const renderInterface = window.renderInterface;
+  window.renderInterface = undefined;
+  try {
+    renderInterface?.dispose?.();
+  } catch (error) {
+    console.warn("Failed to dispose Hydra render delegate", error);
+  }
+
+  const driver = window.driver;
+  window.driver = undefined;
+  try {
+    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) {
+      driver.delete?.();
+    }
+  } catch (error) {
+    console.warn("Failed to delete Hydra driver", error);
+  }
+}
+
+function removeVirtualFilesystemTree(path) {
+  const data = USD?.FS_analyzePath?.(path);
+  if (!data?.exists || !data.object?.node_ops?.readdir) return;
+
+  for (const file of USD.FS_readdir(path)) {
+    if (file === "." || file === "..") continue;
+    const childPath = (path.endsWith("/") ? path : path + "/") + file;
+    const child = USD.FS_analyzePath(childPath);
+    if (!child?.exists) continue;
+
+    if (child.object?.node_ops?.readdir) {
+      removeVirtualFilesystemTree(childPath);
+      try {
+        USD.FS_rmdir(childPath);
+      } catch (error) {
+        if (debugFileHandling) console.debug("Skipping FS_rmdir", childPath, error);
+      }
+    } else {
+      try {
+        USD.FS_unlink(childPath);
+      } catch (error) {
+        if (debugFileHandling) console.debug("Skipping FS_unlink", childPath, error);
+      }
+    }
+  }
+}
+
+function clearLoadedVirtualFilesystemEntries() {
+  const rootEntriesToKeep = new Set(["dev", "proc", "home", "tmp", "usd"]);
+  const root = USD?.FS_analyzePath?.("/");
+  if (!root?.exists) return;
+
+  for (const entry of USD.FS_readdir("/")) {
+    if (entry === "." || entry === ".." || rootEntriesToKeep.has(entry)) continue;
+    const path = "/" + entry;
+    const data = USD.FS_analyzePath(path);
+    if (!data?.exists) continue;
+
+    if (data.object?.node_ops?.readdir) {
+      removeVirtualFilesystemTree(path);
+      try {
+        USD.FS_rmdir(path);
+      } catch (error) {
+        if (debugFileHandling) console.debug("Skipping root FS_rmdir", path, error);
+      }
+    } else {
+      try {
+        USD.FS_unlink(path);
+      } catch (error) {
+        if (debugFileHandling) console.debug("Skipping root FS_unlink", path, error);
+      }
+    }
+  }
+}
+
 function clearStage() {
+  loadGeneration++;
+  disposeCurrentHydra();
 
   // A new model is being loaded — drop any previously captured upload set.
   capturedFiles = [];
@@ -846,14 +955,12 @@ function clearStage() {
   loadedSourceUrl = null;
   loadedSourceFilename = null;
 
-  var allFilePaths = getAllLoadedFiles();
-  console.log("Clearing stage.", allFilePaths)
+  console.log("Clearing stage.", getAllLoadedFiles());
 
-  for (const file of allFilePaths) {
-    USD.FS_unlink(file, true);
-  }
-
+  clearLoadedVirtualFilesystemEntries();
+  disposeObjectTree(window.usdRoot);
   window.usdRoot.clear();
+  window.usdRoot.rotation.set(0, 0, 0);
   
   // Clear console output when stage is cleared
   if (window.clearMessageLog) {
@@ -884,6 +991,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   setFilenameText(filename);
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
+  const generation = loadGeneration;
 
   // Remember a URL/sample source (no directory) so "Upload to Needle Cloud" can
   // re-fetch it — drag-drop loads are captured separately in loadFile.
@@ -901,35 +1009,52 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   if (containerEl) containerEl.classList.add("have-custom-file");
   if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
 
-  try {
   let driver = null;
+  let renderInterface = null;
+  try {
   const delegateConfig = {
     usdRoot: window.usdRoot,
     paths: new Array(),
     driver: () => (driver),
 };
 
-  const renderInterface = window.renderInterface = new ThreeRenderDelegateInterface(delegateConfig);
+  renderInterface = new ThreeRenderDelegateInterface(delegateConfig);
   driver = new USD.HdWebSyncDriver(renderInterface, path);
   if (driver instanceof Promise) {
     driver = await driver;
   }
-  window.driver = driver;
-  let drawResult = window.driver.Draw();
+  if (generation !== loadGeneration) {
+    renderInterface.dispose?.();
+    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
+    return;
+  }
+  let drawResult = driver.Draw();
   if (drawResult instanceof Promise) {
     await drawResult;
+  }
+  if (generation !== loadGeneration) {
+    renderInterface.dispose?.();
+    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
+    return;
   }
   if (window.setViewerLoading) window.setViewerLoading(false);
   if (window.hideLoadingOverlay) window.hideLoadingOverlay();
   messageLog.textContent = "";
 
-  let stage = window.driver.GetStage();
+  let stage = driver.GetStage();
   if (stage instanceof Promise) {
     stage = await stage;
+  }
+  if (generation !== loadGeneration) {
+    renderInterface.dispose?.();
+    if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
+    return;
   }
   if (!stage) {
     throw new Error("USD did not create a stage for " + (path || filename));
   }
+  window.renderInterface = renderInterface;
+  window.driver = driver;
   window.usdStage = stage
   if (stage.GetEndTimeCode){
     endTimeCode = stage.GetEndTimeCode();
@@ -965,6 +1090,12 @@ async function loadUsdFile(directory, filename, path, isRootFile = true) {
   addPath(root, "/");
   console.log("File system", root, USD.FS_analyzePath("/"));
   } catch (err) {
+    try {
+      renderInterface?.dispose?.();
+      if (driver && (typeof driver.isDeleted !== "function" || !driver.isDeleted())) driver.delete?.();
+    } catch (disposeError) {
+      console.warn("Failed to clean up failed USD load", disposeError);
+    }
     // A USD parse/render failure here is otherwise un-awaited, so it would only
     // reach the footer log via the global handler — never Rybbit. Report it with
     // the file context so these crashes are actually visible in analytics.
@@ -1524,17 +1655,23 @@ function render() {
 
 async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
   let file = undefined;
+  const generation = loadGeneration;
   try {
     if(fileOrHandle.getFile !== undefined) {
       file = await fileOrHandle.getFile();
     }
     else
       file = fileOrHandle;
+    if (generation !== loadGeneration) return;
 
     const loadingPromise = new Promise((resolve, reject) => {
       var reader = new FileReader();
       reader.onerror = reject;
       reader.onload = async function(event) {
+        if (generation !== loadGeneration) {
+          resolve();
+          return;
+        }
         let fileName = file.name;
         let directory = "/";
         if (fullPath !== undefined) {
@@ -1552,6 +1689,10 @@ async function loadFile(fileOrHandle, isRootFile = true, fullPath = undefined) {
         if (isRootFile) capturedRootFilename = relPath;
 
         try {
+          if (generation !== loadGeneration) {
+            resolve();
+            return;
+          }
           await loadUsdFile(directory, fileName, fullPath, isRootFile);
           resolve();
         } catch (err) {
