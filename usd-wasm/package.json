@@ -70,7 +70,7 @@
     "@needle-tools/three-test-matrix": "^0.1.0",
     "@playwright/test": "^1.60.0",
     "@types/three": "^0.164.1",
-    "vite": "^5.2.13"
+    "vite": "^8.1.0"
   },
   "publishConfig": {
     "access": "public",
