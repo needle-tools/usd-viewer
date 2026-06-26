@@ -20,7 +20,7 @@
     "@needle-tools/usd": "file:..",
     "@types/three": "^0.165.0",
     "three": "npm:@needle-tools/three@^0.169.19",
-    "vite-plugin-top-level-await": "^1.4.1",
+    "vite-plugin-top-level-await": "1.2.2",
     "vite-plugin-wasm": "^3.3.0"
   }
 }
