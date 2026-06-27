@@ -4,7 +4,7 @@
 // and the handoff page must be non-isolated so it can postMessage a cross-origin
 // popup — hence IndexedDB as the per-origin, navigation-proof handoff buffer.
 //
-// Shared by index.js (writes) and cloud-handoff.js (reads).
+// Shared by viewer-app.js (writes) and cloud-handoff.js (reads).
 
 const DB_NAME = "needle-cloud-handoff";
 const STORE = "handoff";

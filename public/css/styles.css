@@ -463,7 +463,7 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 }
 
 /* The menu is a two-column mega-menu: link list + Sample Library flyout.
-   Visibility is JS-driven via .menu-open (see index.js): pointer devices open on
+   Visibility is JS-driven via .menu-open (see viewer-app.js): pointer devices open on
    mouseenter and close 300ms after mouseleave; touch toggles it by tap. A class
    (not :hover) is used so the close can be delayed and so a tap doesn't get
    stuck in :hover on touch. */

@@ -79,7 +79,7 @@
       const useNeedleLoader = viewerMode === "needle-loader";
       const imports = useNeedleLoader ? {
         "three": "/needle-engine/dist/three.min.js",
-        "viewer-three-core": "/needle-three-core.js",
+        "viewer-runtime": "/viewer-runtime-needle-loader.js",
         "three-examples": "/needle-engine/dist/three-examples.min.js",
         "three/addons/": "/needle-three/examples/jsm/",
         "three/examples/jsm/": "/needle-three/examples/jsm/",
@@ -87,12 +87,12 @@
         "@needle-tools/materialx": "/materialx/index.js"
       } : {
         "three": "/three/build/three.module.js",
-        "viewer-three-core": "/three-core.js",
-        "three-examples": "/three-examples.js",
+        "viewer-runtime": "/viewer-runtime-three.js",
         "three/addons/": "/three/examples/jsm/",
         "three/examples/jsm/": "/three/examples/jsm/",
         "@needle-tools/materialx": "/materialx/index.js"
       };
+      window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });
@@ -102,10 +102,8 @@
   <script>
     globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";
   </script>
-  <script type="module" src ="index.js"></script>
   <script type="module">
-    import { init } from './index.js';
-    init();
+    import(window.__usdViewerEntry || "/index.three.js");
   </script>
   <!-- Official Needle marketer engagement tracker. Exposes window.needleWhatsNew
        (impression/hover/click); whats-new.js calls it imperatively because our

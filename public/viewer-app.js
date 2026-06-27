@@ -1,8 +1,27 @@
-import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, PMREMGenerator, EquirectangularReflectionMapping } from 'viewer-three-core';
-import { createThreeHydra, getUsdModule } from './usd/index.js';
-import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
-import { RGBELoader, GLTFExporter } from 'three-examples';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {
+  Vector3,
+  Box3,
+  PerspectiveCamera,
+  Scene,
+  Color,
+  AmbientLight,
+  Group,
+  PointLight,
+  WebGLRenderer,
+  SRGBColorSpace,
+  AgXToneMapping,
+  NeutralToneMapping,
+  PMREMGenerator,
+  EquirectangularReflectionMapping,
+  createThreeHydra,
+  getUsdModule,
+  addPluginForNeedleEngine,
+  getHydraHandleFromNeedleEngineAsset,
+  RGBELoader,
+  GLTFExporter,
+  OrbitControls,
+  runtimeViewerMode,
+} from 'viewer-runtime';
 import { track, trackError } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
@@ -132,8 +151,16 @@ function updateOpenUsdBuildInfo(Usd) {
   }
 }
 
+function onDomReady(callback) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", callback, { once: true });
+  } else {
+    callback();
+  }
+}
+
 // About dialog functionality - runs when module is loaded
-document.addEventListener("DOMContentLoaded", function() {
+onDomReady(function() {
   const aboutLink = document.getElementById('about-link');
   const aboutDialog = document.getElementById('about-dialog');
   const dialogCloseBtn = document.getElementById('dialog-close-btn');
@@ -308,7 +335,7 @@ export function init(options = {
 }) {
 
 // wait for document
-document.addEventListener("DOMContentLoaded", function() {
+onDomReady(function() {
 
 let scene;
 let defaultTexture;
@@ -329,7 +356,7 @@ const testFixtureBaseUrl = testFixtureUrl("");
 const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
-let viewerMode = normalizeViewerMode(params.get("viewer") || safeLocalStorageGet(VIEWER_MODE_STORAGE_KEY));
+let viewerMode = normalizeViewerMode(runtimeViewerMode);
 var currentRootFileName = undefined;
 var timeout = 40;
 var endTimeCode = 1;
