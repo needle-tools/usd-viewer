@@ -1396,6 +1396,8 @@ async function init() {
   let selectedSampleGroup = 'usd-wg';
   let loadedConversionCard = null;
   let loadedConverter = '';
+  let lastPointerActivatedHref = '';
+  let lastPointerActivatedAt = 0;
   const conversionCardByUrl = new Map();
 
   const sampleGroups = new Map([
@@ -1624,6 +1626,7 @@ async function init() {
       const card = document.createElement('a');
       card.className = 'file gallery-card';
       card.href = sampleHref(url);
+      card.draggable = false;
       card.dataset.name = item.name || 'Model';
       if (conversions.three) card.dataset.three = conversions.three;
       if (conversions.blender) card.dataset.blender = conversions.blender;
@@ -1635,6 +1638,7 @@ async function init() {
         const img = document.createElement('img');
         img.className = 'gallery-thumb';
         img.loading = 'lazy';
+        img.draggable = false;
         // COEP: require-corp blocks no-cors cross-origin images; load via CORS
         // (the API host sends Access-Control-Allow-Origin: *).
         img.crossOrigin = 'anonymous';
@@ -1808,6 +1812,42 @@ async function init() {
   selectSampleGroup(selectedSampleGroup);
   refreshLoadedConverterState(filename);
 
+  function activateFileLink(link) {
+    // Highlight the active gallery card, then close the menu after a 300ms grace
+    // (not instantly) so the choice registers visually before it disappears.
+    if (link.classList.contains('gallery-card')) {
+      if (galleryGrid) {
+        for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
+        link.classList.add('active');
+      }
+      menuScheduleClose();
+    }
+    loadFromFileLink(link).catch(error => console.error("Failed to load linked USD file", error));
+  }
+
+  if (galleryGrid) {
+    galleryGrid.addEventListener('pointerdown', function(event) {
+      if (event.defaultPrevented || event.button !== 0 || event.pointerType === 'touch' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target.closest && event.target.closest('a.file.gallery-card');
+      if (!link || !galleryGrid.contains(link)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      lastPointerActivatedHref = link.href;
+      lastPointerActivatedAt = performance.now();
+      activateFileLink(link);
+    }, true);
+
+    galleryGrid.addEventListener('click', function(event) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target.closest && event.target.closest('a.file.gallery-card');
+      if (!link || !galleryGrid.contains(link)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (link.href === lastPointerActivatedHref && performance.now() - lastPointerActivatedAt < 750) return;
+      activateFileLink(link);
+    }, true);
+  }
+
   // Load handler for our curated "a.file" links: the dropdown samples, the Clear
   // button, and the runtime-populated gallery cards. Delegated from the body so
   // dynamically-added cards are covered without re-binding.
@@ -1860,8 +1900,8 @@ async function init() {
       }
       // get just the filename, no paths
       const parts = filename.split('/');
-      filename = parts[parts.length - 1];
-      await loadUsdFile(undefined, filename, urlPath, true);
+      const displayFilename = parts[parts.length - 1];
+      await loadUsdFile(undefined, displayFilename, urlPath, true);
     } else {
       // Clear the URL when no file is selected (Clear button clicked)
       const currentUrl = new URL(window.location.href);
@@ -1874,19 +1914,11 @@ async function init() {
   // Single delegated listener so that we don't have to reload the entire page,
   // and so gallery cards added after init are handled too.
   document.body.addEventListener('click', function(event) {
+    if (event.defaultPrevented) return;
     const link = event.target.closest && event.target.closest('a.file');
     if (!link) return;
     event.preventDefault();
-    // Highlight the active gallery card, then close the menu after a 300ms grace
-    // (not instantly) so the choice registers visually before it disappears.
-    if (link.classList.contains('gallery-card')) {
-      if (galleryGrid) {
-        for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
-        link.classList.add('active');
-      }
-      menuScheduleClose();
-    }
-    loadFromFileLink(link).catch(error => console.error("Failed to load linked USD file", error));
+    activateFileLink(link);
   });
   
   render();

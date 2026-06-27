@@ -1164,6 +1164,8 @@ button.cta-primary {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .gallery-card-body {

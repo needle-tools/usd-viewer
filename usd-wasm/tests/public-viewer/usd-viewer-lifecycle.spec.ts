@@ -17,6 +17,18 @@ const publicSamples = {
     },
 };
 
+const assetExplorerSamples = {
+    antiqueCameraOv: {
+        filename: 'AntiqueCamera.glb.ov.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.ov.usdz',
+    },
+    animatedMorphSphereOv: {
+        label: 'Animated Morph Sphere',
+        filename: 'AnimatedMorphSphere.glb.ov.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.ov.usdz',
+    },
+};
+
 const fatalConsolePatterns = [
     /out of memory/i,
     /Cannot enlarge memory/i,
@@ -138,6 +150,28 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(cameraMoved(before, after)).toBe(true);
         expect(diagnostics).toEqual([]);
     });
+
+    test('switches between Asset Explorer Omniverse samples from a direct URL', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraOv.url)}&viewer=three`);
+        await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraOv.filename);
+
+        await page.click('.dropdown-button');
+        await page.click('[data-sample-group="gltf"]');
+        await page.waitForFunction(label => {
+            return Array.from(document.querySelectorAll<HTMLAnchorElement>('.gallery-card'))
+                .some(card => card.dataset.name === label && card.href.includes('.ov.usdz'));
+        }, assetExplorerSamples.animatedMorphSphereOv.label);
+
+        await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereOv.label}"]`);
+        const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereOv.filename);
+
+        expect(state.filename).toBe(assetExplorerSamples.animatedMorphSphereOv.filename);
+        expect(new URL(state.href).searchParams.get('file')).toBe(assetExplorerSamples.animatedMorphSphereOv.url);
+        expect(state.loadedConverterVisible).toBe(true);
+        expect(state.loadedConverter).toBe('omniverse');
+        expect(diagnostics).toEqual([]);
+    });
 });
 
 async function addLocalLifecycleSamples(page: Page) {
@@ -187,10 +221,13 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
     }, filename);
     await page.waitForTimeout(1000);
     return await page.evaluate(() => ({
+        href: location.href,
         filename: document.querySelector('.filename-text')?.textContent || '',
         children: window.usdRoot?.children?.length ?? -1,
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
+        loadedConverterVisible: !document.querySelector<HTMLLabelElement>('#converter-select-wrap')?.hidden,
+        loadedConverter: document.querySelector<HTMLSelectElement>('#converter-select')?.value || '',
         rendererMemory: window.renderer?.info?.memory ? { ...window.renderer.info.memory } : { geometries: -1, textures: -1 },
     }));
 }
