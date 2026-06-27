@@ -264,6 +264,13 @@ fastify.register(require('@fastify/static'), {
 });
 
 fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/three'),
+  prefix: '/three',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'usd-wasm/tests/fixtures'),
   prefix: '/test-fixtures',
   setHeaders,

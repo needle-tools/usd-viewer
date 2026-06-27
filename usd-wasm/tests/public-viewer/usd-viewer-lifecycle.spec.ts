@@ -30,7 +30,7 @@ const fatalConsolePatterns = [
 test.describe('public usd-viewer lifecycle', () => {
     test('disposes prior Hydra stages while switching public viewer samples', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto('/');
+        await page.goto('/?viewer=three');
         await page.waitForFunction(() => {
             const log = document.getElementById('message-log')?.textContent || '';
             return Boolean(globalThis['NEEDLE:USD:GET']) && log.includes('Loading done');
@@ -63,10 +63,13 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('loads a public viewer sample through the Needle Engine loader element', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto(`/?file=${publicSamples.helmet.url}`);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);
         await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
 
-        await page.click('[data-viewer-mode="needle-loader"]');
+        await Promise.all([
+            page.waitForURL(/viewer=needle-loader/),
+            page.click('[data-viewer-mode="needle-loader"]'),
+        ]);
         const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
 
         expect(state.filename).toBe(publicSamples.helmet.filename);

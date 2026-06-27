@@ -69,17 +69,35 @@
 </head>
 <body>
   <script type="text/javascript" async src="modules/es-module-shims@1.8.0.js"></script>
-  <script type="importmap">
-    {
-      "imports": {
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      let viewerMode = params.get("viewer");
+      if (!viewerMode) {
+        try { viewerMode = localStorage.getItem("usd-viewer-mode"); } catch {}
+      }
+      const useNeedleLoader = viewerMode === "needle-loader";
+      const imports = useNeedleLoader ? {
         "three": "/needle-engine/dist/three.min.js",
+        "viewer-three-core": "/needle-three-core.js",
         "three-examples": "/needle-engine/dist/three-examples.min.js",
         "three/addons/": "/needle-three/examples/jsm/",
         "three/examples/jsm/": "/needle-three/examples/jsm/",
         "@needle-tools/engine": "/needle-engine/dist/needle-engine.min.js",
         "@needle-tools/materialx": "/materialx/index.js"
-      }
-    }
+      } : {
+        "three": "/three/build/three.module.js",
+        "viewer-three-core": "/three-core.js",
+        "three-examples": "/three-examples.js",
+        "three/addons/": "/three/examples/jsm/",
+        "three/examples/jsm/": "/three/examples/jsm/",
+        "@needle-tools/materialx": "/materialx/index.js"
+      };
+      const importMap = document.createElement("script");
+      importMap.type = "importmap";
+      importMap.textContent = JSON.stringify({ imports });
+      document.currentScript.after(importMap);
+    })();
   </script>
   <script>
     globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";

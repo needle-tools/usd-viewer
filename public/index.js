@@ -1,4 +1,4 @@
-import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, PMREMGenerator$1 as PMREMGenerator, EquirectangularReflectionMapping } from 'three';
+import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, PMREMGenerator, EquirectangularReflectionMapping } from 'viewer-three-core';
 import { createThreeHydra, getUsdModule } from './usd/index.js';
 import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
 import { RGBELoader, GLTFExporter } from 'three-examples';
@@ -545,28 +545,6 @@ function updateUrl() {
   currentUrl.searchParams.set("file", filename);
   setViewerModeUrlParam(currentUrl);
   window.history.pushState({}, filename, currentUrl);
-}
-
-async function loadCurrentUrlFile() {
-  const currentFile = new URL(document.location.href).searchParams.get("file");
-  if (!currentFile) return;
-  filename = currentFile;
-  setFilenameText(filename);
-  const containerEl = document.querySelector("#container");
-  if (containerEl) containerEl.classList.add("have-custom-file");
-  if (messageLog) messageLog.textContent = "Downloading File " + filename + "...";
-  if (window.setViewerLoading) window.setViewerLoading(true);
-
-  await clearStage();
-  updateUrl();
-
-  const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
-  const catalogAsset = catalogAssetForUrlPath(urlPath);
-  if (catalogAsset?.files?.length) {
-    await loadCatalogAssetBundle(catalogAsset, filename);
-    return;
-  }
-  await loadUsdFile(undefined, filename.split('/').pop(), urlPath, true);
 }
 
 if (messageLog) messageLog.textContent = "Initializing...";
@@ -1351,14 +1329,9 @@ async function init() {
       if (nextMode === viewerMode) return;
       viewerMode = nextMode;
       safeLocalStorageSet(VIEWER_MODE_STORAGE_KEY, viewerMode);
-      applyViewerModeUi();
       const currentUrl = new URL(window.location.href);
       setViewerModeUrlParam(currentUrl);
-      window.history.pushState({}, "USD Viewer", currentUrl);
-      loadCurrentUrlFile().catch(error => {
-        console.error("Failed to reload USD file after viewer mode change", error);
-        trackError("viewer_mode_reload", error, { mode: viewerMode });
-      });
+      window.location.href = currentUrl.href;
     });
   }
 
