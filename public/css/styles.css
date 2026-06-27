@@ -537,8 +537,10 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 .sample-group-tree {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    margin: -2px 0 4px 0;
+    gap: 1px;
+    margin: -1px 0 4px 0;
+    padding-left: 8px;
+    border-left: 1px solid var(--border-subtle);
 }
 
 .sample-group-button {
@@ -593,40 +595,72 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 }
 
 .sample-folder-button {
-    min-height: 42px;
-    padding: 7px 10px 7px calc(10px + (var(--depth, 0) * 12px));
-    border-radius: 6px;
-    font-size: 0.95em;
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 4px;
+    min-height: 24px;
+    padding: 2px 6px 2px calc(2px + ((var(--depth, 1) - 1) * 12px));
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 0.88em;
 }
 
 summary.sample-folder-button {
-    display: block;
+    display: grid;
 }
 
 .sample-folder-button::before {
     content: "";
-    display: inline-block;
-    width: 0.6em;
-    margin-right: 5px;
+    width: 10px;
+    color: var(--color-text-muted);
+    font-size: 0.75em;
+    text-align: center;
 }
 
 .sample-folder > summary.sample-folder-button::before {
     content: ">";
-    color: var(--color-text-muted);
 }
 
 .sample-folder[open] > summary.sample-folder-button::before {
     content: "v";
 }
 
+.sample-folder-button span {
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .sample-folder-button small {
-    font-size: 0.68em;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.58em;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.sample-folder-button:hover {
+    background: rgba(96, 182, 45, 0.08);
+}
+
+.sample-folder-button.active {
+    border-color: transparent;
+    background: rgba(96, 182, 45, 0.1);
+}
+
+.sample-folder-button.active span {
+    color: var(--color-text);
 }
 
 .sample-folder-children {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
 }
 
 .dropdown-section {

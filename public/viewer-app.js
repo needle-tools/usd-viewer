@@ -1610,7 +1610,7 @@ async function init() {
     control.appendChild(name);
 
     const count = document.createElement('small');
-    count.textContent = `${entry.totalChildren || entry.items?.length || 0} samples`;
+    count.textContent = String(entry.totalChildren || entry.items?.length || 0);
     control.appendChild(count);
     return control;
   }
@@ -1619,7 +1619,6 @@ async function init() {
     if (entry.children?.length) {
       const details = document.createElement('details');
       details.className = 'sample-folder';
-      details.open = depth <= 1;
       details.appendChild(createUsdWgTreeControl(entry, depth));
       const children = document.createElement('div');
       children.className = 'sample-folder-children';
