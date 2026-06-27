@@ -1372,18 +1372,86 @@ async function init() {
   window.addEventListener("drop", endDrag);
   window.addEventListener("dragend", endDrag);
 
-  // ---- Sample Library flyout, populated at runtime from the Needle Asset
-  // Explorer. Lives as the second column of the dropdown mega-menu and loads on
-  // first hover. The static menu links remain a fallback if the fetch fails. ----
+  // ---- Sample Library mega-menu -------------------------------------------
+  // The left column selects a source group; every group renders into the same
+  // right-hand card grid. Groups with multiple conversion outputs expose the
+  // converter controls both in the grid header and in the top toolbar.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
+  const USD_WG_RAW = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
+  const sampleGroupList = document.getElementById('sample-group-list');
+  const galleryTitle = document.getElementById('gallery-title');
+  const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
   const galleryStatus = document.getElementById('gallery-status');
   const converterToggle = document.getElementById('converter-toggle');
+  const converterSelectWrap = document.getElementById('converter-select-wrap');
+  const converterSelect = document.getElementById('converter-select');
 
   let galleryFetchStarted = false; // guards against duplicate fetches
+  let galleryFetchPromise = null;
+  let galleryModels = null;
   let selectedConverter = 'three'; // three | blender | omniverse
+  let selectedSampleGroup = 'usd-wg';
+
+  const sampleGroups = new Map([
+    ['usd-wg', {
+      title: 'USD Working Group Assets',
+      subtitle: 'Production USD samples from usd-wg/assets',
+      converterVariants: false,
+      cards: [
+        {
+          name: 'McUsd',
+          meta: 'USD working group asset',
+          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda',
+          thumbnail: USD_WG_RAW + 'full_assets/McUsd/thumbnails/McUsd.png',
+        },
+        {
+          name: 'Carbon Frame Bike',
+          meta: 'USDZ package',
+          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz',
+          thumbnail: USD_WG_RAW + 'full_assets/CarbonFrameBike/thumbnails/CarbonFrameBike.png',
+        },
+        {
+          name: 'Carbon Frame Bike USDA',
+          meta: 'Layered USDA',
+          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda',
+          thumbnail: USD_WG_RAW + 'full_assets/CarbonFrameBike/thumbnails/CarbonFrameBike.png',
+        },
+        {
+          name: 'Mini Car Kit',
+          meta: 'Vehicle variants',
+          url: 'https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda',
+          thumbnail: USD_WG_RAW + 'full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/thumbnails/vehicleVariants.png',
+        },
+        {
+          name: 'Teapot',
+          meta: 'Payloads and materials',
+          url: 'https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd',
+          thumbnail: USD_WG_RAW + 'full_assets/Teapot/thumbnails/Teapot.png',
+        },
+      ],
+    }],
+    ['gltf', {
+      title: 'glTF Sample Assets',
+      subtitle: 'From the Needle Asset Explorer',
+      converterVariants: true,
+      load: loadAssetExplorerCards,
+    }],
+    ['test-models', {
+      title: 'Test Models',
+      subtitle: 'Curated scenes for viewer checks',
+      converterVariants: false,
+      cards: [
+        {
+          name: 'Kitchen Set',
+          meta: 'Needle Cloud scene',
+          url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
+        },
+      ],
+    }],
+  ]);
 
   function setGalleryStatus(text, isError = false) {
     if (!galleryStatus) return;
@@ -1392,8 +1460,34 @@ async function init() {
     galleryStatus.classList.toggle('error', isError);
   }
 
-  // Build a "N textures · M anims · K ext" line from the model metadata.
-  function galleryMetaLine(model) {
+  function setConverterControlsVisible(visible) {
+    if (converterToggle) converterToggle.hidden = !visible;
+    if (converterSelectWrap) converterSelectWrap.hidden = !visible;
+  }
+
+  function syncConverterControls() {
+    if (converterSelect) converterSelect.value = selectedConverter;
+    if (converterToggle) {
+      for (const button of converterToggle.querySelectorAll('button[data-converter]')) {
+        const active = button.dataset.converter === selectedConverter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      }
+    }
+  }
+
+  function setSelectedConverter(converter) {
+    selectedConverter = converter || 'three';
+    syncConverterControls();
+    applyConverter();
+  }
+
+  function sampleHref(url) {
+    return '?file=' + url;
+  }
+
+  // Build a "N textures · M anims · K ext" line from Asset Explorer metadata.
+  function assetExplorerMetaLine(model) {
     const info = model.info || {};
     const bits = [];
     if (info.textures) bits.push(info.textures + (info.textures === 1 ? ' texture' : ' textures'));
@@ -1402,36 +1496,78 @@ async function init() {
     return bits.join(' · ');
   }
 
+  function assetExplorerModelToCard(model) {
+    const usdz = (model.assets && model.assets.usdz) || {};
+    const conversions = {};
+    if (usdz.three) conversions.three = usdz.three;
+    if (usdz.blender) conversions.blender = usdz.blender;
+    if (usdz.omniverse) conversions.omniverse = usdz.omniverse;
+    const url = conversions[selectedConverter] || conversions.three || conversions.blender || conversions.omniverse;
+    if (!url) return null;
+    return {
+      name: model.name || model.slug || 'Model',
+      meta: assetExplorerMetaLine(model),
+      thumbnail: model.thumbnail,
+      conversions,
+      url,
+    };
+  }
+
+  async function loadAssetExplorerCards() {
+    if (galleryModels) return galleryModels;
+    if (galleryFetchPromise) return galleryFetchPromise;
+    galleryFetchStarted = true;
+    galleryFetchPromise = (async () => {
+    setGalleryStatus('Loading sample models…');
+    try {
+      const res = await fetch(ASSET_EXPLORER_API);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const models = Array.isArray(data.models) ? data.models : [];
+      galleryModels = models.map(assetExplorerModelToCard).filter(Boolean);
+      if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
+      return galleryModels;
+    } catch (err) {
+      galleryFetchStarted = false; // allow a retry on next open
+      galleryFetchPromise = null;
+      setGalleryStatus('Couldn’t load sample models. Try the external library link instead.', true);
+      trackError('gallery_fetch', err, { api: ASSET_EXPLORER_API });
+      return [];
+    }
+    })();
+    return galleryFetchPromise;
+  }
+
   // Re-point every card to the currently selected converter variant. Cards keep
   // each available variant URL in their dataset, so the toggle never refetches.
   function applyConverter() {
     if (!galleryGrid) return;
     for (const card of galleryGrid.querySelectorAll('.gallery-card')) {
       const url = card.dataset[selectedConverter] || card.dataset.three || card.dataset.blender || card.dataset.omniverse;
-      if (url) card.setAttribute('href', '?file=' + url);
+      if (url) card.setAttribute('href', sampleHref(url));
     }
   }
 
-  function buildGalleryCards(models) {
+  function buildGalleryCards(cards) {
     if (!galleryGrid) return;
     galleryGrid.textContent = '';
-    for (const model of models) {
-      const usdz = (model.assets && model.assets.usdz) || {};
-      const url = usdz[selectedConverter] || usdz.three || usdz.blender || usdz.omniverse;
-      if (!url) continue; // skip models with no USDZ conversion at all
+    for (const item of cards) {
+      const conversions = item.conversions || {};
+      const url = conversions[selectedConverter] || item.url || conversions.three || conversions.blender || conversions.omniverse;
+      if (!url) continue;
 
       // Cards are "a.file" so they reuse the delegated URL-load handler below.
       const card = document.createElement('a');
       card.className = 'file gallery-card';
-      card.href = '?file=' + url;
-      card.dataset.name = model.name || model.slug || 'Model';
-      if (usdz.three) card.dataset.three = usdz.three;
-      if (usdz.blender) card.dataset.blender = usdz.blender;
-      if (usdz.omniverse) card.dataset.omniverse = usdz.omniverse;
+      card.href = sampleHref(url);
+      card.dataset.name = item.name || 'Model';
+      if (conversions.three) card.dataset.three = conversions.three;
+      if (conversions.blender) card.dataset.blender = conversions.blender;
+      if (conversions.omniverse) card.dataset.omniverse = conversions.omniverse;
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'gallery-thumb-wrap';
-      if (model.thumbnail) {
+      if (item.thumbnail) {
         const img = document.createElement('img');
         img.className = 'gallery-thumb';
         img.loading = 'lazy';
@@ -1439,7 +1575,7 @@ async function init() {
         // (the API host sends Access-Control-Allow-Origin: *).
         img.crossOrigin = 'anonymous';
         img.alt = card.dataset.name;
-        img.src = model.thumbnail;
+        img.src = item.thumbnail;
         thumbWrap.appendChild(img);
       }
       card.appendChild(thumbWrap);
@@ -1450,17 +1586,40 @@ async function init() {
       name.className = 'gallery-name';
       name.textContent = card.dataset.name;
       body.appendChild(name);
-      const meta = galleryMetaLine(model);
-      if (meta) {
+      if (item.meta) {
         const metaEl = document.createElement('span');
         metaEl.className = 'gallery-meta';
-        metaEl.textContent = meta;
+        metaEl.textContent = item.meta;
         body.appendChild(metaEl);
       }
       card.appendChild(body);
 
       galleryGrid.appendChild(card);
     }
+  }
+
+  async function selectSampleGroup(groupId) {
+    const group = sampleGroups.get(groupId) || sampleGroups.get('usd-wg');
+    if (!group) return;
+    selectedSampleGroup = groupId;
+    if (galleryTitle) galleryTitle.textContent = group.title;
+    if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
+    setConverterControlsVisible(!!group.converterVariants);
+    if (sampleGroupList) {
+      for (const button of sampleGroupList.querySelectorAll('[data-sample-group]')) {
+        const active = button.dataset.sampleGroup === groupId;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+      }
+    }
+
+    setGalleryStatus(group.load ? 'Loading sample models…' : '');
+    if (galleryGrid) galleryGrid.textContent = '';
+    const cards = group.load ? await group.load() : group.cards || [];
+    if (selectedSampleGroup !== groupId) return;
+    buildGalleryCards(cards);
+    if (cards.length) setGalleryStatus('');
+    else if (!galleryStatus?.classList.contains('error')) setGalleryStatus('No samples available yet.', true);
   }
 
   function addOpenUsdTestAssets() {
@@ -1495,30 +1654,6 @@ async function init() {
 
   if (SHOW_OPENUSD_TEST_ASSETS) addOpenUsdTestAssets();
 
-  async function loadGalleryModels() {
-    if (galleryFetchStarted) return; // fetch once, then reuse the cards
-    galleryFetchStarted = true;
-    setGalleryStatus('Loading sample models…');
-    try {
-      const res = await fetch(ASSET_EXPLORER_API);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const models = Array.isArray(data.models) ? data.models : [];
-      if (!models.length) {
-        setGalleryStatus('No sample models available right now.', true);
-        return;
-      }
-      buildGalleryCards(models);
-      setGalleryStatus('');
-    } catch (err) {
-      // Don't swallow: surface to the user and analytics. The static dropdown
-      // links remain usable as a fallback.
-      galleryFetchStarted = false; // allow a retry on next open
-      setGalleryStatus('Couldn’t load sample models. Use the dropdown links instead.', true);
-      trackError('gallery_fetch', err, { api: ASSET_EXPLORER_API });
-    }
-  }
-
   // Menu open/close is JS-driven (class .menu-open) so the close can be delayed.
   let menuCloseTimer = null;
   let menuOpenedAt = 0;
@@ -1528,7 +1663,7 @@ async function init() {
     const wasOpen = dropdownEl.classList.contains('menu-open');
     dropdownEl.classList.add('menu-open');
     if (!wasOpen) menuOpenedAt = performance.now();
-    loadGalleryModels();
+    selectSampleGroup(selectedSampleGroup);
     if (!menuOpen.tracked) { menuOpen.tracked = true; track('open_gallery'); }
   }
   function menuClose() {
@@ -1584,14 +1719,26 @@ async function init() {
     converterToggle.addEventListener('click', function(event) {
       const btn = event.target.closest('button[data-converter]');
       if (!btn) return;
-      selectedConverter = btn.dataset.converter;
-      for (const b of converterToggle.querySelectorAll('button')) {
-        b.classList.toggle('active', b === btn);
-      }
-      applyConverter();
+      setSelectedConverter(btn.dataset.converter);
       track('gallery_select_converter', { converter: selectedConverter });
     });
   }
+  if (converterSelect) {
+    converterSelect.addEventListener('change', function() {
+      setSelectedConverter(converterSelect.value);
+      track('gallery_select_converter', { converter: selectedConverter });
+    });
+  }
+  if (sampleGroupList) {
+    sampleGroupList.addEventListener('click', function(event) {
+      const button = event.target.closest('[data-sample-group]');
+      if (!button) return;
+      selectSampleGroup(button.dataset.sampleGroup);
+      track('gallery_select_group', { group: button.dataset.sampleGroup });
+    });
+  }
+  syncConverterControls();
+  selectSampleGroup(selectedSampleGroup);
 
   // Load handler for our curated "a.file" links: the dropdown samples, the Clear
   // button, and the runtime-populated gallery cards. Delegated from the body so
