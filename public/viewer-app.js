@@ -1377,10 +1377,11 @@ async function init() {
   // right-hand card grid. Groups with multiple conversion outputs expose the
   // converter controls both in the grid header and in the top toolbar.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
-  const USD_WG_RAW = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
+  const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
   const sampleGroupList = document.getElementById('sample-group-list');
+  const usdWgGroupTree = document.getElementById('usd-wg-group-tree');
   const galleryTitle = document.getElementById('gallery-title');
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
@@ -1392,6 +1393,9 @@ async function init() {
   let galleryFetchStarted = false; // guards against duplicate fetches
   let galleryFetchPromise = null;
   let galleryModels = null;
+  let usdWgManifest = null;
+  let usdWgManifestPromise = null;
+  let usdWgTreeRendered = false;
   let selectedConverter = 'three'; // three | blender | omniverse
   let selectedSampleGroup = 'usd-wg';
   let loadedConversionCard = null;
@@ -1405,38 +1409,7 @@ async function init() {
       title: 'USD Working Group Assets',
       subtitle: 'Production USD samples from usd-wg/assets',
       converterVariants: false,
-      cards: [
-        {
-          name: 'McUsd',
-          meta: 'USD working group asset',
-          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda',
-          thumbnail: USD_WG_RAW + 'full_assets/McUsd/thumbnails/McUsd.png',
-        },
-        {
-          name: 'Carbon Frame Bike',
-          meta: 'USDZ package',
-          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/CarbonFrameBike.usdz',
-          thumbnail: USD_WG_RAW + 'full_assets/CarbonFrameBike/thumbnails/CarbonFrameBike.png',
-        },
-        {
-          name: 'Carbon Frame Bike USDA',
-          meta: 'Layered USDA',
-          url: 'https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda',
-          thumbnail: USD_WG_RAW + 'full_assets/CarbonFrameBike/thumbnails/CarbonFrameBike.png',
-        },
-        {
-          name: 'Mini Car Kit',
-          meta: 'Vehicle variants',
-          url: 'https://github.com/usd-wg/assets/blob/main/full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/vehicleVariants.usda',
-          thumbnail: USD_WG_RAW + 'full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/thumbnails/vehicleVariants.png',
-        },
-        {
-          name: 'Teapot',
-          meta: 'Payloads and materials',
-          url: 'https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd',
-          thumbnail: USD_WG_RAW + 'full_assets/Teapot/thumbnails/Teapot.png',
-        },
-      ],
+      load: () => loadUsdWgCards(''),
     }],
     ['gltf', {
       title: 'glTF Sample Assets',
@@ -1451,7 +1424,7 @@ async function init() {
       cards: [
         {
           name: 'Kitchen Set',
-          meta: 'Needle Cloud scene',
+          meta: 'Hosted on Needle Cloud',
           url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
         },
       ],
@@ -1578,6 +1551,121 @@ async function init() {
     };
   }
 
+  function prettySampleLabel(value) {
+    return String(value || '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+
+  function normalizeUsdWgPath(value) {
+    const path = String(value || '').replace(/^\/+/, '');
+    return path && !path.endsWith('/') ? `${path}/` : path;
+  }
+
+  function usdWgGroupId(path) {
+    const normalized = normalizeUsdWgPath(path);
+    return normalized ? `usd-wg:${normalized}` : 'usd-wg';
+  }
+
+  function usdWgPathFromGroupId(groupId) {
+    return String(groupId || '').startsWith('usd-wg:')
+      ? normalizeUsdWgPath(String(groupId).slice('usd-wg:'.length))
+      : '';
+  }
+
+  function findUsdWgEntry(path, entry = usdWgManifest?.root) {
+    const normalized = normalizeUsdWgPath(path);
+    if (!entry || normalizeUsdWgPath(entry.path) === normalized) return entry || null;
+    for (const child of entry.children || []) {
+      const result = findUsdWgEntry(normalized, child);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  function collectUsdWgCards(entry, cards = []) {
+    for (const item of entry?.items || []) {
+      const folder = String(item.assetPath || item.path || '').split('/').slice(0, -1).join('/');
+      cards.push({
+        name: item.name || 'USD Asset',
+        meta: [String(item.ext || '').replace('.', '').toUpperCase(), folder].filter(Boolean).join(' · '),
+        thumbnail: item.thumbnail,
+        url: item.url,
+      });
+    }
+    for (const child of entry?.children || []) collectUsdWgCards(child, cards);
+    return cards;
+  }
+
+  function createUsdWgTreeControl(entry, depth) {
+    const hasChildren = !!entry.children?.length;
+    const control = document.createElement(hasChildren ? 'summary' : 'button');
+    control.className = 'sample-group-button sample-folder-button';
+    control.dataset.sampleGroup = usdWgGroupId(entry.path);
+    control.style.setProperty('--depth', String(depth));
+    if (!hasChildren) control.type = 'button';
+
+    const name = document.createElement('span');
+    name.textContent = prettySampleLabel(entry.name);
+    control.appendChild(name);
+
+    const count = document.createElement('small');
+    count.textContent = `${entry.totalChildren || entry.items?.length || 0} samples`;
+    control.appendChild(count);
+    return control;
+  }
+
+  function renderUsdWgTreeEntry(entry, depth = 1) {
+    if (entry.children?.length) {
+      const details = document.createElement('details');
+      details.className = 'sample-folder';
+      details.open = depth <= 1;
+      details.appendChild(createUsdWgTreeControl(entry, depth));
+      const children = document.createElement('div');
+      children.className = 'sample-folder-children';
+      for (const child of entry.children) children.appendChild(renderUsdWgTreeEntry(child, depth + 1));
+      details.appendChild(children);
+      return details;
+    }
+    return createUsdWgTreeControl(entry, depth);
+  }
+
+  function renderUsdWgTree() {
+    if (!usdWgGroupTree || usdWgTreeRendered || !usdWgManifest?.root) return;
+    usdWgGroupTree.textContent = '';
+    for (const child of usdWgManifest.root.children || []) {
+      usdWgGroupTree.appendChild(renderUsdWgTreeEntry(child));
+    }
+    usdWgTreeRendered = true;
+  }
+
+  async function loadUsdWgManifest() {
+    if (usdWgManifest) return usdWgManifest;
+    if (usdWgManifestPromise) return usdWgManifestPromise;
+    usdWgManifestPromise = (async () => {
+      const res = await fetch(USD_WG_MANIFEST_URL);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      usdWgManifest = await res.json();
+      renderUsdWgTree();
+      return usdWgManifest;
+    })();
+    return usdWgManifestPromise;
+  }
+
+  async function loadUsdWgCards(path) {
+    try {
+      setGalleryStatus('Loading USD-WG catalog…');
+      await loadUsdWgManifest();
+      const entry = findUsdWgEntry(path) || usdWgManifest.root;
+      return collectUsdWgCards(entry);
+    } catch (err) {
+      usdWgManifestPromise = null;
+      setGalleryStatus('Couldn’t load the USD-WG catalog.', true);
+      trackError('usd_wg_manifest_fetch', err, { manifest: USD_WG_MANIFEST_URL });
+      return [];
+    }
+  }
+
   async function loadAssetExplorerCards() {
     if (galleryModels) return galleryModels;
     if (galleryFetchPromise) return galleryFetchPromise;
@@ -1667,7 +1755,18 @@ async function init() {
   }
 
   async function selectSampleGroup(groupId) {
-    const group = sampleGroups.get(groupId) || sampleGroups.get('usd-wg');
+    let group = sampleGroups.get(groupId);
+    if (!group && String(groupId || '').startsWith('usd-wg:')) {
+      const path = usdWgPathFromGroupId(groupId);
+      const titleSegment = path.split('/').filter(Boolean).at(-1) || 'USD Working Group Assets';
+      group = {
+        title: prettySampleLabel(titleSegment),
+        subtitle: `USD-WG folder: ${path}`,
+        converterVariants: false,
+        load: () => loadUsdWgCards(path),
+      };
+    }
+    group = group || sampleGroups.get('usd-wg');
     if (!group) return;
     selectedSampleGroup = groupId;
     if (galleryTitle) galleryTitle.textContent = group.title;

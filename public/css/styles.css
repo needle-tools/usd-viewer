@@ -523,6 +523,8 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     gap: 10px;
     padding: 12px;
     min-width: 250px;
+    max-height: 72vh;
+    overflow-y: auto;
     flex-shrink: 0;
 }
 
@@ -530,6 +532,13 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+.sample-group-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: -2px 0 4px 0;
 }
 
 .sample-group-button {
@@ -569,6 +578,55 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 .sample-group-button.active {
     border-color: rgba(96, 182, 45, 0.42);
     background: rgba(96, 182, 45, 0.13);
+}
+
+.sample-folder {
+    margin: 0;
+}
+
+.sample-folder > summary {
+    list-style: none;
+}
+
+.sample-folder > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sample-folder-button {
+    min-height: 42px;
+    padding: 7px 10px 7px calc(10px + (var(--depth, 0) * 12px));
+    border-radius: 6px;
+    font-size: 0.95em;
+}
+
+summary.sample-folder-button {
+    display: block;
+}
+
+.sample-folder-button::before {
+    content: "";
+    display: inline-block;
+    width: 0.6em;
+    margin-right: 5px;
+}
+
+.sample-folder > summary.sample-folder-button::before {
+    content: ">";
+    color: var(--color-text-muted);
+}
+
+.sample-folder[open] > summary.sample-folder-button::before {
+    content: "v";
+}
+
+.sample-folder-button small {
+    font-size: 0.68em;
+}
+
+.sample-folder-children {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .dropdown-section {

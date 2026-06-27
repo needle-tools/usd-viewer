@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "prepare:public": "node scripts/prepare-public-runtime.mjs"
+    "prepare:public": "node scripts/prepare-public-runtime.mjs",
+    "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs"
   },
   "dependencies": {
     "@fastify/static": "^9.1.3",
