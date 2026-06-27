@@ -8,12 +8,12 @@ For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
 ## Install
 
 ```sh
-npm install @needle-tools/usd@next three @needle-tools/materialx@1.7.0
+npm install @needle-tools/usd@1.0.0 three
 ```
 
-This major prerelease uses upstream OpenUSD 26.05 and ships a Hydra imaging
-bridge for three.js. The wasm bundle includes Adobe `usdGltf`, MaterialX, and
-OpenSubdiv support.
+Version 1.0 uses upstream OpenUSD 26.05 and ships a Hydra imaging bridge for
+three.js. The wasm bundle includes Adobe `usdGltf`, MaterialX, and OpenSubdiv
+support.
 
 ## Runtime Requirements
 
@@ -41,44 +41,211 @@ The modern Emscripten output contains `emHdBindings.js` and
 `emHdBindings.wasm`. It does not ship a separate `emHdBindings.worker.js`; the
 pthread workers load the main generated JavaScript entrypoint directly.
 
-## Use with Needle Engine
+## Minimal Examples
 
+All browser examples must be served with the COOP/COEP headers from
+["Runtime Requirements"](#runtime-requirements). The import-map examples use
+same-origin `/vendor/...` URLs so the threaded wasm worker can load the
+Emscripten JavaScript from the page origin; replace those URLs with your own
+served package paths.
 
-```ts
-import { get } from "svelte/store";
-import { activeFiles } from "..";
-import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
+### three.js With Import Map
 
-export function addUsdPlugin() {
-    return addPluginForNeedleEngine({
-        // USD files to load (first file must be the main file)
-        getFiles: () => { return get(activeFiles) as Array<File & { path: string }> }
-    })
+`index.html`
+
+```html
+<!doctype html>
+<html>
+  <body style="margin:0">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/build/three.module.js",
+          "three/addons/": "/vendor/three/examples/jsm/",
+          "@needle-tools/materialx": "/vendor/@needle-tools/materialx/index.js",
+          "@needle-tools/usd": "/vendor/@needle-tools/usd/src/index.js",
+          "@needle-tools/usd/three": "/vendor/@needle-tools/usd/src/create.three.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { getUsdModule } from "@needle-tools/usd";
+      import { createThreeHydra } from "@needle-tools/usd/three";
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 1000);
+      camera.position.set(0, 1.5, 4);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(innerWidth, innerHeight);
+      document.body.append(renderer.domElement);
+
+      const usd = await getUsdModule();
+      const handle = await createThreeHydra({
+        USD: usd,
+        scene,
+        url: "./model.usdz"
+      });
+      await handle.ready();
+
+      let last = performance.now();
+      renderer.setAnimationLoop((time) => {
+        const dt = (time - last) / 1000;
+        last = time;
+        handle.update(dt);
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
+```
+
+### three.js With Package Install
+
+`package.json`
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@needle-tools/usd": "1.0.0",
+    "three": "^0.185.0",
+    "vite": "^8.1.0"
+  }
 }
 ```
 
+`index.html`
 
-### Use with three.js
+```html
+<!doctype html>
+<html>
+  <body style="margin:0">
+    <script type="module">
+      import * as THREE from "three";
+      import { getUsdModule } from "@needle-tools/usd";
+      import { createThreeHydra } from "@needle-tools/usd/three";
 
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 1000);
+      camera.position.set(0, 1.5, 4);
 
-See full example in [examples](/usd-wasm/examples/src/main.ts)
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(innerWidth, innerHeight);
+      document.body.append(renderer.domElement);
 
-```js
-import { getUsdModule } from "@needle-tools/usd";
-import { createThreeHydra } from "@needle-tools/usd/three";
+      const usd = await getUsdModule();
+      const handle = await createThreeHydra({
+        USD: usd,
+        scene,
+        url: "./model.usdz"
+      });
+      await handle.ready();
 
-// Load the USD module
-const usd = await getUsdModule();
-// Load a USD file to be rendered by threejs
-const handle = await createThreeHydra({
-    USD: usd,
-    scene: ctx.scene,
-    usdz: "http://localhost:8081/v1/public/89aa693/89aa693/ImageTrackingNeedleSample.usdz",
-})
-// Call handle.update(dt) in your threejs update loop 
+      let last = performance.now();
+      renderer.setAnimationLoop((time) => {
+        const dt = (time - last) / 1000;
+        last = time;
+        handle.update(dt);
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
 ```
 
-Public package entrypoints:
+For Vite projects, add the `needleUSD()` plugin shown above so dev serving uses
+the required COOP/COEP headers.
+
+### Needle Engine With Import Map
+
+`index.html`
+
+```html
+<!doctype html>
+<html>
+  <body style="margin:0">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/@needle-tools/engine/dist/three.min.js",
+          "three/addons/": "/vendor/@needle-tools/three/examples/jsm/",
+          "@needle-tools/engine": "/vendor/@needle-tools/engine/dist/needle-engine.min.js",
+          "@needle-tools/materialx": "/vendor/@needle-tools/materialx/index.js",
+          "@needle-tools/usd": "/vendor/@needle-tools/usd/src/index.js",
+          "@needle-tools/usd/three": "/vendor/@needle-tools/usd/src/create.three.js",
+          "@needle-tools/usd/plugins": "/vendor/@needle-tools/usd/src/plugins/index.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@needle-tools/engine";
+      import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
+
+      await addPluginForNeedleEngine({
+        getFiles: () => []
+      });
+
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<needle-engine src="./model.usdz" camera-controls></needle-engine>'
+      );
+    </script>
+  </body>
+</html>
+```
+
+### Needle Engine With Package Install
+
+`package.json`
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@needle-tools/engine": "^5.1.2",
+    "@needle-tools/usd": "1.0.0",
+    "three": "npm:@needle-tools/three@^0.169.19",
+    "vite": "^8.1.0"
+  }
+}
+```
+
+`index.html`
+
+```html
+<!doctype html>
+<html>
+  <body style="margin:0">
+    <script type="module">
+      import "@needle-tools/engine";
+      import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
+
+      await addPluginForNeedleEngine({
+        getFiles: () => []
+      });
+
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<needle-engine src="./model.usdz" camera-controls></needle-engine>'
+      );
+    </script>
+  </body>
+</html>
+```
+
+For folder/drop workflows, return the active file set from `getFiles()`. The
+first file must be the root USD file, and each file should have a stable `path`
+property so USD references can resolve.
+
+## Public Entrypoints
 
 ```js
 import { getUsdModule, loadOpenUsdBuildInfo } from "@needle-tools/usd";

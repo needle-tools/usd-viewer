@@ -42,6 +42,8 @@ context.
 
 The public viewer entrypoint lives in `public/`. The package and the three.js
 Hydra bridge live under `usd-wasm/`.
+Minimal package usage examples for plain three.js and Needle Engine live in
+[usd-wasm/README.md](usd-wasm/README.md).
 
 ## OpenUSD Wasm Runtime
 
