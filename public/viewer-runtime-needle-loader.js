@@ -6,7 +6,7 @@ export {
   EquirectangularReflectionMapping,
   Group,
   NeutralToneMapping,
-  PMREMGenerator$1 as PMREMGenerator,
+  PMREMGenerator,
   PerspectiveCamera,
   PointLight,
   SRGBColorSpace,
