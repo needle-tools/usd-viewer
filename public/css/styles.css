@@ -336,11 +336,20 @@ body.drag-active .dropzone-title {
 
 .needle-logo {
     height: 26px;
-    margin-right: 10px;
     /* block removes the inline baseline gap so the logo sits centered */
     display: block;
     /* brand: logo must not be recolored or faded — keep full opacity */
     opacity: 1;
+}
+
+.app-wordmark {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 14px 0 2px;
+    color: var(--color-text);
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
 }
 
 /* Dropdown Styles */
@@ -1147,7 +1156,9 @@ button.cta-primary {
     }
     .needle-logo {
         height: 22px;
-        margin-right: 6px;
+    }
+    .app-wordmark {
+        display: none;
     }
     .filename-bar {
         max-width: 96vw;
