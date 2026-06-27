@@ -306,7 +306,7 @@ function createRenderHostControl() {
   container.append(
     createRenderModeButton("three", "three.js"),
     createRenderModeButton("needle-direct", "Needle Direct Hydra"),
-    createRenderModeButton("needle-loader", "Needle Loader"),
+    createRenderModeButton("needle-loader", "Needle"),
   );
 
   const label = document.createElement("p");

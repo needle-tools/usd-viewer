@@ -192,7 +192,7 @@ the required COOP/COEP headers.
 
       document.body.insertAdjacentHTML(
         "beforeend",
-        '<needle-engine src="./model.usdz" camera-controls></needle-engine>'
+        '<needle-engine src="./model.usdz" camera-controls contactshadows="0.7"></needle-engine>'
       );
     </script>
   </body>
@@ -234,7 +234,7 @@ the required COOP/COEP headers.
 
       document.body.insertAdjacentHTML(
         "beforeend",
-        '<needle-engine src="./model.usdz" camera-controls></needle-engine>'
+        '<needle-engine src="./model.usdz" camera-controls contactshadows="0.7"></needle-engine>'
       );
     </script>
   </body>

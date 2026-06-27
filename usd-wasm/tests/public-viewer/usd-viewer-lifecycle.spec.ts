@@ -79,8 +79,20 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.hasNeedleContext).toBe(true);
         expect(state.needleChildren).toBeGreaterThan(0);
         expect(state.elementSrc).toContain(publicSamples.helmet.url);
+        expect(state.contactShadows).toBe('0.7');
         expect(state.threeCanvasDisplay).toBe('none');
         expect(state.needleDisplay).toBe('block');
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('defaults public viewer samples to Needle mode', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${publicSamples.helmet.url}`);
+        const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
+
+        expect(state.activeButtonText).toBe('Needle');
+        expect(state.contactShadows).toBe('0.7');
         expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
         expect(diagnostics).toEqual([]);
     });
@@ -176,7 +188,9 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         href: location.href,
         filename: document.querySelector('.filename-text')?.textContent || '',
         activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
+        activeButtonText: document.querySelector('[data-viewer-mode].active')?.textContent?.trim() || '',
         elementSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
+        contactShadows: document.querySelector('needle-engine')?.getAttribute('contactshadows') || '',
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
         hasNeedleContext: Boolean(window.needleEngineContext),

@@ -162,7 +162,7 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect((await getViewerState(page))?.renderMode).toBe('three');
         expect((await getViewerState(page))?.model).toBe('Payload Root');
 
-        await page.getByRole('button', { name: 'Needle Loader', exact: true }).click();
+        await page.getByRole('button', { name: 'Needle', exact: true }).click();
         await expect(page.locator('.status')).toHaveText('Loaded Payload Root', { timeout: 45_000 });
         const state = await getViewerState(page);
         expect(state?.renderMode).toBe('needle-loader');
@@ -174,7 +174,7 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
     test('Needle Engine loader mode exposes usdview inspection state', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page, 'needle-engine', 'loader');
-        await expect(page.getByRole('button', { name: 'Needle Loader', exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByRole('button', { name: 'Needle', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
         await loadAssetsInOrder(page, [
             'DamagedHelmet GLB',

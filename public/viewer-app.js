@@ -502,14 +502,6 @@ function catalogAssetForUrlPath(urlPath) {
   return testAssetLibrary.find(asset => asset.root === root);
 }
 
-function safeLocalStorageGet(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 function safeLocalStorageSet(key, value) {
   try {
     localStorage.setItem(key, value);
@@ -976,6 +968,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement = document.createElement("needle-engine");
     needleEngineElement.className = "usd-viewer-needle-engine";
     needleEngineElement.setAttribute("camera-controls", "true");
+    needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
     needleEngineElement.addEventListener("loadstart", () => {
       ready = false;

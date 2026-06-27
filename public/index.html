@@ -73,9 +73,7 @@
     (() => {
       const params = new URLSearchParams(location.search);
       let viewerMode = params.get("viewer");
-      if (!viewerMode) {
-        try { viewerMode = localStorage.getItem("usd-viewer-mode"); } catch {}
-      }
+      viewerMode = viewerMode === "three" ? "three" : "needle-loader";
       const useNeedleLoader = viewerMode === "needle-loader";
       const imports = useNeedleLoader ? {
         "three": "/needle-engine/dist/three.min.js",
@@ -184,8 +182,8 @@
     <a href="#" id="feedback-link" class="feedback-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
 
     <div class="viewer-mode-toggle" id="viewer-mode-toggle" role="group" aria-label="Viewer renderer">
-      <button type="button" data-viewer-mode="three" class="active">three.js</button>
-      <button type="button" data-viewer-mode="needle-loader">Needle Loader</button>
+      <button type="button" data-viewer-mode="three">three.js</button>
+      <button type="button" data-viewer-mode="needle-loader" class="active">Needle</button>
     </div>
 
     <a id="export-gltf" class="export-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Export glTF</a>
