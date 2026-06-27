@@ -1,7 +1,8 @@
 import { Vector3, Box3, PerspectiveCamera, Scene, Color, AmbientLight, Group, PointLight, WebGLRenderer, SRGBColorSpace, AgXToneMapping, NeutralToneMapping, PMREMGenerator$1 as PMREMGenerator, EquirectangularReflectionMapping } from 'three';
 import { createThreeHydra, getUsdModule } from './usd/index.js';
 import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
-import { RGBELoader, OrbitControls, GLTFExporter } from 'three-examples';
+import { RGBELoader, GLTFExporter } from 'three-examples';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { track, trackError } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
@@ -1220,7 +1221,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
       Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
     console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", selection, size);
     if (controls) 
-      controls.update();
+      controls.update(0);
     return;
   }
 
@@ -1257,7 +1258,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
   camera.updateProjectionMatrix();
 
   camera.position.copy(controls.target).sub(direction);
-  controls.update();
+  controls.update(0);
 
   console.log("Fitting camera to selection", {
     size,
@@ -1334,7 +1335,7 @@ async function init() {
   const controls = window._controls = new OrbitControls( camera, renderer.domElement );
   controls.enableDamping = true;
   controls.dampingFactor = 0.2;
-  controls.update();
+  controls.update(0);
 
   window.addEventListener( 'resize', onWindowResize );
   
@@ -1624,7 +1625,7 @@ async function init() {
     if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
     if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
     if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
-    window._controls.update();
+    window._controls.update(0);
 
     // clear existing objects
     if (filename !== undefined) {
@@ -1699,10 +1700,10 @@ async function animate() {
     return;
   }
 
-  window._controls.update();
   const now = performance.now() / 1000;
   const dt = Math.min(0.1, Math.max(0, now - lastAnimationTimeSeconds));
   lastAnimationTimeSeconds = now;
+  window._controls.update(dt);
   if (viewerMode === VIEWER_MODE_THREE && currentHydraHandle && ready) currentHydraHandle.update(dt);
   render();
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );

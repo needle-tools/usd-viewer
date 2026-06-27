@@ -81,6 +81,23 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
         expect(diagnostics).toEqual([]);
     });
+
+    test('keeps three.js camera controls interactive', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);
+        await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
+
+        const before = await page.evaluate(() => window.camera.position.toArray());
+        await page.mouse.move(640, 450);
+        await page.mouse.down();
+        await page.mouse.move(820, 470, { steps: 12 });
+        await page.mouse.up();
+        await page.waitForTimeout(500);
+        const after = await page.evaluate(() => window.camera.position.toArray());
+
+        expect(cameraMoved(before, after)).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
 });
 
 async function addLocalLifecycleSamples(page: Page) {
@@ -164,4 +181,8 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         threeCanvasDisplay: getComputedStyle(document.querySelector('.usd-viewer-three-canvas')!).display,
         needleDisplay: getComputedStyle(document.querySelector('needle-engine')!).display,
     }));
+}
+
+function cameraMoved(before: number[], after: number[]) {
+    return before.some((value, index) => Math.abs(value - after[index]) > 0.0001);
 }
