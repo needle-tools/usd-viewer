@@ -1394,6 +1394,9 @@ async function init() {
   let galleryModels = null;
   let selectedConverter = 'three'; // three | blender | omniverse
   let selectedSampleGroup = 'usd-wg';
+  let loadedConversionCard = null;
+  let loadedConverter = '';
+  const conversionCardByUrl = new Map();
 
   const sampleGroups = new Map([
     ['usd-wg', {
@@ -1462,11 +1465,9 @@ async function init() {
 
   function setConverterControlsVisible(visible) {
     if (converterToggle) converterToggle.hidden = !visible;
-    if (converterSelectWrap) converterSelectWrap.hidden = !visible;
   }
 
   function syncConverterControls() {
-    if (converterSelect) converterSelect.value = selectedConverter;
     if (converterToggle) {
       for (const button of converterToggle.querySelectorAll('button[data-converter]')) {
         const active = button.dataset.converter === selectedConverter;
@@ -1480,6 +1481,68 @@ async function init() {
     selectedConverter = converter || 'three';
     syncConverterControls();
     applyConverter();
+  }
+
+  function setLoadedConverterControlVisible(visible) {
+    if (converterSelectWrap) converterSelectWrap.hidden = !visible;
+  }
+
+  function syncLoadedConverterControl() {
+    if (!converterSelect) return;
+    for (const option of converterSelect.options) {
+      option.disabled = !!loadedConversionCard && !loadedConversionCard.conversions?.[option.value];
+    }
+    if (loadedConverter) converterSelect.value = loadedConverter;
+  }
+
+  function canonicalSampleUrl(url) {
+    try {
+      const parsed = new URL(url, window.location.href);
+      parsed.hash = '';
+      return parsed.href;
+    } catch {
+      return String(url || '').split('#')[0];
+    }
+  }
+
+  function indexConversionCard(card) {
+    for (const [converter, url] of Object.entries(card.conversions || {})) {
+      if (url) conversionCardByUrl.set(canonicalSampleUrl(url), { card, converter });
+    }
+  }
+
+  function looksLikeAssetExplorerConversion(url) {
+    return /https:\/\/asset-explorer\.needle\.tools\/downloads\/.+\.usdz(?:[?#].*)?$/i.test(String(url || ''));
+  }
+
+  function setLoadedConversionCard(card, converter) {
+    loadedConversionCard = card || null;
+    loadedConverter = converter || '';
+    setLoadedConverterControlVisible(!!loadedConversionCard);
+    syncLoadedConverterControl();
+  }
+
+  async function refreshLoadedConverterState(url) {
+    if (!url) {
+      setLoadedConversionCard(null, '');
+      return;
+    }
+    if (!conversionCardByUrl.has(canonicalSampleUrl(url)) && looksLikeAssetExplorerConversion(url)) {
+      await loadAssetExplorerCards();
+    }
+    const match = conversionCardByUrl.get(canonicalSampleUrl(url));
+    setLoadedConversionCard(match?.card || null, match?.converter || '');
+    if (match?.converter) setSelectedConverter(match.converter);
+  }
+
+  function loadConvertedVariant(converter) {
+    const url = loadedConversionCard?.conversions?.[converter];
+    if (!url || canonicalSampleUrl(url) === canonicalSampleUrl(filename)) return;
+    const link = document.createElement('a');
+    link.className = 'file gallery-card';
+    link.href = sampleHref(url);
+    link.dataset.name = loadedConversionCard.name || 'Model';
+    return loadFromFileLink(link);
   }
 
   function sampleHref(url) {
@@ -1525,6 +1588,7 @@ async function init() {
       const data = await res.json();
       const models = Array.isArray(data.models) ? data.models : [];
       galleryModels = models.map(assetExplorerModelToCard).filter(Boolean);
+      for (const card of galleryModels) indexConversionCard(card);
       if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
       return galleryModels;
     } catch (err) {
@@ -1725,8 +1789,11 @@ async function init() {
   }
   if (converterSelect) {
     converterSelect.addEventListener('change', function() {
-      setSelectedConverter(converterSelect.value);
-      track('gallery_select_converter', { converter: selectedConverter });
+      const converter = converterSelect.value;
+      loadedConverter = converter;
+      setSelectedConverter(converter);
+      loadConvertedVariant(converter)?.catch(error => console.error("Failed to load converted sample", error));
+      track('gallery_select_converter', { converter, source: 'loaded_asset' });
     });
   }
   if (sampleGroupList) {
@@ -1739,6 +1806,7 @@ async function init() {
   }
   syncConverterControls();
   selectSampleGroup(selectedSampleGroup);
+  refreshLoadedConverterState(filename);
 
   // Load handler for our curated "a.file" links: the dropdown samples, the Clear
   // button, and the runtime-populated gallery cards. Delegated from the body so
@@ -1757,8 +1825,10 @@ async function init() {
       // name/URL is safe and useful here — unlike user drops.
       const label = (link.dataset.name || link.textContent || '').trim();
       track('load_sample', { file: filename, label });
+      await refreshLoadedConverterState(filename);
     } else {
       track('clear_model');
+      setLoadedConversionCard(null, '');
     }
 
     if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
