@@ -515,8 +515,7 @@ function normalizeViewerMode(value) {
 }
 
 function setViewerModeUrlParam(url) {
-  if (viewerMode === VIEWER_MODE_THREE) url.searchParams.delete("viewer");
-  else url.searchParams.set("viewer", viewerMode);
+  url.searchParams.set("viewer", viewerMode);
 }
 
 function applyViewerModeUi() {

@@ -97,6 +97,31 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('switches empty public viewer from Needle to three.js', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?file=&viewer=needle-loader');
+        await expect(page.locator('[data-viewer-mode="needle-loader"]')).toHaveClass(/active/);
+
+        await Promise.all([
+            page.waitForURL(/viewer=three/),
+            page.click('[data-viewer-mode="three"]'),
+        ]);
+
+        await page.waitForFunction(() => document.body.classList.contains('viewer-mode-three'));
+        const state = await page.evaluate(async () => ({
+            href: location.href,
+            activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
+            runtime: (await import('viewer-runtime')).runtimeViewerMode,
+            threeRevision: (await import('three')).REVISION,
+        }));
+
+        expect(state.activeButton).toBe('three');
+        expect(state.runtime).toBe('three');
+        expect(state.threeRevision).toBe('185');
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('three');
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps three.js camera controls interactive', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);
