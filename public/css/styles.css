@@ -1244,10 +1244,7 @@ button.cta-primary {
    inside a grid/flex item and squash the image into a thin strip. */
 .gallery-thumb-wrap {
     height: 116px;
-    background:
-        linear-gradient(135deg, rgba(96, 182, 45, 0.12), transparent 42%),
-        linear-gradient(315deg, rgba(56, 150, 210, 0.12), transparent 40%),
-        var(--color-info);
+    background: var(--color-surface);
     overflow: hidden;
 }
 

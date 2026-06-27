@@ -1377,11 +1377,13 @@ async function init() {
   // right-hand card grid. Groups with multiple conversion outputs expose the
   // converter controls both in the grid header and in the top toolbar.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
+  const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
   const sampleGroupList = document.getElementById('sample-group-list');
   const usdWgGroupTree = document.getElementById('usd-wg-group-tree');
+  const gltfGroupTree = document.getElementById('gltf-group-tree');
   const galleryTitle = document.getElementById('gallery-title');
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
@@ -1393,6 +1395,9 @@ async function init() {
   let galleryFetchStarted = false; // guards against duplicate fetches
   let galleryFetchPromise = null;
   let galleryModels = null;
+  let gltfTagIndexPromise = null;
+  let gltfTagIndex = null;
+  let gltfTreeRendered = false;
   let usdWgManifest = null;
   let usdWgManifestPromise = null;
   let usdWgTreeRendered = false;
@@ -1418,8 +1423,8 @@ async function init() {
       load: loadAssetExplorerCards,
     }],
     ['test-models', {
-      title: 'Test Models',
-      subtitle: 'Curated scenes for viewer checks',
+      title: 'Needle Cloud',
+      subtitle: 'Hosted USDZ assets with automatic optimization',
       converterVariants: false,
       cards: [
         {
@@ -1548,7 +1553,44 @@ async function init() {
       thumbnail: model.thumbnail,
       conversions,
       url,
+      tags: model.tags || ['untagged'],
     };
+  }
+
+  function normalizeModelKey(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  async function loadGltfTagIndex() {
+    if (gltfTagIndex) return gltfTagIndex;
+    if (gltfTagIndexPromise) return gltfTagIndexPromise;
+    gltfTagIndexPromise = (async () => {
+      const index = new Map();
+      try {
+        const res = await fetch(GLTF_SAMPLE_ASSETS_INDEX);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const entries = await res.json();
+        for (const entry of Array.isArray(entries) ? entries : []) {
+          const tags = Array.isArray(entry.tags) && entry.tags.length ? entry.tags : ['untagged'];
+          for (const key of [entry.name, entry.label]) {
+            const normalized = normalizeModelKey(key);
+            if (normalized) index.set(normalized, tags);
+          }
+        }
+      } catch (err) {
+        trackError('gltf_tag_index_fetch', err, { index: GLTF_SAMPLE_ASSETS_INDEX });
+      }
+      gltfTagIndex = index;
+      return gltfTagIndex;
+    })();
+    return gltfTagIndexPromise;
+  }
+
+  function attachGltfTags(model, tagIndex) {
+    const tags = tagIndex.get(normalizeModelKey(model.slug))
+      || tagIndex.get(normalizeModelKey(model.name))
+      || ['untagged'];
+    return { ...model, tags };
   }
 
   function prettySampleLabel(value) {
@@ -1570,6 +1612,16 @@ async function init() {
   function usdWgPathFromGroupId(groupId) {
     return String(groupId || '').startsWith('usd-wg:')
       ? normalizeUsdWgPath(String(groupId).slice('usd-wg:'.length))
+      : '';
+  }
+
+  function gltfTagGroupId(tag) {
+    return `gltf:${encodeURIComponent(tag)}`;
+  }
+
+  function gltfTagFromGroupId(groupId) {
+    return String(groupId || '').startsWith('gltf:')
+      ? decodeURIComponent(String(groupId).slice('gltf:'.length))
       : '';
   }
 
@@ -1597,22 +1649,40 @@ async function init() {
     return cards;
   }
 
-  function createUsdWgTreeControl(entry, depth) {
-    const hasChildren = !!entry.children?.length;
+  function createSampleTreeControl({ groupId, name, count, hasChildren }, depth) {
     const control = document.createElement(hasChildren ? 'summary' : 'button');
     control.className = 'sample-group-button sample-folder-button';
-    control.dataset.sampleGroup = usdWgGroupId(entry.path);
+    control.dataset.sampleGroup = groupId;
     control.style.setProperty('--depth', String(depth));
     if (!hasChildren) control.type = 'button';
 
-    const name = document.createElement('span');
-    name.textContent = prettySampleLabel(entry.name);
-    control.appendChild(name);
+    const label = document.createElement('span');
+    label.textContent = name;
+    control.appendChild(label);
 
-    const count = document.createElement('small');
-    count.textContent = String(entry.totalChildren || entry.items?.length || 0);
-    control.appendChild(count);
+    const countEl = document.createElement('small');
+    countEl.textContent = String(count || 0);
+    control.appendChild(countEl);
     return control;
+  }
+
+  function createUsdWgTreeControl(entry, depth) {
+    const hasChildren = !!entry.children?.length;
+    return createSampleTreeControl({
+      groupId: usdWgGroupId(entry.path),
+      name: prettySampleLabel(entry.name),
+      count: entry.totalChildren || entry.items?.length || 0,
+      hasChildren,
+    }, depth);
+  }
+
+  function createGltfTagTreeControl(tag, count) {
+    return createSampleTreeControl({
+      groupId: gltfTagGroupId(tag),
+      name: prettySampleLabel(tag),
+      count,
+      hasChildren: false,
+    }, 1);
   }
 
   function renderUsdWgTreeEntry(entry, depth = 1) {
@@ -1636,6 +1706,21 @@ async function init() {
       usdWgGroupTree.appendChild(renderUsdWgTreeEntry(child));
     }
     usdWgTreeRendered = true;
+  }
+
+  function renderGltfTagTree(cards) {
+    if (!gltfGroupTree || gltfTreeRendered) return;
+    const counts = new Map();
+    for (const card of cards || []) {
+      for (const tag of card.tags || ['untagged']) {
+        counts.set(tag, (counts.get(tag) || 0) + 1);
+      }
+    }
+    gltfGroupTree.textContent = '';
+    for (const [tag, count] of [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      gltfGroupTree.appendChild(createGltfTagTreeControl(tag, count));
+    }
+    gltfTreeRendered = true;
   }
 
   async function loadUsdWgManifest() {
@@ -1665,6 +1750,12 @@ async function init() {
     }
   }
 
+  async function loadGltfCards(tag) {
+    const cards = await loadAssetExplorerCards();
+    if (!tag) return cards;
+    return cards.filter((card) => (card.tags || []).includes(tag));
+  }
+
   async function loadAssetExplorerCards() {
     if (galleryModels) return galleryModels;
     if (galleryFetchPromise) return galleryFetchPromise;
@@ -1672,12 +1763,16 @@ async function init() {
     galleryFetchPromise = (async () => {
     setGalleryStatus('Loading sample models…');
     try {
-      const res = await fetch(ASSET_EXPLORER_API);
+      const [res, tagIndex] = await Promise.all([
+        fetch(ASSET_EXPLORER_API),
+        loadGltfTagIndex(),
+      ]);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       const models = Array.isArray(data.models) ? data.models : [];
-      galleryModels = models.map(assetExplorerModelToCard).filter(Boolean);
+      galleryModels = models.map((model) => assetExplorerModelToCard(attachGltfTags(model, tagIndex))).filter(Boolean);
       for (const card of galleryModels) indexConversionCard(card);
+      renderGltfTagTree(galleryModels);
       if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
       return galleryModels;
     } catch (err) {
@@ -1763,6 +1858,15 @@ async function init() {
         subtitle: `USD-WG folder: ${path}`,
         converterVariants: false,
         load: () => loadUsdWgCards(path),
+      };
+    }
+    if (!group && String(groupId || '').startsWith('gltf:')) {
+      const tag = gltfTagFromGroupId(groupId);
+      group = {
+        title: prettySampleLabel(tag),
+        subtitle: `glTF Sample Assets tagged ${tag}`,
+        converterVariants: true,
+        load: () => loadGltfCards(tag),
       };
     }
     group = group || sampleGroups.get('usd-wg');
