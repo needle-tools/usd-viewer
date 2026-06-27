@@ -29,6 +29,30 @@ const assetExplorerSamples = {
     },
 };
 
+const usdWgBaseUrl = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
+const usdWgSamples = [
+    {
+        label: 'OpenChessSet',
+        filename: 'chess_set.usda',
+        url: `${usdWgBaseUrl}full_assets/OpenChessSet/chess_set.usda`,
+    },
+    {
+        label: 'USD-WG all primitives',
+        filename: 'all_primitives.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/primitives/all_primitives.usda`,
+    },
+    {
+        label: 'USD-WG nested transforms',
+        filename: 'xforms_nested.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/transforms/xforms_nested.usda`,
+    },
+    {
+        label: 'USD-WG subdivision quads',
+        filename: 'subdiv_loop_quads.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/subdiv_loop_quads/subdiv_loop_quads.usda`,
+    },
+];
+
 const fatalConsolePatterns = [
     /out of memory/i,
     /Cannot enlarge memory/i,
@@ -37,6 +61,14 @@ const fatalConsolePatterns = [
     /Failed to load USD file/i,
     /wasm memory/i,
     /\babort\b/i,
+];
+
+const usdWgRegressionPatterns = [
+    /does not provide an export named/i,
+    /stage could(?:n't| not) be created/i,
+    /Could not load sublayer/i,
+    /Failed to open USD stage/i,
+    /Failed to load USD file/i,
 ];
 
 test.describe('public usd-viewer lifecycle', () => {
@@ -95,6 +127,28 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.threeCanvasDisplay).toBe('none');
         expect(state.needleDisplay).toBe('block');
         expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('loads representative USD-WG assets through the Needle Engine loader element', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
+
+        for (const sample of usdWgSamples) {
+            await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle-loader`);
+            const state = await waitForNeedleLoaderMode(page, sample.filename);
+
+            expect(state.filename).toBe(sample.filename);
+            expect(state.activeButton).toBe('needle-loader');
+            expect(state.hasHydraHandle).toBe(true);
+            expect(state.driverAlive).toBe(true);
+            expect(state.hasNeedleContext).toBe(true);
+            expect(state.needleChildren).toBeGreaterThan(0);
+            expect(state.elementSrc).toContain(sample.url);
+            expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        }
+
+        expect(usdWgDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
     });
 
@@ -188,10 +242,14 @@ async function addLocalLifecycleSamples(page: Page) {
 }
 
 function collectFatalDiagnostics(page: Page) {
+    return collectConsoleMatches(page, fatalConsolePatterns);
+}
+
+function collectConsoleMatches(page: Page, patterns: RegExp[]) {
     const diagnostics: Array<{ type: string, text: string }> = [];
     page.on('console', message => {
         const text = message.text();
-        if (fatalConsolePatterns.some(pattern => pattern.test(text))) {
+        if (patterns.some(pattern => pattern.test(text))) {
             diagnostics.push({ type: message.type(), text });
         }
     });
