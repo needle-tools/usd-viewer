@@ -706,7 +706,8 @@ class HydraMesh {
 
   _installMeshHooks(mesh) {
     mesh.userData.usdPath = this._id;
-    mesh.userData.usdHydraApplyMaterialSide = (material) => this._applyMaterialSide(material);
+    mesh.userData.usdHydraMaterialSide = this._side;
+    mesh.userData.usdHydraApplyMaterialSide = (material, hydraMaterial) => this._applyMaterialSide(material, hydraMaterial);
   }
 
   _disposeMaterialSideClones() {
@@ -716,12 +717,27 @@ class HydraMesh {
     this._materialSideClones.clear();
   }
 
-  _applyMaterialSide(material) {
+  _updateMeshSideState() {
+    if (this._mesh) {
+      this._mesh.userData.usdHydraMaterialSide = this._side;
+    }
+    if (this._instancedMesh) {
+      this._instancedMesh.userData.usdHydraMaterialSide = this._side;
+    }
+  }
+
+  _applyMaterialSide(material, hydraMaterial = null) {
     if (!material) return material;
     if (Array.isArray(material)) {
-      return material.map(entry => this._applyMaterialSide(entry));
+      return material.map(entry => this._applyMaterialSide(entry, hydraMaterial));
     }
     if (material === this._ownedMaterial || material.userData?.usdHydraMeshOwner === this._id) {
+      material.side = this._side;
+      material.needsUpdate = true;
+      return material;
+    }
+
+    if (!hydraMaterial?.requiresMaterialSideVariants?.()) {
       material.side = this._side;
       material.needsUpdate = true;
       return material;
@@ -742,8 +758,13 @@ class HydraMesh {
   }
 
   _applyCullSideToMeshes() {
+    this._updateMeshSideState();
+    let refreshedMaterialAssignments = false;
     if (this._mesh) {
-      this._mesh.material = this._applyMaterialSide(this._mesh.material);
+      refreshedMaterialAssignments = this._interface.refreshMeshMaterialAssignments(this._mesh);
+      if (!refreshedMaterialAssignments) {
+        this._mesh.material = this._applyMaterialSide(this._mesh.material);
+      }
     }
     if (this._instancedMesh) {
       this._instancedMesh.material = this._mesh?.material;
@@ -1034,11 +1055,15 @@ class HydraMaterial {
     if (!existing) {
       this._assignments.push({ mesh, materialIndex });
     }
-    this._applyMaterialToMesh(mesh, materialIndex);
+    this._applyMaterialToAssignedMeshes();
   }
 
   unassignMesh(mesh) {
+    const previousLength = this._assignments.length;
     this._assignments = this._assignments.filter(assignment => assignment.mesh !== mesh);
+    if (this._assignments.length !== previousLength) {
+      this._applyMaterialToAssignedMeshes();
+    }
   }
 
   dispose() {
@@ -1050,7 +1075,7 @@ class HydraMaterial {
   _applyMaterialToMesh(mesh, materialIndex) {
     const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
     const material = typeof applyMaterialSide === 'function'
-      ? applyMaterialSide(this._material)
+      ? applyMaterialSide(this._material, this)
       : this._material;
 
     if (materialIndex === null || materialIndex === undefined) {
@@ -1070,6 +1095,28 @@ class HydraMaterial {
     for (const assignment of this._assignments) {
       this._applyMaterialToMesh(assignment.mesh, assignment.materialIndex);
     }
+  }
+
+  hasMeshAssignment(mesh) {
+    return this._assignments.some(assignment => assignment.mesh === mesh);
+  }
+
+  requiresMaterialSideVariants() {
+    const sides = new Set();
+    for (const assignment of this._assignments) {
+      const side = assignment.mesh?.userData?.usdHydraMaterialSide;
+      if (typeof side === 'number') {
+        sides.add(side);
+      }
+      if (sides.size > 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  refreshAssignments() {
+    this._applyMaterialToAssignedMeshes();
   }
 
   beginMaterialSync() {
@@ -1849,6 +1896,16 @@ export class ThreeRenderDelegateInterface {
     for (const material of Object.values(this.materials)) {
       material.unassignMesh(mesh);
     }
+  }
+
+  refreshMeshMaterialAssignments(mesh) {
+    let refreshed = false;
+    for (const material of Object.values(this.materials)) {
+      if (!material.hasMeshAssignment(mesh)) continue;
+      material.refreshAssignments();
+      refreshed = true;
+    }
+    return refreshed;
   }
 
   CommitResources() {

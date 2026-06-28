@@ -272,10 +272,10 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('keeps texture maps when cull style creates material side clones', async ({ page }) => {
+    test('keeps texture maps without cloning uniformly culled materials', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.avocadoThree.url)}&viewer=three&waitForMaterials=1`);
-        await waitForPublicViewerLoad(page, assetExplorerSamples.avocadoThree.filename);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three&waitForMaterials=1`);
+        await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
 
         const stats = await page.evaluate(() => {
             const result = {
@@ -297,7 +297,40 @@ test.describe('public usd-viewer lifecycle', () => {
         });
 
         expect(stats.texturedMaterials).toBeGreaterThan(0);
-        expect(stats.texturedSideClones).toBeGreaterThan(0);
+        expect(stats.texturedSideClones).toBe(0);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('clones shared materials only for mixed cull sides', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?file=/test-fixtures/usd-concepts/shared_material_mixed_cull.usda&viewer=three&waitForMaterials=1');
+        await waitForPublicViewerLoad(page, 'shared_material_mixed_cull.usda');
+
+        const stats = await page.evaluate(() => {
+            const entries: Array<{ path: string, side: number, cloneOf: string }> = [];
+            window.usdRoot?.traverse?.((object: any) => {
+                const path = String(object.userData?.usdPath || '');
+                if (!object.isMesh || !/\/World\/(?:DoubleSidedPlane|SingleSidedPlane)$/.test(path)) return;
+                const materials = Array.isArray(object.material) ? object.material : [object.material];
+                for (const material of materials) {
+                    if (!material) continue;
+                    entries.push({
+                        path,
+                        side: material.side,
+                        cloneOf: material.userData?.usdHydraSideCloneOf || '',
+                    });
+                }
+            });
+            return {
+                entries,
+                cloneCount: entries.filter(entry => entry.cloneOf).length,
+                sides: Array.from(new Set(entries.map(entry => entry.side))).sort(),
+            };
+        });
+
+        expect(stats.entries).toHaveLength(2);
+        expect(stats.cloneCount).toBe(2);
+        expect(stats.sides).toEqual([0, 2]);
         expect(diagnostics).toEqual([]);
     });
 
