@@ -801,6 +801,14 @@ class HydraMesh {
     this.updateOrder(this._normals, 'normal');
   }
 
+  updateOrderedNormals(normals) {
+    // don't apply automatically generated normals if there are already authored normals.
+    if (this._geometry.hasAttribute('normal')) return;
+
+    this._normals = normals.slice(0);
+    this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
+  }
+
   setNormals(data, interpolation) {
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it

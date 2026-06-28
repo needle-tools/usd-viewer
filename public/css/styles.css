@@ -511,7 +511,7 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     position: absolute;
     background-color: var(--color-surface);
     width: max-content;
-    max-width: min(900px, 96vw);
+    max-width: min(980px, 96vw);
     /* Clear outline + lift so the popover reads as a distinct floating panel
        against the light page background. */
     box-shadow: 0 10px 28px rgba(26, 26, 26, 0.18);
@@ -1106,8 +1106,8 @@ button.cta-primary {
 .gallery-flyout {
     display: flex;
     flex-direction: column;
-    width: 520px;
-    max-width: 64vw;
+    width: 640px;
+    max-width: 72vw;
     border-left: 1px solid var(--border-subtle);
     background-color: var(--color-page);
     padding: 0 12px 12px 12px;
@@ -1219,7 +1219,7 @@ button.cta-primary {
 
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     padding: 2px;
     /* Self-contained scroll container. A definite max-height here (viewport
@@ -1356,6 +1356,7 @@ button.cta-primary {
     }
     /* Let the whole panel scroll as one on mobile rather than a nested grid. */
     .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         max-height: none;
     }
 }

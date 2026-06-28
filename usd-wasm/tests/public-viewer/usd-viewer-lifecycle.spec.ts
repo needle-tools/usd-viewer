@@ -56,6 +56,11 @@ const usdWgSamples = [
         url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/transforms/xforms_nested.usda`,
     },
     {
+        label: 'USD-WG nested scopes and transforms',
+        filename: 'scopes_and_xforms_nested.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/transforms/scopes_and_xforms_nested.usda`,
+    },
+    {
         label: 'USD-WG subdivision quads',
         filename: 'subdiv_loop_quads.usda',
         url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/subdiv_loop_quads/subdiv_loop_quads.usda`,
@@ -171,6 +176,47 @@ test.describe('public usd-viewer lifecycle', () => {
         }
 
         expect(usdWgDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('renders USD-WG bilinear cubes with usdview-style hull geometry and geometric normals', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const sample = usdWgSamples.find(entry => entry.filename === 'scopes_and_xforms_nested.usda')!;
+
+        await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=three`);
+        await waitForPublicViewerLoad(page, sample.filename);
+
+        const cubeState = await page.evaluate(() => {
+            const meshes: any[] = [];
+            window.usdRoot?.traverse?.((object: any) => {
+                if (object.isMesh) meshes.push(object);
+            });
+            const cube = meshes.find(mesh => mesh.name === 'cube') || meshes.at(-1);
+            const normals = Array.from(cube?.geometry?.attributes?.normal?.array || []) as number[];
+            const uniqueNormals: string[] = [];
+            for (let i = 0; i < normals.length; i += 3) {
+                const key = normals.slice(i, i + 3).map(value => Number(value).toFixed(3)).join(',');
+                if (!uniqueNormals.includes(key)) uniqueNormals.push(key);
+            }
+            return {
+                meshCount: meshes.length,
+                positionCount: cube?.geometry?.attributes?.position?.count ?? 0,
+                normalCount: cube?.geometry?.attributes?.normal?.count ?? 0,
+                uniqueNormals: uniqueNormals.sort(),
+            };
+        });
+
+        expect(cubeState.meshCount).toBeGreaterThanOrEqual(5);
+        expect(cubeState.positionCount).toBe(36);
+        expect(cubeState.normalCount).toBe(36);
+        expect(cubeState.uniqueNormals).toEqual([
+            '-1.000,0.000,0.000',
+            '0.000,-1.000,0.000',
+            '0.000,0.000,-1.000',
+            '0.000,0.000,1.000',
+            '0.000,1.000,0.000',
+            '1.000,0.000,0.000',
+        ]);
         expect(diagnostics).toEqual([]);
     });
 
