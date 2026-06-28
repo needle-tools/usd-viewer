@@ -118,11 +118,11 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     });
 
     await page.goto(`/__rawfs${matrixPage.pagePath}`);
-    const compatibility = await page.waitForFunction(() => (window as any).__USD_THREE_MATRIX__ || (window as any).__USD_THREE_MATRIX_ERROR__, null, { timeout: 120_000 });
-    const state = await compatibility.jsonValue() as any;
+    const matrixStateHandle = await page.waitForFunction(() => (window as any).__USD_THREE_MATRIX__ || (window as any).__USD_THREE_MATRIX_ERROR__, null, { timeout: 120_000 });
+    const state = await matrixStateHandle.jsonValue() as any;
     const error = await page.evaluate(() => (window as any).__USD_THREE_MATRIX_ERROR__ || null);
     if (!state || error) {
-        throw new Error(error || `Matrix page for ${matrixPage.id} did not expose compatibility objects.`);
+        throw new Error(error || `Matrix page for ${matrixPage.id} did not expose its matrix state.`);
     }
     if (state.status === 'unsupported') {
         return {
