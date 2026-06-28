@@ -1535,6 +1535,7 @@ async function init() {
           name: 'Kitchen Set',
           meta: 'Hosted on Needle Cloud',
           url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
+          thumbnail: needleCloudScreenshotThumbnail('https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz'),
         },
       ],
     }],
@@ -1631,6 +1632,12 @@ async function init() {
 
   function sampleHref(url) {
     return '?file=' + url;
+  }
+
+  function needleCloudScreenshotThumbnail(assetUrl) {
+    const url = new URL(assetUrl);
+    url.pathname = url.pathname.replace(/\/file(?:\.[^/?#]+)?$/, '/screenshot.needle.webp');
+    return url.href;
   }
 
   // Build a "N textures · M anims · K ext" line from Asset Explorer metadata.

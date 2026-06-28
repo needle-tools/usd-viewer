@@ -472,6 +472,22 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(diagnostics).toEqual([]);
     });
+
+    test('shows thumbnails for Needle Cloud samples', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?viewer=three');
+        await page.click('.dropdown-button');
+        await page.click('[data-sample-group="test-models"]');
+
+        const kitchenThumbnail = page.locator('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
+        await expect(kitchenThumbnail).toHaveAttribute('src', /screenshot\.needle\.webp$/);
+        await page.waitForFunction(() => {
+            const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
+            return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+        });
+
+        expect(diagnostics).toEqual([]);
+    });
 });
 
 async function addLocalLifecycleSamples(page: Page) {
