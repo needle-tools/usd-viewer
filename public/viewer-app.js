@@ -1006,15 +1006,52 @@ async function waitForNeedleHydraHandle(context) {
 
 function fitNeedleEngineCamera(context) {
   if (!context?.scene || typeof fitCamera !== "function") return;
+  context.scene.updateMatrixWorld?.(true);
+  const box = new Box3().setFromObject(context.scene);
+  const size = new Vector3();
+  box.getSize(size);
+  if (!Number.isFinite(size.x) || !Number.isFinite(size.y) || !Number.isFinite(size.z) || size.lengthSq() <= 0) {
+    return false;
+  }
   try {
-    context.scene.updateMatrixWorld?.(true);
     fitCamera({
       camera: context.mainCamera,
       objects: context.scene,
       fitOffset: 1.35,
     });
+    return true;
   } catch (err) {
     console.warn("Needle camera fit failed", err);
+    return false;
+  }
+}
+
+function scheduleNeedleEngineCameraFit(context, timeoutMs = 15000) {
+  const started = performance.now();
+  const tick = () => {
+    if (fitNeedleEngineCamera(context)) return;
+    if (performance.now() - started > timeoutMs) return;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+async function waitForNeedleHydraReady(handle, timeoutMs = 15000) {
+  const promise = handle?.ready?.();
+  if (!promise || typeof promise.then !== "function") return;
+  let timedOut = false;
+  let timeout = 0;
+  await Promise.race([
+    promise,
+    new Promise(resolve => {
+      timeout = setTimeout(() => {
+        timedOut = true;
+        resolve(undefined);
+      }, timeoutMs);
+    }),
+  ]).finally(() => clearTimeout(timeout));
+  if (timedOut) {
+    console.warn(`Needle Engine USD initial Hydra draw is still pending after ${timeoutMs}ms; continuing loader readiness.`);
   }
 }
 
@@ -1048,8 +1085,10 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   const handle = await waitForNeedleHydraHandle(context);
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
 
-  await handle.ready?.();
-  fitNeedleEngineCamera(context);
+  await waitForNeedleHydraReady(handle);
+  if (!fitNeedleEngineCamera(context)) {
+    scheduleNeedleEngineCameraFit(context);
+  }
   void handle.materialsReady?.().catch(err => {
     console.warn("Needle Engine USD materials finished with errors", err);
   });

@@ -6,6 +6,8 @@ const {
   TextureLoader,
   BufferGeometry,
   MeshPhysicalMaterial,
+  FrontSide,
+  BackSide,
   DoubleSide,
   Color,
   Mesh,
@@ -78,6 +80,31 @@ function disposeObjectResources(object) {
     disposeMaterialResources(entry.material);
   });
   object.parent?.remove(object);
+}
+
+function isFiniteArray(values, dimension = 3) {
+  if (!values || values.length === 0 || values.length % dimension !== 0) return false;
+  for (let i = 0; i < values.length; i++) {
+    if (!Number.isFinite(values[i])) return false;
+  }
+  return true;
+}
+
+function cullStyleToThreeSide(doubleSided, cullStyle) {
+  switch (cullStyle) {
+    case "nothing":
+      return DoubleSide;
+    case "back":
+      return FrontSide;
+    case "front":
+      return BackSide;
+    case "frontUnlessDoubleSided":
+      return doubleSided ? DoubleSide : BackSide;
+    case "backUnlessDoubleSided":
+    case "dontCare":
+    default:
+      return doubleSided ? DoubleSide : FrontSide;
+  }
 }
 
 function primNameFromPath(id, fallback) {
@@ -525,6 +552,8 @@ class HydraMesh {
     this._uvs = undefined;
     this._indices = undefined;
     this._materials = [];
+    this._materialSideClones = new Map();
+    this._side = DoubleSide;
     this._visible = false;
     this._renderTag = 'geometry';
     this._instancedMesh = null;
@@ -538,6 +567,7 @@ class HydraMesh {
     this._ownedMaterial = material;
     this._materials.push(material);
     this._mesh = new Mesh(this._geometry, material);
+    this._installMeshHooks(this._mesh);
     this._mesh.visible = false;
     this._mesh.castShadow = true;
     this._mesh.receiveShadow = true;
@@ -559,6 +589,7 @@ class HydraMesh {
     if (!this._mesh) return;
     this._interface.unassignMeshFromMaterials(this._mesh);
     this._disposeInstancedMesh();
+    this._disposeMaterialSideClones();
     if (this._mesh.parent) {
       this._mesh.parent.remove(this._mesh);
     }
@@ -571,12 +602,24 @@ class HydraMesh {
   updateOrder(attribute, attributeName, dimension = 3) {
     if (debugMeshes) console.log("updateOrder", attribute, attributeName, dimension);
     if (attribute && this._indices) {
+      if (!isFiniteArray(attribute, dimension)) {
+        this._geometry.deleteAttribute(attributeName);
+        return;
+      }
       let values = [];
       for (let i = 0; i < this._indices.length; i++) {
         let index = this._indices[i]
+        if (!Number.isInteger(index) || index < 0 || (dimension * index + dimension) > attribute.length) {
+          this._geometry.deleteAttribute(attributeName);
+          return;
+        }
         for (let j = 0; j < dimension; ++j) {
           values.push(attribute[dimension * index + j]);
         }
+      }
+      if (!isFiniteArray(values, dimension)) {
+        this._geometry.deleteAttribute(attributeName);
+        return;
       }
       this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
       if (attributeName === 'position') {
@@ -626,6 +669,7 @@ class HydraMesh {
     if (!this._instancedMesh || this._instancedMesh.count !== instanceCount) {
       this._disposeInstancedMesh();
       this._instancedMesh = new InstancedMesh(this._geometry, this._mesh.material, instanceCount);
+      this._installMeshHooks(this._instancedMesh);
       this._instancedMesh.name = `${this._mesh.name}_instances`;
       this._instancedMesh.castShadow = this._mesh.castShadow;
       this._instancedMesh.receiveShadow = this._mesh.receiveShadow;
@@ -658,6 +702,54 @@ class HydraMesh {
     }
     this._instancedMesh.dispose?.();
     this._instancedMesh = null;
+  }
+
+  _installMeshHooks(mesh) {
+    mesh.userData.usdPath = this._id;
+    mesh.userData.usdHydraApplyMaterialSide = (material) => this._applyMaterialSide(material);
+  }
+
+  _disposeMaterialSideClones() {
+    for (const material of this._materialSideClones.values()) {
+      material.dispose?.();
+    }
+    this._materialSideClones.clear();
+  }
+
+  _applyMaterialSide(material) {
+    if (!material) return material;
+    if (Array.isArray(material)) {
+      return material.map(entry => this._applyMaterialSide(entry));
+    }
+    if (material === this._ownedMaterial || material.userData?.usdHydraMeshOwner === this._id) {
+      material.side = this._side;
+      material.needsUpdate = true;
+      return material;
+    }
+
+    let clone = this._materialSideClones.get(material);
+    if (!clone) {
+      clone = material.clone();
+      clone.userData.usdHydraSideCloneOf = material.uuid;
+      this._materialSideClones.set(material, clone);
+    }
+    clone.side = this._side;
+    clone.needsUpdate = true;
+    return clone;
+  }
+
+  _applyCullSideToMeshes() {
+    if (this._mesh) {
+      this._mesh.material = this._applyMaterialSide(this._mesh.material);
+    }
+    if (this._instancedMesh) {
+      this._instancedMesh.material = this._mesh?.material;
+    }
+  }
+
+  setCullStyle(doubleSided, cullStyle) {
+    this._side = cullStyleToThreeSide(Boolean(doubleSided), String(cullStyle || "dontCare"));
+    this._applyCullSideToMeshes();
   }
 
   setVisibilityState(visible, renderTag = 'geometry') {
@@ -733,7 +825,9 @@ class HydraMesh {
       this._mesh.parent.remove(this._mesh);
     }
     this._mesh = new Mesh(this._geometry, this._materials);
+    this._installMeshHooks(this._mesh);
     this.setVisibilityState(this._visible, this._renderTag);
+    this._applyCullSideToMeshes();
     this._interface.config.usdRoot.add(this._mesh);
 
     for (let i = 0; i < sections.length; i++) {
@@ -748,8 +842,10 @@ class HydraMesh {
     let wasDefaultMaterial = false;
     if (this._mesh.material === defaultMaterial) {
       this._mesh.material = this._mesh.material.clone();
+      this._mesh.material.userData.usdHydraMeshOwner = this._id;
       wasDefaultMaterial = true;
     }
+    this._mesh.material = this._applyMaterialSide(this._mesh.material);
 
     this._colors = null;
 
@@ -949,17 +1045,22 @@ class HydraMaterial {
   }
 
   _applyMaterialToMesh(mesh, materialIndex) {
+    const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
+    const material = typeof applyMaterialSide === 'function'
+      ? applyMaterialSide(this._material)
+      : this._material;
+
     if (materialIndex === null || materialIndex === undefined) {
-      mesh.material = this._material;
+      mesh.material = material;
       return;
     }
 
     if (Array.isArray(mesh.material)) {
-      mesh.material[materialIndex] = this._material;
+      mesh.material[materialIndex] = material;
       return;
     }
 
-    mesh.material = this._material;
+    mesh.material = material;
   }
 
   _applyMaterialToAssignedMeshes() {

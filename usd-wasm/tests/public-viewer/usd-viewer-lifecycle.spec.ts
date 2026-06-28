@@ -56,6 +56,16 @@ const usdWgSamples = [
         filename: 'subdiv_loop_quads.usda',
         url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/subdiv_loop_quads/subdiv_loop_quads.usda`,
     },
+    {
+        label: 'USD-WG single sided mesh',
+        filename: 'singleSided.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/singleSided/singleSided.usda`,
+    },
+    {
+        label: 'USD-WG points value types',
+        filename: 'pointsTypes.usda',
+        url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/points_types/pointsTypes.usda`,
+    },
 ];
 
 const fatalConsolePatterns = [
@@ -72,6 +82,7 @@ const usdWgRegressionPatterns = [
     /does not provide an export named/i,
     /stage could(?:n't| not) be created/i,
     /Camera fit size is zero/i,
+    /Camera fit size .*NaN/i,
     /Could not load sublayer/i,
     /EXR textures are not fully supported yet/i,
     /Failed to open USD stage/i,
@@ -155,6 +166,32 @@ test.describe('public usd-viewer lifecycle', () => {
             expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
         }
 
+        expect(usdWgDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('respects USD doubleSided=false through the Needle Engine loader element', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
+        const sample = usdWgSamples.find(entry => entry.filename === 'singleSided.usda')!;
+
+        await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle-loader`);
+        await waitForNeedleLoaderMode(page, sample.filename);
+
+        const sides = await page.evaluate(() => {
+            const result: number[] = [];
+            window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                if (!String(object.userData?.usdPath || '').includes('/World/Plane_')) return;
+                const materials = Array.isArray(object.material) ? object.material : [object.material];
+                for (const material of materials) {
+                    if (material) result.push(material.side);
+                }
+            });
+            return result;
+        });
+
+        expect(sides.length).toBeGreaterThan(0);
+        expect(new Set(sides)).toEqual(new Set([0]));
         expect(usdWgDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
     });
