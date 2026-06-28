@@ -88,6 +88,9 @@ served package paths.
         url: "./model.usdz"
       });
       await handle.ready();
+      // By default ready() waits for the stage and first Hydra draw, but not for
+      // async material generation. Pass waitForMaterials: true when correctness
+      // requires a material/texture barrier, or await handle.materialsReady().
 
       let last = performance.now();
       renderer.setAnimationLoop((time) => {
@@ -187,6 +190,8 @@ the required COOP/COEP headers.
       import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
 
       await addPluginForNeedleEngine({
+        // Defaults to non-blocking materials. Set waitForMaterials: true if the
+        // Needle loader should not report ready until materials/textures settle.
         getFiles: () => []
       });
 
@@ -229,6 +234,8 @@ the required COOP/COEP headers.
       import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
 
       await addPluginForNeedleEngine({
+        // Defaults to non-blocking materials. Set waitForMaterials: true if the
+        // Needle loader should not report ready until materials/textures settle.
         getFiles: () => []
       });
 

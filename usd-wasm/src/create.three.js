@@ -349,6 +349,9 @@ export async function createThreeHydra(config) {
 
     /** Draw once, after stage metadata has been applied to the root scene. */
     const initialDrawPromise = draw();
+    const readyPromise = config.waitForMaterials
+        ? initialDrawPromise.then(() => renderInterface.waitForMaterialsReady())
+        : initialDrawPromise;
 
     let time = 0;
     let currentTimeCode = stageStartTimeCode;
@@ -383,7 +386,7 @@ export async function createThreeHydra(config) {
 
     return {
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
-        ready: () => initialDrawPromise,
+        ready: () => readyPromise,
         update: (dt) => {
             // ensure we're not dead
             if (driver.isDeleted()) {

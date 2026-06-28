@@ -232,6 +232,39 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps material loading non-blocking by default with an opt-in blocking mode', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle-loader`);
+        await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
+
+        await expect(page.locator('#wait-materials-toggle')).not.toBeChecked();
+        expect(new URL(page.url()).searchParams.get('waitForMaterials')).toBeNull();
+
+        await Promise.all([
+            page.waitForURL(/waitForMaterials=1/),
+            page.locator('#wait-materials-toggle').check(),
+        ]);
+        await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
+        await expect(page.locator('#wait-materials-toggle')).toBeChecked();
+
+        await Promise.all([
+            page.waitForURL(/viewer=three/),
+            page.click('[data-viewer-mode="three"]'),
+        ]);
+        await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
+
+        const state = await page.evaluate(() => ({
+            waitForMaterials: new URL(location.href).searchParams.get('waitForMaterials'),
+            checked: document.querySelector<HTMLInputElement>('#wait-materials-toggle')?.checked,
+            activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
+        }));
+
+        expect(state.waitForMaterials).toBe('1');
+        expect(state.checked).toBe(true);
+        expect(state.activeButton).toBe('three');
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps three.js camera controls interactive', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);

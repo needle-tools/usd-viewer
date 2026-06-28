@@ -129,6 +129,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 scene: this.comp.root,
                 url: url,
                 files: files,
+                waitForMaterials: opts.waitForMaterials,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);

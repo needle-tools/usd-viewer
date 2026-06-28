@@ -71,6 +71,13 @@ export declare type createThreeHydraConfig = {
      * only controls the helper/demo Three light brightness.
      */
     scenePrimitiveLightIntensityScale?: number,
+
+    /**
+     * Include asynchronous material generation and texture assignment in ready().
+     * Defaults to false so stage loading and first draw are not blocked by materials.
+     * Call handle.materialsReady() when you need an explicit material barrier.
+     */
+    waitForMaterials?: boolean,
 }
 
 /**
@@ -109,6 +116,8 @@ export declare type NeedleThreeHydraHandle = {
      */
     editStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T | undefined>,
     /** Resolves after the initial Hydra draw has settled.
+     * If createThreeHydra was called with waitForMaterials, also waits for
+     * asynchronous material generation and texture assignment.
      */
     ready: () => Promise<void>,
     /** Resolves when asynchronous material generation and texture assignment have settled.

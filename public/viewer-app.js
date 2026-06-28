@@ -358,6 +358,7 @@ const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
+let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
 var currentRootFileName = undefined;
 var timeout = 40;
 var endTimeCode = 1;
@@ -515,8 +516,20 @@ function normalizeViewerMode(value) {
   return value === VIEWER_MODE_NEEDLE_LOADER ? VIEWER_MODE_NEEDLE_LOADER : VIEWER_MODE_THREE;
 }
 
+function parseBooleanUrlParam(value) {
+  return value === "1" || value === "true" || value === "yes";
+}
+
 function setViewerModeUrlParam(url) {
   url.searchParams.set("viewer", viewerMode);
+}
+
+function setWaitForMaterialsUrlParam(url) {
+  if (waitForMaterials) {
+    url.searchParams.set("waitForMaterials", "1");
+  } else {
+    url.searchParams.delete("waitForMaterials");
+  }
 }
 
 function applyViewerModeUi() {
@@ -526,6 +539,13 @@ function applyViewerModeUi() {
     const active = button.getAttribute("data-viewer-mode") === viewerMode;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+}
+
+function applyMaterialLoadPolicyUi() {
+  const toggle = document.getElementById("wait-materials-toggle");
+  if (toggle instanceof HTMLInputElement) {
+    toggle.checked = waitForMaterials;
   }
 }
   
@@ -538,6 +558,7 @@ if (filename) {
 }  
 
 applyViewerModeUi();
+applyMaterialLoadPolicyUi();
   
 function updateUrl() {
 
@@ -563,6 +584,7 @@ function updateUrl() {
   // set the file query parameter
   currentUrl.searchParams.set("file", filename);
   setViewerModeUrlParam(currentUrl);
+  setWaitForMaterialsUrlParam(currentUrl);
   window.history.pushState({}, filename, currentUrl);
 }
 
@@ -961,6 +983,7 @@ async function ensureNeedleEngineLoader() {
   await import("@needle-tools/engine");
   if (!removeNeedleEngineUsdPlugin) {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
+      waitForMaterials,
       getFiles: () => needleLoaderFiles,
     });
   }
@@ -1051,7 +1074,7 @@ async function waitForNeedleHydraReady(handle, timeoutMs = 15000) {
     }),
   ]).finally(() => clearTimeout(timeout));
   if (timedOut) {
-    console.warn(`Needle Engine USD initial Hydra draw is still pending after ${timeoutMs}ms; continuing loader readiness.`);
+    console.warn(`Needle Engine USD readiness is still pending after ${timeoutMs}ms; continuing loader readiness.`);
   }
 }
 
@@ -1089,9 +1112,13 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   if (!fitNeedleEngineCamera(context)) {
     scheduleNeedleEngineCameraFit(context);
   }
-  void handle.materialsReady?.().catch(err => {
-    console.warn("Needle Engine USD materials finished with errors", err);
-  });
+  if (waitForMaterials) {
+    await handle.materialsReady?.();
+  } else {
+    void handle.materialsReady?.().catch(err => {
+      console.warn("Needle Engine USD materials finished with errors", err);
+    });
+  }
   if (generation !== loadGeneration) {
     await handle.dispose?.();
     return null;
@@ -1135,6 +1162,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         scene: window.usdRoot,
         url: filesForHydra?.length ? undefined : path,
         files: filesForHydra,
+        waitForMaterials,
       });
 
       if (generation !== loadGeneration) {
@@ -1143,7 +1171,11 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       }
 
       await handle.ready();
-      await handle.materialsReady?.();
+      if (!waitForMaterials) {
+        void handle.materialsReady?.().catch(err => {
+          console.warn("Three.js USD materials finished with errors", err);
+        });
+      }
     }
 
     if (generation !== loadGeneration) {
@@ -1408,6 +1440,18 @@ async function init() {
       safeLocalStorageSet(VIEWER_MODE_STORAGE_KEY, viewerMode);
       const currentUrl = new URL(window.location.href);
       setViewerModeUrlParam(currentUrl);
+      setWaitForMaterialsUrlParam(currentUrl);
+      window.location.href = currentUrl.href;
+    });
+  }
+
+  const waitMaterialsToggle = document.getElementById("wait-materials-toggle");
+  if (waitMaterialsToggle instanceof HTMLInputElement) {
+    waitMaterialsToggle.addEventListener("change", () => {
+      waitForMaterials = waitMaterialsToggle.checked;
+      const currentUrl = new URL(window.location.href);
+      setViewerModeUrlParam(currentUrl);
+      setWaitForMaterialsUrlParam(currentUrl);
       window.location.href = currentUrl.href;
     });
   }

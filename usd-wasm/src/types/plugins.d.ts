@@ -2,6 +2,11 @@
 
 export type PluginContext = {
     debug?: boolean,
+    /**
+     * Include asynchronous material generation and texture assignment in the
+     * Hydra handle's ready() promise. Defaults to false.
+     */
+    waitForMaterials?: boolean,
     getFiles: () => Array<import("../types").HydraFile>
 }
 
