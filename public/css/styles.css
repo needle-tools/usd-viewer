@@ -346,11 +346,9 @@ body.drag-active .dropzone-title {
     display: inline-flex;
     align-items: center;
     min-height: 24px;
-    margin: 0 12px 0 8px;
-    padding-left: 14px;
-    border-left: 1px solid var(--border-strong);
+    margin: 0 12px 0 2px;
     color: var(--color-text-secondary);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 300;
     line-height: 1;
 }
