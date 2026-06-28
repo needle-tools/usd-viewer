@@ -334,6 +334,26 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps mixed-cull material side variants synced with animated material updates', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?file=/test-fixtures/edge-cases/shared_material_mixed_cull_animated.usda&viewer=three&waitForMaterials=1');
+        await waitForPublicViewerLoad(page, 'shared_material_mixed_cull_animated.usda');
+
+        const frameOne = await seekAndReadMixedCullMaterials(page, 1);
+        const frameTwentyFour = await seekAndReadMixedCullMaterials(page, 24);
+
+        expect(frameOne.entries).toHaveLength(2);
+        expect(frameOne.cloneCount).toBe(2);
+        expect(frameOne.sides).toEqual([0, 2]);
+        expectColorsCloseTo(frameOne.colors, [0.1, 0.25, 1]);
+
+        expect(frameTwentyFour.entries).toHaveLength(2);
+        expect(frameTwentyFour.cloneCount).toBe(2);
+        expect(frameTwentyFour.sides).toEqual([0, 2]);
+        expectColorsCloseTo(frameTwentyFour.colors, [1, 0.32, 0.05]);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps three.js camera controls interactive', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);
@@ -481,6 +501,47 @@ async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {
         });
         return count;
     }, mode);
+}
+
+async function seekAndReadMixedCullMaterials(page: Page, timeCode: number) {
+    return await page.evaluate(async frame => {
+        window.usdHydra?.setPlaying?.(false);
+        await window.usdHydra?.setTime?.(frame);
+        await window.usdHydra?.materialsReady?.();
+        await new Promise(requestAnimationFrame);
+
+        const entries: Array<{ path: string, side: number, cloneOf: string, color: number[] }> = [];
+        window.usdRoot?.traverse?.((object: any) => {
+            const path = String(object.userData?.usdPath || '');
+            if (!object.isMesh || !/\/World\/(?:DoubleSidedPlane|SingleSidedPlane)$/.test(path)) return;
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            for (const material of materials) {
+                if (!material) continue;
+                entries.push({
+                    path,
+                    side: material.side,
+                    cloneOf: material.userData?.usdHydraSideCloneOf || '',
+                    color: material.color?.toArray?.() || [],
+                });
+            }
+        });
+
+        return {
+            entries,
+            cloneCount: entries.filter(entry => entry.cloneOf).length,
+            sides: Array.from(new Set(entries.map(entry => entry.side))).sort(),
+            colors: entries.map(entry => entry.color),
+        };
+    }, timeCode);
+}
+
+function expectColorsCloseTo(colors: number[][], expected: [number, number, number]) {
+    expect(colors.length).toBeGreaterThan(0);
+    for (const color of colors) {
+        expect(color[0]).toBeCloseTo(expected[0], 3);
+        expect(color[1]).toBeCloseTo(expected[1], 3);
+        expect(color[2]).toBeCloseTo(expected[2], 3);
+    }
 }
 
 function cameraMoved(before: number[], after: number[]) {
