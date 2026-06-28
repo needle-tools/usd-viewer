@@ -287,16 +287,13 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle-loader`);
         await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
 
-        await expect(page.locator('#wait-materials-toggle')).not.toBeChecked();
+        await expect(page.locator('#wait-materials-toggle')).toHaveCount(0);
         expect(new URL(page.url()).searchParams.get('waitForMaterials')).toBeNull();
         expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
-        await Promise.all([
-            page.waitForURL(/waitForMaterials=1/),
-            page.locator('#wait-materials-toggle').check(),
-        ]);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle-loader&waitForMaterials=1`);
         await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
-        await expect(page.locator('#wait-materials-toggle')).toBeChecked();
+        await expect(page.locator('#wait-materials-toggle')).toHaveCount(0);
         expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
         await Promise.all([
@@ -308,12 +305,12 @@ test.describe('public usd-viewer lifecycle', () => {
 
         const state = await page.evaluate(() => ({
             waitForMaterials: new URL(location.href).searchParams.get('waitForMaterials'),
-            checked: document.querySelector<HTMLInputElement>('#wait-materials-toggle')?.checked,
+            toggleExists: !!document.querySelector('#wait-materials-toggle'),
             activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
         }));
 
         expect(state.waitForMaterials).toBe('1');
-        expect(state.checked).toBe(true);
+        expect(state.toggleExists).toBe(false);
         expect(state.activeButton).toBe('three');
         expect(diagnostics).toEqual([]);
     });

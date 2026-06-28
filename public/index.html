@@ -196,10 +196,14 @@
         <option value="omniverse">Omniverse</option>
       </select>
     </label>
+    <!-- Hidden from the public viewer chrome for now. The loader still accepts
+         ?waitForMaterials=1 for tests and explicit debugging. -->
+    <!--
     <label class="material-wait-toggle" title="Wait for asynchronous material generation and textures before marking the USD load complete.">
       <input type="checkbox" id="wait-materials-toggle">
       <span>Wait for materials</span>
     </label>
+    -->
 
     <a id="export-gltf" class="export-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Export glTF</a>
   </div>
