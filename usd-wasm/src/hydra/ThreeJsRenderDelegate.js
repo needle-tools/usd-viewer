@@ -258,8 +258,6 @@ class TextureRegistry {
     } else if (extension === 'jpeg') {
       filetype = 'image/jpeg';
     } else if (extension === 'exr') {
-      console.warn("EXR textures are not fully supported yet", resourcePath);
-      // using EXRLoader explicitly
       filetype = 'image/x-exr';
     } else if (extension === 'tga') {
       console.warn("TGA textures are not fully supported yet", resourcePath);

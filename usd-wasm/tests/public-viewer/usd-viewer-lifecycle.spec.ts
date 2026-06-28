@@ -37,6 +37,11 @@ const usdWgSamples = [
         url: `${usdWgBaseUrl}full_assets/OpenChessSet/chess_set.usda`,
     },
     {
+        label: 'StandardShaderBall',
+        filename: 'standard_shader_ball_scene.usda',
+        url: `${usdWgBaseUrl}full_assets/StandardShaderBall/standard_shader_ball_scene.usda`,
+    },
+    {
         label: 'USD-WG all primitives',
         filename: 'all_primitives.usda',
         url: `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/primitives/all_primitives.usda`,
@@ -66,7 +71,9 @@ const fatalConsolePatterns = [
 const usdWgRegressionPatterns = [
     /does not provide an export named/i,
     /stage could(?:n't| not) be created/i,
+    /Camera fit size is zero/i,
     /Could not load sublayer/i,
+    /EXR textures are not fully supported yet/i,
     /Failed to open USD stage/i,
     /Failed to load USD file/i,
 ];

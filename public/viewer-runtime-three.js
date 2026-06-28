@@ -29,3 +29,7 @@ export async function addPluginForNeedleEngine() {
 export function getHydraHandleFromNeedleEngineAsset() {
   return null;
 }
+
+export function fitCamera() {
+  return null;
+}

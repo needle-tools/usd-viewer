@@ -17,6 +17,7 @@ export {
 
 export { createThreeHydra, getUsdModule } from './usd/index.js';
 export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
+export { fitCamera } from '@needle-tools/engine';
 export { GLTFExporter, RGBELoader } from 'three-examples';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 

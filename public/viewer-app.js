@@ -16,6 +16,7 @@ import {
   createThreeHydra,
   getUsdModule,
   addPluginForNeedleEngine,
+  fitCamera,
   getHydraHandleFromNeedleEngineAsset,
   RGBELoader,
   GLTFExporter,
@@ -967,6 +968,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement = document.createElement("needle-engine");
     needleEngineElement.className = "usd-viewer-needle-engine";
     needleEngineElement.setAttribute("camera-controls", "true");
+    needleEngineElement.setAttribute("auto-fit", "false");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
     needleEngineElement.addEventListener("loadstart", () => {
@@ -1002,6 +1004,20 @@ async function waitForNeedleHydraHandle(context) {
   return handle;
 }
 
+function fitNeedleEngineCamera(context) {
+  if (!context?.scene || typeof fitCamera !== "function") return;
+  try {
+    context.scene.updateMatrixWorld?.(true);
+    fitCamera({
+      camera: context.mainCamera,
+      objects: context.scene,
+      fitOffset: 1.35,
+    });
+  } catch (err) {
+    console.warn("Needle camera fit failed", err);
+  }
+}
+
 async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   const element = await ensureNeedleEngineLoader();
   needleLoaderFiles = filesForHydra || [];
@@ -1033,7 +1049,10 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
 
   await handle.ready?.();
-  await handle.materialsReady?.();
+  fitNeedleEngineCamera(context);
+  void handle.materialsReady?.().catch(err => {
+    console.warn("Needle Engine USD materials finished with errors", err);
+  });
   if (generation !== loadGeneration) {
     await handle.dispose?.();
     return null;
