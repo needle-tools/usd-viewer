@@ -568,6 +568,10 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     border-left: 1px solid var(--border-subtle);
 }
 
+.sample-group-tree[hidden] {
+    display: none;
+}
+
 .sample-group-button {
     width: 100%;
     min-height: 56px;
@@ -581,9 +585,33 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     cursor: pointer;
 }
 
+.sample-root-folder {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    column-gap: 6px;
+    align-items: center;
+}
+
+.sample-root-folder::before {
+    content: "▸";
+    color: var(--color-text-muted);
+    font-size: 0.8em;
+    line-height: 1;
+    text-align: center;
+}
+
+.sample-root-folder[aria-expanded="true"]::before {
+    content: "▾";
+}
+
 .sample-group-button span,
 .sample-group-button small {
     display: block;
+}
+
+.sample-root-folder span,
+.sample-root-folder small {
+    grid-column: 2;
 }
 
 .sample-group-button span {
@@ -644,11 +672,11 @@ summary.sample-folder-button {
 }
 
 .sample-folder > summary.sample-folder-button::before {
-    content: ">";
+    content: "▸";
 }
 
 .sample-folder[open] > summary.sample-folder-button::before {
-    content: "v";
+    content: "▾";
 }
 
 .sample-folder-button span {

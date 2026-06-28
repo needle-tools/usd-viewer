@@ -438,6 +438,43 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.loadedConverter).toBe('omniverse');
         expect(diagnostics).toEqual([]);
     });
+
+    test('uses folder-like sample library defaults and ordering', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?viewer=three');
+        await page.click('.dropdown-button');
+
+        await expect(page.locator('#gallery-title')).toHaveText('glTF → USD conversions');
+        await expect(page.locator('#gallery-subtitle')).toHaveText('Converted from glTF Sample Assets');
+        await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
+
+        await page.waitForFunction(() => {
+            const labels = Array.from(document.querySelectorAll('#gltf-group-tree [data-sample-group] span'))
+                .map((node) => node.textContent?.trim());
+            return labels[0] === 'Showcase' && !labels.includes('Video');
+        });
+
+        await page.click('[data-sample-group="gltf"]');
+        await expect(page.locator('#gltf-group-tree')).toBeHidden();
+        await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'false');
+        await page.click('[data-sample-group="gltf"]');
+        await expect(page.locator('#gltf-group-tree')).toBeVisible();
+
+        await page.click('[data-sample-group="usd-wg"]');
+        await expect(page.locator('#usd-wg-group-tree')).toBeVisible();
+        await expect(page.locator('#gltf-group-tree')).toBeHidden();
+        await page.waitForFunction(() => {
+            const first = document.querySelector('#usd-wg-group-tree [data-sample-group] span');
+            return first?.textContent?.trim() === 'Full Assets';
+        });
+        await page.waitForFunction(() => {
+            const firstMeta = document.querySelector('.gallery-card .gallery-meta');
+            return firstMeta?.textContent?.includes('full_assets');
+        });
+
+        expect(diagnostics).toEqual([]);
+    });
 });
 
 async function addLocalLifecycleSamples(page: Page) {

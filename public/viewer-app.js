@@ -1504,12 +1504,14 @@ async function init() {
   let usdWgManifestPromise = null;
   let usdWgTreeRendered = false;
   let selectedConverter = 'three'; // three | blender | omniverse
-  let selectedSampleGroup = 'usd-wg';
+  let selectedSampleGroup = 'gltf';
   let loadedConversionCard = null;
   let loadedConverter = '';
   let lastPointerActivatedHref = '';
   let lastPointerActivatedAt = 0;
   const conversionCardByUrl = new Map();
+  const collapsedSampleTrees = new Set(['usd-wg']);
+  const gltfExcludedTags = new Set(['video']);
 
   const sampleGroups = new Map([
     ['usd-wg', {
@@ -1519,8 +1521,8 @@ async function init() {
       load: () => loadUsdWgCards(''),
     }],
     ['gltf', {
-      title: 'glTF Sample Assets',
-      subtitle: 'From the Needle Asset Explorer',
+      title: 'glTF → USD conversions',
+      subtitle: 'Converted from glTF Sample Assets',
       converterVariants: true,
       load: loadAssetExplorerCards,
     }],
@@ -1642,6 +1644,7 @@ async function init() {
   }
 
   function assetExplorerModelToCard(model) {
+    if (!model.tags?.length) return null;
     const usdz = (model.assets && model.assets.usdz) || {};
     const conversions = {};
     if (usdz.three) conversions.three = usdz.three;
@@ -1673,7 +1676,7 @@ async function init() {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const entries = await res.json();
         for (const entry of Array.isArray(entries) ? entries : []) {
-          const tags = Array.isArray(entry.tags) && entry.tags.length ? entry.tags : ['untagged'];
+          const tags = normalizeGltfTags(entry.tags);
           for (const key of [entry.name, entry.label]) {
             const normalized = normalizeModelKey(key);
             if (normalized) index.set(normalized, tags);
@@ -1688,10 +1691,20 @@ async function init() {
     return gltfTagIndexPromise;
   }
 
+  function normalizeGltfTags(tags, fallbackForMissing = true) {
+    const values = Array.isArray(tags) && tags.length ? tags : (fallbackForMissing ? ['untagged'] : []);
+    return [...new Set(values
+      .map((tag) => String(tag || '').trim())
+      .filter(Boolean)
+      .filter((tag) => !gltfExcludedTags.has(tag.toLowerCase())))];
+  }
+
   function attachGltfTags(model, tagIndex) {
-    const tags = tagIndex.get(normalizeModelKey(model.slug))
-      || tagIndex.get(normalizeModelKey(model.name))
-      || ['untagged'];
+    const slugTags = tagIndex.get(normalizeModelKey(model.slug));
+    const nameTags = tagIndex.get(normalizeModelKey(model.name));
+    const tags = Array.isArray(slugTags)
+      ? slugTags
+      : (Array.isArray(nameTags) ? nameTags : normalizeGltfTags(undefined));
     return { ...model, tags };
   }
 
@@ -1727,6 +1740,54 @@ async function init() {
       : '';
   }
 
+  function topLevelSampleGroup(groupId) {
+    const value = String(groupId || '');
+    if (value.startsWith('usd-wg:')) return 'usd-wg';
+    if (value.startsWith('gltf:')) return 'gltf';
+    return sampleGroups.has(value) ? value : 'gltf';
+  }
+
+  function syncSampleTreeVisibility(groupId = selectedSampleGroup) {
+    const activeTopLevel = topLevelSampleGroup(groupId);
+    const treeByGroup = new Map([
+      ['usd-wg', usdWgGroupTree],
+      ['gltf', gltfGroupTree],
+    ]);
+    for (const [key, tree] of treeByGroup) {
+      if (!tree) continue;
+      tree.hidden = key !== activeTopLevel || collapsedSampleTrees.has(key);
+    }
+    if (!sampleGroupList) return;
+    for (const button of sampleGroupList.querySelectorAll('.sample-root-folder[data-sample-group]')) {
+      const group = button.dataset.sampleGroup || '';
+      const expanded = group === activeTopLevel && !collapsedSampleTrees.has(group);
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+  }
+
+  function compareGltfTags(a, b) {
+    const left = String(a || '');
+    const right = String(b || '');
+    if (left === 'showcase' && right !== 'showcase') return -1;
+    if (right === 'showcase' && left !== 'showcase') return 1;
+    return prettySampleLabel(left).localeCompare(prettySampleLabel(right));
+  }
+
+  function usdWgEntryBucket(entry) {
+    const path = normalizeUsdWgPath(entry?.path);
+    if (path.startsWith('full_assets/')) return 0;
+    if (path.startsWith('test_assets/')) return 1;
+    return 2;
+  }
+
+  function sortUsdWgEntries(entries) {
+    return [...(entries || [])].sort((a, b) => {
+      const bucket = usdWgEntryBucket(a) - usdWgEntryBucket(b);
+      if (bucket) return bucket;
+      return prettySampleLabel(a?.name).localeCompare(prettySampleLabel(b?.name));
+    });
+  }
+
   function findUsdWgEntry(path, entry = usdWgManifest?.root) {
     const normalized = normalizeUsdWgPath(path);
     if (!entry || normalizeUsdWgPath(entry.path) === normalized) return entry || null;
@@ -1747,7 +1808,7 @@ async function init() {
         url: item.url,
       });
     }
-    for (const child of entry?.children || []) collectUsdWgCards(child, cards);
+    for (const child of sortUsdWgEntries(entry?.children)) collectUsdWgCards(child, cards);
     return cards;
   }
 
@@ -1794,7 +1855,7 @@ async function init() {
       details.appendChild(createUsdWgTreeControl(entry, depth));
       const children = document.createElement('div');
       children.className = 'sample-folder-children';
-      for (const child of entry.children) children.appendChild(renderUsdWgTreeEntry(child, depth + 1));
+      for (const child of sortUsdWgEntries(entry.children)) children.appendChild(renderUsdWgTreeEntry(child, depth + 1));
       details.appendChild(children);
       return details;
     }
@@ -1804,25 +1865,27 @@ async function init() {
   function renderUsdWgTree() {
     if (!usdWgGroupTree || usdWgTreeRendered || !usdWgManifest?.root) return;
     usdWgGroupTree.textContent = '';
-    for (const child of usdWgManifest.root.children || []) {
+    for (const child of sortUsdWgEntries(usdWgManifest.root.children)) {
       usdWgGroupTree.appendChild(renderUsdWgTreeEntry(child));
     }
     usdWgTreeRendered = true;
+    syncSampleTreeVisibility();
   }
 
   function renderGltfTagTree(cards) {
     if (!gltfGroupTree || gltfTreeRendered) return;
     const counts = new Map();
     for (const card of cards || []) {
-      for (const tag of card.tags || ['untagged']) {
+      for (const tag of normalizeGltfTags(card.tags, false)) {
         counts.set(tag, (counts.get(tag) || 0) + 1);
       }
     }
     gltfGroupTree.textContent = '';
-    for (const [tag, count] of [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    for (const [tag, count] of [...counts.entries()].sort((a, b) => compareGltfTags(a[0], b[0]))) {
       gltfGroupTree.appendChild(createGltfTagTreeControl(tag, count));
     }
     gltfTreeRendered = true;
+    syncSampleTreeVisibility();
   }
 
   async function loadUsdWgManifest() {
@@ -1978,12 +2041,18 @@ async function init() {
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
     setConverterControlsVisible(!!group.converterVariants);
     if (sampleGroupList) {
+      const activeTopLevel = topLevelSampleGroup(groupId);
       for (const button of sampleGroupList.querySelectorAll('[data-sample-group]')) {
-        const active = button.dataset.sampleGroup === groupId;
+        const buttonGroup = button.dataset.sampleGroup || '';
+        const isTopLevel = sampleGroups.has(buttonGroup);
+        const active = isTopLevel
+          ? buttonGroup === activeTopLevel
+          : buttonGroup === groupId;
         button.classList.toggle('active', active);
         button.setAttribute('aria-selected', active ? 'true' : 'false');
       }
     }
+    syncSampleTreeVisibility(groupId);
 
     setGalleryStatus(group.load ? 'Loading sample models…' : '');
     if (galleryGrid) galleryGrid.textContent = '';
@@ -2108,8 +2177,18 @@ async function init() {
     sampleGroupList.addEventListener('click', function(event) {
       const button = event.target.closest('[data-sample-group]');
       if (!button) return;
-      selectSampleGroup(button.dataset.sampleGroup);
-      track('gallery_select_group', { group: button.dataset.sampleGroup });
+      const groupId = button.dataset.sampleGroup;
+      const isTopLevel = sampleGroups.has(groupId);
+      const hasTree = groupId === 'usd-wg' || groupId === 'gltf';
+      if (isTopLevel && hasTree && selectedSampleGroup === groupId) {
+        if (collapsedSampleTrees.has(groupId)) collapsedSampleTrees.delete(groupId);
+        else collapsedSampleTrees.add(groupId);
+        syncSampleTreeVisibility(groupId);
+      } else {
+        if (hasTree) collapsedSampleTrees.delete(groupId);
+        selectSampleGroup(groupId);
+      }
+      track('gallery_select_group', { group: groupId });
     });
   }
   syncConverterControls();
