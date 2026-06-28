@@ -732,6 +732,9 @@ class HydraMesh {
       clone = material.clone();
       clone.userData.usdHydraSideCloneOf = material.uuid;
       this._materialSideClones.set(material, clone);
+    } else {
+      clone.copy(material);
+      clone.userData.usdHydraSideCloneOf = material.uuid;
     }
     clone.side = this._side;
     clone.needsUpdate = true;

@@ -22,6 +22,10 @@ const assetExplorerSamples = {
         filename: 'AntiqueCamera.glb.ov.usdz',
         url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.ov.usdz',
     },
+    avocadoThree: {
+        filename: 'Avocado.glb.three.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/Avocado.glb.three.usdz',
+    },
     animatedMorphSphereOv: {
         label: 'Animated Morph Sphere',
         filename: 'AnimatedMorphSphere.glb.ov.usdz',
@@ -239,6 +243,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await expect(page.locator('#wait-materials-toggle')).not.toBeChecked();
         expect(new URL(page.url()).searchParams.get('waitForMaterials')).toBeNull();
+        expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
         await Promise.all([
             page.waitForURL(/waitForMaterials=1/),
@@ -246,12 +251,14 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
         await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
         await expect(page.locator('#wait-materials-toggle')).toBeChecked();
+        expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
         await Promise.all([
             page.waitForURL(/viewer=three/),
             page.click('[data-viewer-mode="three"]'),
         ]);
         await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
+        expect(await countTexturedUsdMaterials(page, 'three')).toBeGreaterThan(0);
 
         const state = await page.evaluate(() => ({
             waitForMaterials: new URL(location.href).searchParams.get('waitForMaterials'),
@@ -262,6 +269,35 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.waitForMaterials).toBe('1');
         expect(state.checked).toBe(true);
         expect(state.activeButton).toBe('three');
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps texture maps when cull style creates material side clones', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.avocadoThree.url)}&viewer=three&waitForMaterials=1`);
+        await waitForPublicViewerLoad(page, assetExplorerSamples.avocadoThree.filename);
+
+        const stats = await page.evaluate(() => {
+            const result = {
+                texturedMaterials: 0,
+                texturedSideClones: 0,
+            };
+            window.usdRoot?.traverse?.((object: any) => {
+                if (!object.isMesh || !object.userData?.usdPath) return;
+                const materials = Array.isArray(object.material) ? object.material : [object.material];
+                for (const material of materials) {
+                    if (!material?.map) continue;
+                    result.texturedMaterials++;
+                    if (material.userData?.usdHydraSideCloneOf) {
+                        result.texturedSideClones++;
+                    }
+                }
+            });
+            return result;
+        });
+
+        expect(stats.texturedMaterials).toBeGreaterThan(0);
+        expect(stats.texturedSideClones).toBeGreaterThan(0);
         expect(diagnostics).toEqual([]);
     });
 
@@ -395,6 +431,23 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         threeCanvasDisplay: getComputedStyle(document.querySelector('.usd-viewer-three-canvas')!).display,
         needleDisplay: getComputedStyle(document.querySelector('needle-engine')!).display,
     }));
+}
+
+async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {
+    return await page.evaluate(renderMode => {
+        const root = renderMode === 'needle'
+            ? window.needleEngineContext?.scene
+            : window.usdRoot;
+        let count = 0;
+        root?.traverse?.((object: any) => {
+            if (!object.isMesh || !object.userData?.usdPath) return;
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            for (const material of materials) {
+                if (material?.map) count++;
+            }
+        });
+        return count;
+    }, mode);
 }
 
 function cameraMoved(before: number[], after: number[]) {
