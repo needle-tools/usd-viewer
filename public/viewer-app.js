@@ -1912,8 +1912,7 @@ async function init() {
 
   // ---- Sample Library mega-menu -------------------------------------------
   // The left column selects a source group; every group renders into the same
-  // right-hand card grid. Groups with multiple conversion outputs expose the
-  // converter controls in the grid header and on the loaded-file row.
+  // right-hand card grid. Converter variants are exposed on the loaded-file row.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
@@ -1926,7 +1925,6 @@ async function init() {
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
   const galleryStatus = document.getElementById('gallery-status');
-  const converterToggle = document.getElementById('converter-toggle');
   const loadedConverterToggleWrap = document.getElementById('loaded-converter-toggle-wrap');
   const loadedConverterToggle = document.getElementById('loaded-converter-toggle');
 
@@ -2077,19 +2075,16 @@ async function init() {
     ['gltf', {
       title: 'glTF → USD conversions',
       subtitle: 'Converted from glTF Sample Assets',
-      converterVariants: true,
       load: loadAssetExplorerCards,
     }],
     ['usd-wg', {
       title: 'USD Working Group Assets',
       subtitle: 'Production USD samples from usd-wg/assets',
-      converterVariants: false,
       load: () => loadUsdWgCards(''),
     }],
     ['test-models', {
       title: 'Needle Cloud',
       subtitle: 'Hosted USDZ assets with automatic optimization',
-      converterVariants: false,
       cards: [
         {
           name: 'Kitchen Set',
@@ -2108,12 +2103,8 @@ async function init() {
     galleryStatus.classList.toggle('error', isError);
   }
 
-  function setConverterControlsVisible(visible) {
-    if (converterToggle) converterToggle.hidden = !visible;
-  }
-
   function syncConverterControls() {
-    for (const toggle of [converterToggle, loadedConverterToggle]) {
+    for (const toggle of [loadedConverterToggle]) {
       if (!toggle) continue;
       const buttons = Array.from(toggle.querySelectorAll('button[data-converter]'));
       const visibleActiveId = pickVisibleConverterId(buttons.map(button => button.dataset.converter), selectedConverter);
@@ -2128,7 +2119,6 @@ async function init() {
   function setSelectedConverter(converter) {
     selectedConverter = normalizeConverterId(converter);
     syncConverterControls();
-    applyConverter();
   }
 
   function setLoadedConverterControlVisible(visible) {
@@ -2547,9 +2537,7 @@ async function init() {
       const models = Array.isArray(data.models) ? data.models : [];
       galleryModels = models.map((model) => assetExplorerModelToCard(attachGltfTags(model, tagIndex))).filter(Boolean);
       for (const card of galleryModels) indexConversionCard(card);
-      const ids = orderedConverterIdsForCards(galleryModels);
-      renderConverterToggle(converterToggle, ids, selectedConverter || ids[0]);
-      syncConverterControls();
+      registerConverterMetadataForCards(galleryModels);
       renderGltfTagTree(galleryModels);
       if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
       return galleryModels;
@@ -2564,43 +2552,12 @@ async function init() {
     return galleryFetchPromise;
   }
 
-  // Re-point every card to the currently selected converter variant. Cards keep
-  // each available variant URL in their dataset, so the toggle never refetches.
-  function applyConverter() {
-    if (!galleryGrid) return;
-    for (const card of galleryGrid.querySelectorAll('.gallery-card')) {
-      let conversions = {};
-      try {
-        conversions = JSON.parse(card.dataset.conversions || '{}');
-      } catch {
-        conversions = {};
-      }
-      let converterOrder = [];
-      try {
-        converterOrder = JSON.parse(card.dataset.converterOrder || '[]');
-      } catch {
-        converterOrder = [];
-      }
-      const url = pickConversionUrl(conversions, selectedConverter, converterOrder);
-      if (url) card.setAttribute('href', sampleHref(url));
-    }
-  }
-
   let lastGalleryCardsSignature = null;
 
-  function orderedConverterIdsForCards(cards) {
-    const merged = {};
-    const order = [];
+  function registerConverterMetadataForCards(cards) {
     for (const card of cards || []) {
-      for (const id of card.converterOrder || Object.keys(card.conversions || {})) {
-        const normalized = normalizeConverterId(id);
-        if (!normalized) continue;
-        if (!Object.prototype.hasOwnProperty.call(merged, normalized)) order.push(normalized);
-      }
-      Object.assign(merged, card.conversions || {});
       for (const meta of Object.values(card.converterMetadata || {})) registerConverterMeta(meta);
     }
-    return orderedConverterIds(merged, order);
   }
 
   function buildGalleryCards(cards) {
@@ -2617,15 +2574,12 @@ async function init() {
     if (signature === lastGalleryCardsSignature && galleryGrid.children.length) return;
     lastGalleryCardsSignature = signature;
     galleryGrid.textContent = '';
-    const converterIds = orderedConverterIdsForCards(cards);
-    renderConverterToggle(converterToggle, converterIds, selectedConverter || converterIds[0]);
-    setConverterControlsVisible(converterIds.length > 1);
-    syncConverterControls();
+    registerConverterMetadataForCards(cards);
     let cardIndex = 0;
     for (const item of cards) {
       const conversions = item.conversions || {};
       const converterOrder = item.converterOrder || [];
-      const url = pickConversionUrl(conversions, selectedConverter, converterOrder) || item.url;
+      const url = pickConversionUrl(conversions, '', converterOrder) || item.url;
       if (!url) continue;
 
       // Cards are "a.file" so they reuse the delegated URL-load handler below.
@@ -2683,7 +2637,6 @@ async function init() {
       group = {
         title: prettySampleLabel(titleSegment),
         subtitle: `USD-WG folder: ${path}`,
-        converterVariants: false,
         load: () => loadUsdWgCards(path),
       };
     }
@@ -2692,7 +2645,6 @@ async function init() {
       group = {
         title: prettySampleLabel(tag),
         subtitle: `glTF Sample Assets tagged ${tag}`,
-        converterVariants: true,
         load: () => loadGltfCards(tag),
       };
     }
@@ -2701,7 +2653,6 @@ async function init() {
     selectedSampleGroup = groupId;
     setLabelWithArrow(galleryTitle, group.title);
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
-    setConverterControlsVisible(!!group.converterVariants);
     if (sampleGroupList) {
       const activeTopLevel = topLevelSampleGroup(groupId);
       for (const button of sampleGroupList.querySelectorAll('[data-sample-group]')) {
@@ -2833,16 +2784,11 @@ async function init() {
     converterToggleActivation.set(toggle, { converter, time: performance.now() });
   }
 
-  function activateGalleryConverter(converter) {
-    setSelectedConverter(converter);
-    track('gallery_select_converter', { converter: selectedConverter });
-  }
-
   function activateLoadedConverter(converter) {
     loadedConverter = converter;
     setSelectedConverter(converter);
     loadConvertedVariant(converter)?.catch(error => console.error("Failed to load converted sample", error));
-    track('gallery_select_converter', { converter, source: 'loaded_asset' });
+    track('loaded_select_converter', { converter });
   }
 
   function bindConverterToggle(toggle, activate) {
@@ -2871,7 +2817,6 @@ async function init() {
     });
   }
 
-  bindConverterToggle(converterToggle, activateGalleryConverter);
   bindConverterToggle(loadedConverterToggle, activateLoadedConverter);
   if (sampleGroupList) {
     sampleGroupList.addEventListener('click', function(event) {

@@ -26,6 +26,11 @@ const assetExplorerSamples = {
         filename: 'Avocado.glb.three.usdz',
         url: 'https://asset-explorer.needle.tools/downloads/Avocado.glb.three.usdz',
     },
+    animatedMorphSphereThree: {
+        label: 'Animated Morph Sphere',
+        filename: 'AnimatedMorphSphere.glb.three.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.three.usdz',
+    },
     animatedMorphSphereBlender: {
         label: 'Animated Morph Sphere',
         filename: 'AnimatedMorphSphere.glb.blender.usdz',
@@ -481,7 +486,7 @@ test.describe('public usd-viewer lifecycle', () => {
                             glb: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb',
                         },
                         conversions: [
-                            { id: 'three-r185', label: 'three', version: '0.185.0', usdz: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.three.usdz' },
+                            { id: 'three-r185', label: 'three', version: '0.185.0', usdz: assetExplorerSamples.animatedMorphSphereThree.url },
                             { id: 'blender-5-1', label: 'Blender', version: '5.1.2', usdz: assetExplorerSamples.animatedMorphSphereBlender.url },
                         ],
                     },
@@ -489,6 +494,9 @@ test.describe('public usd-viewer lifecycle', () => {
             }),
         }));
         await page.route(assetExplorerSamples.antiqueCameraThree.url, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
+        }));
+        await page.route(assetExplorerSamples.animatedMorphSphereThree.url, route => route.fulfill({
             path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
         }));
         await page.route(assetExplorerSamples.animatedMorphSphereBlender.url, route => route.fulfill({
@@ -505,13 +513,17 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.waitForFunction(label => {
             return Array.from(document.querySelectorAll<HTMLAnchorElement>('.gallery-card'))
                 .some(card => card.dataset.name === label && card.href.includes('.three.usdz'));
-        }, assetExplorerSamples.animatedMorphSphereBlender.label);
+        }, assetExplorerSamples.animatedMorphSphereThree.label);
 
-        await page.dispatchEvent('#converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
-        await expect(page.locator(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereBlender.label}"]`))
-            .toHaveAttribute('href', `?file=${assetExplorerSamples.animatedMorphSphereBlender.url}`);
+        await expect(page.locator(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereThree.label}"]`))
+            .toHaveAttribute('href', `?file=${assetExplorerSamples.animatedMorphSphereThree.url}`);
 
-        await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereBlender.label}"]`);
+        await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereThree.label}"]`);
+        const loadedDefault = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereThree.filename);
+        expect(loadedDefault.loadedConverterVisible).toBe(true);
+        expect(loadedDefault.loadedConverter).toBe('three-r185');
+
+        await page.dispatchEvent('#loaded-converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
         const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereBlender.filename);
 
         expect(state.filename).toBe(assetExplorerSamples.animatedMorphSphereBlender.filename);
@@ -556,7 +568,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('renders Asset Explorer conversion variants from the model index', async ({ page }) => {
+    test('stores Asset Explorer conversion variants without a gallery switcher', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
             contentType: 'application/json',
@@ -584,15 +596,18 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.goto('/?viewer=needle');
         await page.click('.dropdown-button');
-        await page.waitForFunction(() => document.querySelectorAll('#converter-toggle button').length === 7);
+        await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
 
         const state = await page.evaluate(() => ({
             topSelectExists: Boolean(document.querySelector('#converter-select-wrap, #converter-select')),
-            converters: Array.from(document.querySelectorAll<HTMLButtonElement>('#converter-toggle button')).map(button => button.dataset.converter),
+            galleryConverterExists: Boolean(document.querySelector('#converter-toggle')),
+            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.conversions || '{}')),
+            converterOrder: JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.converterOrder || '[]'),
             firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
         }));
 
         expect(state.topSelectExists).toBe(false);
+        expect(state.galleryConverterExists).toBe(false);
         expect(state.converters).toEqual([
             'three-r185',
             'needle-engine',
@@ -602,16 +617,8 @@ test.describe('public usd-viewer lifecycle', () => {
             'three-r154',
             'original-gltf',
         ]);
+        expect(state.converterOrder).toEqual(state.converters);
         expect(state.firstHref).toContain('Synthetic.glb.three.usdz');
-
-        await page.dispatchEvent('#converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
-        await expect(page.locator('#converter-toggle button[data-converter="blender-5-1"]')).toHaveClass(/active/);
-        await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'blender-5-1');
-        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender.usdz');
-
-        await page.dispatchEvent('#converter-toggle button[data-converter="original-gltf"]', 'click');
-        await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'original-gltf');
-        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb');
         expect(diagnostics).toEqual([]);
     });
 
@@ -642,15 +649,13 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
 
         const state = await page.evaluate(() => ({
-            converters: Array.from(document.querySelectorAll<HTMLButtonElement>('#converter-toggle button')).map(button => button.dataset.converter),
-            active: document.querySelector<HTMLButtonElement>('#converter-toggle button.active')?.dataset.converter || '',
-            converterControlHidden: Boolean(document.querySelector<HTMLElement>('#converter-toggle')?.hidden),
+            galleryConverterExists: Boolean(document.querySelector('#converter-toggle')),
+            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.conversions || '{}')),
             firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
         }));
 
+        expect(state.galleryConverterExists).toBe(false);
         expect(state.converters).toEqual(['original-gltf']);
-        expect(state.active).toBe('original-gltf');
-        expect(state.converterControlHidden).toBe(true);
         expect(state.firstHref).toBe('?file=https://asset-explorer.needle.tools/downloads/ObjectVariant.glb');
         expect(diagnostics).toEqual([]);
     });
