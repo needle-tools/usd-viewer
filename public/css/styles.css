@@ -1667,7 +1667,6 @@ button:focus-visible {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: min(96vw, 920px);
     max-width: 96vw;
     pointer-events: none;
 }
@@ -1691,7 +1690,6 @@ button:focus-visible {
 }
 
 .filename-sep {
-    margin-left: auto;
     color: var(--color-text-muted);
     user-select: none;
 }
