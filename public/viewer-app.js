@@ -31,6 +31,142 @@ import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/t
 
 const SHOW_OPENUSD_TEST_ASSETS = false;
 
+// Vanilla counterpart of needle-cloud's Svelte `use:tooltip` action
+// (`needle-share-admin/src/lib/actions/tooltip.ts`): one shared body-level
+// portal so tooltips are never clipped by segmented controls or dropdowns.
+const TOOLTIP_GAP = 8;
+const TOOLTIP_MARGIN = 8;
+let tooltipPortal = null;
+let tooltipActiveTarget = null;
+let tooltipFlashTimer = null;
+
+function ensureTooltipPortal() {
+  if (tooltipPortal && tooltipPortal.isConnected) return tooltipPortal;
+  tooltipPortal = document.createElement('div');
+  tooltipPortal.className = 'ui-tooltip';
+  tooltipPortal.id = 'ui-tooltip';
+  tooltipPortal.setAttribute('role', 'tooltip');
+  document.body.appendChild(tooltipPortal);
+  return tooltipPortal;
+}
+
+function getTooltipText(target) {
+  if (!target) return '';
+  const container = document.getElementById('container');
+  const fileLoaded = container && container.classList.contains('have-custom-file');
+  if (target.matches?.('.export-button') && !fileLoaded) {
+    return target.dataset.disabledTip || target.dataset.tip || '';
+  }
+  return target.dataset.tip || '';
+}
+
+function positionTooltip(target, preferredPlacement = 'bottom') {
+  const portal = ensureTooltipPortal();
+  const targetRect = target.getBoundingClientRect();
+  const tipRect = portal.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  let placement = preferredPlacement;
+
+  if (placement === 'bottom' && targetRect.bottom + TOOLTIP_GAP + tipRect.height > viewportHeight - TOOLTIP_MARGIN) {
+    placement = 'top';
+  } else if (placement === 'top' && targetRect.top - TOOLTIP_GAP - tipRect.height < TOOLTIP_MARGIN) {
+    placement = 'bottom';
+  }
+
+  const naturalLeft = targetRect.left + targetRect.width / 2 - tipRect.width / 2;
+  const minLeft = TOOLTIP_MARGIN;
+  const maxLeft = viewportWidth - tipRect.width - TOOLTIP_MARGIN;
+  const left = Math.max(minLeft, Math.min(naturalLeft, Math.max(minLeft, maxLeft)));
+  const top = placement === 'bottom'
+    ? targetRect.bottom + TOOLTIP_GAP
+    : targetRect.top - TOOLTIP_GAP - tipRect.height;
+  const clampedTop = Math.max(TOOLTIP_MARGIN, Math.min(top, viewportHeight - tipRect.height - TOOLTIP_MARGIN));
+  const targetCenter = targetRect.left + targetRect.width / 2;
+  const arrowLeft = Math.max(10, Math.min(targetCenter - left, tipRect.width - 10));
+
+  portal.dataset.placement = placement;
+  portal.style.left = `${left}px`;
+  portal.style.top = `${clampedTop}px`;
+  portal.style.setProperty('--tooltip-arrow-left', `${arrowLeft}px`);
+}
+
+function showTooltip(target, text = getTooltipText(target), duration = 0) {
+  if (!target || !text) return;
+  const portal = ensureTooltipPortal();
+  if (tooltipActiveTarget && tooltipActiveTarget !== target) {
+    tooltipActiveTarget.removeAttribute('aria-describedby');
+  }
+  tooltipActiveTarget = target;
+  target.setAttribute('aria-describedby', portal.id);
+  portal.textContent = text;
+  portal.classList.add('visible');
+  positionTooltip(target);
+  requestAnimationFrame(() => {
+    if (tooltipActiveTarget === target) positionTooltip(target);
+  });
+  if (tooltipFlashTimer) clearTimeout(tooltipFlashTimer);
+  if (duration > 0) {
+    tooltipFlashTimer = setTimeout(() => hideTooltip(target), duration);
+  }
+}
+
+function hideTooltip(target = tooltipActiveTarget) {
+  if (!tooltipPortal || !tooltipActiveTarget) return;
+  if (target && target !== tooltipActiveTarget) return;
+  tooltipActiveTarget.removeAttribute('aria-describedby');
+  tooltipActiveTarget = null;
+  tooltipPortal.classList.remove('visible');
+  if (tooltipFlashTimer) {
+    clearTimeout(tooltipFlashTimer);
+    tooltipFlashTimer = null;
+  }
+}
+
+function tooltipTargetFromEvent(event) {
+  const target = event.target?.closest?.('[data-tip]');
+  const container = document.getElementById('container');
+  return target && container?.contains(target) ? target : null;
+}
+
+function isInsideTarget(target, relatedTarget) {
+  return relatedTarget instanceof Node && target.contains(relatedTarget);
+}
+
+document.addEventListener('pointerover', (event) => {
+  const target = tooltipTargetFromEvent(event);
+  if (!target || isInsideTarget(target, event.relatedTarget)) return;
+  showTooltip(target);
+});
+
+document.addEventListener('pointerout', (event) => {
+  const target = tooltipTargetFromEvent(event);
+  if (!target || isInsideTarget(target, event.relatedTarget)) return;
+  hideTooltip(target);
+});
+
+document.addEventListener('focusin', (event) => {
+  const target = tooltipTargetFromEvent(event);
+  if (target) showTooltip(target);
+});
+
+document.addEventListener('focusout', (event) => {
+  const target = tooltipTargetFromEvent(event);
+  if (target) hideTooltip(target);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') hideTooltip();
+});
+
+window.addEventListener('resize', () => {
+  if (tooltipActiveTarget) hideTooltip();
+});
+
+window.addEventListener('scroll', () => {
+  if (tooltipActiveTarget) hideTooltip();
+}, true);
+
 // --- Upload-to-Needle-Cloud capture ---------------------------------------
 // As files are loaded we keep the ORIGINAL bytes + their relative paths so the
 // user can upload the exact USD set (a USD can reference external layers/textures)
@@ -779,15 +915,12 @@ function trackExportHover(button) {
   track('export_hover', { button });
 }
 
-// When no model is loaded the button is shown but inert. CSS reveals the hint on
-// hover; on click/tap (where :hover doesn't fire) we flash it ourselves.
-let exportHintTimer = null;
+// When no model is loaded the button is shown but inert. Hover/focus uses the
+// shared tooltip portal; click/tap flashes the same disabled hint explicitly.
 function flashExportHint(button) {
   const target = button || gltfExportBtn;
   if (!target) return;
-  target.classList.add('show-tip');
-  if (exportHintTimer) clearTimeout(exportHintTimer);
-  exportHintTimer = setTimeout(() => target.classList.remove('show-tip'), 2500);
+  showTooltip(target, getTooltipText(target), 2500);
 }
 
 gltfExportBtns.forEach((button) => {

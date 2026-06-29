@@ -286,6 +286,41 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('renders toolbar tooltips through the shared body portal', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?file=&viewer=needle');
+
+        await page.locator('#viewer-mode-toggle').hover();
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('USD can be rendered either with Needle Engine or with three.js. Choose the render engine here.');
+
+        const rendererState = await page.evaluate(() => {
+            const toggle = document.querySelector('#viewer-mode-toggle')!;
+            const tooltip = document.querySelector('.ui-tooltip.visible')!;
+            return {
+                tooltipParentIsBody: tooltip.parentElement === document.body,
+                toggleContainsTooltip: toggle.contains(tooltip),
+                toggleOverflow: getComputedStyle(toggle).overflow,
+                buttons: Array.from(toggle.querySelectorAll('[data-viewer-mode]')).map(button => ({
+                    label: button.textContent?.trim() || '',
+                    mode: button.getAttribute('data-viewer-mode') || '',
+                    active: button.classList.contains('active'),
+                })),
+            };
+        });
+
+        expect(rendererState.tooltipParentIsBody).toBe(true);
+        expect(rendererState.toggleContainsTooltip).toBe(false);
+        expect(rendererState.toggleOverflow).toBe('hidden');
+        expect(rendererState.buttons).toEqual([
+            { label: 'Needle', mode: 'needle-loader', active: true },
+            { label: 'three.js', mode: 'three', active: false },
+        ]);
+
+        await page.locator('#export-gltf').hover();
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to convert');
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps material loading non-blocking by default with an opt-in blocking mode', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle`);

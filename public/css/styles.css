@@ -392,7 +392,6 @@ body.drag-active .dropzone-title {
 
 .viewer-mode-toggle {
     margin: 0 4px;
-    position: relative;
 }
 
 .viewer-mode-toggle button {
@@ -1658,64 +1657,50 @@ button:focus-visible {
     display: none;
 }
 
-/* Generic compact tooltip used by toolbar actions. .show-tip is toggled by JS
-   for touch/click cases where :hover never fires. */
-#container [data-tip] {
-    position: relative;
-}
-
-#container [data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 11px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    white-space: nowrap;
-    background: var(--color-text);
-    color: #fff;
-    font-size: 0.78rem;
-    font-weight: 600;
-    line-height: 1;
+/* Shared tooltip portal. The element is created by viewer-app.js at document
+   root so it escapes segmented-control overflow and modal/dropdown clipping. */
+.ui-tooltip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    max-width: min(300px, calc(100vw - 24px));
     padding: 8px 11px;
     border-radius: 8px;
+    background: var(--color-text);
+    color: #fff;
     box-shadow: 0 6px 20px rgba(26, 26, 26, 0.22);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
     opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 400;
+    visibility: hidden;
+    white-space: normal;
+    z-index: 100000;
+    transition: opacity 0.15s ease;
 }
 
-#container [data-tip]::before {
+.ui-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ui-tooltip::before {
     content: "";
     position: absolute;
-    top: calc(100% + 5px);
-    left: 50%;
+    left: var(--tooltip-arrow-left, 50%);
     transform: translateX(-50%);
     border: 5px solid transparent;
+}
+
+.ui-tooltip[data-placement="bottom"]::before {
+    top: -10px;
     border-bottom-color: var(--color-text);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease;
-    z-index: 400;
 }
 
-#container [data-tip]:hover::after,
-#container [data-tip]:focus-visible::after,
-#container [data-tip]:focus-within::after,
-#container [data-tip].show-tip::after {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-}
-
-#container [data-tip]:hover::before,
-#container [data-tip]:focus-visible::before,
-#container [data-tip]:focus-within::before,
-#container [data-tip].show-tip::before {
-    opacity: 1;
-    visibility: visible;
+.ui-tooltip[data-placement="top"]::before {
+    bottom: -10px;
+    border-top-color: var(--color-text);
 }
 
 /* When no file is loaded the Export button stays visible but inert and uses
@@ -1729,10 +1714,6 @@ button:focus-visible {
 #container:not(.have-custom-file) .export-button:hover {
     color: var(--color-text-secondary);
     text-decoration: none;
-}
-
-#container:not(.have-custom-file) .export-button::after {
-    content: attr(data-disabled-tip);
 }
 
 /* Hide filename display when no file is loaded */
