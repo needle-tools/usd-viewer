@@ -441,6 +441,8 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?viewer=three');
         await page.click('.dropdown-button');
 
+        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(0)).toHaveAttribute('data-sample-group', 'gltf');
+        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(1)).toHaveAttribute('data-sample-group', 'usd-wg');
         await expect(page.locator('#gallery-title')).toHaveText('glTF → USD conversions');
         await expect(page.locator('#gallery-subtitle')).toHaveText('Converted from glTF Sample Assets');
         await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'true');

@@ -1514,17 +1514,17 @@ async function init() {
   const gltfExcludedTags = new Set(['video']);
 
   const sampleGroups = new Map([
-    ['usd-wg', {
-      title: 'USD Working Group Assets',
-      subtitle: 'Production USD samples from usd-wg/assets',
-      converterVariants: false,
-      load: () => loadUsdWgCards(''),
-    }],
     ['gltf', {
       title: 'glTF → USD conversions',
       subtitle: 'Converted from glTF Sample Assets',
       converterVariants: true,
       load: loadAssetExplorerCards,
+    }],
+    ['usd-wg', {
+      title: 'USD Working Group Assets',
+      subtitle: 'Production USD samples from usd-wg/assets',
+      converterVariants: false,
+      load: () => loadUsdWgCards(''),
     }],
     ['test-models', {
       title: 'Needle Cloud',
