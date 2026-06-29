@@ -1049,6 +1049,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.className = "usd-viewer-needle-engine";
     needleEngineElement.setAttribute("camera-controls", "true");
     needleEngineElement.setAttribute("auto-fit", "false");
+    needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
     needleEngineElement.addEventListener("loadstart", () => {

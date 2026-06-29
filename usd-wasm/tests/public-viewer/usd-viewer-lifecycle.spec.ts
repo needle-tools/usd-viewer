@@ -152,6 +152,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.hasNeedleContext).toBe(true);
         expect(state.needleChildren).toBeGreaterThan(0);
         expect(state.elementSrc).toContain(publicSamples.helmet.url);
+        expect(state.autoplay).toBe(true);
         expect(state.contactShadows).toBe('0.7');
         expect(state.threeCanvasDisplay).toBe('none');
         expect(state.needleDisplay).toBe('block');
@@ -254,6 +255,7 @@ test.describe('public usd-viewer lifecycle', () => {
         const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
 
         expect(state.activeButtonText).toBe('Needle');
+        expect(state.autoplay).toBe(true);
         expect(state.contactShadows).toBe('0.7');
         expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
         expect(diagnostics).toEqual([]);
@@ -455,6 +457,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(needleState.hasHydraHandle).toBe(false);
         expect(needleState.hasUsdStage).toBe(false);
         expect(needleState.needleSrc).toBe(glbUrl);
+        expect(needleState.autoplay).toBe(true);
         expect(needleState.hasNeedleContext).toBe(true);
         expect(diagnostics).toEqual([]);
     });
@@ -651,6 +654,7 @@ async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three'
         threeChildren: window.usdRoot?.children?.length ?? -1,
         hasNeedleContext: Boolean(document.querySelector('needle-engine')?.context),
         needleSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
+        autoplay: document.querySelector('needle-engine')?.hasAttribute('autoplay') ?? false,
     }));
 }
 
@@ -674,6 +678,7 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         activeButton: document.querySelector('[data-viewer-mode].active')?.getAttribute('data-viewer-mode') || '',
         activeButtonText: document.querySelector('[data-viewer-mode].active')?.textContent?.trim() || '',
         elementSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
+        autoplay: document.querySelector('needle-engine')?.hasAttribute('autoplay') ?? false,
         contactShadows: document.querySelector('needle-engine')?.getAttribute('contactshadows') || '',
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
