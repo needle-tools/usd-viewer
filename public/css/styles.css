@@ -1218,9 +1218,9 @@ button.cta-primary {
 
 .converter-label {
     display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    line-height: 1.05;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1;
 }
 
 .converter-name {
@@ -1229,7 +1229,7 @@ button.cta-primary {
 
 .converter-version {
     color: var(--color-text-muted);
-    font-size: 0.72em;
+    font-size: 0.86em;
     font-weight: 700;
     letter-spacing: 0;
 }

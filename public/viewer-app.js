@@ -1530,15 +1530,20 @@ async function init() {
   const collapsedSampleTrees = new Set(['usd-wg']);
   const gltfExcludedTags = new Set(['video']);
   const converterFamilies = [
-    { id: 'three-r185', aliases: ['three-r185'], name: 'three', version: 'r185', title: 'Converted with upstream three.js 0.185.0' },
-    { id: 'three-r154', aliases: ['three', 'three-r154'], name: 'three', version: 'r154', title: 'Converted with three.js r154, Needle fork' },
+    { id: 'three-r185', aliases: ['three-r185'], name: 'three', version: 'r185', icon: 'three', title: 'Converted with upstream three.js 0.185.0' },
+    { id: 'three-r154', aliases: ['three', 'three-r154'], name: 'three', version: 'r154', icon: 'three', title: 'Converted with three.js r154, Needle fork' },
     { id: 'needle-engine', aliases: ['needle-engine', 'needle'], name: 'Needle', version: '5.1', title: 'Converted with Needle Engine 5.1.2 USDZExporter' },
-    { id: 'blender-5-1', aliases: ['blender-5-1'], name: 'Blender', version: '5.1', title: 'Converted with Blender 5.1.2' },
-    { id: 'blender-3-6', aliases: ['blender', 'blender-3-6'], name: 'Blender', version: '3.6', title: 'Converted with Blender 3.6' },
+    { id: 'blender-5-1', aliases: ['blender-5-1'], name: 'Blender', version: '5.1', icon: 'blender', title: 'Converted with Blender 5.1.2' },
+    { id: 'blender-3-6', aliases: ['blender', 'blender-3-6'], name: 'Blender', version: '3.6', icon: 'blender', title: 'Converted with Blender 3.6' },
     { id: 'openusd-adobe-gltf', aliases: ['openusd-adobe-gltf', 'adobe-gltf', 'adobe-openusd-gltf'], name: 'Adobe glTF', version: 'OpenUSD', title: 'Converted with OpenUSD 26.05 and Adobe glTF file-format plugin 2026.03' },
     { id: 'guc', aliases: ['guc'], name: 'GUC', version: '0.5', title: 'Converted with GUC 0.5' },
-    { id: 'omniverse', aliases: ['omniverse', 'ov'], name: 'Omniverse', version: 'Kit 105', title: 'Converted with Omniverse Kit 105.0' },
+    { id: 'omniverse', aliases: ['omniverse', 'ov'], name: 'Omniverse', version: 'Kit 105', icon: 'omniverse', title: 'Converted with Omniverse Kit 105.0' },
   ];
+  const converterIconSvg = {
+    three: '<svg class="conv-logo notranslate" translate="no" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.38 0a.268.268 0 0 0-.256.332l2.894 11.716a.268.268 0 0 0 .01.04l2.89 11.708a.268.268 0 0 0 .447.128L23.802 7.15a.268.268 0 0 0-.112-.45l-5.784-1.667a.268.268 0 0 0-.123-.035L6.38 1.715a.268.268 0 0 0-.144-.04L.456.01A.268.268 0 0 0 .38 0zm.374.654L5.71 2.08 1.99 5.664zM6.61 2.34l4.864 1.4-3.65 3.515zm-.522.12l1.217 4.926-4.877-1.4zm6.28 1.538l4.878 1.404-3.662 3.53zm-.52.13l1.208 4.9-4.853-1.392zm6.3 1.534l4.947 1.424-3.715 3.574zm-.524.12l1.215 4.926-4.876-1.398zm-15.432.696l4.964 1.424-3.726 3.586zM8.047 8.15l4.877 1.4-3.66 3.527zm-.518.137l1.236 5.017-4.963-1.432zm6.274 1.535l4.965 1.425-3.73 3.586zm-.52.127l1.235 5.012-4.958-1.43zm-9.63 2.438l4.873 1.406-3.656 3.523zm5.854 1.687l4.863 1.403-3.648 3.51zm-.54.04l1.214 4.927-4.875-1.4zm-3.896 4.02l5.037 1.442-3.782 3.638z"/></svg>',
+    blender: '<svg class="conv-logo notranslate" translate="no" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.51 13.214c.046-.8.438-1.506 1.03-2.006a3.424 3.424 0 0 1 2.212-.79c.85 0 1.631.3 2.211.79.592.5.983 1.206 1.028 2.005.045.823-.285 1.586-.865 2.153a3.389 3.389 0 0 1-2.374.938 3.393 3.393 0 0 1-2.376-.938c-.58-.567-.91-1.33-.865-2.152M7.35 14.831c.006.314.106.922.256 1.398a7.372 7.372 0 0 0 1.593 2.757 8.227 8.227 0 0 0 2.787 2.001 8.947 8.947 0 0 0 3.66.76 8.964 8.964 0 0 0 3.657-.772 8.285 8.285 0 0 0 2.785-2.01 7.428 7.428 0 0 0 1.592-2.762 6.964 6.964 0 0 0 .25-3.074 7.123 7.123 0 0 0-1.016-2.779 7.764 7.764 0 0 0-1.852-2.043h.002L13.566 2.55l-.02-.015c-.492-.378-1.319-.376-1.86.002-.547.382-.609 1.015-.123 1.415l-.001.001 3.126 2.543-9.53.01h-.013c-.788.001-1.545.518-1.695 1.172-.154.665.38 1.217 1.2 1.22V8.9l4.83-.01-8.62 6.617-.034.025c-.813.622-1.075 1.658-.563 2.313.52.667 1.625.668 2.447.004L7.414 14s-.069.52-.063.831zm12.09 1.741c-.97.988-2.326 1.548-3.795 1.55-1.47.004-2.827-.552-3.797-1.538a4.51 4.51 0 0 1-1.036-1.622 4.282 4.282 0 0 1 .282-3.519 4.702 4.702 0 0 1 1.153-1.371c.942-.768 2.141-1.183 3.396-1.185 1.256-.002 2.455.41 3.398 1.175.48.391.87.854 1.152 1.367a4.28 4.28 0 0 1 .522 1.706 4.236 4.236 0 0 1-.239 1.811 4.54 4.54 0 0 1-1.035 1.626"/></svg>',
+    omniverse: '<svg class="conv-logo notranslate" translate="no" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.948 8.798v-1.43a6.7 6.7 0 0 1 .424-.018c3.922-.124 6.493 3.374 6.493 3.374s-2.774 3.851-5.75 3.851c-.398 0-.787-.062-1.158-.185v-4.346c1.528.185 1.837.857 2.747 2.385l2.04-1.714s-1.492-1.952-4-1.952a6.016 6.016 0 0 0-.796.035m0-4.735v2.138l.424-.027c5.45-.185 9.01 4.47 9.01 4.47s-4.08 4.964-8.33 4.964c-.37 0-.733-.035-1.095-.097v1.325c.3.035.61.062.91.062 3.957 0 6.82-2.023 9.593-4.408.459.371 2.34 1.263 2.73 1.652-2.633 2.208-8.772 3.984-12.253 3.984-.335 0-.653-.018-.971-.053v1.864H24V4.063zm0 10.326v1.131c-3.657-.654-4.673-4.46-4.673-4.46s1.758-1.944 4.673-2.262v1.237H8.94c-1.528-.186-2.73 1.245-2.73 1.245s.68 2.412 2.739 3.11M2.456 10.9s2.164-3.197 6.5-3.533V6.201C4.153 6.59 0 10.653 0 10.653s2.35 6.802 8.948 7.42v-1.237c-4.84-.6-6.492-5.936-6.492-5.936z"/></svg>',
+  };
   const converterFamilyById = new Map();
   const converterAliasToId = new Map();
   for (const family of converterFamilies) {
@@ -1583,6 +1588,9 @@ async function init() {
     const isActive = id === normalizeConverterId(activeId);
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    if (family.icon && converterIconSvg[family.icon]) {
+      button.insertAdjacentHTML('beforeend', converterIconSvg[family.icon]);
+    }
 
     const label = document.createElement('span');
     label.className = 'converter-label';
@@ -1593,6 +1601,7 @@ async function init() {
     if (family.version) {
       const version = document.createElement('span');
       version.className = 'converter-version';
+      version.setAttribute('aria-label', family.version);
       version.textContent = family.version;
       label.appendChild(version);
     }
