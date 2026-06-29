@@ -459,6 +459,12 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(needleState.needleSrc).toBe(glbUrl);
         expect(needleState.autoplay).toBe(true);
         expect(needleState.hasNeedleContext).toBe(true);
+        expect(needleState.cameraFit?.meshCount).toBeGreaterThan(0);
+        expect(needleState.cameraFit?.angleToCenterDeg).toBeLessThan(1);
+        expect(needleState.cameraFit?.ndc.minX).toBeGreaterThanOrEqual(-0.98);
+        expect(needleState.cameraFit?.ndc.maxX).toBeLessThanOrEqual(0.98);
+        expect(needleState.cameraFit?.ndc.minY).toBeGreaterThanOrEqual(-0.98);
+        expect(needleState.cameraFit?.ndc.maxY).toBeLessThanOrEqual(0.98);
         expect(diagnostics).toEqual([]);
     });
 
@@ -647,15 +653,75 @@ async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three'
             && (nativeThreeLoaded || nativeNeedleLoaded);
     }, { expectedFilename: filename, expectedMode: mode });
     await page.waitForTimeout(1000);
-    return await page.evaluate(() => ({
-        filename: document.querySelector('.filename-text')?.textContent || '',
-        hasHydraHandle: Boolean(window.usdHydra),
-        hasUsdStage: Boolean(window.usdStage),
-        threeChildren: window.usdRoot?.children?.length ?? -1,
-        hasNeedleContext: Boolean(document.querySelector('needle-engine')?.context),
-        needleSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
-        autoplay: document.querySelector('needle-engine')?.hasAttribute('autoplay') ?? false,
-    }));
+    return await page.evaluate(expectedMode => {
+        let cameraFit: any = null;
+        if (expectedMode === 'needle-loader') {
+            const THREE = (window as any).THREE;
+            const context = document.querySelector('needle-engine')?.context;
+            const camera = context?.mainCamera;
+            if (THREE && context?.scene && camera) {
+                context.scene.updateMatrixWorld(true);
+                camera.updateMatrixWorld(true);
+                camera.updateProjectionMatrix?.();
+
+                const loadedRoots = (context.scene.children || []).filter((object: any) => {
+                    if (object === camera || object.isCamera) return false;
+                    if (/fallback camera|contactshadows/i.test(object.name || '')) return false;
+                    return true;
+                });
+                const meshes: any[] = [];
+                for (const root of loadedRoots) {
+                    root.traverse?.((object: any) => {
+                        if (!object.isMesh || !object.geometry?.attributes?.position) return;
+                        meshes.push(object);
+                    });
+                }
+
+                const box = new THREE.Box3();
+                box.makeEmpty();
+                for (const root of loadedRoots) box.expandByObject(root);
+
+                const center = new THREE.Vector3();
+                box.getCenter(center);
+                const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
+                const cameraDirection = new THREE.Vector3();
+                camera.getWorldDirection(cameraDirection);
+                const toCenter = center.clone().sub(cameraPosition).normalize();
+
+                const corners: any[] = [];
+                for (const x of [box.min.x, box.max.x]) {
+                    for (const y of [box.min.y, box.max.y]) {
+                        for (const z of [box.min.z, box.max.z]) {
+                            corners.push(new THREE.Vector3(x, y, z).project(camera));
+                        }
+                    }
+                }
+                const xs = corners.map(point => point.x).filter(Number.isFinite);
+                const ys = corners.map(point => point.y).filter(Number.isFinite);
+                cameraFit = {
+                    meshCount: meshes.length,
+                    rootNames: loadedRoots.map((object: any) => object.name || object.type || ''),
+                    angleToCenterDeg: cameraDirection.angleTo(toCenter) * 180 / Math.PI,
+                    ndc: {
+                        minX: Math.min(...xs),
+                        maxX: Math.max(...xs),
+                        minY: Math.min(...ys),
+                        maxY: Math.max(...ys),
+                    },
+                };
+            }
+        }
+        return {
+            filename: document.querySelector('.filename-text')?.textContent || '',
+            hasHydraHandle: Boolean(window.usdHydra),
+            hasUsdStage: Boolean(window.usdStage),
+            threeChildren: window.usdRoot?.children?.length ?? -1,
+            hasNeedleContext: Boolean(document.querySelector('needle-engine')?.context),
+            needleSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
+            autoplay: document.querySelector('needle-engine')?.hasAttribute('autoplay') ?? false,
+            cameraFit,
+        };
+    }, mode);
 }
 
 async function waitForNeedleLoaderMode(page: Page, filename: string) {

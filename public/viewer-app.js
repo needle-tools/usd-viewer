@@ -17,7 +17,7 @@ import {
   createThreeHydra,
   getUsdModule,
   addPluginForNeedleEngine,
-  fitCamera,
+  fitNeedleCameraToObjects,
   getHydraHandleFromNeedleEngineAsset,
   RGBELoader,
   GLTFExporter,
@@ -394,6 +394,7 @@ const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
 let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
+const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
 var timeout = 40;
 var endTimeCode = 1;
@@ -1124,32 +1125,64 @@ async function waitForNeedleHydraHandle(context) {
   return handle;
 }
 
-function fitNeedleEngineCamera(context) {
-  if (!context?.scene || typeof fitCamera !== "function") return;
+function toNeedleFitObject(value) {
+  if (!value) return null;
+  if (value.isObject3D === true) return value;
+  return toNeedleFitObject(value.scene) || toNeedleFitObject(value.root) || null;
+}
+
+function needleFitObjectsFromLoadDetail(detail) {
+  const objects = [];
+  for (const loaded of detail?.loadedFiles || []) {
+    const object = toNeedleFitObject(loaded?.file);
+    if (object) objects.push(object);
+  }
+  return objects;
+}
+
+function cameraFitDirection() {
+  return new Vector3(
+    numberUrlParam("cameraX", 0),
+    numberUrlParam("cameraY", 7),
+    numberUrlParam("cameraZ", 7),
+  );
+}
+
+function numberUrlParam(name, fallback) {
+  const value = Number(params.get(name));
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function fitNeedleEngineCamera(context, targets = undefined) {
+  if (!context?.scene || typeof fitNeedleCameraToObjects !== "function") return;
+  const objects = (Array.isArray(targets) && targets.length > 0) ? targets : [context.scene];
   context.scene.updateMatrixWorld?.(true);
-  const box = new Box3().setFromObject(context.scene);
+  const box = new Box3();
+  box.makeEmpty();
+  for (const object of objects) {
+    object.updateMatrixWorld?.(true);
+    box.expandByObject(object);
+  }
   const size = new Vector3();
   box.getSize(size);
   if (!Number.isFinite(size.x) || !Number.isFinite(size.y) || !Number.isFinite(size.z) || size.lengthSq() <= 0) {
     return false;
   }
   try {
-    fitCamera({
-      camera: context.mainCamera,
-      objects: context.scene,
-      fitOffset: 1.35,
+    return fitNeedleCameraToObjects(context, objects, {
+      fitOffset: DEFAULT_CAMERA_FIT_OFFSET,
+      centerCamera: "y",
     });
-    return true;
   } catch (err) {
     console.warn("Needle camera fit failed", err);
     return false;
   }
 }
 
-function scheduleNeedleEngineCameraFit(context, timeoutMs = 15000) {
+function scheduleNeedleEngineCameraFit(context, targets = undefined, timeoutMs = 15000) {
   const started = performance.now();
   const tick = () => {
-    if (fitNeedleEngineCamera(context)) return;
+    if (fitNeedleEngineCamera(context, targets)) return;
     if (performance.now() - started > timeoutMs) return;
     requestAnimationFrame(tick);
   };
@@ -1188,7 +1221,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
     };
     const onLoadFinished = event => {
       cleanup();
-      resolve(event.detail?.context || element.context);
+      resolve(event.detail || { context: element.context, loadedFiles: [] });
     };
     const onError = event => {
       cleanup();
@@ -1199,15 +1232,17 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   });
 
   element.setAttribute("src", source);
-  const context = await loadPromise;
+  const loadDetail = await loadPromise;
+  const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
 
   const handle = await waitForNeedleHydraHandle(context);
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
 
   await waitForNeedleHydraReady(handle);
-  if (!fitNeedleEngineCamera(context)) {
-    scheduleNeedleEngineCameraFit(context);
+  const fitTargets = needleFitObjectsFromLoadDetail(loadDetail);
+  if (!fitNeedleEngineCamera(context, fitTargets)) {
+    scheduleNeedleEngineCameraFit(context, fitTargets);
   }
   if (waitForMaterials) {
     await handle.materialsReady?.();
@@ -1234,7 +1269,7 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
     };
     const onLoadFinished = event => {
       cleanup();
-      resolve(event.detail?.context || element.context);
+      resolve(event.detail || { context: element.context, loadedFiles: [] });
     };
     const onError = event => {
       cleanup();
@@ -1245,10 +1280,12 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   });
 
   element.setAttribute("src", path);
-  const context = await loadPromise;
+  const loadDetail = await loadPromise;
+  const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
-  if (!fitNeedleEngineCamera(context)) {
-    scheduleNeedleEngineCameraFit(context);
+  const fitTargets = needleFitObjectsFromLoadDetail(loadDetail);
+  if (!fitNeedleEngineCamera(context, fitTargets)) {
+    scheduleNeedleEngineCameraFit(context, fitTargets);
   }
   return context;
 }
@@ -1488,7 +1525,7 @@ async function loadCatalogAssetBundle(asset, displayName) {
 }
 
 // from https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
-function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
+function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_CAMERA_FIT_OFFSET) {
   const size = new Vector3();
   const center = new Vector3();
   const box = new Box3();
@@ -1524,12 +1561,8 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.5) {
     return;
   }
 
-  camera.position.z = params.get('cameraZ') || 7;
-  camera.position.y = params.get('cameraY') || 7;
-  camera.position.x = params.get('cameraX') || 0;
-
-  const direction = controls.target.clone()
-    .sub(camera.position)
+  const direction = center.clone()
+    .sub(cameraFitDirection())
     .normalize()
     .multiplyScalar(distance);
 
