@@ -18,18 +18,18 @@ const publicSamples = {
 };
 
 const assetExplorerSamples = {
-    antiqueCameraOv: {
-        filename: 'AntiqueCamera.glb.ov.usdz',
-        url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.ov.usdz',
+    antiqueCameraThree: {
+        filename: 'AntiqueCamera.glb.three.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.three.usdz',
     },
     avocadoThree: {
         filename: 'Avocado.glb.three.usdz',
         url: 'https://asset-explorer.needle.tools/downloads/Avocado.glb.three.usdz',
     },
-    animatedMorphSphereOv: {
+    animatedMorphSphereBlender: {
         label: 'Animated Morph Sphere',
-        filename: 'AnimatedMorphSphere.glb.ov.usdz',
-        url: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.ov.usdz',
+        filename: 'AnimatedMorphSphere.glb.blender.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.blender.usdz',
     },
 };
 
@@ -453,25 +453,71 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('switches between Asset Explorer Omniverse samples from a direct URL', async ({ page }) => {
+    test('switches between Asset Explorer converted samples from a direct URL', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraOv.url)}&viewer=three`);
-        await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraOv.filename);
+        await page.route(assetExplorerApi, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [
+                    {
+                        name: 'Antique Camera',
+                        slug: 'AntiqueCamera',
+                        tags: ['showcase'],
+                        thumbnail: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.three.webp',
+                        assets: {
+                            glb: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb',
+                        },
+                        conversions: [
+                            { id: 'three-r185', label: 'three', version: '0.185.0', usdz: assetExplorerSamples.antiqueCameraThree.url },
+                            { id: 'blender-5-1', label: 'Blender', version: '5.1.2', usdz: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.blender.usdz' },
+                        ],
+                    },
+                    {
+                        name: assetExplorerSamples.animatedMorphSphereBlender.label,
+                        slug: 'AnimatedMorphSphere',
+                        tags: ['showcase'],
+                        thumbnail: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.three.webp',
+                        assets: {
+                            glb: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb',
+                        },
+                        conversions: [
+                            { id: 'three-r185', label: 'three', version: '0.185.0', usdz: 'https://asset-explorer.needle.tools/downloads/AnimatedMorphSphere.glb.three.usdz' },
+                            { id: 'blender-5-1', label: 'Blender', version: '5.1.2', usdz: assetExplorerSamples.animatedMorphSphereBlender.url },
+                        ],
+                    },
+                ],
+            }),
+        }));
+        await page.route(assetExplorerSamples.antiqueCameraThree.url, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
+        }));
+        await page.route(assetExplorerSamples.animatedMorphSphereBlender.url, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/BoomBox.glb.three.usdz',
+        }));
+
+        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraThree.url)}&viewer=three`);
+        const initialState = await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraThree.filename);
+        expect(initialState.loadedConverterVisible).toBe(true);
+        expect(initialState.loadedConverter).toBe('three-r185');
 
         await page.click('.dropdown-button');
         await page.click('[data-sample-group="gltf"]');
         await page.waitForFunction(label => {
             return Array.from(document.querySelectorAll<HTMLAnchorElement>('.gallery-card'))
-                .some(card => card.dataset.name === label && card.href.includes('.ov.usdz'));
-        }, assetExplorerSamples.animatedMorphSphereOv.label);
+                .some(card => card.dataset.name === label && card.href.includes('.three.usdz'));
+        }, assetExplorerSamples.animatedMorphSphereBlender.label);
 
-        await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereOv.label}"]`);
-        const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereOv.filename);
+        await page.dispatchEvent('#converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
+        await expect(page.locator(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereBlender.label}"]`))
+            .toHaveAttribute('href', `?file=${assetExplorerSamples.animatedMorphSphereBlender.url}`);
 
-        expect(state.filename).toBe(assetExplorerSamples.animatedMorphSphereOv.filename);
-        expect(new URL(state.href).searchParams.get('file')).toBe(assetExplorerSamples.animatedMorphSphereOv.url);
+        await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereBlender.label}"]`);
+        const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereBlender.filename);
+
+        expect(state.filename).toBe(assetExplorerSamples.animatedMorphSphereBlender.filename);
+        expect(new URL(state.href).searchParams.get('file')).toBe(assetExplorerSamples.animatedMorphSphereBlender.url);
         expect(state.loadedConverterVisible).toBe(true);
-        expect(state.loadedConverter).toBe('omniverse');
+        expect(state.loadedConverter).toBe('blender-5-1');
         expect(diagnostics).toEqual([]);
     });
 
@@ -510,7 +556,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('renders versioned Asset Explorer converter families', async ({ page }) => {
+    test('renders Asset Explorer conversion variants from the model index', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
             contentType: 'application/json',
@@ -525,12 +571,12 @@ test.describe('public usd-viewer lifecycle', () => {
                     },
                     info: { textures: 2, animations: 1 },
                     conversions: [
-                        { id: 'three-r185', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three-r185.usdz' },
-                        { id: 'needle-engine', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.needle-engine.usdz' },
-                        { id: 'blender-5-1', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender-5-1.usdz' },
-                        { id: 'openusd-adobe-gltf', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.openusd-adobe-gltf.usdz' },
-                        { id: 'guc', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.guc.usdz' },
-                        { id: 'three-r154', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three.usdz' },
+                        { id: 'three-r185', label: 'three', version: '0.185.0', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three.usdz' },
+                        { id: 'needle-engine', label: 'Needle', version: '5.1.2', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.needle-engine.usdz' },
+                        { id: 'blender-5-1', label: 'Blender', version: '5.1.2', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender.usdz' },
+                        { id: 'openusd-adobe-gltf', label: 'Adobe glTF', version: 'OpenUSD 26.05', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.openusd-adobe-gltf.usdz' },
+                        { id: 'guc', label: 'GUC', version: '0.5', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.guc.usdz' },
+                        { id: 'three-r154', label: 'three', version: 'r154', available: true, usdz: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three-r154.usdz' },
                     ],
                 }],
             }),
@@ -549,23 +595,63 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.topSelectExists).toBe(false);
         expect(state.converters).toEqual([
             'three-r185',
-            'three-r154',
             'needle-engine',
             'blender-5-1',
             'openusd-adobe-gltf',
             'guc',
+            'three-r154',
             'original-gltf',
         ]);
-        expect(state.firstHref).toContain('Synthetic.glb.three-r185.usdz');
+        expect(state.firstHref).toContain('Synthetic.glb.three.usdz');
 
         await page.dispatchEvent('#converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
         await expect(page.locator('#converter-toggle button[data-converter="blender-5-1"]')).toHaveClass(/active/);
         await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'blender-5-1');
-        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender-5-1.usdz');
+        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender.usdz');
 
         await page.dispatchEvent('#converter-toggle button[data-converter="original-gltf"]', 'click');
         await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'original-gltf');
         await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb');
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('does not infer variants from Asset Explorer usdz summaries', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route(assetExplorerApi, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [{
+                    name: 'Object Variant Matrix',
+                    slug: 'ObjectVariantMatrix',
+                    tags: ['showcase'],
+                    thumbnail: 'https://asset-explorer.needle.tools/thumbnail.png',
+                    assets: {
+                        glb: 'https://asset-explorer.needle.tools/downloads/ObjectVariant.glb',
+                        usdz: {
+                            three: 'https://asset-explorer.needle.tools/downloads/ObjectVariant.glb.three.usdz',
+                            blender: 'https://asset-explorer.needle.tools/downloads/ObjectVariant.glb.blender.usdz',
+                            ov: 'https://asset-explorer.needle.tools/downloads/ObjectVariant.glb.ov.usdz',
+                        },
+                    },
+                }],
+            }),
+        }));
+
+        await page.goto('/?viewer=needle');
+        await page.click('.dropdown-button');
+        await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
+
+        const state = await page.evaluate(() => ({
+            converters: Array.from(document.querySelectorAll<HTMLButtonElement>('#converter-toggle button')).map(button => button.dataset.converter),
+            active: document.querySelector<HTMLButtonElement>('#converter-toggle button.active')?.dataset.converter || '',
+            converterControlHidden: Boolean(document.querySelector<HTMLElement>('#converter-toggle')?.hidden),
+            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
+        }));
+
+        expect(state.converters).toEqual(['original-gltf']);
+        expect(state.active).toBe('original-gltf');
+        expect(state.converterControlHidden).toBe(true);
+        expect(state.firstHref).toBe('?file=https://asset-explorer.needle.tools/downloads/ObjectVariant.glb');
         expect(diagnostics).toEqual([]);
     });
 
