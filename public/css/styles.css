@@ -302,6 +302,83 @@ body.drag-active .dropzone-title {
     height: 15px;
 }
 
+/* Centered load-error card — same centered placement as the loading overlay,
+   shown when a file fails to load (e.g. 404). */
+#load-error {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    /* above the drop hint (10) and loading overlay (20), below the toolbar (200) */
+    z-index: 25;
+    padding: 24px;
+    pointer-events: none; /* backdrop is click-through; only the card captures */
+}
+
+#load-error.visible {
+    display: flex;
+}
+
+.load-error-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(92vw, 540px);
+    padding: 13px 13px 13px 17px;
+    border: 1px solid rgba(179, 38, 30, 0.28);
+    border-radius: 14px;
+    background: var(--color-surface);
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    pointer-events: auto;
+}
+
+.load-error-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: #b3261e;
+}
+
+.load-error-title {
+    margin: 0;
+    min-width: 0;
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.load-error-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, transform 0.12s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.load-error-dismiss:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.load-error-dismiss:active {
+    transform: scale(0.94);
+}
+
+.load-error-dismiss svg {
+    width: 15px;
+    height: 15px;
+}
+
 @keyframes spinner-rotate {
     to { transform: rotate(360deg); }
 }
@@ -393,11 +470,8 @@ body.drag-active .dropzone-title {
 .viewer-mode-toggle {
     margin: 0 4px;
 }
-
-.viewer-mode-toggle button {
-    min-width: 72px;
-    font-size: 0.76em;
-}
+/* NOTE: the engine-switch button sizing lives AFTER ".converter-toggle button"
+   (search "Engine switch") so its larger, readable font wins the cascade. */
 
 .header-overflow {
     position: relative;
@@ -550,6 +624,10 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 .dropdown.menu-open .dropdown-content {
     display: flex;
     align-items: stretch;
+    /* Keep a stable minimum height so folding from a long item to a short one
+       (e.g. Needle Cloud) doesn't shrink the popover out from under the cursor
+       and dismiss it. The gallery grid inside scrolls within this height. */
+    min-height: 50vh;
 }
 
 .dropdown-menu {
@@ -577,10 +655,27 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
     margin: -1px 0 4px 0;
     padding-left: 8px;
     border-left: 1px solid var(--border-subtle);
+    /* Slide open/closed. JS toggles .is-open (and [hidden] for inactive groups).
+       max-height is a generous cap — tag lists never approach it. */
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.24s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.18s ease;
+}
+
+.sample-group-tree.is-open {
+    max-height: 1200px;
+    opacity: 1;
 }
 
 .sample-group-tree[hidden] {
     display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sample-group-tree {
+        transition: none;
+    }
 }
 
 .sample-group-button {
@@ -598,21 +693,40 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 
 .sample-root-folder {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr);
+    /* Label on the left, chevron on the right. */
+    grid-template-columns: minmax(0, 1fr) 14px;
     column-gap: 6px;
     align-items: center;
 }
 
-.sample-root-folder::before {
-    content: "▸";
+/* Chevron is an inline SVG in each root-folder button; it rotates 90° when the
+   folder expands — crisper and smoother than swapping ▸/▾ glyphs. */
+.sample-chevron {
+    grid-column: 2;
+    grid-row: 1 / -1;     /* span both label lines so the chevron stays centered */
+    align-self: center;
+    justify-self: center;
+    width: 14px;
+    height: 14px;
     color: var(--color-text-muted);
-    font-size: 1.6em;
-    line-height: 1;
-    text-align: center;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.sample-root-folder[aria-expanded="true"]::before {
-    content: "▾";
+.sample-root-folder[aria-expanded="true"] .sample-chevron {
+    transform: rotate(90deg);
+}
+
+/* Inline arrow SVG inside a sample-group label (e.g. "glTF → USD conversions"). */
+.label-arrow {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.14em;
+    margin: 0 0.1em;
+    color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sample-chevron { transition: none; }
 }
 
 .sample-group-button span,
@@ -622,7 +736,7 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 
 .sample-root-folder span,
 .sample-root-folder small {
-    grid-column: 2;
+    grid-column: 1;
 }
 
 .sample-group-button span {
@@ -633,7 +747,7 @@ body.viewer-mode-needle-loader .usd-viewer-needle-engine {
 
 .sample-group-button small {
     margin-top: 2px;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary); /* higher contrast than muted */
     font-size: 0.72em;
 }
 
@@ -880,11 +994,34 @@ body.show-debug-menu .dropdown-menu a.debug-only {
     font-weight: 800;
 }
 
+/* OpenUSD runtime build info, presented as a labelled box. The native
+   <fieldset>/<legend> gives the "interrupted outline" (the border breaks around
+   the label) for free, and the title attribute carries a hover tooltip. */
+.runtime-info-box {
+    margin: 0 0 16px;
+    padding: 8px 12px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    /* No fill — a clean outline lets the legend cleanly interrupt the border. */
+    background: transparent;
+    min-width: 0; /* reset the fieldset's min-content intrinsic width */
+    cursor: help; /* signals the tooltip is there */
+}
+
+.runtime-info-legend {
+    padding: 0 6px;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    /* Nudge down so the label sits optically centered on the border line. */
+    transform: translateY(2px);
+}
+
 .runtime-info {
-    padding: 10px 12px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 4px;
-    background: var(--color-info);
+    margin: 0;
     color: var(--color-text);
     font-family: var(--font-code);
     font-size: 0.78rem;
@@ -1197,7 +1334,7 @@ button.cta-primary {
 
 .gallery-panel-subtitle {
     font-size: 0.72em;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary); /* higher contrast than muted */
     font-weight: 600;
     white-space: nowrap;
 }
@@ -1286,13 +1423,45 @@ button.cta-primary {
 
 .converter-toggle-inline {
     background: rgba(255, 255, 255, 0.78);
+    /* Stronger outline so the segmented control reads clearly on the page. */
+    border-color: var(--border-strong);
+    border-radius: 11px;
 }
 
 .converter-toggle-inline button {
-    font-size: 0.76em;
-    min-width: 74px;
+    font-size: 0.72em;
+    min-width: 62px;
+    min-height: 26px;
+    padding: 3px 9px;
+    /* Match the outer outline contrast on the inter-segment dividers. */
+    border-left-color: var(--border-strong);
+}
+
+/* Engine switch (Needle | three.js) — the renderer chooser in the pill.
+   Placed AFTER ".converter-toggle button" so its larger size wins the
+   equal-specificity cascade (the shared 0.72em ≈ 10px is far too small for this
+   primary control). Adds press feedback per design-eng (buttons must feel they
+   were heard). */
+.viewer-mode-toggle button {
+    min-width: 78px;
     min-height: 30px;
-    padding: 4px 10px;
+    padding: 5px 13px;
+    font-size: 0.85rem; /* ~13.6px — was an effective ~10px */
+    letter-spacing: 0.01em;
+    transition: background-color 0.15s ease,
+                color 0.15s ease,
+                box-shadow 0.15s ease,
+                transform 0.12s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.viewer-mode-toggle button:active {
+    transform: scale(0.97); /* subtle press feedback */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .viewer-mode-toggle button:active {
+        transform: none;
+    }
 }
 
 .gallery-status {
@@ -1356,6 +1525,24 @@ button.cta-primary {
 #container .gallery-card.active {
     border-color: var(--color-green-dark);
     box-shadow: 0 0 0 2px var(--color-green-dark);
+}
+
+/* Staggered fade-in for the sample thumbnails (per-card delay set in JS).
+   `backwards` fill keeps the final frame == base styles, so it doesn't lock the
+   transform and the :hover lift still works after the entrance. */
+@keyframes gallery-card-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+#container .gallery-card {
+    animation: gallery-card-in 280ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #container .gallery-card {
+        animation: none;
+    }
 }
 
 .gallery-thumb-wrap {
@@ -1777,6 +1964,13 @@ button:focus-visible {
     color: var(--color-text-muted);
     line-height: 1;
     user-select: none;
+}
+
+/* When the "converted with" control is visible it already separates the row, so
+   the dash before Clear is redundant — drop it (kept for plain files, where it's
+   the only separator between the filename and Clear). */
+.loaded-converter-control:not([hidden]) ~ .filename-sep {
+    display: none;
 }
 
 .filename-bar .clear-button {

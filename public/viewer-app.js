@@ -125,8 +125,11 @@ function hideTooltip(target = tooltipActiveTarget) {
 
 function tooltipTargetFromEvent(event) {
   const target = event.target?.closest?.('[data-tip]');
+  if (!target) return null;
+  // Tooltips are used by the header pill controls and by dialog content.
   const container = document.getElementById('container');
-  return target && container?.contains(target) ? target : null;
+  const allowed = container?.contains(target) || target.closest('.dialog-overlay');
+  return allowed ? target : null;
 }
 
 function isInsideTarget(target, relatedTarget) {
@@ -290,6 +293,42 @@ function updateOpenUsdBuildInfo(Usd) {
   }
 }
 
+// Render a label that may contain a "→" arrow, swapping the glyph for an inline
+// SVG arrow (matching the static markup labels). Group titles are internal
+// constants, but the text parts are HTML-escaped before injection anyway.
+const LABEL_ARROW_MARKUP = '<svg class="label-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12.5"/><path d="M12.5 6l6 6-6 6"/></svg>';
+function setLabelWithArrow(el, text) {
+  if (!el) return;
+  const str = String(text == null ? '' : text);
+  if (!str.includes('→')) { el.textContent = str; return; }
+  el.innerHTML = str
+    .split('→')
+    .map(part => part.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])))
+    .join(LABEL_ARROW_MARKUP);
+}
+
+// Best-effort classification of a failed load into a user-facing message. Only
+// called on the failure path, so the extra request never slows a successful load.
+// A HEAD lets us name a 404 specifically; if it's blocked (CORS / network /
+// method-not-allowed) we fall back to a generic message.
+async function classifyLoadError(url, filename) {
+  const name = filename || 'this file';
+  // `status` is reported to Rybbit alongside the failure: an HTTP code when we
+  // can read it, 'blocked' when the probe is CORS/network-blocked, or 'unknown'.
+  let status = url ? 'blocked' : 'unknown';
+  if (url) {
+    try {
+      const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      status = res.status;
+      if (res.status === 404) return { status, message: `“${name}” was not found (404). The link may be broken or the file removed.` };
+      if (!res.ok) return { status, message: `Couldn't load “${name}” — the server returned ${res.status}.` };
+    } catch {
+      // CORS-blocked, offline, or HEAD not allowed — fall through to the generic message.
+    }
+  }
+  return { status, message: `Couldn't load “${name}” — it may be missing, blocked, or an unsupported format.` };
+}
+
 function onDomReady(callback) {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", callback, { once: true });
@@ -446,6 +485,8 @@ onDomReady(function() {
   const loadingOverlayFilename = document.getElementById('loading-overlay-filename');
   window.showLoadingOverlay = function(name) {
     if (!loadingOverlay) return;
+    // A new load supersedes any previous failure.
+    if (window.hideLoadError) window.hideLoadError();
     const display = String(name || '').split('/').pop().split('#')[0].split('?')[0] || 'file';
     if (loadingOverlayFilename) {
       loadingOverlayFilename.textContent = display;
@@ -456,6 +497,20 @@ onDomReady(function() {
   window.hideLoadingOverlay = function() {
     if (loadingOverlay) loadingOverlay.classList.remove('visible');
   };
+
+  // Centered load-error card (shown when a file fails to load, e.g. a 404).
+  const loadError = document.getElementById('load-error');
+  const loadErrorMessage = document.getElementById('load-error-message');
+  window.showLoadError = function(message) {
+    if (!loadError) return;
+    if (loadErrorMessage) loadErrorMessage.textContent = message || "Couldn't load this file.";
+    loadError.classList.add('visible');
+  };
+  window.hideLoadError = function() {
+    if (loadError) loadError.classList.remove('visible');
+  };
+  const loadErrorDismiss = document.getElementById('load-error-dismiss');
+  if (loadErrorDismiss) loadErrorDismiss.addEventListener('click', () => window.hideLoadError());
 
   // Cancel genuinely stops loading: the USD WASM driver has no abort API, so the
   // only reliable way to interrupt an in-flight load is to reload into the empty
@@ -1490,10 +1545,13 @@ async function loadNativeGltfFile(filename, path) {
     if (messageLog) messageLog.textContent = "";
   } catch (err) {
     console.error("Failed to load glTF file:", err);
-    trackError('gltf_load', err, { type: extOf(filename), name: safeName(filename) });
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     ready = false;
+    const current = generation === loadGeneration;
+    const info = current ? await classifyLoadError(path, filename) : null;
+    trackError('gltf_load', err, { type: extOf(filename), name: safeName(filename), status: info?.status });
+    if (info && window.showLoadError) window.showLoadError(info.message);
   }
 }
 
@@ -1609,10 +1667,15 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     // reach the footer log via the global handler — never Rybbit. Report it with
     // the file context so these crashes are actually visible in analytics.
     console.error("Failed to load USD file:", err);
-    trackError('usd_load', err, { type: extOf(filename), name: safeName(filename) });
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     ready = false;
+    // Classify (best-effort) so BOTH the UI message and the Rybbit event carry
+    // the HTTP status (e.g. 404). Surface the card only for the current load.
+    const current = generation === loadGeneration;
+    const info = current ? await classifyLoadError(path, filename) : null;
+    trackError('usd_load', err, { type: extOf(filename), name: safeName(filename), status: info?.status });
+    if (info && window.showLoadError) window.showLoadError(info.message);
   }
 }
 
@@ -1804,6 +1867,9 @@ async function init() {
       if (!button) return;
       const nextMode = normalizeViewerMode(button.getAttribute("data-viewer-mode"));
       if (nextMode === viewerMode) return;
+      // Track the engine switch before navigating — Rybbit sends via beacon,
+      // which survives the reload triggered just below.
+      track('viewer_mode_change', { mode: nextMode, from: viewerMode });
       viewerMode = nextMode;
       safeLocalStorageSet(VIEWER_MODE_STORAGE_KEY, viewerMode);
       const currentUrl = new URL(window.location.href);
@@ -1817,6 +1883,8 @@ async function init() {
   if (waitMaterialsToggle instanceof HTMLInputElement) {
     waitMaterialsToggle.addEventListener("change", () => {
       waitForMaterials = waitMaterialsToggle.checked;
+      // Track before navigating (Rybbit beacons survive the reload below).
+      track('wait_for_materials_change', { enabled: waitForMaterials });
       const currentUrl = new URL(window.location.href);
       setViewerModeUrlParam(currentUrl);
       setWaitForMaterialsUrlParam(currentUrl);
@@ -2249,7 +2317,11 @@ async function init() {
     ]);
     for (const [key, tree] of treeByGroup) {
       if (!tree) continue;
-      tree.hidden = key !== activeTopLevel || collapsedSampleTrees.has(key);
+      const isActive = key === activeTopLevel;
+      // Inactive groups are fully removed; the active group slides open/closed
+      // via .is-open (see .sample-group-tree in styles.css).
+      tree.hidden = !isActive;
+      tree.classList.toggle('is-open', isActive && !collapsedSampleTrees.has(key));
     }
     if (!sampleGroupList) return;
     for (const button of sampleGroupList.querySelectorAll('.sample-root-folder[data-sample-group]')) {
@@ -2463,13 +2535,26 @@ async function init() {
     }
   }
 
+  let lastGalleryCardsSignature = null;
   function buildGalleryCards(cards) {
     if (!galleryGrid) return;
+    // Identity of the rendered set. Re-rendering the SAME set (e.g. re-clicking
+    // the current menu item) must not replay the stagger — bail out and keep the
+    // existing DOM (also preserves the active-card highlight). Converter-only
+    // changes don't come through here, so a card-identity signature is enough.
+    const signature = cards.map(c =>
+      (c.name || '') + '#' +
+      Object.keys(c.conversions || {}).sort().join(',') + '#' +
+      (c.url || '')
+    ).join('~');
+    if (signature === lastGalleryCardsSignature && galleryGrid.children.length) return;
+    lastGalleryCardsSignature = signature;
     galleryGrid.textContent = '';
     const converterIds = orderedConverterIds(Object.assign({}, ...cards.map(card => card.conversions || {})));
     renderConverterToggle(converterToggle, converterIds, selectedConverter);
     setConverterControlsVisible(converterIds.length > 1);
     syncConverterControls();
+    let cardIndex = 0;
     for (const item of cards) {
       const conversions = item.conversions || {};
       const url = pickConversionUrl(conversions) || item.url;
@@ -2513,6 +2598,10 @@ async function init() {
       }
       card.appendChild(body);
 
+      // Staggered fade-in: each card enters slightly after the previous one.
+      // Capped so a large grid doesn't take too long to finish appearing.
+      card.style.animationDelay = `${Math.min(cardIndex, 14) * 40}ms`;
+      cardIndex += 1;
       galleryGrid.appendChild(card);
     }
   }
@@ -2541,7 +2630,7 @@ async function init() {
     group = group || sampleGroups.get('usd-wg');
     if (!group) return;
     selectedSampleGroup = groupId;
-    if (galleryTitle) galleryTitle.textContent = group.title;
+    setLabelWithArrow(galleryTitle, group.title);
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
     setConverterControlsVisible(!!group.converterVariants);
     if (sampleGroupList) {
@@ -2722,15 +2811,19 @@ async function init() {
       const groupId = button.dataset.sampleGroup;
       const isTopLevel = sampleGroups.has(groupId);
       const hasTree = groupId === 'usd-wg' || groupId === 'gltf';
+      let action;
       if (isTopLevel && hasTree && selectedSampleGroup === groupId) {
-        if (collapsedSampleTrees.has(groupId)) collapsedSampleTrees.delete(groupId);
+        const wasCollapsed = collapsedSampleTrees.has(groupId);
+        if (wasCollapsed) collapsedSampleTrees.delete(groupId);
         else collapsedSampleTrees.add(groupId);
         syncSampleTreeVisibility(groupId);
+        action = wasCollapsed ? 'expand' : 'collapse';
       } else {
         if (hasTree) collapsedSampleTrees.delete(groupId);
         selectSampleGroup(groupId);
+        action = 'select';
       }
-      track('gallery_select_group', { group: groupId });
+      track('gallery_select_group', { group: groupId, action });
     });
   }
   syncConverterControls();

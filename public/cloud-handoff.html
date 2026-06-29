@@ -67,9 +67,32 @@
     #detail { margin: 0; font-weight: 600; color: var(--color-text-muted); min-height: 1.2em; } /* muted grey filename */
     #view-link { display: none; margin-top: 18px; color: var(--color-link); text-decoration: none; font-weight: 600; }
     #view-link:hover { text-decoration: underline; }
-    #retry-link { display: none; margin-top: 18px; color: var(--color-green-dark); text-decoration: none; font-weight: 700; }
-    #retry-link:hover { text-decoration: underline; }
-    .nc-retry-icon { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 5px; }
+    /* "Try again" — a real button: USD blue pill, white label, press feedback.
+       JS toggles display to inline-block when shown. */
+    #retry-link {
+      display: none;
+      margin-top: 18px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: var(--color-usd-blue);
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 1px 2px rgba(31, 123, 181, 0.25);
+      transition: background-color 0.15s ease,
+                  transform 0.12s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.15s ease;
+    }
+    /* Gate hover behind real hover devices so tap doesn't leave a stuck state. */
+    @media (hover: hover) and (pointer: fine) {
+      #retry-link:hover {
+        background: var(--color-usd-blue-dark);
+        box-shadow: 0 2px 8px rgba(31, 123, 181, 0.3);
+      }
+    }
+    #retry-link:active { transform: scale(0.97); } /* press feedback */
+    #retry-link:focus-visible { outline: 2px solid var(--color-usd-blue); outline-offset: 2px; }
+    .nc-retry-icon { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 6px; }
     /* Page footer: back link, muted grey, small. */
     .nc-footer { margin-top: 28px; }
     .nc-footer a { color: var(--color-text-muted); text-decoration: none; font-size: 0.8rem; }

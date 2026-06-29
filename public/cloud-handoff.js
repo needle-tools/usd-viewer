@@ -106,7 +106,10 @@ function watchForClose() {
 
 function showRetry() {
   track("cloud_handoff_window_closed");
-  setStatusLines("The Needle Cloud window closed.", "If your upload didn't finish, you can try again.");
+  // We can't reliably tell whether the cloud window actually closed (it becomes
+  // cross-origin-isolated, which severs the opener relationship and makes
+  // `popup.closed` unreliable), so don't assert that it did — just offer a retry.
+  setStatusLines("Not finished?", "If your upload didn't complete, you can try again.");
   if (viewLink) viewLink.style.display = "none";
   if (retryLink) retryLink.style.display = "inline-block";
 }
@@ -114,7 +117,8 @@ function showRetry() {
 function openAndSend() {
   sent = false;
   if (retryLink) retryLink.style.display = "none";
-  popup = openCentered(connectUrl, "needle-cloud-connect", 520, 860);
+  // 1.3× the previous 520px width — the cloud /connect view needs more room.
+  popup = openCentered(connectUrl, "needle-cloud-connect", 676, 860);
   if (!popup) {
     setStatusAlert("Please allow pop-ups for this site, then try again.");
     if (retryLink) retryLink.style.display = "inline-block";

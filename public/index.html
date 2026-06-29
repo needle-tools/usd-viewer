@@ -145,13 +145,15 @@
         <div class="dropdown-menu">
           <div class="sample-group-list" id="sample-group-list" role="listbox" aria-label="Sample groups">
             <button type="button" class="sample-group-button sample-root-folder active" data-sample-group="gltf" role="option" aria-selected="true" aria-expanded="true">
-              <span>glTF &rarr; USD conversions</span>
+              <span>glTF <svg class="label-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12.5"/><path d="M12.5 6l6 6-6 6"/></svg> USD conversions</span>
               <small>Converted from glTF Sample Assets</small>
+              <svg class="sample-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
             <div class="sample-group-tree" id="gltf-group-tree" aria-label="glTF Sample Asset tags"></div>
             <button type="button" class="sample-group-button sample-root-folder" data-sample-group="usd-wg" role="option" aria-selected="false" aria-expanded="false">
               <span>USD Working Group Assets</span>
               <small>Production USD samples</small>
+              <svg class="sample-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
             <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders" hidden></div>
             <button type="button" class="sample-group-button" data-sample-group="test-models" role="option" aria-selected="false">
@@ -252,6 +254,17 @@
     </div>
   </div>
 
+  <!-- Centered load-error card — shown when a file fails to load (e.g. 404). -->
+  <div id="load-error" class="load-error" role="alert" aria-live="assertive">
+    <div class="load-error-inner">
+      <svg class="load-error-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <p class="load-error-title" id="load-error-message">Couldn't load this file.</p>
+      <button id="load-error-dismiss" class="load-error-dismiss" type="button" title="Dismiss" aria-label="Dismiss">
+        <svg class="notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
   <!-- About Dialog -->
   <div id="about-dialog" class="dialog-overlay">
     <div class="dialog">
@@ -262,7 +275,10 @@
       <div class="dialog-content">
         <p>A free, in-browser viewer for <strong>OpenUSD</strong> files (.usd, .usdz, .usda, .usdc), built and maintained by <a href="https://needle.tools" target="_blank" rel="noopener">Needle</a>.</p>
         <p>It runs OpenUSD compiled to WebAssembly and rendered through the three.js Hydra bridge, so scene composition works right in your browser. Nothing is uploaded; everything runs locally on your device.</p>
-        <p id="openusd-build-info" class="runtime-info">OpenUSD runtime: loading...</p>
+        <fieldset class="runtime-info-box" aria-label="OpenUSD runtime build information" data-tip="Version, source-commit, and enabled modules of the OpenUSD WebAssembly runtime that powers this viewer.">
+          <legend class="runtime-info-legend">OpenUSD runtime</legend>
+          <p id="openusd-build-info" class="runtime-info">loading&hellip;</p>
+        </fieldset>
         <p>Drag &amp; drop a file to load it, pick one from the <strong>Load Sample</strong> menu, or export the scene to glTF. We built this while adding OpenUSD support to <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Needle Cloud</a> — found a bug or have an idea? Use the <strong>Feedback</strong> button.</p>
         <div class="dialog-actions">
           <a href="https://github.com/needle-tools/usd-viewer" target="_blank" rel="noopener">
