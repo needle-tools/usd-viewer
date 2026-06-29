@@ -523,7 +523,13 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
         expect(state.firstHref).toContain('Synthetic.glb.three-r185.usdz');
 
+        await page.dispatchEvent('#converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
+        await expect(page.locator('#converter-toggle button[data-converter="blender-5-1"]')).toHaveClass(/active/);
+        await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'blender-5-1');
+        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender-5-1.usdz');
+
         await page.dispatchEvent('#converter-toggle button[data-converter="original-gltf"]', 'click');
+        await expect(page.locator('#converter-toggle button.active')).toHaveAttribute('data-converter', 'original-gltf');
         await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb');
         expect(diagnostics).toEqual([]);
     });

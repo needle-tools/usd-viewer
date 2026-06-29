@@ -2527,25 +2527,61 @@ async function init() {
       menuClose();
     });
   }
-  if (converterToggle) {
-    converterToggle.addEventListener('click', function(event) {
-      const btn = event.target.closest('button[data-converter]');
-      if (!btn) return;
-      setSelectedConverter(btn.dataset.converter);
-      track('gallery_select_converter', { converter: selectedConverter });
-    });
+  const converterToggleActivation = new WeakMap();
+
+  function converterButtonFromEvent(event) {
+    return event.target.closest?.('button[data-converter]');
   }
-  if (loadedConverterToggle) {
-    loadedConverterToggle.addEventListener('click', function(event) {
-      const btn = event.target.closest('button[data-converter]');
-      if (!btn) return;
+
+  function wasConverterRecentlyActivated(toggle, converter) {
+    const last = converterToggleActivation.get(toggle);
+    return last?.converter === converter && performance.now() - last.time < 350;
+  }
+
+  function rememberConverterActivation(toggle, converter) {
+    converterToggleActivation.set(toggle, { converter, time: performance.now() });
+  }
+
+  function activateGalleryConverter(converter) {
+    setSelectedConverter(converter);
+    track('gallery_select_converter', { converter: selectedConverter });
+  }
+
+  function activateLoadedConverter(converter) {
+    loadedConverter = converter;
+    setSelectedConverter(converter);
+    loadConvertedVariant(converter)?.catch(error => console.error("Failed to load converted sample", error));
+    track('gallery_select_converter', { converter, source: 'loaded_asset' });
+  }
+
+  function bindConverterToggle(toggle, activate) {
+    if (!toggle) return;
+    const activateFromEvent = function(event) {
+      const btn = converterButtonFromEvent(event);
+      if (!btn || !toggle.contains(btn)) return;
+      event.preventDefault();
+      event.stopPropagation();
       const converter = normalizeConverterId(btn.dataset.converter);
-      loadedConverter = converter;
-      setSelectedConverter(converter);
-      loadConvertedVariant(converter)?.catch(error => console.error("Failed to load converted sample", error));
-      track('gallery_select_converter', { converter, source: 'loaded_asset' });
+      if (wasConverterRecentlyActivated(toggle, converter)) return;
+      rememberConverterActivation(toggle, converter);
+      activate(converter);
+    };
+    toggle.addEventListener('pointerdown', activateFromEvent, true);
+    toggle.addEventListener('mousedown', activateFromEvent, true);
+    toggle.addEventListener('click', function(event) {
+      const btn = converterButtonFromEvent(event);
+      if (!btn || !toggle.contains(btn)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const converter = normalizeConverterId(btn.dataset.converter);
+      if (wasConverterRecentlyActivated(toggle, converter)) return;
+      rememberConverterActivation(toggle, converter);
+      activate(converter);
     });
   }
+
+  bindConverterToggle(converterToggle, activateGalleryConverter);
+  bindConverterToggle(loadedConverterToggle, activateLoadedConverter);
   if (sampleGroupList) {
     sampleGroupList.addEventListener('click', function(event) {
       const button = event.target.closest('[data-sample-group]');

@@ -1247,6 +1247,10 @@ button.cta-primary {
     border-left: none;
 }
 
+.converter-toggle button > * {
+    pointer-events: none;
+}
+
 .converter-toggle button:hover {
     background-color: rgba(255, 255, 255, 0.78);
     color: var(--color-text);
