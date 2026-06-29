@@ -697,7 +697,7 @@ function doGltfExport() {
   }
 }
 
-// "Export glTF" opens a dialog that points users to Needle Cloud for a
+// "Convert to glTF" opens a dialog that points users to Needle Cloud for a
 // production-ready conversion, while still offering the quick in-browser export.
 const gltfExportBtn = document.getElementById('export-gltf');
 const exportDialog = document.getElementById('export-dialog');
@@ -734,8 +734,25 @@ function trackExportHover(button) {
   track('export_hover', { button });
 }
 
+// When no model is loaded the button is shown but inert. CSS reveals the hint on
+// hover; on click/tap (where :hover doesn't fire) we flash it ourselves.
+let exportHintTimer = null;
+function flashExportHint() {
+  if (!gltfExportBtn) return;
+  gltfExportBtn.classList.add('show-tip');
+  if (exportHintTimer) clearTimeout(exportHintTimer);
+  exportHintTimer = setTimeout(() => gltfExportBtn.classList.remove('show-tip'), 2500);
+}
+
 if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
   evt.preventDefault();
+  const container = document.getElementById('container');
+  const hasFile = container && container.classList.contains('have-custom-file');
+  if (!hasFile) {
+    track('export_blocked_no_file');
+    flashExportHint();
+    return;
+  }
   openExportDialog();
 });
 if (exportDialogCloseBtn) exportDialogCloseBtn.addEventListener('click', () => closeExportDialog('close_button'));
