@@ -1140,12 +1140,16 @@ function needleFitObjectsFromLoadDetail(detail) {
   return objects;
 }
 
-function cameraFitDirection() {
-  return new Vector3(
+function cameraFitOffset() {
+  const offset = new Vector3(
     numberUrlParam("cameraX", 0),
     numberUrlParam("cameraY", 7),
     numberUrlParam("cameraZ", 7),
   );
+  if (offset.lengthSq() <= 0) {
+    offset.set(0, 7, 7);
+  }
+  return offset;
 }
 
 function numberUrlParam(name, fallback) {
@@ -1561,8 +1565,8 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
     return;
   }
 
-  const direction = center.clone()
-    .sub(cameraFitDirection())
+  const direction = cameraFitOffset()
+    .multiplyScalar(-1)
     .normalize()
     .multiplyScalar(distance);
 
@@ -1594,6 +1598,7 @@ async function init() {
   camera.position.x = params.get('cameraX') || 0;
 
   const scene = window.scene = new Scene();
+  window.__usdViewerThreeDiagnostics = { Box3, Vector3 };
   // scene.background = new Color(0xffffff);
   
 

@@ -450,6 +450,13 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(threeState.hasHydraHandle).toBe(false);
         expect(threeState.hasUsdStage).toBe(false);
         expect(threeState.threeChildren).toBeGreaterThan(0);
+        expect(threeState.cameraFit?.meshCount).toBeGreaterThan(0);
+        expect(threeState.cameraFit?.angleToCenterDeg).toBeLessThan(1);
+        expect(threeState.cameraFit?.cameraOffsetAlignment).toBeGreaterThan(0.999);
+        expect(threeState.cameraFit?.ndc.minX).toBeGreaterThanOrEqual(-0.98);
+        expect(threeState.cameraFit?.ndc.maxX).toBeLessThanOrEqual(0.98);
+        expect(threeState.cameraFit?.ndc.minY).toBeGreaterThanOrEqual(-0.98);
+        expect(threeState.cameraFit?.ndc.maxY).toBeLessThanOrEqual(0.98);
 
         await page.goto(`/?file=${glbUrl}&viewer=needle-loader`);
         const needleState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'needle-loader');
@@ -655,61 +662,64 @@ async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three'
     await page.waitForTimeout(1000);
     return await page.evaluate(expectedMode => {
         let cameraFit: any = null;
-        if (expectedMode === 'needle-loader') {
-            const THREE = (window as any).THREE;
-            const context = document.querySelector('needle-engine')?.context;
-            const camera = context?.mainCamera;
-            if (THREE && context?.scene && camera) {
-                context.scene.updateMatrixWorld(true);
-                camera.updateMatrixWorld(true);
-                camera.updateProjectionMatrix?.();
+        const THREE = (window as any).THREE || (window as any).__usdViewerThreeDiagnostics;
+        const context = document.querySelector('needle-engine')?.context;
+        const camera = expectedMode === 'needle-loader' ? context?.mainCamera : window.camera;
+        const loadedRoots = expectedMode === 'needle-loader'
+            ? (context?.scene?.children || []).filter((object: any) => {
+                if (object === camera || object.isCamera) return false;
+                if (/fallback camera|contactshadows/i.test(object.name || '')) return false;
+                return true;
+            })
+            : (window.usdRoot?.children || []);
+        if (THREE && camera && loadedRoots.length > 0) {
+            for (const root of loadedRoots) root.updateMatrixWorld?.(true);
+            camera.updateMatrixWorld(true);
+            camera.updateProjectionMatrix?.();
 
-                const loadedRoots = (context.scene.children || []).filter((object: any) => {
-                    if (object === camera || object.isCamera) return false;
-                    if (/fallback camera|contactshadows/i.test(object.name || '')) return false;
-                    return true;
+            const meshes: any[] = [];
+            for (const root of loadedRoots) {
+                root.traverse?.((object: any) => {
+                    if (!object.isMesh || !object.geometry?.attributes?.position) return;
+                    meshes.push(object);
                 });
-                const meshes: any[] = [];
-                for (const root of loadedRoots) {
-                    root.traverse?.((object: any) => {
-                        if (!object.isMesh || !object.geometry?.attributes?.position) return;
-                        meshes.push(object);
-                    });
-                }
+            }
 
-                const box = new THREE.Box3();
-                box.makeEmpty();
-                for (const root of loadedRoots) box.expandByObject(root);
+            const box = new THREE.Box3();
+            box.makeEmpty();
+            for (const root of loadedRoots) box.expandByObject(root);
 
-                const center = new THREE.Vector3();
-                box.getCenter(center);
-                const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
-                const cameraDirection = new THREE.Vector3();
-                camera.getWorldDirection(cameraDirection);
-                const toCenter = center.clone().sub(cameraPosition).normalize();
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const toCenter = center.clone().sub(cameraPosition).normalize();
+            const defaultCameraOffset = new THREE.Vector3(0, 7, 7).normalize();
+            const cameraOffset = cameraPosition.clone().sub(center).normalize();
 
-                const corners: any[] = [];
-                for (const x of [box.min.x, box.max.x]) {
-                    for (const y of [box.min.y, box.max.y]) {
-                        for (const z of [box.min.z, box.max.z]) {
-                            corners.push(new THREE.Vector3(x, y, z).project(camera));
-                        }
+            const corners: any[] = [];
+            for (const x of [box.min.x, box.max.x]) {
+                for (const y of [box.min.y, box.max.y]) {
+                    for (const z of [box.min.z, box.max.z]) {
+                        corners.push(new THREE.Vector3(x, y, z).project(camera));
                     }
                 }
-                const xs = corners.map(point => point.x).filter(Number.isFinite);
-                const ys = corners.map(point => point.y).filter(Number.isFinite);
-                cameraFit = {
-                    meshCount: meshes.length,
-                    rootNames: loadedRoots.map((object: any) => object.name || object.type || ''),
-                    angleToCenterDeg: cameraDirection.angleTo(toCenter) * 180 / Math.PI,
-                    ndc: {
-                        minX: Math.min(...xs),
-                        maxX: Math.max(...xs),
-                        minY: Math.min(...ys),
-                        maxY: Math.max(...ys),
-                    },
-                };
             }
+            const xs = corners.map(point => point.x).filter(Number.isFinite);
+            const ys = corners.map(point => point.y).filter(Number.isFinite);
+            cameraFit = {
+                meshCount: meshes.length,
+                rootNames: loadedRoots.map((object: any) => object.name || object.type || ''),
+                angleToCenterDeg: cameraDirection.angleTo(toCenter) * 180 / Math.PI,
+                cameraOffsetAlignment: cameraOffset.dot(defaultCameraOffset),
+                ndc: {
+                    minX: Math.min(...xs),
+                    maxX: Math.max(...xs),
+                    minY: Math.min(...ys),
+                    maxY: Math.max(...ys),
+                },
+            };
         }
         return {
             filename: document.querySelector('.filename-text')?.textContent || '',
