@@ -399,6 +399,7 @@ body.drag-active .dropzone-title {
     border: 1px solid var(--border-subtle);
     border-radius: 999px;
     background: rgba(240, 244, 239, 0.82);
+    position: relative;
 }
 
 .viewer-mode-toggle button {
@@ -416,16 +417,10 @@ body.drag-active .dropzone-title {
 }
 
 .viewer-mode-toggle button.active {
-    background: var(--color-surface);
-    color: var(--color-text);
-    box-shadow: 0 1px 2px rgba(26, 26, 26, 0.08);
-}
-
-.viewer-mode-toggle button[data-viewer-mode="needle-loader"].active {
-    background: var(--needle-brand-gradient);
-    color: #fff;
-    box-shadow: var(--needle-brand-gradient-shadow);
-    font-weight: 800;
+    background: rgba(44, 143, 208, 0.14);
+    color: var(--color-usd-blue-dark);
+    box-shadow: inset 0 0 0 1px rgba(44, 143, 208, 0.18), 0 1px 2px rgba(26, 26, 26, 0.06);
+    font-weight: 700;
 }
 
 .viewer-mode-toggle button:not(.active):hover {
@@ -1286,23 +1281,13 @@ button.cta-primary {
 }
 
 .converter-toggle button.active {
-    background: var(--color-surface);
-    color: var(--color-text);
-    box-shadow: inset 0 0 0 1px rgba(198, 208, 196, 0.72);
+    background: rgba(44, 143, 208, 0.14);
+    color: var(--color-usd-blue-dark);
+    box-shadow: inset 0 0 0 1px rgba(44, 143, 208, 0.18);
 }
 
 .converter-toggle button.active .converter-version {
-    color: var(--color-text-muted);
-}
-
-.converter-toggle button[data-converter="needle-engine"].active {
-    background: var(--needle-brand-gradient);
-    color: #fff;
-    box-shadow: var(--needle-brand-gradient-shadow);
-}
-
-.converter-toggle button[data-converter="needle-engine"].active .converter-version {
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(31, 123, 181, 0.72);
 }
 
 .converter-label {
@@ -1697,24 +1682,13 @@ button:focus-visible {
     display: none;
 }
 
-/* When no file is loaded the Export button stays VISIBLE but inert: dimmed,
-   non-interactive, and it reveals a hint tooltip (a USD must be loaded first)
-   on hover / focus / tap. .show-tip is toggled by JS for touch & click, where
-   :hover never fires. */
-#container:not(.have-custom-file) .export-button {
-    position: relative; /* anchor for the tooltip */
-    opacity: 0.5;
-    cursor: default;
+/* Generic compact tooltip used by toolbar actions. .show-tip is toggled by JS
+   for touch/click cases where :hover never fires. */
+#container [data-tip] {
+    position: relative;
 }
 
-/* Don't give the dimmed button the interactive hover darken/underline. */
-#container:not(.have-custom-file) .export-button:hover {
-    color: var(--color-text-secondary);
-    text-decoration: none;
-}
-
-/* Tooltip bubble, anchored just under the button. */
-#container:not(.have-custom-file) .export-button::after {
+#container [data-tip]::after {
     content: attr(data-tip);
     position: absolute;
     top: calc(100% + 11px);
@@ -1736,8 +1710,7 @@ button:focus-visible {
     z-index: 400;
 }
 
-/* Little arrow pointing up at the button. */
-#container:not(.have-custom-file) .export-button::before {
+#container [data-tip]::before {
     content: "";
     position: absolute;
     top: calc(100% + 5px);
@@ -1752,19 +1725,38 @@ button:focus-visible {
     z-index: 400;
 }
 
-#container:not(.have-custom-file) .export-button:hover::after,
-#container:not(.have-custom-file) .export-button:focus-visible::after,
-#container:not(.have-custom-file) .export-button.show-tip::after {
+#container [data-tip]:hover::after,
+#container [data-tip]:focus-visible::after,
+#container [data-tip]:focus-within::after,
+#container [data-tip].show-tip::after {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
 
-#container:not(.have-custom-file) .export-button:hover::before,
-#container:not(.have-custom-file) .export-button:focus-visible::before,
-#container:not(.have-custom-file) .export-button.show-tip::before {
+#container [data-tip]:hover::before,
+#container [data-tip]:focus-visible::before,
+#container [data-tip]:focus-within::before,
+#container [data-tip].show-tip::before {
     opacity: 1;
     visibility: visible;
+}
+
+/* When no file is loaded the Export button stays visible but inert and uses
+   the disabled tooltip copy. */
+#container:not(.have-custom-file) .export-button {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Don't give the dimmed button the interactive hover darken/underline. */
+#container:not(.have-custom-file) .export-button:hover {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+
+#container:not(.have-custom-file) .export-button::after {
+    content: attr(data-disabled-tip);
 }
 
 /* Hide filename display when no file is loaded */
@@ -1823,7 +1815,10 @@ button:focus-visible {
 }
 
 .filename-sep {
+    display: inline-flex;
+    align-items: center;
     color: var(--color-text-muted);
+    line-height: 1;
     user-select: none;
 }
 
@@ -1831,11 +1826,20 @@ button:focus-visible {
     pointer-events: auto;
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     color: var(--color-text-secondary);
     text-decoration: none;
     font-size: 0.9em;
+    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
+}
+
+.filename-bar .clear-button .inline-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 0;
+    vertical-align: 0;
 }
 
 .filename-bar .clear-button:hover {
