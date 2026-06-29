@@ -127,7 +127,7 @@
         <img src="needle-logo-black.svg" alt="Needle" class="needle-logo" />
       </a>
       <span class="app-wordmark">USD Viewer</span>
-    <a href="#" id="about-link"><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
+    <a href="#" id="about-link" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
 
     <div class="dropdown">
       <button class="dropdown-button">
@@ -178,11 +178,25 @@
       </div>
     </div>
 
-    <a href="#" id="feedback-link" class="feedback-button"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
+    <a href="#" id="feedback-link" class="feedback-button" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
 
     <div class="viewer-mode-toggle" id="viewer-mode-toggle" role="group" aria-label="Viewer renderer">
       <button type="button" data-viewer-mode="three">three.js</button>
       <button type="button" data-viewer-mode="needle-loader" class="active">Needle</button>
+    </div>
+    <div class="header-overflow" id="header-overflow">
+      <button class="header-overflow-button" type="button" aria-label="More actions" aria-expanded="false" aria-controls="header-overflow-menu">
+        <svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="1"/>
+          <circle cx="19" cy="12" r="1"/>
+          <circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+      <div class="header-overflow-menu" id="header-overflow-menu">
+        <a href="#" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span>About</span></a>
+        <a href="#" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Feedback</span></a>
+        <a href="#" class="export-button" data-export-gltf data-tip="Load a USD file first to convert"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg><span>Convert to glTF</span></a>
+      </div>
     </div>
     <!-- Hidden from the public viewer chrome for now. The loader still accepts
          ?waitForMaterials=1 for tests and explicit debugging. -->
@@ -193,7 +207,7 @@
     </label>
     -->
 
-    <a id="export-gltf" class="export-button" data-tip="Load a USD file first to convert"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Convert to glTF</a>
+    <a href="#" id="export-gltf" class="export-button" data-export-gltf data-tip="Load a USD file first to convert"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Convert to glTF</a>
   </div>
 
   </div>

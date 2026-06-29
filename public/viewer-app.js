@@ -162,9 +162,41 @@ function onDomReady(callback) {
   }
 }
 
+function setHeaderOverflowOpen(open) {
+  const overflow = document.getElementById('header-overflow');
+  const button = overflow && overflow.querySelector('.header-overflow-button');
+  if (!overflow || !button) return;
+  overflow.classList.toggle('menu-open', open);
+  button.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function closeHeaderOverflowMenu() {
+  setHeaderOverflowOpen(false);
+}
+
+onDomReady(function() {
+  const overflow = document.getElementById('header-overflow');
+  const button = overflow && overflow.querySelector('.header-overflow-button');
+  if (!overflow || !button) return;
+
+  button.addEventListener('click', function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    setHeaderOverflowOpen(!overflow.classList.contains('menu-open'));
+  });
+
+  document.addEventListener('click', function(event) {
+    if (!overflow.contains(event.target)) closeHeaderOverflowMenu();
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeHeaderOverflowMenu();
+  });
+});
+
 // About dialog functionality - runs when module is loaded
 onDomReady(function() {
-  const aboutLink = document.getElementById('about-link');
+  const aboutLinks = Array.from(document.querySelectorAll('[data-open-about]'));
   const aboutDialog = document.getElementById('about-dialog');
   const dialogCloseBtn = document.getElementById('dialog-close-btn');
 
@@ -178,13 +210,14 @@ onDomReady(function() {
     closeDialogAnimated(aboutDialog);
   }
 
-  if (aboutLink) {
+  aboutLinks.forEach(function(aboutLink) {
     aboutLink.addEventListener('click', function(event) {
       event.preventDefault();
+      closeHeaderOverflowMenu();
       track('open_about');
       openAboutDialog();
     });
-  }
+  });
 
   if (dialogCloseBtn) {
     dialogCloseBtn.addEventListener('click', closeAboutDialog);
@@ -710,6 +743,7 @@ function doGltfExport() {
 // "Convert to glTF" opens a dialog that points users to Needle Cloud for a
 // production-ready conversion, while still offering the quick in-browser export.
 const gltfExportBtn = document.getElementById('export-gltf');
+const gltfExportBtns = Array.from(document.querySelectorAll('[data-export-gltf]'));
 const exportDialog = document.getElementById('export-dialog');
 const exportDialogCloseBtn = document.getElementById('export-dialog-close-btn');
 const exportDownloadDirectBtn = document.getElementById('export-download-direct');
@@ -747,23 +781,27 @@ function trackExportHover(button) {
 // When no model is loaded the button is shown but inert. CSS reveals the hint on
 // hover; on click/tap (where :hover doesn't fire) we flash it ourselves.
 let exportHintTimer = null;
-function flashExportHint() {
-  if (!gltfExportBtn) return;
-  gltfExportBtn.classList.add('show-tip');
+function flashExportHint(button) {
+  const target = button || gltfExportBtn;
+  if (!target) return;
+  target.classList.add('show-tip');
   if (exportHintTimer) clearTimeout(exportHintTimer);
-  exportHintTimer = setTimeout(() => gltfExportBtn.classList.remove('show-tip'), 2500);
+  exportHintTimer = setTimeout(() => target.classList.remove('show-tip'), 2500);
 }
 
-if (gltfExportBtn) gltfExportBtn.addEventListener('click', (evt) => {
-  evt.preventDefault();
-  const container = document.getElementById('container');
-  const hasFile = container && container.classList.contains('have-custom-file');
-  if (!hasFile) {
-    track('export_blocked_no_file');
-    flashExportHint();
-    return;
-  }
-  openExportDialog();
+gltfExportBtns.forEach((button) => {
+  button.addEventListener('click', (evt) => {
+    evt.preventDefault();
+    const container = document.getElementById('container');
+    const hasFile = container && container.classList.contains('have-custom-file');
+    if (!hasFile) {
+      track('export_blocked_no_file');
+      flashExportHint(button);
+      return;
+    }
+    closeHeaderOverflowMenu();
+    openExportDialog();
+  });
 });
 if (exportDialogCloseBtn) exportDialogCloseBtn.addEventListener('click', () => closeExportDialog('close_button'));
 if (exportDialog) exportDialog.addEventListener('click', (event) => {
@@ -809,7 +847,7 @@ if (exportDownloadDirectBtn) {
 // "Feedback" opens a dialog that posts a message to the Needle team via the
 // server-side Discord webhook (POST /api/feedback). The webhook URL is a secret
 // held only on the server — this page just sends the message + light context.
-const feedbackLink = document.getElementById('feedback-link');
+const feedbackLinks = Array.from(document.querySelectorAll('[data-open-feedback]'));
 const feedbackDialog = document.getElementById('feedback-dialog');
 const feedbackDialogCloseBtn = document.getElementById('feedback-dialog-close-btn');
 const feedbackForm = document.getElementById('feedback-form');
@@ -858,11 +896,12 @@ function closeFeedbackDialog(via) {
   closeDialogAnimated(feedbackDialog);
 }
 
-if (feedbackLink) {
-  feedbackLink.addEventListener('click', (evt) => {
+if (feedbackLinks.length) {
+  feedbackLinks.forEach((feedbackLink) => feedbackLink.addEventListener('click', (evt) => {
     evt.preventDefault();
+    closeHeaderOverflowMenu();
     openFeedbackDialog();
-  });
+  }));
 }
 if (feedbackDialogCloseBtn) feedbackDialogCloseBtn.addEventListener('click', () => closeFeedbackDialog('close_button'));
 if (feedbackDialog) feedbackDialog.addEventListener('click', (event) => {

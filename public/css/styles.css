@@ -433,6 +433,71 @@ body.drag-active .dropzone-title {
     background: rgba(255, 255, 255, 0.62);
 }
 
+.header-overflow {
+    position: relative;
+    display: none;
+    align-items: center;
+}
+
+.header-overflow-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-overflow-button:hover,
+.header-overflow.menu-open .header-overflow-button {
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.header-overflow-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 188px;
+    padding: 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    background: var(--color-surface);
+    box-shadow: 0 12px 30px rgba(26, 26, 26, 0.16);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1001;
+}
+
+.header-overflow.menu-open .header-overflow-menu {
+    display: flex;
+}
+
+#container .header-overflow-menu a {
+    margin: 0;
+    padding: 9px 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#container .header-overflow-menu a:hover {
+    background: var(--color-page);
+    text-decoration: none;
+}
+
+.header-overflow-menu .export-button::before,
+.header-overflow-menu .export-button::after {
+    display: none;
+}
+
 .material-wait-toggle {
     display: inline-flex;
     align-items: center;
@@ -1427,46 +1492,114 @@ button.cta-primary {
     }
 }
 
-/* Phone widths: condense the pill so it stays one row. The "About USD Viewer"
-   label collapses to just its icon, and spacing tightens. */
+/* Narrow desktop/tablet: keep the primary workflow in the pill, and move
+   secondary actions into the overflow menu before they collide with the canvas
+   controls below. */
+@media (max-width: 1080px) {
+    .app-wordmark {
+        display: none;
+    }
+    #about-link,
+    .feedback-button,
+    #export-gltf {
+        display: none;
+    }
+    .header-overflow {
+        display: inline-flex;
+    }
+    .filename-bar {
+        width: min(96vw, 760px);
+        justify-content: center;
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+    .filename-bar .filename {
+        max-width: min(72vw, 560px);
+    }
+    .loaded-converter-control {
+        order: 3;
+        flex-basis: 100%;
+        justify-content: center;
+    }
+    .loaded-converter-control::before {
+        display: none;
+    }
+    .converter-toggle-inline {
+        max-width: 96vw;
+        overflow-x: auto;
+    }
+}
+
+/* Phone widths: condense the pill so it stays one row. The secondary header
+   actions are already in the overflow menu, and spacing tightens. */
 @media (max-width: 560px) {
     #container {
         padding-left: 12px;
         padding-right: 12px;
         font-size: 0.85em;
     }
-    .about-text {
-        display: none;
-    }
-    #about-link .usd-logo {
-        margin-right: 0;
-    }
-    /* Collapse Feedback to its icon so the pill stays one row. */
-    .feedback-text {
-        display: none;
-    }
-    .feedback-button .inline-icon {
-        margin-right: 0;
-    }
     .needle-logo {
         height: 22px;
     }
-    .app-wordmark {
-        display: none;
+    .dropdown-button {
+        margin: 0 2px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .viewer-mode-toggle button {
+        min-width: 64px;
+        padding: 0 8px;
     }
     .filename-bar {
         max-width: 96vw;
     }
+    .loaded-converter-control {
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    .loaded-converter-control > span {
+        flex-basis: 100%;
+        text-align: center;
+    }
+    .converter-toggle-inline {
+        min-width: 0;
+        max-width: 100%;
+    }
 }
 
-/* Tiniest phones: Export collapses to its icon so the pill still fits one row.
-   Load Sample keeps its label as the primary action. */
+/* Tiniest phones: the Needle logo collapses to its mark, while Load Sample keeps
+   its label as the primary action. */
 @media (max-width: 430px) {
-    .export-button {
-        font-size: 0;
+    #container {
+        padding-left: 8px;
+        padding-right: 8px;
     }
-    .export-button .inline-icon {
+    .needle-logo-link {
+        width: 28px;
+        overflow: hidden;
+        padding-left: 6px;
+        padding-right: 0;
         margin-right: 0;
+    }
+    .needle-logo {
+        width: 73px;
+        max-width: none;
+    }
+    .dropdown-button {
+        padding-left: 6px;
+        padding-right: 6px;
+        gap: 4px;
+    }
+    .viewer-mode-toggle {
+        margin: 0 2px;
+    }
+    .viewer-mode-toggle button {
+        min-width: 55px;
+        font-size: 0.8em;
+    }
+    .header-overflow-button {
+        width: 30px;
+        height: 30px;
     }
 }
 
