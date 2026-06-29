@@ -448,6 +448,9 @@ test.describe('public usd-viewer lifecycle', () => {
                     slug: 'SyntheticConverterMatrix',
                     tags: ['showcase'],
                     thumbnail: 'https://asset-explorer.needle.tools/thumbnail.png',
+                    assets: {
+                        glb: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb',
+                    },
                     info: { textures: 2, animations: 1 },
                     conversions: [
                         { id: 'three-r185', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three-r185.usdz' },
@@ -463,7 +466,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.goto('/?viewer=needle-loader');
         await page.click('.dropdown-button');
-        await page.waitForFunction(() => document.querySelectorAll('#converter-toggle button').length === 6);
+        await page.waitForFunction(() => document.querySelectorAll('#converter-toggle button').length === 7);
 
         const state = await page.evaluate(() => ({
             topSelectExists: Boolean(document.querySelector('#converter-select-wrap, #converter-select')),
@@ -479,8 +482,12 @@ test.describe('public usd-viewer lifecycle', () => {
             'blender-5-1',
             'openusd-adobe-gltf',
             'guc',
+            'original-gltf',
         ]);
         expect(state.firstHref).toContain('Synthetic.glb.three-r185.usdz');
+
+        await page.dispatchEvent('#converter-toggle button[data-converter="original-gltf"]', 'click');
+        await expect(page.locator('.gallery-card')).toHaveAttribute('href', '?file=https://asset-explorer.needle.tools/downloads/Synthetic.glb');
         expect(diagnostics).toEqual([]);
     });
 
