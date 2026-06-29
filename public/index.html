@@ -6,7 +6,7 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
   <title>USD &amp; USDZ Viewer — View OpenUSD Files Online | Needle</title>
-  <meta name="description" content="Free online USD &amp; USDZ viewer by Needle. Drag &amp; drop OpenUSD files (.usd, .usdz, .usda, .usdc) to view them in your browser and export to glTF — powered by the real OpenUSD runtime compiled to WebAssembly." />
+  <meta name="description" content="Free online USD &amp; USDZ viewer by Needle. Drag &amp; drop OpenUSD files (.usd, .usdz, .usda, .usdc) to view them in your browser and export to glTF — powered by OpenUSD compiled to WebAssembly." />
   <meta name="author" content="Needle" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#0b1320" />
@@ -17,14 +17,14 @@
   <meta property="og:site_name" content="Needle USD Viewer" />
   <meta property="og:url" content="https://usd-viewer.needle.tools/" />
   <meta property="og:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
-  <meta property="og:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by the real OpenUSD runtime compiled to WebAssembly." />
+  <meta property="og:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by OpenUSD compiled to WebAssembly." />
   <meta property="og:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
   <meta property="og:image:alt" content="USD Viewer by Needle" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
-  <meta name="twitter:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by the real OpenUSD runtime compiled to WebAssembly." />
+  <meta name="twitter:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by OpenUSD compiled to WebAssembly." />
   <meta name="twitter:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
 
   <!-- Structured data: this is an in-browser web application -->
@@ -37,7 +37,7 @@
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Any (modern web browser)",
     "browserRequirements": "Requires a browser with WebAssembly and SharedArrayBuffer support",
-    "description": "Free online viewer for OpenUSD files (.usd, .usdz, .usda, .usdc). View USD and USDZ models in the browser and export them to glTF, powered by the real OpenUSD runtime compiled to WebAssembly.",
+    "description": "Free online viewer for OpenUSD files (.usd, .usdz, .usda, .usdc). View USD and USDZ models in the browser and export them to glTF, powered by OpenUSD compiled to WebAssembly.",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "creator": { "@type": "Organization", "name": "Needle", "url": "https://needle.tools" }
   }
@@ -72,9 +72,8 @@
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
-      let viewerMode = params.get("viewer");
-      viewerMode = viewerMode === "three" ? "three" : "needle-loader";
-      const useNeedleLoader = viewerMode === "needle-loader";
+      const viewerMode = params.get("viewer") === "three" ? "three" : "needle";
+      const useNeedleLoader = viewerMode === "needle";
       const imports = useNeedleLoader ? {
         "three": "/needle-engine/dist/three.min.js",
         "viewer-runtime": "/viewer-runtime-needle-loader.js",
@@ -116,7 +115,7 @@
 
   <!-- Crawlable page heading. Visually hidden because the UI is a full-bleed 3D
        canvas with its own chrome, but search engines and screen readers need a
-       real <h1>. -->
+       actual <h1>. -->
   <h1 class="sr-only">USD &amp; USDZ Viewer — view and export OpenUSD files online</h1>
 
   <!-- Centered top stack: the header pill, with the loaded-file row below it. -->
@@ -262,7 +261,7 @@
       </div>
       <div class="dialog-content">
         <p>A free, in-browser viewer for <strong>OpenUSD</strong> files (.usd, .usdz, .usda, .usdc), built and maintained by <a href="https://needle.tools" target="_blank" rel="noopener">Needle</a>.</p>
-        <p>It runs the real OpenUSD runtime compiled to WebAssembly and rendered through the three.js Hydra bridge, so full scene composition works right in your browser. Nothing is uploaded; everything runs locally on your device.</p>
+        <p>It runs OpenUSD compiled to WebAssembly and rendered through the three.js Hydra bridge, so scene composition works right in your browser. Nothing is uploaded; everything runs locally on your device.</p>
         <p id="openusd-build-info" class="runtime-info">OpenUSD runtime: loading...</p>
         <p>Drag &amp; drop a file to load it, pick one from the <strong>Load Sample</strong> menu, or export the scene to glTF. We built this while adding OpenUSD support to <a href="https://cloud.needle.tools" target="_blank" rel="noopener">Needle Cloud</a> — found a bug or have an idea? Use the <strong>Feedback</strong> button.</p>
         <div class="dialog-actions">

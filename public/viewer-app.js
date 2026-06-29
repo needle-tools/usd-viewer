@@ -551,7 +551,7 @@ function safeLocalStorageSet(key, value) {
 }
 
 function normalizeViewerMode(value) {
-  return value === VIEWER_MODE_NEEDLE_LOADER ? VIEWER_MODE_NEEDLE_LOADER : VIEWER_MODE_THREE;
+  return value === "needle" || value === VIEWER_MODE_NEEDLE_LOADER ? VIEWER_MODE_NEEDLE_LOADER : VIEWER_MODE_THREE;
 }
 
 function parseBooleanUrlParam(value) {
@@ -559,7 +559,7 @@ function parseBooleanUrlParam(value) {
 }
 
 function setViewerModeUrlParam(url) {
-  url.searchParams.set("viewer", viewerMode);
+  url.searchParams.set("viewer", viewerMode === VIEWER_MODE_NEEDLE_LOADER ? "needle" : viewerMode);
 }
 
 function setWaitForMaterialsUrlParam(url) {
@@ -2481,7 +2481,7 @@ async function init() {
   }
 
   if (dropdownEl) {
-    // Real mouse pointers: open on enter, close 300ms after leaving. Touch/pen
+    // Mouse pointers: open on enter, close 300ms after leaving. Touch/pen
     // are ignored here (pointerType !== 'mouse') so the synthetic hover a tap
     // generates doesn't open the menu only for the tap-click to toggle it back
     // shut — which made the first tap do nothing and only the second one work.

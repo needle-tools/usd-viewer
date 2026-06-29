@@ -140,7 +140,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
 
         await Promise.all([
-            page.waitForURL(/viewer=needle-loader/),
+            page.waitForURL(/viewer=needle/),
             page.click('[data-viewer-mode="needle-loader"]'),
         ]);
         const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
@@ -156,7 +156,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.contactShadows).toBe('0.7');
         expect(state.threeCanvasDisplay).toBe('none');
         expect(state.needleDisplay).toBe('block');
-        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
         expect(diagnostics).toEqual([]);
     });
 
@@ -165,7 +165,7 @@ test.describe('public usd-viewer lifecycle', () => {
         const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
 
         for (const sample of usdWgSamples) {
-            await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle-loader`);
+            await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
             const state = await waitForNeedleLoaderMode(page, sample.filename);
 
             expect(state.filename).toBe(sample.filename);
@@ -175,7 +175,7 @@ test.describe('public usd-viewer lifecycle', () => {
             expect(state.hasNeedleContext).toBe(true);
             expect(state.needleChildren).toBeGreaterThan(0);
             expect(state.elementSrc).toContain(sample.url);
-            expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+            expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
         }
 
         expect(usdWgDiagnostics).toEqual([]);
@@ -228,7 +228,7 @@ test.describe('public usd-viewer lifecycle', () => {
         const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
         const sample = usdWgSamples.find(entry => entry.filename === 'singleSided.usda')!;
 
-        await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle-loader`);
+        await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
         await waitForNeedleLoaderMode(page, sample.filename);
 
         const sides = await page.evaluate(() => {
@@ -257,13 +257,13 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.activeButtonText).toBe('Needle');
         expect(state.autoplay).toBe(true);
         expect(state.contactShadows).toBe('0.7');
-        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle-loader');
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
         expect(diagnostics).toEqual([]);
     });
 
     test('switches empty public viewer from Needle to three.js', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto('/?file=&viewer=needle-loader');
+        await page.goto('/?file=&viewer=needle');
         await expect(page.locator('[data-viewer-mode="needle-loader"]')).toHaveClass(/active/);
 
         await Promise.all([
@@ -288,14 +288,14 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('keeps material loading non-blocking by default with an opt-in blocking mode', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle-loader`);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle`);
         await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
 
         await expect(page.locator('#wait-materials-toggle')).toHaveCount(0);
         expect(new URL(page.url()).searchParams.get('waitForMaterials')).toBeNull();
         expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
-        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle-loader&waitForMaterials=1`);
+        await page.goto(`/?file=${publicSamples.helmet.url}&viewer=needle&waitForMaterials=1`);
         await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
         await expect(page.locator('#wait-materials-toggle')).toHaveCount(0);
         expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
@@ -458,7 +458,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(threeState.cameraFit?.ndc.minY).toBeGreaterThanOrEqual(-0.98);
         expect(threeState.cameraFit?.ndc.maxY).toBeLessThanOrEqual(0.98);
 
-        await page.goto(`/?file=${glbUrl}&viewer=needle-loader`);
+        await page.goto(`/?file=${glbUrl}&viewer=needle`);
         const needleState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'needle-loader');
         expect(needleState.filename).toBe('DamagedHelmet.glb');
         expect(needleState.hasHydraHandle).toBe(false);
@@ -501,7 +501,7 @@ test.describe('public usd-viewer lifecycle', () => {
             }),
         }));
 
-        await page.goto('/?viewer=needle-loader');
+        await page.goto('/?viewer=needle');
         await page.click('.dropdown-button');
         await page.waitForFunction(() => document.querySelectorAll('#converter-toggle button').length === 7);
 
