@@ -1828,11 +1828,18 @@ async function init() {
     return button;
   }
 
+  function pickVisibleConverterId(ids, preferred = selectedConverter) {
+    const ordered = ids.map(normalizeConverterId).filter(Boolean);
+    const normalizedPreferred = normalizeConverterId(preferred);
+    return ordered.includes(normalizedPreferred) ? normalizedPreferred : (ordered[0] || '');
+  }
+
   function renderConverterToggle(toggle, ids, activeId = selectedConverter) {
     if (!toggle) return;
-    const ordered = ids.filter(Boolean);
+    const ordered = ids.map(normalizeConverterId).filter(Boolean);
+    const visibleActiveId = pickVisibleConverterId(ordered, activeId);
     toggle.textContent = '';
-    for (const id of ordered) toggle.appendChild(createConverterButton(id, activeId));
+    for (const id of ordered) toggle.appendChild(createConverterButton(id, visibleActiveId));
   }
 
   const sampleGroups = new Map([
@@ -1877,8 +1884,10 @@ async function init() {
   function syncConverterControls() {
     for (const toggle of [converterToggle, loadedConverterToggle]) {
       if (!toggle) continue;
-      for (const button of toggle.querySelectorAll('button[data-converter]')) {
-        const active = normalizeConverterId(button.dataset.converter) === normalizeConverterId(selectedConverter);
+      const buttons = Array.from(toggle.querySelectorAll('button[data-converter]'));
+      const visibleActiveId = pickVisibleConverterId(buttons.map(button => button.dataset.converter), selectedConverter);
+      for (const button of buttons) {
+        const active = normalizeConverterId(button.dataset.converter) === visibleActiveId;
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       }
