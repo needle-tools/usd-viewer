@@ -1637,13 +1637,13 @@ button:focus-visible {
     display: none;
 }
 
-/* Loaded-file row: filename label, separator, Clear — centered under the pill.
-   No background; it floats as plain text over the canvas. Only the Clear action
-   is interactive so the label never blocks canvas interaction. */
+/* Loaded-file row: filename, optional converter, and Clear. No background; it
+   floats as plain text over the canvas. Only actions receive pointer events. */
 .filename-bar {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: min(96vw, 920px);
     max-width: 96vw;
     pointer-events: none;
 }
@@ -1652,6 +1652,7 @@ button:focus-visible {
     display: inline-flex;
     align-items: center;
     min-width: 0;
+    flex: 0 1 auto;
     padding: 0;
     margin: 0;
     font-size: 0.9em;
@@ -1666,6 +1667,7 @@ button:focus-visible {
 }
 
 .filename-sep {
+    margin-left: auto;
     color: var(--color-text-muted);
     user-select: none;
 }
@@ -1691,16 +1693,24 @@ button:focus-visible {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-left: 8px;
-    color: var(--color-text-muted);
-    font-size: 0.86em;
+    min-width: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9em;
+    white-space: nowrap;
 }
 
 .loaded-converter-control[hidden] {
     display: none;
 }
 
+.loaded-converter-control::before {
+    content: "–";
+    color: var(--color-text-muted);
+    user-select: none;
+}
+
 .loaded-converter-control > span {
+    color: inherit;
     white-space: nowrap;
 }
 

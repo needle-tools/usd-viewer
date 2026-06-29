@@ -200,16 +200,16 @@
 
   <!-- Loaded-file row, centered just below the header pill (not inside it).
        Shown only once a model is loaded (see the :not(.have-custom-file) rule in
-       styles.css). The filename label is followed by a separator and the Clear
-       action on the right. -->
+       styles.css). The filename label is followed by conversion controls when
+       applicable, with Clear pinned to the right edge. -->
   <div class="filename-bar">
     <span class="filename"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><span class="filename-text"></span></span>
-    <span class="filename-sep" aria-hidden="true">&ndash;</span>
-    <a class="file clear-button" href="?file=" title="Clear loaded model"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Clear</a>
     <div class="loaded-converter-control" id="loaded-converter-toggle-wrap" hidden>
       <span>converted by</span>
       <div class="converter-toggle converter-toggle-inline" id="loaded-converter-toggle" role="group" aria-label="Converted by"></div>
     </div>
+    <span class="filename-sep" aria-hidden="true">&ndash;</span>
+    <a class="file clear-button" href="?file=" title="Clear loaded model"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Clear</a>
   </div>
   </div>
 
