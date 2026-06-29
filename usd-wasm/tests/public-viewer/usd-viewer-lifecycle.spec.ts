@@ -568,6 +568,83 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps Needle Engine renderer alive while switching converted and original glTF variants', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const contextDiagnostics = collectConsoleMatches(page, [
+            /Attempting to recover WebGL context/i,
+            /WEBGL_lose_context/i,
+            /webgl context (?:lost|was lost)/i,
+        ]);
+        const sample = {
+            name: 'Animated Colors Cube',
+            slug: 'AnimatedColorsCube',
+            glb: 'https://asset-explorer.needle.tools/downloads/AnimatedColorsCube.glb',
+            usdz: 'https://asset-explorer.needle.tools/downloads/AnimatedColorsCube.glb.three.usdz',
+        };
+        await page.route(assetExplorerApi, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [{
+                    name: sample.name,
+                    slug: sample.slug,
+                    tags: ['showcase'],
+                    thumbnail: 'https://asset-explorer.needle.tools/downloads/AnimatedColorsCube.glb.three.webp',
+                    assets: { glb: sample.glb },
+                    conversions: [
+                        { id: 'three-r185', label: 'three', version: '0.185.0', usdz: sample.usdz },
+                    ],
+                }],
+            }),
+        }));
+        await page.route(sample.usdz, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
+        }));
+        await page.route(sample.glb, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb',
+        }));
+
+        await page.goto(`/?file=${encodeURIComponent(sample.usdz)}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, 'AnimatedColorsCube.glb.three.usdz');
+        const firstLifecycleState = await page.evaluate(() => {
+            const element = document.querySelector('needle-engine');
+            (window as any).__needleLifecycleElement = element;
+            (window as any).__needleLifecycleContext = element?.context;
+            return {
+                src: element?.getAttribute('src') || '',
+                sameElement: element === (window as any).__needleLifecycleElement,
+                sameContext: element?.context === (window as any).__needleLifecycleContext,
+            };
+        });
+        expect(firstLifecycleState.src).toBe(sample.usdz);
+        expect(firstLifecycleState.sameElement).toBe(true);
+        expect(firstLifecycleState.sameContext).toBe(true);
+
+        await page.dispatchEvent('#loaded-converter-toggle button[data-converter="original-gltf"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
+        const originalState = await waitForNativeGltfLoad(page, 'AnimatedColorsCube.glb', 'needle-loader');
+        expect(originalState.needleSrc).toBe(sample.glb);
+        expect(await page.evaluate(() => {
+            const element = document.querySelector('needle-engine');
+            return {
+                sameElement: element === (window as any).__needleLifecycleElement,
+                sameContext: element?.context === (window as any).__needleLifecycleContext,
+            };
+        })).toEqual({ sameElement: true, sameContext: true });
+
+        await page.dispatchEvent('#loaded-converter-toggle button[data-converter="three-r185"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
+        await waitForNeedleLoaderMode(page, 'AnimatedColorsCube.glb.three.usdz');
+        expect(await page.evaluate(() => {
+            const element = document.querySelector('needle-engine');
+            return {
+                src: element?.getAttribute('src') || '',
+                sameElement: element === (window as any).__needleLifecycleElement,
+                sameContext: element?.context === (window as any).__needleLifecycleContext,
+            };
+        })).toEqual({ src: sample.usdz, sameElement: true, sameContext: true });
+
+        expect(contextDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('stores Asset Explorer conversion variants without a gallery switcher', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({

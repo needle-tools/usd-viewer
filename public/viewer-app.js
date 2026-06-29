@@ -1154,7 +1154,7 @@ if (feedbackForm) {
   });
 }
 
-async function clearStage() {
+async function clearStage({ clearNeedleEngine = false } = {}) {
   loadGeneration++;
   ready = false;
 
@@ -1176,9 +1176,11 @@ async function clearStage() {
   }
 
   try {
-    if (needleEngineElement) {
+    if (clearNeedleEngine && needleEngineElement) {
+      // Do not do this for normal file switches: changing <needle-engine src>
+      // performs scene cleanup while keeping the renderer/context alive. Emptying
+      // src here is only for the explicit Clear action.
       needleEngineElement.setAttribute("src", "");
-      needleEngineElement.context?.clear?.();
     }
   } catch (error) {
     console.warn("Failed to clear Needle Engine scene", error);
@@ -2917,7 +2919,7 @@ async function init() {
     const el = document.querySelector("#container");
     el.classList.remove("have-custom-file");
 
-    await clearStage();
+    await clearStage({ clearNeedleEngine: !filename });
 
     if (filename) {
       el.classList.add("have-custom-file");
