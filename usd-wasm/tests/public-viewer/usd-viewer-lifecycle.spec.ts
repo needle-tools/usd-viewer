@@ -33,6 +33,8 @@ const assetExplorerSamples = {
     },
 };
 
+const assetExplorerApi = 'https://asset-explorer.needle.tools/api/models.json';
+
 const usdWgBaseUrl = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
 const usdWgSamples = [
     {
@@ -436,6 +438,52 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('renders versioned Asset Explorer converter families', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route(assetExplorerApi, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [{
+                    name: 'Synthetic Converter Matrix',
+                    slug: 'SyntheticConverterMatrix',
+                    tags: ['showcase'],
+                    thumbnail: 'https://asset-explorer.needle.tools/thumbnail.png',
+                    info: { textures: 2, animations: 1 },
+                    conversions: [
+                        { id: 'three-r185', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three-r185.usdz' },
+                        { id: 'needle-engine', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.needle-engine.usdz' },
+                        { id: 'blender-5-1', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.blender-5-1.usdz' },
+                        { id: 'openusd-adobe-gltf', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.openusd-adobe-gltf.usdz' },
+                        { id: 'guc', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.guc.usdz' },
+                        { id: 'three-r154', available: true, usdzUri: 'https://asset-explorer.needle.tools/downloads/Synthetic.glb.three.usdz' },
+                    ],
+                }],
+            }),
+        }));
+
+        await page.goto('/?viewer=needle-loader');
+        await page.click('.dropdown-button');
+        await page.waitForFunction(() => document.querySelectorAll('#converter-toggle button').length === 6);
+
+        const state = await page.evaluate(() => ({
+            topSelectExists: Boolean(document.querySelector('#converter-select-wrap, #converter-select')),
+            converters: Array.from(document.querySelectorAll<HTMLButtonElement>('#converter-toggle button')).map(button => button.dataset.converter),
+            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
+        }));
+
+        expect(state.topSelectExists).toBe(false);
+        expect(state.converters).toEqual([
+            'three-r185',
+            'three-r154',
+            'needle-engine',
+            'blender-5-1',
+            'openusd-adobe-gltf',
+            'guc',
+        ]);
+        expect(state.firstHref).toContain('Synthetic.glb.three-r185.usdz');
+        expect(diagnostics).toEqual([]);
+    });
+
     test('uses folder-like sample library defaults and ordering', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three');
@@ -548,8 +596,8 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
         children: window.usdRoot?.children?.length ?? -1,
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
-        loadedConverterVisible: !document.querySelector<HTMLLabelElement>('#converter-select-wrap')?.hidden,
-        loadedConverter: document.querySelector<HTMLSelectElement>('#converter-select')?.value || '',
+        loadedConverterVisible: !document.querySelector<HTMLElement>('#loaded-converter-toggle-wrap')?.hidden,
+        loadedConverter: document.querySelector<HTMLButtonElement>('#loaded-converter-toggle button.active')?.dataset.converter || '',
         rendererMemory: window.renderer?.info?.memory ? { ...window.renderer.info.memory } : { geometries: -1, textures: -1 },
     }));
 }

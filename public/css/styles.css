@@ -421,39 +421,6 @@ body.drag-active .dropzone-title {
     color: var(--color-text);
 }
 
-.converter-select {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin: 0 4px;
-    padding: 2px 4px 2px 10px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
-    color: var(--color-text-secondary);
-    font-size: 0.82em;
-}
-
-.converter-select[hidden] {
-    display: none;
-}
-
-.converter-select span {
-    color: var(--color-text-muted);
-    font-size: 0.86em;
-    white-space: nowrap;
-}
-
-.converter-select select {
-    height: 28px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--color-surface);
-    color: var(--color-text);
-    font: inherit;
-    padding: 0 26px 0 10px;
-}
-
 .material-wait-toggle {
     display: inline-flex;
     align-items: center;
@@ -1199,7 +1166,7 @@ button.cta-primary {
     flex-shrink: 0;
 }
 
-/* Segmented converter toggle (three | blender | omniverse). */
+/* Segmented converter toggle. */
 .converter-toggle {
     display: inline-flex;
     border: 1px solid var(--border-subtle);
@@ -1215,6 +1182,7 @@ button.cta-primary {
 .converter-toggle button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
     background: var(--color-surface);
     border: none;
@@ -1222,9 +1190,12 @@ button.cta-primary {
     color: var(--color-text-secondary);
     font-family: inherit;
     font-size: 0.72em;
-    padding: 4px 8px;
+    min-width: 68px;
+    min-height: 29px;
+    padding: 4px 9px;
     cursor: pointer;
     transition: background-color 0.15s, color 0.15s;
+    white-space: nowrap;
 }
 
 .converter-toggle button:first-child {
@@ -1239,6 +1210,39 @@ button.cta-primary {
 .converter-toggle button.active {
     background-color: var(--color-green-dark);
     color: #fff;
+}
+
+.converter-toggle button.active .converter-version {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.converter-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.05;
+}
+
+.converter-name {
+    font-weight: 700;
+}
+
+.converter-version {
+    color: var(--color-text-muted);
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.converter-toggle-inline {
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.converter-toggle-inline button {
+    font-size: 0.76em;
+    min-width: 74px;
+    min-height: 30px;
+    padding: 4px 10px;
 }
 
 .gallery-status {
@@ -1615,6 +1619,24 @@ button:focus-visible {
 .filename-bar .clear-button:hover {
     color: var(--color-text);
     text-decoration: underline;
+}
+
+.loaded-converter-control {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+    color: var(--color-text-muted);
+    font-size: 0.86em;
+}
+
+.loaded-converter-control[hidden] {
+    display: none;
+}
+
+.loaded-converter-control > span {
+    white-space: nowrap;
 }
 
 /* "What's New" banner — small, subtle, bottom-right announcement card that

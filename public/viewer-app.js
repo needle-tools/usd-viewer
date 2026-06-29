@@ -1477,7 +1477,7 @@ async function init() {
   // ---- Sample Library mega-menu -------------------------------------------
   // The left column selects a source group; every group renders into the same
   // right-hand card grid. Groups with multiple conversion outputs expose the
-  // converter controls both in the grid header and in the top toolbar.
+  // converter controls in the grid header and on the loaded-file row.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
@@ -1491,8 +1491,8 @@ async function init() {
   const galleryGrid = document.getElementById('gallery-grid');
   const galleryStatus = document.getElementById('gallery-status');
   const converterToggle = document.getElementById('converter-toggle');
-  const converterSelectWrap = document.getElementById('converter-select-wrap');
-  const converterSelect = document.getElementById('converter-select');
+  const loadedConverterToggleWrap = document.getElementById('loaded-converter-toggle-wrap');
+  const loadedConverterToggle = document.getElementById('loaded-converter-toggle');
 
   let galleryFetchStarted = false; // guards against duplicate fetches
   let galleryFetchPromise = null;
@@ -1503,7 +1503,7 @@ async function init() {
   let usdWgManifest = null;
   let usdWgManifestPromise = null;
   let usdWgTreeRendered = false;
-  let selectedConverter = 'three'; // three | blender | omniverse
+  let selectedConverter = 'three-r185';
   let selectedSampleGroup = 'gltf';
   let loadedConversionCard = null;
   let loadedConverter = '';
@@ -1512,6 +1512,83 @@ async function init() {
   const conversionCardByUrl = new Map();
   const collapsedSampleTrees = new Set(['usd-wg']);
   const gltfExcludedTags = new Set(['video']);
+  const converterFamilies = [
+    { id: 'three-r185', aliases: ['three-r185'], name: 'three', version: 'r185', title: 'Converted with upstream three.js 0.185.0' },
+    { id: 'three-r154', aliases: ['three', 'three-r154'], name: 'three', version: 'r154', title: 'Converted with three.js r154, Needle fork' },
+    { id: 'needle-engine', aliases: ['needle-engine', 'needle'], name: 'Needle', version: '5.1', title: 'Converted with Needle Engine 5.1.2 USDZExporter' },
+    { id: 'blender-5-1', aliases: ['blender-5-1'], name: 'Blender', version: '5.1', title: 'Converted with Blender 5.1.2' },
+    { id: 'blender-3-6', aliases: ['blender', 'blender-3-6'], name: 'Blender', version: '3.6', title: 'Converted with Blender 3.6' },
+    { id: 'openusd-adobe-gltf', aliases: ['openusd-adobe-gltf', 'adobe-gltf', 'adobe-openusd-gltf'], name: 'Adobe glTF', version: 'OpenUSD', title: 'Converted with OpenUSD 26.05 and Adobe glTF file-format plugin 2026.03' },
+    { id: 'guc', aliases: ['guc'], name: 'GUC', version: '0.5', title: 'Converted with GUC 0.5' },
+    { id: 'omniverse', aliases: ['omniverse', 'ov'], name: 'Omniverse', version: 'Kit 105', title: 'Converted with Omniverse Kit 105.0' },
+  ];
+  const converterFamilyById = new Map();
+  const converterAliasToId = new Map();
+  for (const family of converterFamilies) {
+    converterFamilyById.set(family.id, family);
+    for (const alias of [family.id, ...(family.aliases || [])]) converterAliasToId.set(alias, family.id);
+  }
+
+  function normalizeConverterId(value) {
+    const key = String(value || '').trim();
+    return converterAliasToId.get(key) || key;
+  }
+
+  function orderedConverterIds(conversions) {
+    const available = new Set(Object.keys(conversions || {}).map(normalizeConverterId));
+    const ordered = converterFamilies.map(family => family.id).filter(id => available.has(id));
+    for (const id of available) {
+      if (!ordered.includes(id)) ordered.push(id);
+    }
+    return ordered;
+  }
+
+  function pickConverterId(conversions, preferred = selectedConverter) {
+    const ids = orderedConverterIds(conversions);
+    if (!ids.length) return '';
+    const normalizedPreferred = normalizeConverterId(preferred);
+    if (normalizedPreferred && conversions?.[normalizedPreferred]) return normalizedPreferred;
+    return ids[0];
+  }
+
+  function pickConversionUrl(conversions, preferred = selectedConverter) {
+    const id = pickConverterId(conversions, preferred);
+    return id ? conversions?.[id] : '';
+  }
+
+  function createConverterButton(converterId, activeId) {
+    const id = normalizeConverterId(converterId);
+    const family = converterFamilyById.get(id) || { id, name: id, version: '', title: id };
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.converter = id;
+    button.title = family.title || family.name || id;
+    const isActive = id === normalizeConverterId(activeId);
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+
+    const label = document.createElement('span');
+    label.className = 'converter-label';
+    const name = document.createElement('span');
+    name.className = 'converter-name';
+    name.textContent = family.name || id;
+    label.appendChild(name);
+    if (family.version) {
+      const version = document.createElement('span');
+      version.className = 'converter-version';
+      version.textContent = family.version;
+      label.appendChild(version);
+    }
+    button.appendChild(label);
+    return button;
+  }
+
+  function renderConverterToggle(toggle, ids, activeId = selectedConverter) {
+    if (!toggle) return;
+    const ordered = ids.filter(Boolean);
+    toggle.textContent = '';
+    for (const id of ordered) toggle.appendChild(createConverterButton(id, activeId));
+  }
 
   const sampleGroups = new Map([
     ['gltf', {
@@ -1553,9 +1630,10 @@ async function init() {
   }
 
   function syncConverterControls() {
-    if (converterToggle) {
-      for (const button of converterToggle.querySelectorAll('button[data-converter]')) {
-        const active = button.dataset.converter === selectedConverter;
+    for (const toggle of [converterToggle, loadedConverterToggle]) {
+      if (!toggle) continue;
+      for (const button of toggle.querySelectorAll('button[data-converter]')) {
+        const active = normalizeConverterId(button.dataset.converter) === normalizeConverterId(selectedConverter);
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       }
@@ -1563,21 +1641,19 @@ async function init() {
   }
 
   function setSelectedConverter(converter) {
-    selectedConverter = converter || 'three';
+    selectedConverter = normalizeConverterId(converter) || 'three-r185';
     syncConverterControls();
     applyConverter();
   }
 
   function setLoadedConverterControlVisible(visible) {
-    if (converterSelectWrap) converterSelectWrap.hidden = !visible;
+    if (loadedConverterToggleWrap) loadedConverterToggleWrap.hidden = !visible;
   }
 
   function syncLoadedConverterControl() {
-    if (!converterSelect) return;
-    for (const option of converterSelect.options) {
-      option.disabled = !!loadedConversionCard && !loadedConversionCard.conversions?.[option.value];
-    }
-    if (loadedConverter) converterSelect.value = loadedConverter;
+    if (!loadedConverterToggle) return;
+    const ids = orderedConverterIds(loadedConversionCard?.conversions || {});
+    renderConverterToggle(loadedConverterToggle, ids, loadedConverter || selectedConverter);
   }
 
   function canonicalSampleUrl(url) {
@@ -1602,8 +1678,8 @@ async function init() {
 
   function setLoadedConversionCard(card, converter) {
     loadedConversionCard = card || null;
-    loadedConverter = converter || '';
-    setLoadedConverterControlVisible(!!loadedConversionCard);
+    loadedConverter = normalizeConverterId(converter) || '';
+    setLoadedConverterControlVisible(orderedConverterIds(loadedConversionCard?.conversions || {}).length > 1);
     syncLoadedConverterControl();
   }
 
@@ -1621,7 +1697,8 @@ async function init() {
   }
 
   function loadConvertedVariant(converter) {
-    const url = loadedConversionCard?.conversions?.[converter];
+    const normalized = normalizeConverterId(converter);
+    const url = loadedConversionCard?.conversions?.[normalized];
     if (!url || canonicalSampleUrl(url) === canonicalSampleUrl(filename)) return;
     const link = document.createElement('a');
     link.className = 'file gallery-card';
@@ -1650,19 +1727,41 @@ async function init() {
     return bits.join(' · ');
   }
 
+  function addConversion(conversions, converter, url) {
+    const id = normalizeConverterId(converter);
+    if (!id || !url) return;
+    conversions[id] = url;
+  }
+
+  function collectAssetExplorerConversions(model) {
+    const conversions = {};
+    const legacyUsdz = (model.assets && model.assets.usdz) || {};
+    addConversion(conversions, 'three', legacyUsdz.three);
+    addConversion(conversions, 'blender', legacyUsdz.blender);
+    addConversion(conversions, 'omniverse', legacyUsdz.omniverse || legacyUsdz.ov);
+
+    const conversionEntries = [
+      ...(Array.isArray(model.conversions) ? model.conversions : []),
+      ...(Array.isArray(model.paths?.conversions) ? model.paths.conversions : []),
+    ];
+    for (const conversion of conversionEntries) {
+      if (!conversion || conversion.available === false) continue;
+      const converter = conversion.id || conversion.suffix || conversion.converter || conversion.label;
+      const url = conversion.usdzUri || conversion.usdzUrl || conversion.downloadUri || conversion.url || conversion.href;
+      addConversion(conversions, converter, url);
+    }
+    return conversions;
+  }
+
   function assetExplorerModelToCard(model) {
     if (!model.tags?.length) return null;
-    const usdz = (model.assets && model.assets.usdz) || {};
-    const conversions = {};
-    if (usdz.three) conversions.three = usdz.three;
-    if (usdz.blender) conversions.blender = usdz.blender;
-    if (usdz.omniverse) conversions.omniverse = usdz.omniverse;
-    const url = conversions[selectedConverter] || conversions.three || conversions.blender || conversions.omniverse;
+    const conversions = collectAssetExplorerConversions(model);
+    const url = pickConversionUrl(conversions);
     if (!url) return null;
     return {
       name: model.name || model.slug || 'Model',
       meta: assetExplorerMetaLine(model),
-      thumbnail: model.thumbnail,
+      thumbnail: model.thumbnail || model.previewUri,
       conversions,
       url,
       tags: model.tags || ['untagged'],
@@ -1944,6 +2043,8 @@ async function init() {
       const models = Array.isArray(data.models) ? data.models : [];
       galleryModels = models.map((model) => assetExplorerModelToCard(attachGltfTags(model, tagIndex))).filter(Boolean);
       for (const card of galleryModels) indexConversionCard(card);
+      renderConverterToggle(converterToggle, orderedConverterIds(Object.assign({}, ...galleryModels.map(card => card.conversions || {}))), selectedConverter);
+      syncConverterControls();
       renderGltfTagTree(galleryModels);
       if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
       return galleryModels;
@@ -1963,7 +2064,13 @@ async function init() {
   function applyConverter() {
     if (!galleryGrid) return;
     for (const card of galleryGrid.querySelectorAll('.gallery-card')) {
-      const url = card.dataset[selectedConverter] || card.dataset.three || card.dataset.blender || card.dataset.omniverse;
+      let conversions = {};
+      try {
+        conversions = JSON.parse(card.dataset.conversions || '{}');
+      } catch {
+        conversions = {};
+      }
+      const url = pickConversionUrl(conversions);
       if (url) card.setAttribute('href', sampleHref(url));
     }
   }
@@ -1971,9 +2078,13 @@ async function init() {
   function buildGalleryCards(cards) {
     if (!galleryGrid) return;
     galleryGrid.textContent = '';
+    const converterIds = orderedConverterIds(Object.assign({}, ...cards.map(card => card.conversions || {})));
+    renderConverterToggle(converterToggle, converterIds, selectedConverter);
+    setConverterControlsVisible(converterIds.length > 1);
+    syncConverterControls();
     for (const item of cards) {
       const conversions = item.conversions || {};
-      const url = conversions[selectedConverter] || item.url || conversions.three || conversions.blender || conversions.omniverse;
+      const url = pickConversionUrl(conversions) || item.url;
       if (!url) continue;
 
       // Cards are "a.file" so they reuse the delegated URL-load handler below.
@@ -1982,9 +2093,7 @@ async function init() {
       card.href = sampleHref(url);
       card.draggable = false;
       card.dataset.name = item.name || 'Model';
-      if (conversions.three) card.dataset.three = conversions.three;
-      if (conversions.blender) card.dataset.blender = conversions.blender;
-      if (conversions.omniverse) card.dataset.omniverse = conversions.omniverse;
+      card.dataset.conversions = JSON.stringify(conversions);
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'gallery-thumb-wrap';
@@ -2171,9 +2280,11 @@ async function init() {
       track('gallery_select_converter', { converter: selectedConverter });
     });
   }
-  if (converterSelect) {
-    converterSelect.addEventListener('change', function() {
-      const converter = converterSelect.value;
+  if (loadedConverterToggle) {
+    loadedConverterToggle.addEventListener('click', function(event) {
+      const btn = event.target.closest('button[data-converter]');
+      if (!btn) return;
+      const converter = normalizeConverterId(btn.dataset.converter);
       loadedConverter = converter;
       setSelectedConverter(converter);
       loadConvertedVariant(converter)?.catch(error => console.error("Failed to load converted sample", error));
