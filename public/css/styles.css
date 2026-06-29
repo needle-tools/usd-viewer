@@ -423,7 +423,7 @@ body.drag-active .dropzone-title {
 
 .viewer-mode-toggle button[data-viewer-mode="needle-loader"].active {
     background: var(--needle-brand-gradient);
-    color: var(--color-text);
+    color: #fff;
     box-shadow: var(--needle-brand-gradient-shadow);
     font-weight: 800;
 }
@@ -1232,12 +1232,12 @@ button.cta-primary {
 
 .converter-toggle button[data-converter="needle-engine"].active {
     background: var(--needle-brand-gradient);
-    color: var(--color-text);
+    color: #fff;
     box-shadow: var(--needle-brand-gradient-shadow);
 }
 
 .converter-toggle button[data-converter="needle-engine"].active .converter-version {
-    color: rgba(26, 26, 26, 0.66);
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .converter-label {
