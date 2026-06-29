@@ -438,6 +438,27 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('loads original glTF samples with native viewer loaders', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const glbUrl = '/test-fixtures/asset-explorer/DamagedHelmet.glb';
+
+        await page.goto(`/?file=${glbUrl}&viewer=three`);
+        const threeState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'three');
+        expect(threeState.filename).toBe('DamagedHelmet.glb');
+        expect(threeState.hasHydraHandle).toBe(false);
+        expect(threeState.hasUsdStage).toBe(false);
+        expect(threeState.threeChildren).toBeGreaterThan(0);
+
+        await page.goto(`/?file=${glbUrl}&viewer=needle-loader`);
+        const needleState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'needle-loader');
+        expect(needleState.filename).toBe('DamagedHelmet.glb');
+        expect(needleState.hasHydraHandle).toBe(false);
+        expect(needleState.hasUsdStage).toBe(false);
+        expect(needleState.needleSrc).toBe(glbUrl);
+        expect(needleState.hasNeedleContext).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('renders versioned Asset Explorer converter families', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
@@ -606,6 +627,30 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
         loadedConverterVisible: !document.querySelector<HTMLElement>('#loaded-converter-toggle-wrap')?.hidden,
         loadedConverter: document.querySelector<HTMLButtonElement>('#loaded-converter-toggle button.active')?.dataset.converter || '',
         rendererMemory: window.renderer?.info?.memory ? { ...window.renderer.info.memory } : { geometries: -1, textures: -1 },
+    }));
+}
+
+async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three' | 'needle-loader') {
+    await page.waitForFunction(({ expectedFilename, expectedMode }) => {
+        const overlay = document.getElementById('loading-overlay');
+        const overlayHidden = !overlay || !overlay.classList.contains('visible');
+        const actualFilename = document.querySelector('.filename-text')?.textContent || '';
+        const nativeThreeLoaded = expectedMode === 'three' && (window.usdRoot?.children?.length ?? 0) > 0;
+        const nativeNeedleLoaded = expectedMode === 'needle-loader' && Boolean(document.querySelector('needle-engine')?.context);
+        return overlayHidden
+            && actualFilename === expectedFilename
+            && !window.usdHydra
+            && !window.usdStage
+            && (nativeThreeLoaded || nativeNeedleLoaded);
+    }, { expectedFilename: filename, expectedMode: mode });
+    await page.waitForTimeout(1000);
+    return await page.evaluate(() => ({
+        filename: document.querySelector('.filename-text')?.textContent || '',
+        hasHydraHandle: Boolean(window.usdHydra),
+        hasUsdStage: Boolean(window.usdStage),
+        threeChildren: window.usdRoot?.children?.length ?? -1,
+        hasNeedleContext: Boolean(document.querySelector('needle-engine')?.context),
+        needleSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
     }));
 }
 

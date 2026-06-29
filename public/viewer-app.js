@@ -1,5 +1,6 @@
 import {
   Vector3,
+  AnimationMixer,
   Box3,
   PerspectiveCamera,
   Scene,
@@ -20,6 +21,7 @@ import {
   getHydraHandleFromNeedleEngineAsset,
   RGBELoader,
   GLTFExporter,
+  GLTFLoader,
   OrbitControls,
   runtimeViewerMode,
 } from 'viewer-runtime';
@@ -370,6 +372,8 @@ var lastAnimationTimeSeconds = performance.now() / 1000;
 let needleEngineElement = null;
 let removeNeedleEngineUsdPlugin = null;
 let needleLoaderFiles = [];
+let nativeGltfRoot = null;
+let nativeGltfMixers = [];
 
 // Lowercase file extension from a name or URL, with any query/hash stripped.
 // Used only for analytics — extensions are not sensitive (unlike names/paths).
@@ -625,7 +629,13 @@ try {
       if (catalogAsset?.files?.length) {
         await loadCatalogAssetBundle(catalogAsset, filename);
       } else {
-        await loadUsdFile(undefined, filename, urlPath, true);
+        const parts = filename.split('/');
+        const displayFilename = parts[parts.length - 1];
+        if (isGltfFileName(displayFilename || urlPath)) {
+          await loadNativeGltfFile(displayFilename, urlPath);
+        } else {
+          await loadUsdFile(undefined, displayFilename, urlPath, true);
+        }
       }
     }
   }).catch((error) => {
@@ -929,6 +939,7 @@ async function clearStage() {
   window.needleEngineContext = undefined;
   pendingHydraFiles = [];
   needleLoaderFiles = [];
+  nativeGltfMixers = [];
 
   try {
     await handle?.dispose?.();
@@ -945,6 +956,12 @@ async function clearStage() {
     console.warn("Failed to clear Needle Engine scene", error);
   }
 
+  try {
+    disposeNativeGltfRoot();
+  } catch (error) {
+    console.warn("Failed to dispose native glTF scene", error);
+  }
+
   // A new model is being loaded — drop any previously captured upload set.
   capturedFiles = [];
   capturedRootFilename = null;
@@ -958,6 +975,29 @@ async function clearStage() {
   if (window.clearMessageLog) {
     window.clearMessageLog();
   }
+}
+
+function disposeMaterial(material) {
+  if (!material) return;
+  const materials = Array.isArray(material) ? material : [material];
+  for (const item of materials) {
+    for (const value of Object.values(item)) {
+      if (value && typeof value === "object" && typeof value.dispose === "function" && value.isTexture) {
+        value.dispose();
+      }
+    }
+    item.dispose?.();
+  }
+}
+
+function disposeNativeGltfRoot() {
+  if (!nativeGltfRoot) return;
+  nativeGltfRoot.traverse?.(object => {
+    object.geometry?.dispose?.();
+    disposeMaterial(object.material);
+  });
+  nativeGltfRoot.parent?.remove?.(nativeGltfRoot);
+  nativeGltfRoot = null;
 }
 
 function addPath(root, path) {
@@ -1141,6 +1181,106 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
     return null;
   }
   return { handle, context };
+}
+
+async function loadNativeNeedleEngineGltf(filename, path, generation) {
+  const element = await ensureNeedleEngineLoader();
+  needleLoaderFiles = [];
+
+  const loadPromise = new Promise((resolve, reject) => {
+    const cleanup = () => {
+      element.removeEventListener("loadfinished", onLoadFinished);
+      element.removeEventListener("error", onError);
+    };
+    const onLoadFinished = event => {
+      cleanup();
+      resolve(event.detail?.context || element.context);
+    };
+    const onError = event => {
+      cleanup();
+      reject(event.detail || new Error("Needle Engine failed to load " + path));
+    };
+    element.addEventListener("loadfinished", onLoadFinished, { once: true });
+    element.addEventListener("error", onError, { once: true });
+  });
+
+  element.setAttribute("src", path);
+  const context = await loadPromise;
+  if (generation !== loadGeneration) return null;
+  if (!fitNeedleEngineCamera(context)) {
+    scheduleNeedleEngineCameraFit(context);
+  }
+  return context;
+}
+
+function loadThreeGltf(path) {
+  const loader = new GLTFLoader();
+  loader.setCrossOrigin?.("anonymous");
+  return new Promise((resolve, reject) => {
+    loader.load(
+      path,
+      resolve,
+      event => {
+        if (!event.lengthComputable || !messageLog) return;
+        const percent = Math.round((event.loaded / event.total) * 100);
+        messageLog.textContent = `Loading ${currentDisplayFilename || "glTF"} ${percent}%`;
+      },
+      reject,
+    );
+  });
+}
+
+async function loadNativeGltfFile(filename, path) {
+  setFilenameText(filename);
+  ready = false;
+  const generation = loadGeneration;
+
+  loadedSourceUrl = path;
+  loadedSourceFilename = filename;
+
+  const containerEl = document.querySelector("#container");
+  if (containerEl) containerEl.classList.add("have-custom-file");
+  if (window.showLoadingOverlay) window.showLoadingOverlay(filename);
+  if (window.setViewerLoading) window.setViewerLoading(true);
+
+  try {
+    if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
+      const context = await loadNativeNeedleEngineGltf(filename, path, generation);
+      if (!context || generation !== loadGeneration) return;
+      window.needleEngineContext = context;
+      window.usdHydra = undefined;
+      window.driver = undefined;
+      window.usdStage = undefined;
+      window.renderInterface = undefined;
+    } else {
+      const gltf = await loadThreeGltf(path);
+      if (generation !== loadGeneration) return;
+      nativeGltfRoot = gltf.scene || new Group();
+      window.usdRoot.add(nativeGltfRoot);
+      nativeGltfMixers = (gltf.animations || []).length ? [new AnimationMixer(nativeGltfRoot)] : [];
+      for (const clip of gltf.animations || []) {
+        nativeGltfMixers[0]?.clipAction(clip).play();
+      }
+      fitCameraToSelection(window.camera, window._controls, [nativeGltfRoot]);
+      window.needleEngineContext = undefined;
+      window.usdHydra = undefined;
+      window.driver = undefined;
+      window.usdStage = undefined;
+      window.renderInterface = undefined;
+    }
+
+    if (generation !== loadGeneration) return;
+    ready = true;
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    if (messageLog) messageLog.textContent = "";
+  } catch (err) {
+    console.error("Failed to load glTF file:", err);
+    trackError('gltf_load', err, { type: extOf(filename), name: safeName(filename) });
+    if (window.setViewerLoading) window.setViewerLoading(false);
+    if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    ready = false;
+  }
 }
 
 async function loadUsdFile(directory, filename, path, isRootFile = true, filesForHydra = undefined) {
@@ -2430,6 +2570,10 @@ async function init() {
       // get just the filename, no paths
       const parts = filename.split('/');
       const displayFilename = parts[parts.length - 1];
+      if (isGltfFileName(displayFilename || urlPath)) {
+        await loadNativeGltfFile(displayFilename, urlPath);
+        return;
+      }
       await loadUsdFile(undefined, displayFilename, urlPath, true);
     } else {
       // Clear the URL when no file is selected (Clear button clicked)
@@ -2474,6 +2618,9 @@ async function animate() {
   const dt = Math.min(0.1, Math.max(0, now - lastAnimationTimeSeconds));
   lastAnimationTimeSeconds = now;
   window._controls.update(dt);
+  if (nativeGltfMixers.length && ready) {
+    for (const mixer of nativeGltfMixers) mixer.update(dt);
+  }
   if (viewerMode === VIEWER_MODE_THREE && currentHydraHandle && ready) currentHydraHandle.update(dt);
   render();
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );

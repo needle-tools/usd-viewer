@@ -1,5 +1,6 @@
 export {
   AgXToneMapping,
+  AnimationMixer,
   AmbientLight,
   Box3,
   Color,
@@ -17,6 +18,7 @@ export {
 
 export { createThreeHydra, getUsdModule } from './usd/index.js';
 export { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+export { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
