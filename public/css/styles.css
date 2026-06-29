@@ -1306,9 +1306,9 @@ button.cta-primary {
    "#container" prefix is needed to out-specify "#container a" (1,0,1), which
    would otherwise force its own padding/margin onto these <a> cards. */
 #container .gallery-card {
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: relative;
-    aspect-ratio: 1 / 1;
     padding: 0;
     margin: 0;
     border: 1px solid var(--border-subtle);
@@ -1333,8 +1333,10 @@ button.cta-primary {
 }
 
 .gallery-thumb-wrap {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
     background: var(--color-surface);
     overflow: hidden;
     display: flex;
@@ -1352,10 +1354,8 @@ button.cta-primary {
 }
 
 .gallery-card-body {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: relative;
+    flex: 0 0 auto;
     padding: 7px 9px 9px 9px;
     display: flex;
     flex-direction: column;
