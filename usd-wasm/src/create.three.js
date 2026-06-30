@@ -397,6 +397,9 @@ export async function createThreeHydra(config) {
                 }
                 return;
             }
+            if (drawInFlight || editInFlight) {
+                return;
+            }
             if (playing) {
                 time += dt;
                 const startTimeCode = stageStartTimeCode;

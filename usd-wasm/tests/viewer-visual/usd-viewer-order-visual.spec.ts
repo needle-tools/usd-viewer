@@ -20,6 +20,8 @@ const forbiddenConsolePatterns = [
     /RuntimeError/i,
     /Cannot enlarge memory/i,
     /pageerror/i,
+    /Unsafe scene index/i,
+    /Failed verification/i,
 ];
 
 test.describe('usd-viewer order-dependent visual regressions', () => {
@@ -142,6 +144,17 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(state?.usdview?.isPlaying).toBe(false);
         expect(state?.sceneDiagnostics.meshCount).toBeGreaterThan(0);
         expect(await renderAreaScreenshot(page)).toMatchSnapshot('time-samples-three.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('animated HTTP assets do not dirty Hydra during an async initial draw', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+
+        await loadUrl(page, 'https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc', 'Elephant With Monochord');
+
+        const state = await getViewerState(page);
+        expect(state?.childCount).toBeGreaterThan(0);
         expectForbiddenDiagnostics(diagnostics);
     });
 
@@ -269,6 +282,14 @@ async function loadAssetsInOrder(page, assetNames: string[], host: 'three' | 'ne
 async function loadApiScene(page, buttonName: string, loadedStatus: string) {
     await page.getByRole('button', { name: buttonName, exact: true }).click();
     await expect(page.locator('.status')).toHaveText(loadedStatus, { timeout: 45_000 });
+    await waitForFrames(page, 4);
+}
+
+async function loadUrl(page, url: string, label: string) {
+    await page.evaluate(({ url, label }) => {
+        return (window as Window & { loadFile: (url: string, label?: string) => Promise<void> }).loadFile(url, label);
+    }, { url, label });
+    await expect(page.locator('.status')).toHaveText(`Loaded ${label}`, { timeout: 120_000 });
     await waitForFrames(page, 4);
 }
 
