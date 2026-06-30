@@ -67,7 +67,7 @@
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
   "devDependencies": {
-    "@needle-tools/engine": "^5.1.2-canary.1782551556.isaac-newton.7c76e45",
+    "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
     "@needle-tools/three-test-matrix": "^0.1.0",
     "@playwright/test": "^1.60.0",
     "@types/three": "^0.164.1",
@@ -78,6 +78,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@needle-tools/materialx": "1.7.0-next.57183d6"
+  },
+  "overrides": {
     "@needle-tools/materialx": "1.7.0-next.57183d6"
   }
 }

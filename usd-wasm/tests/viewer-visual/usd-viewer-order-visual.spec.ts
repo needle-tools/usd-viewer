@@ -42,6 +42,30 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
+    test('Gingerbread USDC renders with textured materials in three.js mode', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['Gingerbread USDC']);
+
+        const state = await getViewerState(page);
+        expect(state?.sceneDiagnostics.meshCount).toBeGreaterThan(0);
+        expect(state?.sceneDiagnostics.materialXMaterialCount).toBeGreaterThan(0);
+        expect(await renderAreaScreenshot(page)).toMatchSnapshot('gingerbread-usdc-three.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('MaterialX External Ref renders generated MaterialX materials in three.js mode', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['MaterialX External Ref']);
+
+        const state = await getViewerState(page);
+        expect(state?.sceneDiagnostics.meshCount).toBe(2);
+        expect(state?.sceneDiagnostics.materialXMaterialCount).toBeGreaterThanOrEqual(2);
+        expect(await renderAreaScreenshot(page)).toMatchSnapshot('materialx-external-ref-three.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
     test('MaterialX Texture + Noise remains textured and polygonal after prior asset loads', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page);
@@ -116,6 +140,21 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(state?.stageMetadata?.startTimeCode).toBe(1);
         expect(state?.stageMetadata?.endTimeCode).toBe(48);
         expect(state?.usdview?.isPlaying).toBe(false);
+        expect(state?.sceneDiagnostics.meshCount).toBeGreaterThan(0);
+        expect(await renderAreaScreenshot(page)).toMatchSnapshot('time-samples-three.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('Catmull-Clark Cube remains subdivided in the demo viewer', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['Catmull-Clark Cube']);
+
+        const state = await getViewerState(page);
+        expect(state?.sceneDiagnostics.meshCount).toBe(1);
+        expect(state?.sceneDiagnostics.maxPositionCount).toBeGreaterThan(36);
+        expect(state?.sceneDiagnostics.maxAbsBound).toBeLessThan(0.95);
+        expect(await renderAreaScreenshot(page)).toMatchSnapshot('catmull-clark-cube-three.png');
         expectForbiddenDiagnostics(diagnostics);
     });
 
@@ -134,6 +173,17 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expect(state?.renderHost).toBe('needle-engine');
         expect(state?.childCount).toBeGreaterThan(0);
         expect(await renderAreaScreenshot(page)).toMatchSnapshot('needle-engine-procedural-bricks.png');
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
+    test('Needle Engine host shows camera and point light helpers', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page, 'needle-engine');
+        await loadAssetsInOrder(page, ['Camera + Light'], 'needle-engine');
+
+        const state = await getViewerState(page);
+        expect(state?.sceneDiagnostics.cameraHelperCount).toBeGreaterThan(0);
+        expect(state?.sceneDiagnostics.pointLightHelperCount).toBeGreaterThan(0);
         expectForbiddenDiagnostics(diagnostics);
     });
 
@@ -253,6 +303,14 @@ async function getViewerState(page) {
                 model: string | null;
                 rootRotationX: number | null;
                 stageMetadata: { upAxis: string } | null;
+                sceneDiagnostics: {
+                    meshCount: number;
+                    maxPositionCount: number;
+                    maxAbsBound: number;
+                    materialXMaterialCount: number;
+                    pointLightHelperCount: number;
+                    cameraHelperCount: number;
+                };
                 usdview: {
                     hasStage: boolean;
                     selectedPath: string;

@@ -273,7 +273,7 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
 
     if (fixtureName === 'local-catmull-clark-subdivision-usda') {
         expect(checks.subdivision.meshCount).toBe(1);
-        expect(checks.subdivision.maxPositionCount).toBeGreaterThan(8);
+        expect(checks.subdivision.maxPositionCount).toBeGreaterThan(36);
         expect(checks.subdivision.maxAbsBound).toBeLessThan(0.95);
     }
 

@@ -27,6 +27,14 @@ declare global {
       rootMatrixWorld: number[] | null,
       stageMetadata: ReturnType<NeedleThreeHydraHandle["stageMetadata"]> | null,
       diagnostics: Record<string, unknown> | null,
+      sceneDiagnostics: {
+        meshCount: number,
+        maxPositionCount: number,
+        maxAbsBound: number,
+        materialXMaterialCount: number,
+        pointLightHelperCount: number,
+        cameraHelperCount: number,
+      },
       usdview: {
         hasStage: boolean,
         selectedPath: string,
@@ -909,6 +917,50 @@ function findObject3D(value: unknown): Object3D | null {
   return findObject3D(candidate?.scene) ?? findObject3D(candidate?.root);
 }
 
+function collectSceneDiagnostics(root: Object3D | null | undefined) {
+  const diagnostics = {
+    meshCount: 0,
+    maxPositionCount: 0,
+    maxAbsBound: 0,
+    materialXMaterialCount: 0,
+    pointLightHelperCount: 0,
+    cameraHelperCount: 0,
+  };
+  root?.traverse(object => {
+    const entry = object as Object3D & {
+      isMesh?: boolean,
+      type?: string,
+      geometry?: {
+        attributes?: {
+          position?: {
+            count?: number,
+            array?: ArrayLike<number>,
+          },
+        },
+      },
+      material?: { constructor?: { name?: string } } | Array<{ constructor?: { name?: string } }>,
+    };
+    if (entry.type === "PointLightHelper") diagnostics.pointLightHelperCount++;
+    if (entry.type === "CameraHelper") diagnostics.cameraHelperCount++;
+    if (entry.isMesh) {
+      diagnostics.meshCount++;
+      const position = entry.geometry?.attributes?.position;
+      diagnostics.maxPositionCount = Math.max(diagnostics.maxPositionCount, position?.count ?? 0);
+      const array = position?.array;
+      if (array) {
+        for (let i = 0; i < array.length; i++) {
+          diagnostics.maxAbsBound = Math.max(diagnostics.maxAbsBound, Math.abs(Number(array[i]) || 0));
+        }
+      }
+      const materials = Array.isArray(entry.material) ? entry.material : [entry.material];
+      for (const material of materials) {
+        if (material?.constructor?.name === "MaterialXMaterial") diagnostics.materialXMaterialCount++;
+      }
+    }
+  });
+  return diagnostics;
+}
+
 window.loadFile = loadFile;
 window.__usdViewerTestState = () => {
   const usdview = usdViewState.snapshot();
@@ -923,6 +975,7 @@ window.__usdViewerTestState = () => {
     rootMatrixWorld: usdContent?.matrixWorld?.elements ? Array.from(usdContent.matrixWorld.elements) : null,
     stageMetadata: hydraDelegate?.stageMetadata?.() ?? null,
     diagnostics: hydraDelegate?.diagnostics?.() ?? null,
+    sceneDiagnostics: collectSceneDiagnostics(usdContent),
     usdview: {
       hasStage: Boolean(usdview.stage),
       selectedPath: usdview.selectedPath,
