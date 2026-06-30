@@ -2122,6 +2122,7 @@ async function init() {
   function setSelectedConverter(converter) {
     selectedConverter = normalizeConverterId(converter);
     syncConverterControls();
+    syncGalleryCardConverterUrls();
   }
 
   function setLoadedConverterControlVisible(visible) {
@@ -2567,6 +2568,28 @@ async function init() {
     }
   }
 
+  function galleryCardUrlForItem(item) {
+    const conversions = item?.conversions || {};
+    const converterOrder = item?.converterOrder || [];
+    return pickConversionUrl(conversions, selectedConverter, converterOrder) || item?.url || '';
+  }
+
+  function syncGalleryCardConverterUrls() {
+    if (!galleryGrid) return;
+    for (const card of galleryGrid.querySelectorAll('.gallery-card')) {
+      let conversions = {};
+      let converterOrder = [];
+      try {
+        conversions = JSON.parse(card.dataset.conversions || '{}');
+        converterOrder = JSON.parse(card.dataset.converterOrder || '[]');
+      } catch {
+        continue;
+      }
+      const url = pickConversionUrl(conversions, selectedConverter, converterOrder);
+      if (url) card.href = sampleHref(url);
+    }
+  }
+
   function buildGalleryCards(cards) {
     if (!galleryGrid) return;
     // Identity of the rendered set. Re-rendering the SAME set (e.g. re-clicking
@@ -2585,7 +2608,7 @@ async function init() {
     for (const item of cards) {
       const conversions = item.conversions || {};
       const converterOrder = item.converterOrder || [];
-      const url = pickConversionUrl(conversions, '', converterOrder) || item.url;
+      const url = galleryCardUrlForItem(item);
       if (!url) continue;
 
       // Cards are "a.file" so they reuse the delegated URL-load handler below.

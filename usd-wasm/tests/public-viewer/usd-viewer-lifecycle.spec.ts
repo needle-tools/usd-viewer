@@ -22,6 +22,10 @@ const assetExplorerSamples = {
         filename: 'AntiqueCamera.glb.three.usdz',
         url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.three.usdz',
     },
+    antiqueCameraBlender: {
+        filename: 'AntiqueCamera.glb.blender.usdz',
+        url: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.blender.usdz',
+    },
     avocadoThree: {
         filename: 'Avocado.glb.three.usdz',
         url: 'https://asset-explorer.needle.tools/downloads/Avocado.glb.three.usdz',
@@ -476,7 +480,7 @@ test.describe('public usd-viewer lifecycle', () => {
                         },
                         conversions: [
                             { id: 'three-r185', label: 'three', version: '0.185.0', usdz: assetExplorerSamples.antiqueCameraThree.url },
-                            { id: 'blender-5-1', label: 'Blender', version: '5.1.2', usdz: 'https://asset-explorer.needle.tools/downloads/AntiqueCamera.glb.blender.usdz' },
+                            { id: 'blender-5-1', label: 'Blender', version: '5.1.2', usdz: assetExplorerSamples.antiqueCameraBlender.url },
                         ],
                     },
                     {
@@ -497,6 +501,9 @@ test.describe('public usd-viewer lifecycle', () => {
         }));
         await page.route(assetExplorerSamples.antiqueCameraThree.url, route => route.fulfill({
             path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
+        }));
+        await page.route(assetExplorerSamples.antiqueCameraBlender.url, route => route.fulfill({
+            path: 'tests/fixtures/asset-explorer/BoomBox.glb.three.usdz',
         }));
         await page.route(assetExplorerSamples.animatedMorphSphereThree.url, route => route.fulfill({
             path: 'tests/fixtures/asset-explorer/DamagedHelmet.glb.three.usdz',
@@ -547,6 +554,17 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(new URL(state.href).searchParams.get('file')).toBe(assetExplorerSamples.animatedMorphSphereBlender.url);
         expect(state.loadedConverterVisible).toBe(true);
         expect(state.loadedConverter).toBe('blender-5-1');
+
+        await page.click('.dropdown-button');
+        await page.click('[data-sample-group="gltf"]');
+        await expect(page.locator(`.gallery-card[data-name="Antique Camera"]`))
+            .toHaveAttribute('href', `?file=${assetExplorerSamples.antiqueCameraBlender.url}`);
+
+        await page.click('.gallery-card[data-name="Antique Camera"]');
+        const nextState = await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraBlender.filename);
+        expect(new URL(nextState.href).searchParams.get('file')).toBe(assetExplorerSamples.antiqueCameraBlender.url);
+        expect(nextState.loadedConverterVisible).toBe(true);
+        expect(nextState.loadedConverter).toBe('blender-5-1');
         expect(diagnostics).toEqual([]);
     });
 
