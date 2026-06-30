@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
-    "@needle-tools/materialx": "1.7.0-next.57183d6",
+    "@needle-tools/materialx": "1.7.0",
     "@needle-tools/usd": "file:..",
     "@types/three": "^0.165.0",
     "three": "npm:@needle-tools/three@^0.169.19",
@@ -25,6 +25,6 @@
     "vite-plugin-wasm": "^3.3.0"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.0-next.57183d6"
+    "@needle-tools/materialx": "1.7.0"
   }
 }

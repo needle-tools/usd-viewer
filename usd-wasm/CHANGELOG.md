@@ -4,7 +4,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.0.0-next.1] - 2026-06-29
+## [1.0.0] - 2026-06-30
 ### Added
 - Added optional material readiness policy support for loaders that need to wait for asynchronous material generation and texture loading before reporting completion.
 - Added matrix coverage for USD Working Group assets, Needle Engine runtime shapes, public viewer lifecycle cleanup, authored USD concepts, and culling/material edge cases.
