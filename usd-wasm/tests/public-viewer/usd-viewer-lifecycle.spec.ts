@@ -645,6 +645,114 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps WebGL contexts stable during rapid Needle USD asset switches', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const contextDiagnostics = collectConsoleMatches(page, [
+            /Attempting to recover WebGL context/i,
+            /Too many active WebGL contexts/i,
+            /WEBGL_lose_context/i,
+            /webgl context (?:lost|was lost)/i,
+        ]);
+
+        await page.addInitScript(() => {
+            const originalGetContext = HTMLCanvasElement.prototype.getContext;
+            const seen = new WeakMap<HTMLCanvasElement, number>();
+            let nextCanvasId = 1;
+            (window as any).__webglContextProbe = [];
+            HTMLCanvasElement.prototype.getContext = function(type: string, ...args: any[]) {
+                const result = originalGetContext.call(this, type, ...args);
+                if ((type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') && result) {
+                    if (!seen.has(this)) seen.set(this, nextCanvasId++);
+                    const canvasId = seen.get(this);
+                    const probe = (window as any).__webglContextProbe;
+                    if (!probe.some((entry: any) => entry.canvasId === canvasId && entry.type === type)) {
+                        probe.push({
+                            canvasId,
+                            type,
+                            stack: new Error().stack || '',
+                        });
+                    }
+                }
+                return result;
+            } as typeof HTMLCanvasElement.prototype.getContext;
+        });
+
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: `
+                (() => {
+                    function fingerprint() {
+                        const canvas = document.createElement('canvas');
+                        canvas.getContext('webgl') || canvas.getContext('webgl2');
+                    }
+                    window.rybbit = {
+                        event() { fingerprint(); },
+                        pageview() { fingerprint(); },
+                    };
+                    fingerprint();
+                })();
+            `,
+        }));
+
+        const samples = [
+            `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/primitives/cube.usda`,
+            `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/primitives/sphere.usda`,
+            `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/singleSided/singleSided.usda`,
+            `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/quad_mesh/quads.usda`,
+            `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/doubleSided/doubleSided_quad.usda`,
+        ];
+
+        await page.goto(`/?file=${encodeURIComponent(samples[4])}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, 'doubleSided_quad.usda');
+        await page.evaluate(() => {
+            const events: string[] = [];
+            (window as any).__webglContextEvents = events;
+            const canvases = [
+                window.renderer?.domElement,
+                document.querySelector('needle-engine')?.context?.renderer?.domElement,
+            ].filter(Boolean) as HTMLCanvasElement[];
+            for (const canvas of canvases) {
+                canvas.addEventListener('webglcontextlost', () => events.push('lost'), false);
+                canvas.addEventListener('webglcontextrestored', () => events.push('restored'), false);
+            }
+        });
+
+        for (let i = 0; i < 30; i++) {
+            await clickSyntheticFileLink(page, samples[i % samples.length]);
+            await page.waitForTimeout(250);
+        }
+
+        await waitForNeedleLoaderMode(page, 'doubleSided_quad.usda');
+        const state = await page.evaluate(() => {
+            const contexts = ((window as any).__webglContextProbe || []) as Array<{ stack: string }>;
+            const analyticsContexts = contexts.filter(entry => entry.stack.includes('/api/script.js'));
+            const element = document.querySelector('needle-engine');
+            return {
+                contextCount: contexts.length,
+                analyticsContextCount: analyticsContexts.length,
+                contextEvents: (window as any).__webglContextEvents || [],
+                publicLost: Boolean(window.renderer?.getContext?.()?.isContextLost?.()),
+                needleLost: Boolean(element?.context?.renderer?.getContext?.()?.isContextLost?.()),
+                filename: document.querySelector('.filename-text')?.textContent || '',
+                hasHydraHandle: Boolean(window.usdHydra),
+                hasNeedleContext: Boolean(window.needleEngineContext),
+            };
+        });
+
+        expect(state).toMatchObject({
+            analyticsContextCount: 0,
+            contextEvents: [],
+            publicLost: false,
+            needleLost: false,
+            filename: 'doubleSided_quad.usda',
+            hasHydraHandle: true,
+            hasNeedleContext: true,
+        });
+        expect(state.contextCount).toBeLessThanOrEqual(2);
+        expect(contextDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('stores Asset Explorer conversion variants without a gallery switcher', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
@@ -831,6 +939,19 @@ async function loadPublicSample(page: Page, label: string) {
         if (!link) throw new Error(`Missing public sample link: ${sampleLabel}`);
         link.click();
     }, label);
+}
+
+async function clickSyntheticFileLink(page: Page, url: string) {
+    await page.evaluate(fileUrl => {
+        const link = document.createElement('a');
+        link.className = 'file';
+        link.href = `/?file=${encodeURIComponent(fileUrl)}`;
+        link.dataset.name = fileUrl.split('/').pop() || fileUrl;
+        link.textContent = link.dataset.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }, url);
 }
 
 async function waitForPublicViewerLoad(page: Page, filename: string) {

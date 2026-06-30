@@ -599,6 +599,8 @@ let removeNeedleEngineUsdPlugin = null;
 let needleLoaderFiles = [];
 let nativeGltfRoot = null;
 let nativeGltfMixers = [];
+let fileLinkLoadRunning = false;
+let pendingFileLinkRequest = null;
 
 // Lowercase file extension from a name or URL, with any query/hash stripped.
 // Used only for analytics — extensions are not sensitive (unlike names/paths).
@@ -2856,7 +2858,38 @@ async function init() {
       }
       menuScheduleClose();
     }
-    loadFromFileLink(link).catch(error => console.error("Failed to load linked USD file", error));
+    queueFileLinkLoad(link);
+  }
+
+  function fileLinkRequestFrom(link) {
+    return {
+      href: link.href,
+      dataset: { name: link.dataset?.name || "" },
+      textContent: link.textContent || "",
+    };
+  }
+
+  async function queueFileLinkLoad(link) {
+    pendingFileLinkRequest = fileLinkRequestFrom(link);
+    if (fileLinkLoadRunning) return;
+
+    fileLinkLoadRunning = true;
+    try {
+      while (pendingFileLinkRequest) {
+        const request = pendingFileLinkRequest;
+        pendingFileLinkRequest = null;
+        try {
+          await loadFromFileLink(request);
+        } catch (error) {
+          console.error("Failed to load linked USD file", error);
+        }
+      }
+    } finally {
+      fileLinkLoadRunning = false;
+      if (pendingFileLinkRequest) {
+        queueFileLinkLoad(pendingFileLinkRequest);
+      }
+    }
   }
 
   if (galleryGrid) {
@@ -2891,7 +2924,13 @@ async function init() {
       params = (new URL(link.href)).searchParams;
     }
     catch {}
-    filename = params.get("file");
+    const requestedFilename = params.get("file");
+
+    if (requestedFilename && requestedFilename === filename && ready && currentHydraHandle) {
+      return;
+    }
+
+    filename = requestedFilename;
 
     // Distinguish loading a sample from clicking "Clear" (empty file).
     if (filename) {

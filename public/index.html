@@ -54,6 +54,20 @@
        the Rybbit endpoint does not send. Proxying makes it same-origin. The
        Rybbit script derives its API base from this src, so all of its calls
        (/track, /identify, /site/tracking-config/...) stay same-origin too. -->
+  <script>
+    (() => {
+      const originalGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+        // Rybbit fingerprints via WebGL for each payload. This viewer needs the
+        // browser's limited WebGL context budget for actual rendering.
+        if ((type === "webgl" || type === "webgl2" || type === "experimental-webgl")
+          && new Error().stack?.includes("/api/script.js")) {
+          return null;
+        }
+        return originalGetContext.call(this, type, ...args);
+      };
+    })();
+  </script>
   <script
     src="/api/script.js"
     data-site-id="6bc313ba3488"
