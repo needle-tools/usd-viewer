@@ -1399,26 +1399,14 @@ button.cta-primary {
     font-weight: 700;
 }
 
-.converter-toggle button.active .converter-version {
-    color: rgba(31, 123, 181, 0.72);
-}
-
 .converter-label {
     display: inline-flex;
     align-items: baseline;
-    gap: 4px;
     line-height: 1;
 }
 
 .converter-name {
     font-weight: 700;
-}
-
-.converter-version {
-    color: var(--color-text-muted);
-    font-size: 0.86em;
-    font-weight: 700;
-    letter-spacing: 0;
 }
 
 .converter-toggle-inline {
@@ -1525,24 +1513,6 @@ button.cta-primary {
 #container .gallery-card.active {
     border-color: var(--color-green-dark);
     box-shadow: 0 0 0 2px var(--color-green-dark);
-}
-
-/* Staggered fade-in for the sample thumbnails (per-card delay set in JS).
-   `backwards` fill keeps the final frame == base styles, so it doesn't lock the
-   transform and the :hover lift still works after the entrance. */
-@keyframes gallery-card-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-#container .gallery-card {
-    animation: gallery-card-in 280ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #container .gallery-card {
-        animation: none;
-    }
 }
 
 .gallery-thumb-wrap {

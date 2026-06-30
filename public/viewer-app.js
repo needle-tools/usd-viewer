@@ -126,9 +126,11 @@ function hideTooltip(target = tooltipActiveTarget) {
 function tooltipTargetFromEvent(event) {
   const target = event.target?.closest?.('[data-tip]');
   if (!target) return null;
-  // Tooltips are used by the header pill controls and by dialog content.
+  // Tooltips are used by the header controls, loaded-file row, and dialogs.
   const container = document.getElementById('container');
-  const allowed = container?.contains(target) || target.closest('.dialog-overlay');
+  const allowed = container?.contains(target) ||
+    target.closest('.filename-bar') ||
+    target.closest('.dialog-overlay');
   return allowed ? target : null;
 }
 
@@ -1281,6 +1283,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.className = "usd-viewer-needle-engine";
     needleEngineElement.setAttribute("camera-controls", "true");
     needleEngineElement.setAttribute("auto-fit", "false");
+    needleEngineElement.setAttribute("auto-rotate", "false");
     needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
@@ -1949,7 +1952,6 @@ async function init() {
   let lastPointerActivatedAt = 0;
   const conversionCardByUrl = new Map();
   const collapsedSampleTrees = new Set(['usd-wg']);
-  const gltfExcludedTags = new Set(['video']);
   const converterMetadataById = new Map();
   const originalGltfConverter = {
     id: 'original-gltf',
@@ -2031,10 +2033,15 @@ async function init() {
   function createConverterButton(converterId, activeId) {
     const id = normalizeConverterId(converterId);
     const family = converterMetadataById.get(id) || defaultConverterMeta(id);
+    const versionText = family.version || family.versionLabel || '';
+    const tooltipText = [
+      family.title || family.description || '',
+      versionText ? `Version: ${versionText}` : '',
+    ].filter(Boolean).join('\n') || family.label || family.name || id;
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.converter = id;
-    button.title = family.title || family.description || family.label || family.name || id;
+    button.dataset.tip = tooltipText;
     const isActive = id === normalizeConverterId(activeId);
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -2049,14 +2056,6 @@ async function init() {
     name.className = 'converter-name';
     name.textContent = family.label || family.name || id;
     label.appendChild(name);
-    const versionText = family.version || family.versionLabel || '';
-    if (versionText) {
-      const version = document.createElement('span');
-      version.className = 'converter-version';
-      version.setAttribute('aria-label', versionText);
-      version.textContent = versionText;
-      label.appendChild(version);
-    }
     button.appendChild(label);
     return button;
   }
@@ -2219,11 +2218,7 @@ async function init() {
     const order = [];
     const metadata = {};
 
-    const conversionEntries = [
-      ...(Array.isArray(model.conversions) ? model.conversions : []),
-      ...(Array.isArray(model.paths?.conversions) ? model.paths.conversions : []),
-    ].filter(conversion => conversion && conversion.available !== false);
-    for (const conversion of conversionEntries) {
+    for (const conversion of assetExplorerConversionEntries(model)) {
       const converter = conversion.id || conversion.converter || conversion.suffix || conversion.label;
       const url = conversion.usdz || conversion.usdzUri || conversion.usdzUrl || conversion.downloadUri || conversion.url || conversion.href;
       addConversion(conversions, order, converter, url, {
@@ -2246,7 +2241,6 @@ async function init() {
   }
 
   function assetExplorerModelToCard(model) {
-    if (!model.tags?.length) return null;
     const { conversions, order, metadata } = collectAssetExplorerConversions(model);
     const url = pickConversionUrl(conversions, selectedConverter, order);
     if (!url) return null;
@@ -2258,7 +2252,7 @@ async function init() {
       converterOrder: order,
       converterMetadata: metadata,
       url,
-      tags: model.tags || ['untagged'],
+      tags: model.tags || [],
     };
   }
 
@@ -2291,21 +2285,30 @@ async function init() {
     return gltfTagIndexPromise;
   }
 
-  function normalizeGltfTags(tags, fallbackForMissing = true) {
-    const values = Array.isArray(tags) && tags.length ? tags : (fallbackForMissing ? ['untagged'] : []);
+  function normalizeGltfTags(tags) {
+    const values = Array.isArray(tags) ? tags : [];
     return [...new Set(values
       .map((tag) => String(tag || '').trim())
-      .filter(Boolean)
-      .filter((tag) => !gltfExcludedTags.has(tag.toLowerCase())))];
+      .filter(Boolean))];
+  }
+
+  function assetExplorerConversionEntries(model) {
+    return [
+      ...(Array.isArray(model?.conversions) ? model.conversions : []),
+      ...(Array.isArray(model?.paths?.conversions) ? model.paths.conversions : []),
+    ].filter(conversion => {
+      if (!conversion || conversion.available === false) return false;
+      return Boolean(conversion.usdz || conversion.usdzUri || conversion.usdzUrl || conversion.downloadUri || conversion.url || conversion.href);
+    });
   }
 
   function attachGltfTags(model, tagIndex) {
     const slugTags = tagIndex.get(normalizeModelKey(model.slug));
     const nameTags = tagIndex.get(normalizeModelKey(model.name));
-    const tags = Array.isArray(slugTags)
+    const sampleAssetTags = Array.isArray(slugTags)
       ? slugTags
-      : (Array.isArray(nameTags) ? nameTags : normalizeGltfTags(undefined));
-    return { ...model, tags };
+      : (Array.isArray(nameTags) ? nameTags : []);
+    return { ...model, tags: [...sampleAssetTags] };
   }
 
   function prettySampleLabel(value) {
@@ -2480,7 +2483,7 @@ async function init() {
     if (!gltfGroupTree || gltfTreeRendered) return;
     const counts = new Map();
     for (const card of cards || []) {
-      for (const tag of normalizeGltfTags(card.tags, false)) {
+      for (const tag of normalizeGltfTags(card.tags)) {
         counts.set(tag, (counts.get(tag) || 0) + 1);
       }
     }
@@ -2567,9 +2570,9 @@ async function init() {
   function buildGalleryCards(cards) {
     if (!galleryGrid) return;
     // Identity of the rendered set. Re-rendering the SAME set (e.g. re-clicking
-    // the current menu item) must not replay the stagger — bail out and keep the
-    // existing DOM (also preserves the active-card highlight). Converter-only
-    // changes don't come through here, so a card-identity signature is enough.
+    // the current menu item) keeps the existing DOM and active-card highlight.
+    // Converter-only changes don't come through here, so a card-identity
+    // signature is enough.
     const signature = cards.map(c =>
       (c.name || '') + '#' +
       Object.keys(c.conversions || {}).sort().join(',') + '#' +
@@ -2579,7 +2582,6 @@ async function init() {
     lastGalleryCardsSignature = signature;
     galleryGrid.textContent = '';
     registerConverterMetadataForCards(cards);
-    let cardIndex = 0;
     for (const item of cards) {
       const conversions = item.conversions || {};
       const converterOrder = item.converterOrder || [];
@@ -2625,10 +2627,6 @@ async function init() {
       }
       card.appendChild(body);
 
-      // Staggered fade-in: each card enters slightly after the previous one.
-      // Capped so a large grid doesn't take too long to finish appearing.
-      card.style.animationDelay = `${Math.min(cardIndex, 14) * 40}ms`;
-      cardIndex += 1;
       galleryGrid.appendChild(card);
     }
   }

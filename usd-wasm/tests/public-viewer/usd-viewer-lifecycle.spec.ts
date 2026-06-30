@@ -39,6 +39,7 @@ const assetExplorerSamples = {
 };
 
 const assetExplorerApi = 'https://asset-explorer.needle.tools/api/models.json';
+const gltfSampleAssetsIndex = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
 
 const usdWgBaseUrl = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
 const usdWgSamples = [
@@ -158,6 +159,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.needleChildren).toBeGreaterThan(0);
         expect(state.elementSrc).toContain(publicSamples.helmet.url);
         expect(state.autoplay).toBe(true);
+        expect(state.autoRotate).toBe('false');
         expect(state.contactShadows).toBe('0.7');
         expect(state.threeCanvasDisplay).toBe('none');
         expect(state.needleDisplay).toBe('block');
@@ -522,6 +524,21 @@ test.describe('public usd-viewer lifecycle', () => {
         const loadedDefault = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereThree.filename);
         expect(loadedDefault.loadedConverterVisible).toBe(true);
         expect(loadedDefault.loadedConverter).toBe('three-r185');
+        const converterState = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll<HTMLButtonElement>('#loaded-converter-toggle button')).map(button => ({
+                converter: button.dataset.converter || '',
+                text: button.textContent?.trim() || '',
+                tip: button.dataset.tip || '',
+                hasVisibleVersion: Boolean(button.querySelector('.converter-version')),
+            }));
+        });
+        expect(converterState).toEqual([
+            { converter: 'three-r185', text: 'three', tip: 'Version: 0.185.0', hasVisibleVersion: false },
+            { converter: 'blender-5-1', text: 'Blender', tip: 'Version: 5.1.2', hasVisibleVersion: false },
+            { converter: 'original-gltf', text: 'Original glTF', tip: 'Original glTF/GLB source asset', hasVisibleVersion: false },
+        ]);
+        await page.locator('#loaded-converter-toggle button[data-converter="three-r185"]').hover();
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Version: 0.185.0');
 
         await page.dispatchEvent('#loaded-converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
         const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereBlender.filename);
@@ -952,12 +969,45 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('uses folder-like sample library defaults and ordering', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
+        await page.route(assetExplorerApi, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                models: [
+                    {
+                        name: 'A Beautiful Game',
+                        slug: 'ABeautifulGame',
+                        thumbnail: 'https://asset-explorer.needle.tools/downloads/ABeautifulGame.glb.three.webp',
+                        assets: { glb: 'https://asset-explorer.needle.tools/downloads/ABeautifulGame.glb' },
+                        conversions: [
+                            { id: 'three-r185', label: 'three r185', usdz: 'https://asset-explorer.needle.tools/downloads/ABeautifulGame.glb.three.usdz' },
+                            { id: 'needle-engine', label: 'Needle', usdz: 'https://asset-explorer.needle.tools/downloads/ABeautifulGame.glb.needle-engine.usdz' },
+                        ],
+                    },
+                    {
+                        name: 'Unindexed Converter Sample',
+                        slug: 'UnindexedConverterSample',
+                        thumbnail: 'https://asset-explorer.needle.tools/downloads/Unindexed.glb.three.webp',
+                        assets: { glb: 'https://asset-explorer.needle.tools/downloads/Unindexed.glb' },
+                        conversions: [
+                            { id: 'needle-engine', label: 'Needle', usdz: 'https://asset-explorer.needle.tools/downloads/Unindexed.glb.needle-engine.usdz' },
+                        ],
+                    },
+                ],
+            }),
+        }));
+        await page.route(gltfSampleAssetsIndex, route => route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify([
+                { name: 'ABeautifulGame', label: 'A Beautiful Game', tags: ['showcase', 'core', 'video'] },
+            ]),
+        }));
+
         await page.goto('/?viewer=three');
         await page.click('.dropdown-button');
 
         await expect(page.locator('#sample-group-list > [data-sample-group]').nth(0)).toHaveAttribute('data-sample-group', 'gltf');
         await expect(page.locator('#sample-group-list > [data-sample-group]').nth(1)).toHaveAttribute('data-sample-group', 'usd-wg');
-        await expect(page.locator('#gallery-title')).toHaveText('glTF → USD conversions');
+        await expect(page.locator('#gallery-title')).toHaveText(/glTF\s+USD conversions/);
         await expect(page.locator('#gallery-subtitle')).toHaveText('Converted from glTF Sample Assets');
         await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
@@ -965,9 +1015,26 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.waitForFunction(() => {
             const labels = Array.from(document.querySelectorAll('#gltf-group-tree [data-sample-group] span'))
                 .map((node) => node.textContent?.trim());
-            return labels[0] === 'Showcase' && !labels.includes('Video');
+            return labels[0] === 'Showcase'
+                && labels.includes('Core')
+                && labels.includes('Video')
+                && !labels.includes('Needle')
+                && !labels.includes('Three R185')
+                && !labels.includes('Untagged');
         });
+        const galleryMotion = await page.evaluate(() => {
+            const card = document.querySelector<HTMLElement>('.gallery-card');
+            if (!card) throw new Error('Missing gallery card');
+            return {
+                inlineDelay: card.style.animationDelay,
+                animationName: getComputedStyle(card).animationName,
+            };
+        });
+        expect(galleryMotion).toEqual({ inlineDelay: '', animationName: 'none' });
 
+        if (!await page.locator('#sample-group-list').isVisible()) {
+            await page.click('.dropdown-button');
+        }
         await page.click('[data-sample-group="gltf"]');
         await expect(page.locator('#gltf-group-tree')).toBeHidden();
         await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'false');
@@ -1190,6 +1257,7 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         activeButtonText: document.querySelector('[data-viewer-mode].active')?.textContent?.trim() || '',
         elementSrc: document.querySelector('needle-engine')?.getAttribute('src') || '',
         autoplay: document.querySelector('needle-engine')?.hasAttribute('autoplay') ?? false,
+        autoRotate: document.querySelector('needle-engine')?.getAttribute('auto-rotate') || '',
         contactShadows: document.querySelector('needle-engine')?.getAttribute('contactshadows') || '',
         driverAlive: Boolean(window.driver) && (typeof window.driver.isDeleted !== 'function' || !window.driver.isDeleted()),
         hasHydraHandle: Boolean(window.usdHydra),
