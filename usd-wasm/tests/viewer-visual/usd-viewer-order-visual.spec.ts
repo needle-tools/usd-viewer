@@ -158,6 +158,17 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
+    test('invalid remote MaterialX texture assets fall back without crashing Hydra', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+
+        await loadUrl(page, 'https://github.com/usd-wg/assets/blob/main/test_assets/MaterialXTest/basicTextured.usda', 'Basic Textured Invalid Textures');
+
+        const state = await getViewerState(page);
+        expect(state?.childCount).toBeGreaterThan(0);
+        expectCrashDiagnostics(diagnostics);
+    });
+
     test('Catmull-Clark Cube remains subdivided in the demo viewer', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page);
@@ -363,4 +374,19 @@ function expectForbiddenDiagnostics(diagnostics: string[]) {
     const forbidden = diagnostics.filter(diagnostic =>
         forbiddenConsolePatterns.some(pattern => pattern.test(diagnostic)));
     expect(forbidden).toEqual([]);
+}
+
+function expectCrashDiagnostics(diagnostics: string[]) {
+    const crashPatterns = [
+        /Error in fetch_asset/i,
+        /out of memory/i,
+        /memory access out of bounds/i,
+        /RuntimeError/i,
+        /Cannot enlarge memory/i,
+        /Hydra draw failed/i,
+        /pageerror/i,
+    ];
+    const crashes = diagnostics.filter(diagnostic =>
+        crashPatterns.some(pattern => pattern.test(diagnostic)));
+    expect(crashes).toEqual([]);
 }
