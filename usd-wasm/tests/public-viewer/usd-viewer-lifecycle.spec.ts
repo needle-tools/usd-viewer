@@ -753,6 +753,33 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('uses smooth normals for Catmull-Clark subdivision meshes', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        const catmullUrl = `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/subdiv_catmullClark/subdiv_catmullClark.usda`;
+        await page.goto(`/?file=${encodeURIComponent(catmullUrl)}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, 'subdiv_catmullClark.usda');
+        const catmull = await getNeedleUsdMeshNormalState(page);
+        expect(catmull.positionCount).toBeGreaterThan(36);
+        expect(catmull.triangleCount).toBeGreaterThan(12);
+        expect(catmull.faceConstantNormals).toBe(0);
+        expect(catmull.sampledFaces).toBeGreaterThan(0);
+        expect(catmull.sharedPositionDifferentNormalGroups).toBe(0);
+
+        const noneUrl = `${usdWgBaseUrl}test_assets/schemaTests/usdGeom/meshes/subdiv_none/subdiv_none.usda`;
+        await page.goto(`/?file=${encodeURIComponent(noneUrl)}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, 'subdiv_none.usda');
+        const none = await getNeedleUsdMeshNormalState(page);
+        expect(none.positionCount).toBe(36);
+        expect(none.triangleCount).toBe(12);
+        expect(none.faceConstantNormals).toBe(none.sampledFaces);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('stores Asset Explorer conversion variants without a gallery switcher', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
@@ -1093,6 +1120,75 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
         threeCanvasDisplay: getComputedStyle(document.querySelector('.usd-viewer-three-canvas')!).display,
         needleDisplay: getComputedStyle(document.querySelector('needle-engine')!).display,
     }));
+}
+
+async function getNeedleUsdMeshNormalState(page: Page) {
+    return await page.evaluate(() => {
+        let target: any = null;
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!target && object.isMesh && object.userData?.usdPath === '/mesh') {
+                target = object;
+            }
+        });
+        if (!target) throw new Error('Missing Needle USD mesh at /mesh');
+
+        const position = target.geometry?.attributes?.position;
+        const normal = target.geometry?.attributes?.normal;
+        let faceConstantNormals = 0;
+        let sampledFaces = 0;
+        const positionNormalGroups = new Map<string, Set<string>>();
+
+        if (position && normal) {
+            sampledFaces = Math.min(Math.floor(normal.count / 3), 20);
+            const values = normal.array;
+            for (let face = 0; face < sampledFaces; face++) {
+                const offset = face * 9;
+                const same01 =
+                    Math.abs(values[offset] - values[offset + 3]) < 1e-5 &&
+                    Math.abs(values[offset + 1] - values[offset + 4]) < 1e-5 &&
+                    Math.abs(values[offset + 2] - values[offset + 5]) < 1e-5;
+                const same02 =
+                    Math.abs(values[offset] - values[offset + 6]) < 1e-5 &&
+                    Math.abs(values[offset + 1] - values[offset + 7]) < 1e-5 &&
+                    Math.abs(values[offset + 2] - values[offset + 8]) < 1e-5;
+                if (same01 && same02) faceConstantNormals++;
+            }
+
+            const count = Math.min(position.count, normal.count);
+            for (let i = 0; i < count; i++) {
+                const positionKey = [
+                    position.getX(i).toFixed(5),
+                    position.getY(i).toFixed(5),
+                    position.getZ(i).toFixed(5),
+                ].join(',');
+                const normalKey = [
+                    normal.getX(i).toFixed(3),
+                    normal.getY(i).toFixed(3),
+                    normal.getZ(i).toFixed(3),
+                ].join(',');
+                let normals = positionNormalGroups.get(positionKey);
+                if (!normals) {
+                    normals = new Set<string>();
+                    positionNormalGroups.set(positionKey, normals);
+                }
+                normals.add(normalKey);
+            }
+        }
+
+        let sharedPositionDifferentNormalGroups = 0;
+        for (const normals of positionNormalGroups.values()) {
+            if (normals.size > 1) sharedPositionDifferentNormalGroups++;
+        }
+
+        return {
+            positionCount: position?.count || 0,
+            normalCount: normal?.count || 0,
+            triangleCount: (position?.count || 0) / 3,
+            faceConstantNormals,
+            sampledFaces,
+            sharedPositionDifferentNormalGroups,
+        };
+    });
 }
 
 async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {
