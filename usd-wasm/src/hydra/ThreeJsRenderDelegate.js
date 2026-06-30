@@ -813,8 +813,8 @@ class HydraMesh {
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
       this._geometry.setAttribute('normal', new Float32BufferAttribute(data, 3));
-    } else if (interpolation === 'vertex') {
-      // We have per-vertex UVs, so we need to sort them accordingly
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
+      // Per-point data is sorted into the expanded triangle order.
       this._normals = data.slice(0);
       this.updateOrder(this._normals, 'normal');
     }
@@ -823,7 +823,7 @@ class HydraMesh {
   setTangents(data, dimension, interpolation) {
     if (interpolation === 'facevarying') {
       this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, dimension));
-    } else if (interpolation === 'vertex') {
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
       this._tangents = data.slice(0);
       this.updateOrder(this._tangents, 'tangent', dimension);
     }
@@ -883,7 +883,7 @@ class HydraMesh {
 
     if (interpolation === 'constant') {
       this._mesh.material.color = new Color().fromArray(data);
-    } else if (interpolation === 'vertex') {
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-vertex buffer attribute
       this._mesh.material.vertexColors = true;
       if (wasDefaultMaterial) {
@@ -910,8 +910,8 @@ class HydraMesh {
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
       this._geometry.setAttribute('uv', new Float32BufferAttribute(data, dimension));
-    } else if (interpolation === 'vertex') {
-      // We have per-vertex UVs, so we need to sort them accordingly
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
+      // Per-point data is sorted into the expanded triangle order.
       this._uvs = data.slice(0);
       this.updateOrder(this._uvs, 'uv', 2);
     }

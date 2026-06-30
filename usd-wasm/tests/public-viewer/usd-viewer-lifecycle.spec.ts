@@ -780,6 +780,84 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps UVs for subdivided meshes with normal textures', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        const sampleUrl = `${usdWgBaseUrl}test_assets/NormalsTextureBiasAndScale/NormalsTextureBiasAndScale.usdz`;
+        await page.goto(`/?file=${encodeURIComponent(sampleUrl)}&viewer=needle&waitForMaterials=1`);
+        await waitForNeedleLoaderMode(page, 'NormalsTextureBiasAndScale.usdz');
+
+        const state = await page.evaluate(() => {
+            const meshes: any[] = [];
+            window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                if (!object.isMesh || !String(object.userData?.usdPath || '').startsWith('/NormalsTextureBiasAndScale/Geom/')) {
+                    return;
+                }
+                const material = Array.isArray(object.material) ? object.material[0] : object.material;
+                const attributes = object.geometry?.attributes || {};
+                meshes.push({
+                    name: object.name,
+                    positionCount: attributes.position?.count || 0,
+                    normalCount: attributes.normal?.count || 0,
+                    uvCount: attributes.uv?.count || 0,
+                    uv2Count: attributes.uv2?.count || 0,
+                    hasNormalMap: Boolean(material?.normalMap),
+                    normalMapName: material?.normalMap?.name || '',
+                });
+            });
+            return meshes;
+        });
+
+        expect(state).toHaveLength(3);
+        for (const mesh of state) {
+            expect(mesh.positionCount).toBeGreaterThan(36);
+            expect(mesh.normalCount).toBe(mesh.positionCount);
+            expect(mesh.uvCount).toBe(mesh.positionCount);
+            expect(mesh.uv2Count).toBe(mesh.positionCount);
+            expect(mesh.hasNormalMap).toBe(true);
+            expect(mesh.normalMapName).toMatch(/r_normal_map.*\.png/);
+        }
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('refines varying primvars on subdivision meshes', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_varying_color.usda&viewer=needle');
+        await waitForNeedleLoaderMode(page, 'catmull_clark_varying_color.usda');
+
+        const state = await getNeedleMeshAttributeState(page, '/World/SubdivVaryingColor');
+        expect(state.positionCount).toBeGreaterThan(36);
+        expect(state.colorCount).toBe(state.positionCount);
+        expect(state.vertexColors).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('refines face-varying primvars on subdivision meshes', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_facevarying_st.usda&viewer=needle');
+        await waitForNeedleLoaderMode(page, 'catmull_clark_facevarying_st.usda');
+
+        const state = await getNeedleMeshAttributeState(page, '/World/SubdivFaceVaryingSt');
+        expect(state.positionCount).toBeGreaterThan(36);
+        expect(state.uvCount).toBe(state.positionCount);
+        expect(state.uv2Count).toBe(state.positionCount);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('stores Asset Explorer conversion variants without a gallery switcher', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route(assetExplorerApi, route => route.fulfill({
@@ -1189,6 +1267,31 @@ async function getNeedleUsdMeshNormalState(page: Page) {
             sharedPositionDifferentNormalGroups,
         };
     });
+}
+
+async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
+    return await page.evaluate(path => {
+        let target: any = null;
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!target && object.isMesh && object.userData?.usdPath === path) {
+                target = object;
+            }
+        });
+        if (!target) throw new Error(`Missing Needle USD mesh at ${path}`);
+
+        const material = Array.isArray(target.material)
+            ? target.material[0]
+            : target.material;
+        const attributes = target.geometry?.attributes || {};
+        return {
+            positionCount: attributes.position?.count || 0,
+            normalCount: attributes.normal?.count || 0,
+            colorCount: attributes.color?.count || 0,
+            uvCount: attributes.uv?.count || 0,
+            uv2Count: attributes.uv2?.count || 0,
+            vertexColors: Boolean(material?.vertexColors),
+        };
+    }, usdPath);
 }
 
 async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {
