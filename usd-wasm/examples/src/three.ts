@@ -1,4 +1,4 @@
-import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, DirectionalLight, Clock, PMREMGenerator, Texture, Vector3, Box3, Object3D } from 'three';
+import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, Clock, PMREMGenerator, Texture, Vector3, Box3, Object3D } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
@@ -101,9 +101,6 @@ async function createRenderHost(config: {
 
     const gridhelper = new GridHelper(100, 100);
     scene.add(gridhelper);
-
-    if (!scene.environment)
-        scene.add(new DirectionalLight(0xffffff, 1));
 
     const clock = new Clock();
     function render(timestamp = performance.now()) {

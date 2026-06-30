@@ -88,6 +88,29 @@
       background-color: rgb(75, 75, 75);
     }
 
+    .lighting-controls {
+      display: grid;
+      gap: 4px;
+    }
+
+    .light-toggle {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 6px;
+      align-items: center;
+      margin: 3px;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .light-toggle input {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      accent-color: rgb(84, 144, 24);
+    }
+
     .scene-control-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;

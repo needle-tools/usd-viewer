@@ -52,6 +52,8 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         const state = await getViewerState(page);
         expect(state?.sceneDiagnostics.meshCount).toBeGreaterThan(0);
         expect(state?.sceneDiagnostics.materialXMaterialCount).toBeGreaterThan(0);
+        expect(state?.sceneDiagnostics.materialX?.uniformLightCount).toBe(0);
+        expect(state?.sceneDiagnostics.materialX?.uniformEnvRadiance).toBeTruthy();
         expect(await renderAreaScreenshot(page)).toMatchSnapshot('gingerbread-usdc-three.png');
         expectForbiddenDiagnostics(diagnostics);
     });
@@ -342,6 +344,7 @@ async function getViewerState(page) {
                     materialXMaterialCount: number;
                     pointLightHelperCount: number;
                     cameraHelperCount: number;
+                    materialX?: Record<string, unknown>;
                 };
                 usdview: {
                     hasStage: boolean;

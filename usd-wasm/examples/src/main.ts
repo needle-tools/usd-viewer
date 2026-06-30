@@ -1,7 +1,8 @@
 
 import { getUsdModule, getOpenUsdBuildInfo, createThreeHydra, type USD, type HydraFile, type NeedleThreeHydraHandle, type OpenUsdBuildInfo } from '@needle-tools/usd';
 import { loadEnvMap, run, type DemoRenderHost, type RenderHostRuntime } from './three';
-import { Object3D, Scene, WebGLRenderer } from 'three';
+import { DirectionalLight, Object3D, PointLight, Scene, SpotLight, WebGLRenderer } from 'three';
+import { MaterialXEnvironment } from '@needle-tools/materialx';
 import { mount } from 'svelte';
 import UsdViewPanel from './UsdViewPanel.svelte';
 
@@ -34,6 +35,7 @@ declare global {
         materialXMaterialCount: number,
         pointLightHelperCount: number,
         cameraHelperCount: number,
+        materialX?: Record<string, unknown>,
       },
       usdview: {
         hasStage: boolean,
@@ -74,6 +76,13 @@ type TestAssetLibraryEntry = { label: string, root: string, files?: string[], gr
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
 type NeedleIntegrationMode = "direct" | "loader";
 type RenderMode = "three" | "needle-direct" | "needle-loader";
+type DemoLightKind = "directional" | "spot" | "point";
+type DemoLightControl = {
+  key: DemoLightKind,
+  label: string,
+  enabled: boolean,
+  objects: Object3D[],
+};
 type AssetFetchProgress = {
   state: string,
   active: number,
@@ -219,6 +228,8 @@ getUsdModule({
   div2.appendChild(downloadButton);
   div.appendChild(div2);
 
+  div.appendChild(createLightingControl());
+
   statusElement = document.createElement("div");
   statusElement.className = "status";
   statusElement.innerText = "Ready";
@@ -346,6 +357,94 @@ function createRenderModeButton(mode: RenderMode, label: string) {
     window.location.href = url.href;
   };
   return button;
+}
+
+const demoLightControls: DemoLightControl[] = [
+  {
+    key: "directional",
+    label: "Directional Light",
+    enabled: false,
+    objects: createDemoLightObjects("directional"),
+  },
+  {
+    key: "spot",
+    label: "Spot Light",
+    enabled: false,
+    objects: createDemoLightObjects("spot"),
+  },
+  {
+    key: "point",
+    label: "Point Light",
+    enabled: false,
+    objects: createDemoLightObjects("point"),
+  },
+];
+
+function createLightingControl() {
+  const section = document.createElement("section");
+  section.className = "lighting-controls control-group";
+
+  const heading = document.createElement("h2");
+  heading.innerText = "Lights";
+  section.appendChild(heading);
+
+  for (const control of demoLightControls) {
+    const label = document.createElement("label");
+    label.className = "light-toggle";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = control.enabled;
+    input.onchange = () => setDemoLightEnabled(control.key, input.checked);
+
+    const text = document.createElement("span");
+    text.innerText = control.label;
+
+    label.append(input, text);
+    section.appendChild(label);
+  }
+
+  return section;
+}
+
+function createDemoLightObjects(kind: DemoLightKind) {
+  if (kind === "directional") {
+    const light = new DirectionalLight(0xffffff, 1);
+    light.name = "Demo Directional Light";
+    light.position.set(3, 4, 5);
+    return [light];
+  }
+
+  if (kind === "spot") {
+    const light = new SpotLight(0xffffff, 25, 0, Math.PI / 5, 0.25, 1);
+    light.name = "Demo Spot Light";
+    light.position.set(3, 5, 4);
+    light.target.name = "Demo Spot Light Target";
+    light.target.position.set(0, 0, 0);
+    return [light, light.target];
+  }
+
+  const light = new PointLight(0xffffff, 5, 0, 1);
+  light.name = "Demo Point Light";
+  light.position.set(-3, 3, 4);
+  return [light];
+}
+
+function setDemoLightEnabled(kind: DemoLightKind, enabled: boolean) {
+  const control = demoLightControls.find(candidate => candidate.key === kind);
+  if (!control || control.enabled === enabled) return;
+
+  control.enabled = enabled;
+  for (const object of control.objects) {
+    if (enabled) scene.add(object);
+    else object.removeFromParent();
+  }
+
+  refreshMaterialXLights();
+}
+
+function refreshMaterialXLights() {
+  MaterialXEnvironment.get(scene)?.refreshLights();
 }
 
 async function loadAsset(asset: TestAsset, options: { updateUrl?: boolean } = {}) {
@@ -917,6 +1016,26 @@ function findObject3D(value: unknown): Object3D | null {
   return findObject3D(candidate?.scene) ?? findObject3D(candidate?.root);
 }
 
+function summarizeTexture(texture: unknown) {
+  const entry = texture as {
+    name?: string,
+    mapping?: number,
+    isTexture?: boolean,
+    isRenderTargetTexture?: boolean,
+    image?: { width?: number, height?: number },
+    source?: { data?: { width?: number, height?: number } },
+  } | null | undefined;
+  if (!entry) return null;
+  return {
+    name: entry.name ?? "",
+    mapping: entry.mapping ?? null,
+    isTexture: entry.isTexture === true,
+    isRenderTargetTexture: entry.isRenderTargetTexture === true,
+    width: entry.source?.data?.width ?? entry.image?.width ?? null,
+    height: entry.source?.data?.height ?? entry.image?.height ?? null,
+  };
+}
+
 function collectSceneDiagnostics(root: Object3D | null | undefined) {
   const diagnostics = {
     meshCount: 0,
@@ -925,6 +1044,7 @@ function collectSceneDiagnostics(root: Object3D | null | undefined) {
     materialXMaterialCount: 0,
     pointLightHelperCount: 0,
     cameraHelperCount: 0,
+    materialX: undefined as Record<string, unknown> | undefined,
   };
   root?.traverse(object => {
     const entry = object as Object3D & {
@@ -954,7 +1074,29 @@ function collectSceneDiagnostics(root: Object3D | null | undefined) {
       }
       const materials = Array.isArray(entry.material) ? entry.material : [entry.material];
       for (const material of materials) {
-        if (material?.constructor?.name === "MaterialXMaterial") diagnostics.materialXMaterialCount++;
+        const materialEntry = material as {
+          constructor?: { name?: string },
+          name?: string,
+          envMap?: unknown,
+          envMapIntensity?: number,
+          uniforms?: Record<string, { value?: unknown }>,
+        } | undefined;
+        if (materialEntry?.constructor?.name === "MaterialXMaterial") {
+          diagnostics.materialXMaterialCount++;
+          if (!diagnostics.materialX) {
+            const uniforms = materialEntry.uniforms;
+            diagnostics.materialX = {
+              name: materialEntry.name ?? "",
+              envMap: summarizeTexture(materialEntry.envMap),
+              envMapIntensity: materialEntry.envMapIntensity ?? null,
+              uniformEnvMapIntensity: Number(uniforms?.envMapIntensity?.value ?? NaN),
+              uniformLightCount: Number(uniforms?.u_numActiveLightSources?.value ?? NaN),
+              uniformLightDataLength: Array.isArray(uniforms?.u_lightData?.value) ? uniforms.u_lightData.value.length : null,
+              uniformEnvRadiance: summarizeTexture(uniforms?.u_envRadiance?.value),
+              uniformEnvIrradiance: summarizeTexture(uniforms?.u_envIrradiance?.value),
+            };
+          }
+        }
       }
     }
   });

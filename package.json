@@ -12,12 +12,12 @@
   "dependencies": {
     "@fastify/static": "^9.1.3",
     "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
-    "@needle-tools/materialx": "1.7.0-next.57183d6",
+    "@needle-tools/materialx": "1.7.0-next.043f0c6",
     "fastify": "^5.8.5",
     "three": "^0.185.0"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.0-next.57183d6"
+    "@needle-tools/materialx": "1.7.0-next.043f0c6"
   },
   "engines": {
     "node": "22.x"
