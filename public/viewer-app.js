@@ -1944,11 +1944,13 @@ async function init() {
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
+  const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
   const sampleGroupList = document.getElementById('sample-group-list');
   const usdWgGroupTree = document.getElementById('usd-wg-group-tree');
   const gltfGroupTree = document.getElementById('gltf-group-tree');
+  const needleGroupTree = document.getElementById('needle-group-tree');
   const galleryTitle = document.getElementById('gallery-title');
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
@@ -1965,6 +1967,7 @@ async function init() {
   let usdWgManifest = null;
   let usdWgManifestPromise = null;
   let usdWgTreeRendered = false;
+  let needleTreeRendered = false;
   let selectedConverter = '';
   let selectedSampleGroup = 'gltf';
   let loadedConversionCard = null;
@@ -2119,19 +2122,21 @@ async function init() {
       subtitle: 'Production USD samples from usd-wg/assets',
       load: () => loadUsdWgCards(''),
     }],
-    ['test-models', {
-      title: 'Needle Cloud',
-      subtitle: 'Hosted USDZ assets with automatic optimization',
-      cards: [
-        {
-          name: 'Kitchen Set',
-          meta: 'Hosted on Needle Cloud',
-          url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
-          thumbnail: needleCloudScreenshotThumbnail('https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz'),
-        },
-      ],
+    ['needle', {
+      title: 'Needle',
+      subtitle: 'Viewer fixtures and hosted assets',
+      load: () => loadNeedleCards(''),
     }],
   ]);
+
+  const needleCloudCards = [
+    {
+      name: 'Kitchen Set',
+      meta: 'Hosted on Needle Cloud',
+      url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
+      thumbnail: needleCloudScreenshotThumbnail('https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz'),
+    },
+  ];
 
   function setGalleryStatus(text, isError = false) {
     if (!galleryStatus) return;
@@ -2378,10 +2383,21 @@ async function init() {
       : '';
   }
 
+  function needleFolderGroupId(folder) {
+    return `needle:${encodeURIComponent(folder)}`;
+  }
+
+  function needleFolderFromGroupId(groupId) {
+    return String(groupId || '').startsWith('needle:')
+      ? decodeURIComponent(String(groupId).slice('needle:'.length))
+      : '';
+  }
+
   function topLevelSampleGroup(groupId) {
     const value = String(groupId || '');
     if (value.startsWith('usd-wg:')) return 'usd-wg';
     if (value.startsWith('gltf:')) return 'gltf';
+    if (value.startsWith('needle:')) return 'needle';
     return sampleGroups.has(value) ? value : 'gltf';
   }
 
@@ -2390,6 +2406,7 @@ async function init() {
     const treeByGroup = new Map([
       ['usd-wg', usdWgGroupTree],
       ['gltf', gltfGroupTree],
+      ['needle', needleGroupTree],
     ]);
     for (const [key, tree] of treeByGroup) {
       if (!tree) continue;
@@ -2490,6 +2507,15 @@ async function init() {
     }, 1);
   }
 
+  function createNeedleTreeControl(folder, count) {
+    return createSampleTreeControl({
+      groupId: folder === 'cloud' ? NEEDLE_CLOUD_GROUP_ID : needleFolderGroupId(folder),
+      name: folder === 'cloud' ? 'Needle Cloud' : prettyNeedleFolderLabel(folder),
+      count,
+      hasChildren: false,
+    }, 1);
+  }
+
   function renderUsdWgTreeEntry(entry, depth = 1) {
     if (entry.children?.length) {
       const details = document.createElement('details');
@@ -2528,6 +2554,68 @@ async function init() {
     }
     gltfTreeRendered = true;
     syncSampleTreeVisibility();
+  }
+
+  function needleFixtureFolder(asset) {
+    const path = String(asset?.root || asset?.files?.[0] || '').replace(/^\/+/, '');
+    return path.includes('/') ? path.split('/')[0] : 'root';
+  }
+
+  function needleFixtureFolders() {
+    const folders = new Map();
+    for (const asset of testAssetLibrary) {
+      const folder = needleFixtureFolder(asset);
+      const cards = folders.get(folder) || [];
+      cards.push(needleFixtureCard(asset, folder));
+      folders.set(folder, cards);
+    }
+    for (const cards of folders.values()) {
+      cards.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    }
+    return folders;
+  }
+
+  function needleFixtureCard(asset, folder = needleFixtureFolder(asset)) {
+    return {
+      name: asset.label || asset.root || 'Fixture',
+      meta: [prettyNeedleFolderLabel(folder), asset.group].filter(Boolean).join(' · '),
+      url: testFixtureUrl(asset.root),
+    };
+  }
+
+  function sortedNeedleFixtureFolders() {
+    return [...needleFixtureFolders().keys()].sort((a, b) => prettyNeedleFolderLabel(a).localeCompare(prettyNeedleFolderLabel(b)));
+  }
+
+  function prettyNeedleFolderLabel(folder) {
+    const labels = new Map([
+      ['asset-explorer', 'Asset Explorer'],
+      ['materialx', 'MaterialX'],
+      ['usd-concepts', 'USD Concepts'],
+      ['usdz-nested-material-src', 'USDZ Nested Material Src'],
+    ]);
+    return labels.get(String(folder || '')) || prettySampleLabel(folder);
+  }
+
+  function renderNeedleTree() {
+    if (!needleGroupTree || needleTreeRendered) return;
+    needleGroupTree.textContent = '';
+    needleGroupTree.appendChild(createNeedleTreeControl('cloud', needleCloudCards.length));
+    const folders = needleFixtureFolders();
+    for (const folder of sortedNeedleFixtureFolders()) {
+      needleGroupTree.appendChild(createNeedleTreeControl(folder, folders.get(folder)?.length || 0));
+    }
+    needleTreeRendered = true;
+    syncSampleTreeVisibility();
+  }
+
+  function loadNeedleCards(folder) {
+    renderNeedleTree();
+    if (folder === 'cloud') return needleCloudCards;
+    const folders = needleFixtureFolders();
+    if (folder) return folders.get(folder) || [];
+    const fixtureCards = sortedNeedleFixtureFolders().flatMap((name) => folders.get(name) || []);
+    return [...needleCloudCards, ...fixtureCards];
   }
 
   async function loadUsdWgManifest() {
@@ -2707,6 +2795,16 @@ async function init() {
         load: () => loadGltfCards(tag),
       };
     }
+    if (!group && String(groupId || '').startsWith('needle:')) {
+      const folder = needleFolderFromGroupId(groupId);
+      group = {
+        title: folder === 'cloud' ? 'Needle Cloud' : prettyNeedleFolderLabel(folder),
+        subtitle: folder === 'cloud'
+          ? 'Hosted USDZ assets with automatic optimization'
+          : `Needle fixture folder: ${folder}`,
+        load: () => loadNeedleCards(folder),
+      };
+    }
     group = group || sampleGroups.get('usd-wg');
     if (!group) return;
     selectedSampleGroup = groupId;
@@ -2883,7 +2981,7 @@ async function init() {
       if (!button) return;
       const groupId = button.dataset.sampleGroup;
       const isTopLevel = sampleGroups.has(groupId);
-      const hasTree = groupId === 'usd-wg' || groupId === 'gltf';
+      const hasTree = groupId === 'usd-wg' || groupId === 'gltf' || groupId === 'needle';
       let action;
       if (isTopLevel && hasTree && selectedSampleGroup === groupId) {
         const wasCollapsed = collapsedSampleTrees.has(groupId);

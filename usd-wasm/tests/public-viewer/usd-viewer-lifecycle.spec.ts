@@ -1210,10 +1210,12 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await expect(page.locator('#sample-group-list > [data-sample-group]').nth(0)).toHaveAttribute('data-sample-group', 'gltf');
         await expect(page.locator('#sample-group-list > [data-sample-group]').nth(1)).toHaveAttribute('data-sample-group', 'usd-wg');
+        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(2)).toHaveAttribute('data-sample-group', 'needle');
         await expect(page.locator('#gallery-title')).toHaveText(/glTF\s+USD conversions/);
         await expect(page.locator('#gallery-subtitle')).toHaveText('Converted from glTF Sample Assets');
         await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
+        await expect(page.locator('#needle-group-tree')).toBeHidden();
 
         await page.waitForFunction(() => {
             const labels = Array.from(document.querySelectorAll('#gltf-group-tree [data-sample-group] span'))
@@ -1247,6 +1249,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.click('[data-sample-group="usd-wg"]');
         await expect(page.locator('#usd-wg-group-tree')).toBeVisible();
         await expect(page.locator('#gltf-group-tree')).toBeHidden();
+        await expect(page.locator('#needle-group-tree')).toBeHidden();
         await page.waitForFunction(() => {
             const first = document.querySelector('#usd-wg-group-tree [data-sample-group] span');
             return first?.textContent?.trim() === 'Full Assets';
@@ -1256,6 +1259,25 @@ test.describe('public usd-viewer lifecycle', () => {
             return firstMeta?.textContent?.includes('full_assets');
         });
 
+        await page.click('[data-sample-group="needle"]');
+        await expect(page.locator('#needle-group-tree')).toBeVisible();
+        await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
+        await page.waitForFunction(() => {
+            const labels = Array.from(document.querySelectorAll('#needle-group-tree [data-sample-group] span'))
+                .map((node) => node.textContent?.trim());
+            return labels[0] === 'Needle Cloud'
+                && labels.includes('Asset Explorer')
+                && labels.includes('MaterialX')
+                && labels.includes('Subdivision');
+        });
+
+        await page.click('[data-sample-group="needle:subdivision"]');
+        await expect(page.locator('#gallery-title')).toHaveText('Subdivision');
+        await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/catmull_clark_cube.usda');
+        await page.click('.gallery-card[data-name="Catmull-Clark Cube"]');
+        const fixtureState = await waitForPublicViewerLoad(page, 'catmull_clark_cube.usda');
+        expect(fixtureState.hasHydraHandle).toBe(true);
+
         expect(diagnostics).toEqual([]);
     });
 
@@ -1263,7 +1285,8 @@ test.describe('public usd-viewer lifecycle', () => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three');
         await page.click('.dropdown-button');
-        await page.click('[data-sample-group="test-models"]');
+        await page.click('[data-sample-group="needle"]');
+        await page.click('[data-sample-group="needle:cloud"]');
 
         const kitchenThumbnail = page.locator('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
         await expect(kitchenThumbnail).toHaveAttribute('src', /screenshot\.needle\.webp$/);
