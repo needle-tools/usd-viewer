@@ -11,7 +11,6 @@ import {
   WebGLRenderer,
   SRGBColorSpace,
   AgXToneMapping,
-  NeutralToneMapping,
   PMREMGenerator,
   EquirectangularReflectionMapping,
   createThreeHydra,
@@ -743,6 +742,19 @@ function setFilenameText(__filename) {
   currentDisplayFilename = _filename;
 }
 
+function applyAgXToneMapping(rendererLike) {
+  const candidates = [
+    rendererLike,
+    rendererLike?.renderer,
+    rendererLike?.threeRenderer,
+  ];
+  for (const renderer of candidates) {
+    if (!renderer || typeof renderer !== "object") continue;
+    renderer.toneMapping = AgXToneMapping;
+    if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = 1;
+  }
+}
+
 function catalogAssetForUrlPath(urlPath) {
   if (!urlPath || !urlPath.startsWith(testFixtureBaseUrl)) return undefined;
   const root = decodeURIComponent(urlPath.substring(testFixtureBaseUrl.length));
@@ -1452,6 +1464,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   const loadDetail = await loadPromise;
   const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
+  applyAgXToneMapping(context?.renderer);
 
   const handle = await waitForNeedleHydraHandle(context);
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
@@ -1500,6 +1513,7 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   const loadDetail = await loadPromise;
   const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
+  applyAgXToneMapping(context?.renderer);
   const fitTargets = needleFitObjectsFromLoadDetail(loadDetail);
   if (!fitNeedleEngineCamera(context, fitTargets)) {
     scheduleNeedleEngineCameraFit(context, fitTargets);
@@ -1819,7 +1833,7 @@ async function init() {
   camera.position.x = params.get('cameraX') || 0;
 
   const scene = window.scene = new Scene();
-  window.__usdViewerThreeDiagnostics = { Box3, Vector3 };
+  window.__usdViewerThreeDiagnostics = { Box3, Vector3, AgXToneMapping };
   // scene.background = new Color(0xffffff);
   
 
@@ -1849,10 +1863,7 @@ async function init() {
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.outputColorSpace = SRGBColorSpace;
-  // renderer.toneMapping = AgXToneMapping;
-  // renderer.toneMappingExposure = 1;
-  renderer.toneMapping = NeutralToneMapping;
-  console.log("tonemapping", renderer.toneMapping)
+  applyAgXToneMapping(renderer);
   renderer.shadowMap.enabled = false;
   renderer.setClearColor( 0x000000, 0 ); // the default
 

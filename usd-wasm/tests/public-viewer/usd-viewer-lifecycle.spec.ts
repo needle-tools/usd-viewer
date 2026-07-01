@@ -380,6 +380,35 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('uses AgX tone mapping for three.js and Needle renderers', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const fixture = '/test-fixtures/subdivision/catmull_clark_cube.usda';
+
+        await page.goto(`/?file=${fixture}&viewer=three`);
+        await waitForPublicViewerLoad(page, 'catmull_clark_cube.usda');
+        const threeToneMapping = await page.evaluate(() => ({
+            expected: window.__usdViewerThreeDiagnostics?.AgXToneMapping,
+            actual: window.renderer?.toneMapping,
+            exposure: window.renderer?.toneMappingExposure,
+        }));
+        expect(threeToneMapping.actual).toBe(threeToneMapping.expected);
+        expect(threeToneMapping.exposure).toBe(1);
+
+        await page.goto(`/?file=${fixture}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, 'catmull_clark_cube.usda');
+        const needleToneMapping = await page.evaluate(() => {
+            const renderer = document.querySelector('needle-engine')?.context?.renderer;
+            return {
+                expected: window.__usdViewerThreeDiagnostics?.AgXToneMapping,
+                actual: renderer?.toneMapping,
+                exposure: renderer?.toneMappingExposure,
+            };
+        });
+        expect(needleToneMapping.actual).toBe(needleToneMapping.expected);
+        expect(needleToneMapping.exposure).toBe(1);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('switches empty public viewer from Needle to three.js', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?file=&viewer=needle');
