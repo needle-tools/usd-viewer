@@ -33,6 +33,10 @@ jobs:
         if: startsWith(github.ref_name, 'release/stable')
         run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "stable" --create-tag "release/"
 
+      - name: Publish to npm (latest branch)
+        if: startsWith(github.ref_name, 'release/latest')
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "latest" --create-tag "release/"
+
       - name: Publish to npm (next and experimental branches)
-        if: ${{ !startsWith(github.ref_name, 'release/stable') }}
-        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "${{ github.ref_name }}" --version+tag --version+hash --create-tag "release/"
+        if: ${{ !startsWith(github.ref_name, 'release/stable') && !startsWith(github.ref_name, 'release/latest') }}
+        run: npx --yes needle-publish-helper@stable publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "${{ github.ref_name }}" --version+time --version+name --version+tag --version+hash --create-tag "release/"
