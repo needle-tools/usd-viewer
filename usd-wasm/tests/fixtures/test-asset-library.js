@@ -45,6 +45,7 @@ export const testAssetLibrary = [
   { group: "USD Concepts", label: "Nested Material USDZ", root: "usdz-nested-material.usdz" },
 
   { group: "Edge Cases", label: "Animated Shared Material Mixed Cull", root: "edge-cases/shared_material_mixed_cull_animated.usda", files: ["edge-cases/shared_material_mixed_cull_animated.usda"] },
+  { group: "Edge Cases", label: "Face-Varying Normals Matrix", root: "primvars/facevarying_normals_matrix.usda", files: ["primvars/facevarying_normals_matrix.usda"] },
 
   { group: "Subdivision", label: "Catmull-Clark Cube", root: "subdivision/catmull_clark_cube.usda", files: ["subdivision/catmull_clark_cube.usda"] },
 

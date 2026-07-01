@@ -286,6 +286,73 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('preserves indexed and non-indexed face-varying normals through triangulation', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        await page.goto('/?file=/test-fixtures/primvars/facevarying_normals_matrix.usda&viewer=needle');
+        await waitForNeedleLoaderMode(page, 'facevarying_normals_matrix.usda');
+
+        const state = await getNeedleFaceVaryingNormalMatrixState(page);
+        const authoredPolygonalMeshes = [
+            'IndexedFaceVaryingNone',
+            'NonIndexedFaceVaryingNone',
+        ];
+
+        for (const name of authoredPolygonalMeshes) {
+            const mesh = state[name];
+            expect(mesh, name).toBeTruthy();
+            expect(mesh.normalCount, name).toBe(mesh.positionCount);
+            expect(mesh.zeroNormalCount, name).toBe(0);
+            expect(mesh.uniqueNormals, name).toEqual([
+                '0.000,1.000,0.000',
+                '1.000,0.000,0.000',
+            ]);
+            expect(mesh.firstSixNormals, name).toEqual([
+                '1.000,0.000,0.000',
+                '1.000,0.000,0.000',
+                '1.000,0.000,0.000',
+                '1.000,0.000,0.000',
+                '1.000,0.000,0.000',
+                '1.000,0.000,0.000',
+            ]);
+        }
+
+        const subdivisionMeshesWithAuthoredNormals = [
+            'IndexedFaceVaryingCatmullClark',
+            'NonIndexedFaceVaryingCatmullClark',
+        ];
+        for (const name of subdivisionMeshesWithAuthoredNormals) {
+            const mesh = state[name];
+            expect(mesh, name).toBeTruthy();
+            expect(mesh.normalCount, name).toBe(mesh.positionCount);
+            expect(mesh.zeroNormalCount, name).toBe(0);
+            expect(mesh.positionCount, name).toBeGreaterThan(12);
+            expect(mesh.uniqueNormals, name).toEqual(['0.000,0.000,1.000']);
+            expect(mesh.firstSixNormals, name).toEqual([
+                '0.000,0.000,1.000',
+                '0.000,0.000,1.000',
+                '0.000,0.000,1.000',
+                '0.000,0.000,1.000',
+                '0.000,0.000,1.000',
+                '0.000,0.000,1.000',
+            ]);
+        }
+
+        expect(state.IndexedFaceVaryingNone.positionCount).toBe(12);
+        expect(state.NonIndexedFaceVaryingNone.positionCount).toBe(12);
+
+        const generated = state.CatmullClarkGeneratedNormals;
+        expect(generated.normalCount).toBe(generated.positionCount);
+        expect(generated.positionCount).toBeGreaterThan(36);
+        expect(generated.zeroNormalCount).toBe(0);
+        expect(generated.uniqueNormals.length).toBeGreaterThan(6);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('defaults public viewer samples to Needle mode', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}`);
@@ -1425,6 +1492,58 @@ async function getNeedleSceneNormalState(page: Page) {
             missingNormalMeshes,
             grassBlockTopFirstNormals,
         };
+    });
+}
+
+async function getNeedleFaceVaryingNormalMatrixState(page: Page) {
+    return await page.evaluate(() => {
+        const result: Record<string, {
+            positionCount: number;
+            normalCount: number;
+            zeroNormalCount: number;
+            uniqueNormals: string[];
+            firstSixNormals: string[];
+        }> = {};
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            const usdPath = String(object.userData?.usdPath || '');
+            if (!object.isMesh || !usdPath.startsWith('/World/')) return;
+
+            const name = usdPath.split('/').at(-1) || object.name;
+            const position = object.geometry?.attributes?.position;
+            const normal = object.geometry?.attributes?.normal;
+            const uniqueNormals = new Set<string>();
+            const firstSixNormals: string[] = [];
+            let zeroNormalCount = 0;
+
+            if (normal) {
+                for (let i = 0; i < normal.count; i++) {
+                    const x = normal.getX(i);
+                    const y = normal.getY(i);
+                    const z = normal.getZ(i);
+                    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z) || (x * x + y * y + z * z) <= 1e-12) {
+                        zeroNormalCount++;
+                    }
+                    const key = [
+                        x.toFixed(3),
+                        y.toFixed(3),
+                        z.toFixed(3),
+                    ].join(',');
+                    uniqueNormals.add(key);
+                    if (i < 6) firstSixNormals.push(key);
+                }
+            }
+
+            result[name] = {
+                positionCount: position?.count || 0,
+                normalCount: normal?.count || 0,
+                zeroNormalCount,
+                uniqueNormals: Array.from(uniqueNormals).sort(),
+                firstSixNormals,
+            };
+        });
+
+        return result;
     });
 }
 
