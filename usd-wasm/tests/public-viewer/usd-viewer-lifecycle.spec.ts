@@ -711,6 +711,83 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('loads dropped USD files from the window drop target', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?viewer=needle');
+        await waitForDropReady(page);
+
+        const drop = await dropFixtureFile(page, {
+            path: 'subdivision/catmull_clark_cube.usda',
+            name: 'catmull_clark_cube.usda',
+            target: 'window',
+            type: 'model/vnd.usda',
+        });
+        expect(drop.defaultPrevented).toBe(true);
+
+        const state = await waitForNeedleLoaderMode(page, 'catmull_clark_cube.usda');
+        expect(state.elementSrc).toBe('catmull_clark_cube.usda');
+        expect(state.hasHydraHandle).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('loads dropped GLB and glTF files through generated USD wrappers', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+
+        await page.goto('/?viewer=needle');
+        await waitForDropReady(page);
+        const glbDrop = await dropFixtureFile(page, {
+            path: 'asset-explorer/DamagedHelmet.glb',
+            name: 'DamagedHelmet.glb',
+            target: 'canvas',
+            type: 'model/gltf-binary',
+        });
+        expect(glbDrop.defaultPrevented).toBe(true);
+        const glbState = await waitForNeedleLoaderMode(page, 'DamagedHelmet.usda');
+        expect(glbState.elementSrc).toBe('DamagedHelmet.usda');
+        expect(glbState.hasHydraHandle).toBe(true);
+
+        await page.goto('/?viewer=needle');
+        await waitForDropReady(page);
+        const gltfDrop = await dropFixtureFile(page, {
+            path: 'asset-explorer/EmbeddedTriangle.gltf',
+            name: 'EmbeddedTriangle.gltf',
+            target: 'window',
+            type: 'model/gltf+json',
+        });
+        expect(gltfDrop.defaultPrevented).toBe(true);
+        const gltfState = await waitForNeedleLoaderMode(page, 'EmbeddedTriangle.usda');
+        expect(gltfState.elementSrc).toBe('EmbeddedTriangle.usda');
+        expect(gltfState.hasHydraHandle).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('loads dropped MaterialX files through generated preview USD wrappers', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?viewer=needle');
+        await waitForDropReady(page);
+
+        const drop = await dropFixtureFile(page, {
+            path: 'materialx/mtlxFiles/standard_surface_default.mtlx',
+            name: 'standard_surface_default.mtlx',
+            target: 'window',
+            type: 'application/xml',
+        });
+        expect(drop.defaultPrevented).toBe(true);
+
+        const state = await waitForNeedleLoaderMode(page, 'standard_surface_default.usda');
+        expect(state.elementSrc).toBe('standard_surface_default.usda');
+        expect(state.hasHydraHandle).toBe(true);
+        const meshNames = await page.evaluate(() => {
+            const names: string[] = [];
+            window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                if (object.isMesh) names.push(object.name || '');
+            });
+            return names;
+        });
+        expect(meshNames).toContain('PreviewSphere');
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps Needle Engine renderer alive while switching converted and original glTF variants', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         const contextDiagnostics = collectConsoleMatches(page, [
@@ -1360,6 +1437,43 @@ async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three'
             cameraFit,
         };
     }, mode);
+}
+
+async function dropFixtureFile(page: Page, options: {
+    path: string;
+    name: string;
+    target: 'window' | string;
+    type?: string;
+}) {
+    return await page.evaluate(async ({ path, name, target, type }) => {
+        const response = await fetch(`/test-fixtures/${path}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch dropped fixture ${path}: ${response.status} ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const file = new File([blob], name, { type: type || blob.type || 'application/octet-stream' });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        const element = target === 'window' ? window : document.querySelector(target);
+        if (!element) throw new Error(`Drop target not found: ${target}`);
+        const event = new DragEvent('drop', {
+            bubbles: true,
+            cancelable: true,
+            dataTransfer,
+        });
+        element.dispatchEvent(event);
+        return {
+            defaultPrevented: event.defaultPrevented,
+            itemCount: dataTransfer.items.length,
+            fileCount: dataTransfer.files.length,
+        };
+    }, options);
+}
+
+async function waitForDropReady(page: Page) {
+    await page.waitForFunction(() => {
+        return Boolean(globalThis['NEEDLE:USD:GET']) && Boolean(document.querySelector('canvas'));
+    });
 }
 
 async function waitForNeedleLoaderMode(page: Page, filename: string) {

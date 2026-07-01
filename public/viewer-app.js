@@ -1932,7 +1932,10 @@ async function init() {
   });
   window.addEventListener("dragover", (ev) => ev.preventDefault());
   const endDrag = () => { dragDepth = 0; setDragActive(false); };
-  window.addEventListener("drop", endDrag);
+  window.addEventListener("drop", (ev) => {
+    endDrag();
+    if (!ev.defaultPrevented) dropHandler(ev);
+  });
   window.addEventListener("dragend", endDrag);
 
   // ---- Sample Library mega-menu -------------------------------------------
@@ -3304,6 +3307,7 @@ async function handleFilesystemEntries(entries) {
   ]
 
   for (let entry of entries) {
+    if (!entry) continue;
     if (debugFileHandling) console.log("file entry", entry)
     if (entry.isFile) {
       if (debugFileHandling) console.log("single file", entry);
@@ -3493,12 +3497,12 @@ async function handleFilesystemEntries(entries) {
  * @param {DragEvent} ev
  */
 function dropHandler(ev) {
-  if (debugFileHandling) console.log('File(s) dropped', ev.dataTransfer.items, ev.dataTransfer.files);
+  if (debugFileHandling) console.log('File(s) dropped', ev.dataTransfer?.items, ev.dataTransfer?.files);
 
   // Prevent default behavior (Prevent file from being opened)
   ev.preventDefault();
 
-  if (ev.dataTransfer.items)
+  if (ev.dataTransfer?.items)
   {
     /** @type {FileSystemEntry[]} */
     const allEntries = [];
@@ -3511,11 +3515,19 @@ function dropHandler(ev) {
       for (var i = 0; i < ev.dataTransfer.items.length; i++)
       {
         let item = ev.dataTransfer.items[i];
+        if (item.kind !== 'file') continue;
         /** @type {FileSystemEntry} */
         let entry = ("getAsEntry" in item) ? item.getAsEntry() : item.webkitGetAsEntry();
-        allEntries.push(entry);
+        if (entry) {
+          allEntries.push(entry);
+        } else {
+          const file = item.getAsFile();
+          if (file) allEntries.push(droppedFileToEntry(file));
+        }
       }
-      handleFilesystemEntries(allEntries);
+      if (allEntries.length > 0) {
+        handleFilesystemEntries(allEntries).catch(error => console.error("Failed to load dropped file entries", error));
+      }
       return;
     }
 
@@ -3553,6 +3565,16 @@ function dropHandler(ev) {
       testAndLoadFile(file).catch(error => console.error("Failed to load dropped USD file", error));
     }
   }
+}
+
+function droppedFileToEntry(file) {
+  return {
+    isFile: true,
+    isDirectory: false,
+    name: file.name,
+    fullPath: `/${file.name}`,
+    file: resolve => resolve(file),
+  };
 }
 
 function dragOverHandler(ev) {
