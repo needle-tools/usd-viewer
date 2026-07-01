@@ -15,6 +15,11 @@ const copies = [
     to: join(root, "public", "materialx"),
     label: "/materialx",
   },
+  {
+    from: join(root, "usd-wasm", "tests", "fixtures"),
+    to: join(root, "public", "test-fixtures"),
+    label: "/test-fixtures",
+  },
 ];
 
 for (const copy of copies) {
@@ -26,7 +31,9 @@ for (const copy of copies) {
     recursive: true,
     dereference: true,
     filter(source) {
-      return !source.includes(`${copy.from}/node_modules/`) && !source.endsWith("/dist");
+      return !source.includes(`${copy.from}/node_modules/`)
+        && !source.endsWith("/dist")
+        && !source.endsWith("/.DS_Store");
     },
   });
   console.log(`Prepared ${copy.label}: ${copy.to}`);
