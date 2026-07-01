@@ -260,7 +260,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('uses generated normals when USD-WG McUsd carries invalid zero normals', async ({ page }) => {
+    test('preserves USD-WG McUsd indexed face-varying normals', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         const sample = {
             filename: 'McUsd_10cm.usdz',
@@ -321,6 +321,20 @@ test.describe('public usd-viewer lifecycle', () => {
             ]);
         }
 
+        const authoredZeroMesh = state.AuthoredZeroFaceVaryingNone;
+        expect(authoredZeroMesh).toBeTruthy();
+        expect(authoredZeroMesh.normalCount).toBe(authoredZeroMesh.positionCount);
+        expect(authoredZeroMesh.zeroNormalCount).toBe(authoredZeroMesh.normalCount);
+        expect(authoredZeroMesh.uniqueNormals).toEqual(['0.000,0.000,0.000']);
+        expect(authoredZeroMesh.firstSixNormals).toEqual([
+            '0.000,0.000,0.000',
+            '0.000,0.000,0.000',
+            '0.000,0.000,0.000',
+            '0.000,0.000,0.000',
+            '0.000,0.000,0.000',
+            '0.000,0.000,0.000',
+        ]);
+
         const subdivisionMeshesWithAuthoredNormals = [
             'IndexedFaceVaryingCatmullClark',
             'NonIndexedFaceVaryingCatmullClark',
@@ -344,6 +358,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(state.IndexedFaceVaryingNone.positionCount).toBe(12);
         expect(state.NonIndexedFaceVaryingNone.positionCount).toBe(12);
+        expect(state.AuthoredZeroFaceVaryingNone.positionCount).toBe(12);
 
         const generated = state.CatmullClarkGeneratedNormals;
         expect(generated.normalCount).toBe(generated.positionCount);

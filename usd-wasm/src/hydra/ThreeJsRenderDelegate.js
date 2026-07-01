@@ -547,6 +547,7 @@ class HydraMesh {
     this._interface = hydraInterface;
     this._points = undefined;
     this._normals = undefined;
+    this._hasAuthoredNormals = false;
     this._tangents = undefined;
     this._colors = undefined;
     this._uvs = undefined;
@@ -622,9 +623,6 @@ class HydraMesh {
         return;
       }
       this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
-      if (attributeName === 'normal') {
-        this._discardInvalidNormalAttribute();
-      }
       if (attributeName === 'position') {
         this._geometry.computeBoundingBox();
         this._geometry.computeBoundingSphere();
@@ -774,28 +772,6 @@ class HydraMesh {
     }
   }
 
-  _hasUsableNormalAttribute() {
-    const normal = this._geometry.getAttribute('normal');
-    if (!normal || normal.itemSize !== 3 || normal.count <= 0) return false;
-
-    for (let i = 0; i < normal.count; i++) {
-      const x = normal.getX(i);
-      const y = normal.getY(i);
-      const z = normal.getZ(i);
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return false;
-      if ((x * x + y * y + z * z) <= 1e-12) return false;
-    }
-
-    return true;
-  }
-
-  _discardInvalidNormalAttribute() {
-    if (!this._geometry.hasAttribute('normal')) return;
-    if (this._hasUsableNormalAttribute()) return;
-    this._geometry.deleteAttribute('normal');
-    this._normals = undefined;
-  }
-
   setCullStyle(doubleSided, cullStyle) {
     this._side = cullStyleToThreeSide(Boolean(doubleSided), String(cullStyle || "dontCare"));
     this._applyCullSideToMeshes();
@@ -820,8 +796,7 @@ class HydraMesh {
    */
   updateNormals(normals) {
     // don't apply automatically generated normals if there are already authored normals.
-    if (this._hasUsableNormalAttribute()) return;
-    this._discardInvalidNormalAttribute();
+    if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
     this._normals = normals.slice(0);
     this.updateOrder(this._normals, 'normal');
@@ -829,19 +804,18 @@ class HydraMesh {
 
   updateOrderedNormals(normals) {
     // don't apply automatically generated normals if there are already authored normals.
-    if (this._hasUsableNormalAttribute()) return;
-    this._discardInvalidNormalAttribute();
+    if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
     this._normals = normals.slice(0);
     this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
-    this._discardInvalidNormalAttribute();
   }
 
   setNormals(data, interpolation) {
+    this._hasAuthoredNormals = true;
+
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
       this._geometry.setAttribute('normal', new Float32BufferAttribute(data, 3));
-      this._discardInvalidNormalAttribute();
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
       this._normals = data.slice(0);
