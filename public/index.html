@@ -18,14 +18,17 @@
   <meta property="og:url" content="https://usd-viewer.needle.tools/" />
   <meta property="og:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
   <meta property="og:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by OpenUSD compiled to WebAssembly." />
-  <meta property="og:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
+  <meta property="og:image" content="https://usd-viewer.needle.tools/og-image.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="USD Viewer by Needle" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="USD &amp; USDZ Viewer — View OpenUSD Files Online" />
   <meta name="twitter:description" content="Drag &amp; drop USD and USDZ files to view them in your browser and export to glTF. Powered by OpenUSD compiled to WebAssembly." />
-  <meta name="twitter:image" content="https://usd-viewer.needle.tools/usd-logo.png" />
+  <meta name="twitter:image" content="https://usd-viewer.needle.tools/og-image.jpg" />
 
   <!-- Structured data: this is an in-browser web application -->
   <script type="application/ld+json">
@@ -196,7 +199,7 @@
       </div>
     </div>
 
-    <a href="#" id="feedback-link" class="feedback-button" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="feedback-text">Feedback</span></a>
+    <a href="#" id="feedback-link" class="feedback-button" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg><span class="feedback-text">Feedback</span></a>
 
     <div class="header-overflow" id="header-overflow">
       <button class="header-overflow-button" type="button" aria-label="More actions" aria-expanded="false" aria-controls="header-overflow-menu">
@@ -208,8 +211,8 @@
       </button>
       <div class="header-overflow-menu" id="header-overflow-menu">
         <a href="#" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span>About</span></a>
-        <a href="#" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Feedback</span></a>
-        <a href="#" class="export-button" data-export-gltf data-tip="Convert this model to glTF" data-disabled-tip="Load a USD file first to convert"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg><span>Convert to glTF</span></a>
+        <a href="#" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg><span>Feedback</span></a>
+        <a href="#" class="export-button" data-export-gltf data-tip="Share or export the USD — click to see options" data-disabled-tip="Load a USD file first to share"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4"/><path d="M15.4 6.5l-6.8 4"/></svg><span>Share USD</span></a>
       </div>
     </div>
     <!-- Hidden from the public viewer chrome for now. The loader still accepts
@@ -221,7 +224,7 @@
     </label>
     -->
 
-    <a href="#" id="export-gltf" class="export-button" data-export-gltf data-tip="Convert this model to glTF" data-disabled-tip="Load a USD file first to convert"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>Convert to glTF</a>
+    <a href="#" id="export-gltf" class="export-button" data-export-gltf data-tip="Share or export the USD — click to see options" data-disabled-tip="Load a USD file first to share"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4"/><path d="M15.4 6.5l-6.8 4"/></svg>Share USD</a>
   </div>
 
   </div>
@@ -311,18 +314,17 @@
     </div>
   </div>
 
-  <!-- Convert-to-glTF dialog. Opening "Convert to glTF" pitches Needle Cloud as
-       the primary path (compression, hosting, sharing) while still offering the
+  <!-- Share-USD dialog. Opening "Share USD" pitches Needle Cloud as the primary
+       path (upload → hosted, shareable viewer + embed) while still offering the
        quick in-browser .glb download as a secondary action. -->
   <div id="export-dialog" class="dialog-overlay">
     <div class="dialog">
       <div class="dialog-header">
-        <h2>Convert to glTF</h2>
+        <h2>Share USD</h2>
         <button class="dialog-close" id="export-dialog-close-btn" aria-label="Close">&times;</button>
       </div>
       <div class="dialog-content">
-        <p>This viewer can convert your model to a quick glTF right here in your browser — handy for a fast look in another tool.</p>
-        <p style="margin-bottom: 6px;"><strong>Want to do more with it?</strong></p>
+        <p>Share your model as a hosted, interactive 3D viewer — or export a quick glTF right here in the browser for a fast look in another tool.</p>
         <p>Upload your model to <a href="https://cloud.needle.tools" target="_blank" rel="noopener" class="cloud-link"><svg class="needle-logo-inline" viewBox="0 0 813 813" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="fill-rule:evenodd;clip-rule:evenodd;"><g transform="matrix(4.16667,0,0,4.16667,0,0)"><g transform="matrix(0.806379,0,0,0.806379,43.028,21.9214)"><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M79.32,36.98L79.32,187.74L95,174.54L101.59,18.23L79.32,36.98Z" style="fill:url(#_Linear1);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M79.32,36.98L57.05,18.23L63.64,174.54L79.32,187.74L79.32,36.98Z" style="fill:url(#_Linear2);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M25.19,104.83L33.82,153.87L46.32,138.92L43.86,82.5L25.19,104.83Z" style="fill:url(#_Linear3);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M25.19,104.83L0,90.24L16.97,144.1L33.82,153.87L25.19,104.83Z" style="fill:url(#_Linear4);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M43.86,82.5L18.69,67.98L0,90.24L25.18,104.83L43.86,82.5Z" style="fill:rgb(153,204,51);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M134.82,78.69L124.85,135.19L140.43,126.15L160,64.1L134.82,78.69Z" style="fill:url(#_Linear5);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M134.82,78.69L116.14,56.36L113.28,121.36L124.85,135.19L134.82,78.69Z" style="fill:url(#_Linear6);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M160,64.1L141.31,41.84L116.14,56.36L134.81,78.69L160,64.1Z" style="fill:rgb(255,225,19);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M101.59,18.23L79.32,0L57.05,18.23L79.32,36.98L101.59,18.23Z" style="fill:rgb(243,230,0);fill-rule:nonzero;"/></g></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.84,-162.96,162.96,0.84,89.64,184.81)"><stop offset="0" style="stop-color:rgb(98,211,153);stop-opacity:1"/><stop offset="0.51" style="stop-color:rgb(172,216,66);stop-opacity:1"/><stop offset="0.9" style="stop-color:rgb(215,219,10);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(215,219,10);stop-opacity:1"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.6,-162.13,162.13,-1.6,69.68,178.9)"><stop offset="0" style="stop-color:rgb(11,163,152);stop-opacity:1"/><stop offset="0.5" style="stop-color:rgb(76,163,82);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(118,163,10);stop-opacity:1"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.9,-67.98,67.98,-1.9,36.6,152.17)"><stop offset="0" style="stop-color:rgb(54,163,130);stop-opacity:1"/><stop offset="0.19" style="stop-color:rgb(54,163,130);stop-opacity:1"/><stop offset="0.54" style="stop-color:rgb(73,164,89);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(118,163,11);stop-opacity:1"/></linearGradient><linearGradient id="_Linear4" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(2.18,-62.38,62.38,2.18,15.82,153.24)"><stop offset="0" style="stop-color:rgb(38,120,128);stop-opacity:1"/><stop offset="0.51" style="stop-color:rgb(69,122,92);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(113,117,22);stop-opacity:1"/></linearGradient><linearGradient id="_Linear5" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(13.85,-71.96,71.96,13.85,135.08,135.43)"><stop offset="0" style="stop-color:rgb(176,217,57);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(234,219,4);stop-opacity:1"/></linearGradient><linearGradient id="_Linear6" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(26.159,-64.7372,64.7372,26.159,107.418,128.145)"><stop offset="0" style="stop-color:rgb(116,175,82);stop-opacity:1"/><stop offset="0.17" style="stop-color:rgb(116,175,82);stop-opacity:1"/><stop offset="0.48" style="stop-color:rgb(153,190,50);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(192,196,10);stop-opacity:1"/></linearGradient></defs></svg>Needle&nbsp;Cloud</a> and get:</p>
         <ul class="dialog-list">
           <li>Your original USD, kept safe</li>

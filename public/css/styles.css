@@ -1346,6 +1346,18 @@ button.cta-primary {
     flex-shrink: 0;
 }
 
+/* The Needle crystal mark sits inside a padded square viewBox and reads small,
+   so give it a bit more size, aspect-preserved. It keeps its brand colours when
+   unselected; on the selected pill it's whitened to match the white label. */
+.conv-logo.conv-logo-needle {
+    width: auto;
+    height: 18px;
+}
+
+.converter-toggle button.active .conv-logo-needle {
+    filter: brightness(0) invert(1);
+}
+
 /* Shared segmented toggle. */
 .converter-toggle {
     display: inline-flex;
@@ -1393,8 +1405,10 @@ button.cta-primary {
 }
 
 .converter-toggle button.active {
-    background: rgba(44, 143, 208, 0.28);
-    color: var(--color-usd-blue-dark);
+    /* Selected: dark USD blue fill with white text (flipped from the old light
+       fill + blue text). Applies to both the engine and converter toggles. */
+    background: var(--color-usd-blue-dark);
+    color: #fff;
     box-shadow: none;
     font-weight: 700;
 }
