@@ -260,6 +260,32 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('uses generated normals when USD-WG McUsd carries invalid zero normals', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        const sample = {
+            filename: 'McUsd_10cm.usdz',
+            url: `${usdWgBaseUrl}full_assets/McUsd/McUsd_10cm.usdz`,
+        };
+
+        await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
+        await waitForNeedleLoaderMode(page, sample.filename);
+
+        const normalState = await getNeedleSceneNormalState(page);
+
+        expect(normalState.meshCount).toBeGreaterThanOrEqual(20);
+        expect(normalState.zeroNormalMeshes).toEqual([]);
+        expect(normalState.missingNormalMeshes).toEqual([]);
+        expect(normalState.grassBlockTopFirstNormals).toEqual([
+            '0.000,1.000,0.000',
+            '0.000,1.000,0.000',
+            '0.000,1.000,0.000',
+            '0.000,1.000,0.000',
+            '0.000,1.000,0.000',
+            '0.000,1.000,0.000',
+        ]);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('defaults public viewer samples to Needle mode', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}`);
@@ -1351,6 +1377,53 @@ async function getNeedleUsdMeshNormalState(page: Page) {
             faceConstantNormals,
             sampledFaces,
             sharedPositionDifferentNormalGroups,
+        };
+    });
+}
+
+async function getNeedleSceneNormalState(page: Page) {
+    return await page.evaluate(() => {
+        const zeroNormalMeshes: string[] = [];
+        const missingNormalMeshes: string[] = [];
+        const grassBlockTopFirstNormals: string[] = [];
+        let meshCount = 0;
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!object.isMesh || !object.geometry?.attributes?.position || !object.name) return;
+            meshCount++;
+
+            const normal = object.geometry.attributes.normal;
+            if (!normal) {
+                missingNormalMeshes.push(object.name);
+                return;
+            }
+
+            for (let i = 0; i < normal.count; i++) {
+                const x = normal.getX(i);
+                const y = normal.getY(i);
+                const z = normal.getZ(i);
+                if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z) || (x * x + y * y + z * z) <= 1e-12) {
+                    zeroNormalMeshes.push(object.name);
+                    break;
+                }
+            }
+
+            if (object.name === 'grass_block_top') {
+                for (let i = 0; i < Math.min(6, normal.count); i++) {
+                    grassBlockTopFirstNormals.push([
+                        normal.getX(i).toFixed(3),
+                        normal.getY(i).toFixed(3),
+                        normal.getZ(i).toFixed(3),
+                    ].join(','));
+                }
+            }
+        });
+
+        return {
+            meshCount,
+            zeroNormalMeshes,
+            missingNormalMeshes,
+            grassBlockTopFirstNormals,
         };
     });
 }
