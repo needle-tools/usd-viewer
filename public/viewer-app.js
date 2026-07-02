@@ -484,10 +484,23 @@ onDomReady(function() {
   // Centered "Loading <filename>" overlay shown while a file is loading.
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingOverlayFilename = document.getElementById('loading-overlay-filename');
+  const loadingOverlayProgress = document.getElementById('loading-overlay-progress');
+  function formatLoadingPercent(progress) {
+    if (!progress) return '';
+    let ratio = Number.NaN;
+    if (typeof progress.ratio === 'number') ratio = progress.ratio;
+    else if (typeof progress.loaded === 'number' && typeof progress.total === 'number' && progress.total > 0) {
+      ratio = progress.loaded / progress.total;
+    }
+    if (!Number.isFinite(ratio)) return progress.text || '';
+    const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+    return progress.text || `${percent}%`;
+  }
   window.showLoadingOverlay = function(name) {
     if (!loadingOverlay) return;
     // A new load supersedes any previous failure.
     if (window.hideLoadError) window.hideLoadError();
+    if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
     const display = String(name || '').split('/').pop().split('#')[0].split('?')[0] || 'file';
     if (loadingOverlayFilename) {
       loadingOverlayFilename.textContent = display;
@@ -495,8 +508,15 @@ onDomReady(function() {
     }
     loadingOverlay.classList.add('visible');
   };
+  window.updateLoadingOverlayProgress = function(progress) {
+    if (!loadingOverlayProgress) return;
+    const text = formatLoadingPercent(progress);
+    loadingOverlayProgress.textContent = text;
+    loadingOverlayProgress.hidden = !text;
+  };
   window.hideLoadingOverlay = function() {
     if (loadingOverlay) loadingOverlay.classList.remove('visible');
+    if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
   };
 
   // Centered load-error card (shown when a file fails to load, e.g. a 404).
@@ -782,6 +802,22 @@ function diagnosticsMode() {
   return window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
 }
 
+function updateLoadingByteProgress(loaded, total, label = currentDisplayFilename || "file") {
+  if (!(total > 0) || !(loaded >= 0)) return;
+  const clampedLoaded = Math.min(loaded, total);
+  window.updateLoadingOverlayProgress?.({ loaded: clampedLoaded, total });
+  if (messageLog) {
+    const percent = Math.round((clampedLoaded / total) * 100);
+    messageLog.textContent = `Loading ${label} ${percent}%`;
+  }
+}
+
+function updateUsdAssetFetchProgress(progress) {
+  const loaded = Number(progress?.loadedTotal ?? progress?.loaded ?? 0);
+  const total = Number(progress?.totalBytes ?? progress?.total ?? 0);
+  if (total > 0) updateLoadingByteProgress(loaded, total);
+}
+
 async function waitForAssetCacheReady() {
   try {
     await Promise.race([
@@ -880,6 +916,8 @@ try {
       if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);
       else console.error(...args);
     },
+    onDownloadProgress: (downloaded, total) => updateLoadingByteProgress(downloaded, total, "OpenUSD runtime"),
+    onAssetFetchProgress: updateUsdAssetFetchProgress,
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
     resolveUsdModuleReady?.(USD);
@@ -1342,8 +1380,11 @@ async function ensureNeedleEngineLoader() {
     });
     needleEngineElement.addEventListener("progress", event => {
       const progress = event.detail?.totalProgress01;
-      if (typeof progress === "number" && messageLog) {
-        messageLog.textContent = `Loading ${currentDisplayFilename || "file"} ${Math.round(progress * 100)}%`;
+      if (typeof progress === "number") {
+        window.updateLoadingOverlayProgress?.({ ratio: progress });
+        if (messageLog) {
+          messageLog.textContent = `Loading ${currentDisplayFilename || "file"} ${Math.round(progress * 100)}%`;
+        }
       }
     });
     needleEngineElement.addEventListener("drop", dropHandler);
@@ -1549,9 +1590,8 @@ function loadThreeGltf(path) {
       path,
       resolve,
       event => {
-        if (!event.lengthComputable || !messageLog) return;
-        const percent = Math.round((event.loaded / event.total) * 100);
-        messageLog.textContent = `Loading ${currentDisplayFilename || "glTF"} ${percent}%`;
+        if (!event.lengthComputable) return;
+        updateLoadingByteProgress(event.loaded, event.total, currentDisplayFilename || "glTF");
       },
       reject,
     );
@@ -1739,13 +1779,31 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   }
 }
 
-async function fetchCatalogFile(path) {
+async function responseBlobWithProgress(response, onProgress) {
+  const total = Number(response.headers.get('content-length'));
+  if (!response.body || !Number.isFinite(total) || total <= 0) {
+    return response.blob();
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onProgress?.(loaded, total);
+  }
+  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
+}
+
+async function fetchCatalogFile(path, onProgress) {
   const url = testFixtureUrl(path);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch " + url + ": " + response.status + " " + response.statusText);
   }
-  const blob = await response.blob();
+  const blob = await responseBlobWithProgress(response, onProgress);
   const name = path.split('/').pop() || path;
   return new File([blob], name);
 }
@@ -1756,17 +1814,18 @@ async function loadCatalogAssetBundle(asset, displayName) {
   const dependencyPaths = allPaths.filter(path => path !== rootPath);
   const rootIndex = allPaths.indexOf(rootPath);
   const totalFiles = dependencyPaths.length + 1;
+  if (window.showLoadingOverlay) window.showLoadingOverlay(displayName || asset.label || rootPath);
 
   try {
     for (let i = 0; i < dependencyPaths.length; i++) {
       const path = dependencyPaths[i];
       if (messageLog) messageLog.textContent = "Downloading " + asset.label + " dependency " + (i + 1) + " / " + totalFiles + "...";
-      const file = await fetchCatalogFile(path);
+      const file = await fetchCatalogFile(path, (loaded, total) => updateLoadingByteProgress(loaded, total, asset.label || displayName));
       await loadFile(file, false, path);
     }
 
     if (messageLog) messageLog.textContent = "Opening " + asset.label + "...";
-    const rootFile = await fetchCatalogFile(rootPath);
+    const rootFile = await fetchCatalogFile(rootPath, (loaded, total) => updateLoadingByteProgress(loaded, total, asset.label || displayName));
     await loadFile(rootFile, true, rootPath);
 
     track('load_test_asset_bundle', {

@@ -378,6 +378,20 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.hitCount).toBeGreaterThanOrEqual(1);
     });
 
+    test('shows byte progress in the centered loading overlay', async ({ page }) => {
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).showLoadingOverlay === 'function' &&
+            typeof (window as any).updateLoadingOverlayProgress === 'function');
+        await page.evaluate(() => {
+            (window as any).showLoadingOverlay('ABeautifulGame.glb.three.usdz');
+            (window as any).updateLoadingOverlayProgress({ loaded: 50, total: 100 });
+        });
+
+        await expect(page.locator('#loading-overlay')).toHaveClass(/visible/);
+        await expect(page.locator('#loading-overlay-filename')).toHaveText('ABeautifulGame.glb.three.usdz');
+        await expect(page.locator('#loading-overlay-progress')).toHaveText('50%');
+    });
+
     test('loads authored Needle fixture coverage assets through the Needle Engine loader element', async ({ page }) => {
         test.setTimeout(120000);
         const fatalDiagnostics = collectFatalDiagnostics(page);
