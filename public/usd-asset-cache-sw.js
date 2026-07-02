@@ -1,4 +1,5 @@
 const CACHE_NAME = "usd-viewer-asset-cache-v1";
+const MAX_CACHEABLE_BYTES = 64 * 1024 * 1024;
 
 const SAME_ORIGIN_PREFIXES = [
   "/data/",
@@ -58,8 +59,9 @@ function isCacheableRequest(request) {
 
 function canStore(response) {
   if (!response) return false;
-  if (response.status === 200) return true;
-  return response.type === "opaque";
+  if (response.status !== 200) return false;
+  const contentLength = Number(response.headers.get("content-length"));
+  return !Number.isFinite(contentLength) || contentLength <= MAX_CACHEABLE_BYTES;
 }
 
 async function notifyClient(clientId, payload) {
@@ -81,16 +83,21 @@ async function refreshCache(cache, request, clientId) {
 }
 
 async function cacheFirst(event) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(event.request);
-  if (cached) {
-    event.waitUntil(refreshCache(cache, event.request, event.clientId));
-    event.waitUntil(notifyClient(event.clientId, { type: "hit", url: event.request.url }));
-    return cached;
+  let cache = null;
+  try {
+    cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(event.request);
+    if (cached) {
+      event.waitUntil(refreshCache(cache, event.request, event.clientId));
+      event.waitUntil(notifyClient(event.clientId, { type: "hit", url: event.request.url }));
+      return cached;
+    }
+  } catch {
+    cache = null;
   }
 
   const response = await fetch(event.request);
-  if (canStore(response)) {
+  if (cache && canStore(response)) {
     event.waitUntil(
       cache.put(event.request, response.clone())
         .then(() => notifyClient(event.clientId, { type: "store", url: event.request.url }))

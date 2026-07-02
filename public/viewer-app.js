@@ -934,7 +934,9 @@ try {
       // full URL, which can carry signed-link tokens or private asset ids.
       let host = "";
       try { host = new URL(filename).hostname; } catch { /* relative/odd URL */ }
-      track('load_url', { method: 'url', type: extOf(filename), host });
+      if (!diagnosticsMode()) {
+        track('load_url', { method: 'url', type: extOf(filename), host });
+      }
 
       await clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
@@ -3004,9 +3006,16 @@ async function init() {
       dataset: { name: target.name || '' },
       textContent: target.name || target.url,
     };
-    await loadFromFileLink(link);
-    if (!ready) {
-      throw new Error(`Viewer did not reach ready state for ${target.url}`);
+    const previousWaitForMaterials = waitForMaterials;
+    waitForMaterials = true;
+    try {
+      await loadFromFileLink(link);
+      await currentHydraHandle?.materialsReady?.();
+      if (!ready) {
+        throw new Error(`Viewer did not reach ready state for ${target.url}`);
+      }
+    } finally {
+      waitForMaterials = previousWaitForMaterials;
     }
   }
 
@@ -3502,10 +3511,14 @@ async function init() {
       // Samples are our own curated links (not user content), so the full
       // name/URL is safe and useful here — unlike user drops.
       const label = (link.dataset.name || link.textContent || '').trim();
-      track('load_sample', { file: filename, label });
+      if (!diagnosticsMode()) {
+        track('load_sample', { file: filename, label });
+      }
       await refreshLoadedConverterState(filename);
     } else {
-      track('clear_model');
+      if (!diagnosticsMode()) {
+        track('clear_model');
+      }
       setLoadedConversionCard(null, '');
     }
 

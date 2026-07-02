@@ -439,6 +439,35 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(fatalDiagnostics).toEqual([]);
     });
 
+    test('attributes delayed MaterialX texture failures to the debug target that caused them', async ({ page }) => {
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).runUsdViewerAssetTest === 'function');
+
+        const report = await page.evaluate(async baseUrl => {
+            return await (window as any).runUsdViewerAssetTest({
+                targets: [
+                    {
+                        source: 'usd-wg',
+                        name: 'basicTextured',
+                        url: `${baseUrl}test_assets/MaterialXTest/basicTextured.usda`,
+                    },
+                    {
+                        source: 'usd-wg',
+                        name: 'basic',
+                        url: `${baseUrl}test_assets/MaterialXTest/basic.usda`,
+                    },
+                ],
+            });
+        }, usdWgBaseUrl);
+
+        const textured = report.results[0];
+        const basic = report.results[1];
+        expect(textured.name).toBe('basicTextured');
+        expect(textured.errors.join('\n')).toMatch(/\[MaterialX\] Failed to load texture/i);
+        expect(basic.name).toBe('basic');
+        expect(basic.errors.join('\n')).not.toMatch(/\[MaterialX\] Failed to load texture/i);
+    });
+
     test('materializes scalar face-varying and uniform primvars as Needle geometry attributes', async ({ page }) => {
         test.setTimeout(120000);
         const fatalDiagnostics = collectFatalDiagnostics(page);
