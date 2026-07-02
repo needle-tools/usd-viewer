@@ -1,5 +1,6 @@
 const fastify = require('fastify')()
-const path = require('path') 
+const path = require('path')
+const { injectClientIpIntoTrackBody } = require('./rybbit-ip')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
 // Otherwise we wouldn't need a server at all.
@@ -50,17 +51,25 @@ async function proxyToRybbit(request, reply) {
     if (request.headers[h]) headers[h] = request.headers[h];
   }
   // Preserve the real client IP so Rybbit attributes / geolocates correctly.
+  // X-Forwarded-For is best-effort (Traefik only keeps it when it trusts
+  // Cloudflare); the reliable path is the ip_address stamped into the track
+  // body below from CF-Connecting-IP, which Rybbit reads directly.
   const fwd = request.headers["x-forwarded-for"];
   headers["x-forwarded-for"] = fwd ? `${fwd}, ${request.ip}` : request.ip;
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  // For track events, stamp the real visitor IP (CF-Connecting-IP) into the body
+  // so geolocation is correct regardless of proxy header handling.
+  const body = hasBody
+    ? injectClientIpIntoTrackBody(request.url, request.body, request.headers["cf-connecting-ip"])
+    : undefined;
 
   let upstream;
   try {
     upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: hasBody ? request.body : undefined,
+      body,
     });
   } catch (err) {
     // Analytics must never break the viewer: surface the failure in the log but
