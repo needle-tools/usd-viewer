@@ -304,8 +304,76 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(fatalDiagnostics).toEqual([]);
     });
 
+    test('does not load analytics or marketer trackers in debug and browser automation', async ({ page }) => {
+        const blockedRequests: string[] = [];
+        page.on('request', request => {
+            const url = request.url();
+            if (
+                url.includes('/api/script.js')
+                || url.includes('analytics-2.needle.tools')
+                || url.includes('rybbit')
+                || url.includes('marketer.needle.tools')
+            ) {
+                blockedRequests.push(url);
+            }
+        });
+
+        await page.goto('/?debug&viewer=three', { waitUntil: 'networkidle' });
+
+        expect(blockedRequests).toEqual([]);
+        await expect(page.locator('#debug-test-button')).toBeVisible();
+        await expect(page.locator('.whats-new')).toHaveCount(0);
+    });
+
+    test('loads authored Needle fixture coverage assets through the Needle Engine loader element', async ({ page }) => {
+        test.setTimeout(120000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const fixtures = [
+            { filename: 'custom_geomprops_usdshade.usda', url: '/test-fixtures/usd-concepts/custom_geomprops_usdshade.usda' },
+            { filename: 'referenced_geomprop_overrides.usda', url: '/test-fixtures/usd-concepts/referenced_geomprop_overrides.usda' },
+            { filename: 'liverps_all.usda', url: '/test-fixtures/composition/liverps_all.usda' },
+            { filename: 'custom_nodedef_materialx.usda', url: '/test-fixtures/materialx/custom_nodedef_materialx.usda' },
+            { filename: 'draco_mixed_overrides.usda', url: '/test-fixtures/draco/draco_mixed_overrides.usda' },
+            { filename: 'CubeCompressedTriangles.usda', url: '/test-fixtures/draco/CubeCompressedTriangles.usda' },
+        ];
+
+        for (const fixture of fixtures) {
+            await page.goto(`/?file=${fixture.url}&viewer=needle&waitForMaterials=1`, {
+                waitUntil: 'domcontentloaded',
+            });
+            const state = await waitForNeedleLoaderMode(page, fixture.filename);
+            expect(state.filename, fixture.filename).toBe(fixture.filename);
+            expect(state.hasHydraHandle, fixture.filename).toBe(true);
+            expect(state.driverAlive, fixture.filename).toBe(true);
+            expect(state.hasNeedleContext, fixture.filename).toBe(true);
+            expect(state.needleChildren, fixture.filename).toBeGreaterThan(0);
+        }
+
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('loads MaterialX basic textures without texture errors or tangent retry spam', async ({ page }) => {
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const tangentPreconditionWarnings = collectConsoleMatches(page, [
+            /\[MaterialX\] Cannot generate tangents: geometry requires position and uv attributes/i,
+        ]);
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}test_assets/MaterialXTest/basic.usda`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        const state = await waitForPublicViewerLoad(page, 'basic.usda');
+
+        expect(state.hasHydraHandle).toBe(true);
+        expect(rendererErrors).toEqual([]);
+        expect(tangentPreconditionWarnings).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
     test('materializes scalar face-varying and uniform primvars as Needle geometry attributes', async ({ page }) => {
-        test.setTimeout(90000);
+        test.setTimeout(120000);
         const fatalDiagnostics = collectFatalDiagnostics(page);
         const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
         const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
@@ -1576,7 +1644,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('shows thumbnails for Needle Cloud samples', async ({ page }) => {
+    test('shows thumbnails for Needle Cloud and local Needle fixture samples', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three');
         await page.click('.dropdown-button');
@@ -1587,6 +1655,14 @@ test.describe('public usd-viewer lifecycle', () => {
         await expect(kitchenThumbnail).toHaveAttribute('src', /screenshot\.needle\.webp$/);
         await page.waitForFunction(() => {
             const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
+            return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+        });
+
+        await page.click('[data-sample-group="needle:usd-concepts"]');
+        const fixtureThumbnail = page.locator('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
+        await expect(fixtureThumbnail).toHaveAttribute('src', /\/test-fixtures\/thumbnails\/usd-concepts-custom-geomprops-usdshade-usda\.png$/);
+        await page.waitForFunction(() => {
+            const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
             return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
         });
 

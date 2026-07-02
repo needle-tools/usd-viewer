@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<materialx version="1.38">
+  <nodedef name="ND_needle_gain_tint" node="needle_gain_tint" nodegroup="colortransform">
+    <input name="base" type="color3" value="0.7, 0.2, 1.0" />
+    <input name="gain" type="float" value="1.0" />
+    <output name="out" type="color3" />
+  </nodedef>
+
+  <nodegraph name="NG_needle_gain_tint" nodedef="ND_needle_gain_tint">
+    <multiply name="gain_multiply" type="color3">
+      <input name="in1" type="color3" interfacename="base" />
+      <input name="in2" type="float" interfacename="gain" />
+    </multiply>
+    <output name="out" type="color3" nodename="gain_multiply" />
+  </nodegraph>
+
+  <needle_gain_tint name="CustomTint" type="color3">
+    <input name="base" type="color3" value="0.65, 0.18, 1.0" />
+    <input name="gain" type="float" value="1.15" />
+  </needle_gain_tint>
+
+  <standard_surface name="SR_custom_nodedef" type="surfaceshader">
+    <input name="base_color" type="color3" nodename="CustomTint" />
+    <input name="specular_roughness" type="float" value="0.38" />
+  </standard_surface>
+
+  <surfacematerial name="Custom_NodeDef_Surface" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_custom_nodedef" />
+  </surfacematerial>
+</materialx>

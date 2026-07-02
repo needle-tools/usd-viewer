@@ -2579,6 +2579,17 @@ async function init() {
     return path.includes('/') ? path.split('/')[0] : 'root';
   }
 
+  function fixtureThumbnailPath(asset) {
+    if (asset?.thumbnail) return asset.thumbnail;
+    const root = String(asset?.root || '').trim();
+    if (!root) return '';
+    const slug = root
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
+    return slug ? `thumbnails/${slug}.png` : '';
+  }
+
   function needleFixtureFolders() {
     const folders = new Map();
     for (const asset of testAssetLibrary) {
@@ -2594,10 +2605,12 @@ async function init() {
   }
 
   function needleFixtureCard(asset, folder = needleFixtureFolder(asset)) {
+    const thumbnail = fixtureThumbnailPath(asset);
     return {
       name: asset.label || asset.root || 'Fixture',
       meta: [prettyNeedleFolderLabel(folder), asset.group].filter(Boolean).join(' · '),
       url: testFixtureUrl(asset.root),
+      thumbnail: thumbnail ? testFixtureUrl(thumbnail) : undefined,
     };
   }
 

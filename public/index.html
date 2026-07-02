@@ -59,6 +59,10 @@
        (/track, /identify, /site/tracking-config/...) stay same-origin too. -->
   <script>
     (() => {
+      const params = new URLSearchParams(location.search);
+      const analyticsDisabled = params.has("debug") || navigator.webdriver === true;
+      if (analyticsDisabled) return;
+
       const originalGetContext = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function(type, ...args) {
         // Rybbit fingerprints via WebGL for each payload. This viewer needs the
@@ -69,13 +73,14 @@
         }
         return originalGetContext.call(this, type, ...args);
       };
+
+      const script = document.createElement("script");
+      script.src = "/api/script.js";
+      script.dataset.siteId = "6bc313ba3488";
+      script.defer = true;
+      document.head.appendChild(script);
     })();
   </script>
-  <script
-    src="/api/script.js"
-    data-site-id="6bc313ba3488"
-    defer
-  ></script>
 
   <!-- Needle brand typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,7 +130,16 @@
        with Cross-Origin-Resource-Policy: cross-origin, so it loads under this
        page's COEP: require-corp. Loaded before whats-new.js so the global is
        ready early (whats-new.js also queues calls until it appears). -->
-  <script defer src="https://marketer.needle.tools/whatsnew.js"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      if (params.has("debug") || navigator.webdriver === true) return;
+      const script = document.createElement("script");
+      script.defer = true;
+      script.src = "https://marketer.needle.tools/whatsnew.js";
+      document.currentScript.after(script);
+    })();
+  </script>
 
   <!-- Subtle rotating "What's New" banner (bottom-right), fed by the Needle marketer feed -->
   <script type="module" src="whats-new.js"></script>

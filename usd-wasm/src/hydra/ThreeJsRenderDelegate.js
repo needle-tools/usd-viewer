@@ -100,6 +100,35 @@ function disposeObjectResources(object) {
   object.parent?.remove(object);
 }
 
+function prepareMaterialXMaterialForGeometry(material) {
+  if (!material || typeof material.onBeforeRender !== 'function') return material;
+  if (material.userData?.usdHydraMaterialXGeometryGuard) return material;
+  if (!material.isMaterialXMaterial && material.constructor?.name !== 'MaterialXMaterial') return material;
+
+  material.userData ??= {};
+  material.userData.usdHydraMaterialXGeometryGuard = true;
+  const originalOnBeforeRender = material.onBeforeRender.bind(material);
+  material.onBeforeRender = (renderer, scene, camera, geometry, object, group) => {
+    const needsTangents = material._needsTangents && !geometry?.attributes?.tangent;
+    const canGenerateTangents = geometry?.attributes?.position && geometry?.attributes?.uv;
+    if (needsTangents && !canGenerateTangents) {
+      if (!material._missingTangentsWarned) {
+        material._missingTangentsWarned = true;
+        console.warn(`[MaterialX] Tangents are required for this material (${material.name}) but could not be generated for the geometry.`);
+      }
+      const previousGenerateTangents = material.generateTangents;
+      material.generateTangents = false;
+      try {
+        return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
+      } finally {
+        material.generateTangents = previousGenerateTangents;
+      }
+    }
+    return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
+  };
+  return material;
+}
+
 function isFiniteArray(values, dimension = 3) {
   if (!values || values.length === 0 || values.length % dimension !== 0) return false;
   for (let i = 0; i < values.length; i++) {
@@ -1207,9 +1236,9 @@ class HydraMaterial {
 
   _applyMaterialToMesh(mesh, materialIndex) {
     const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
-    const material = typeof applyMaterialSide === 'function'
+    const material = prepareMaterialXMaterialForGeometry(typeof applyMaterialSide === 'function'
       ? applyMaterialSide(this._material, this)
-      : this._material;
+      : this._material);
 
     if (materialIndex === null || materialIndex === undefined) {
       mesh.material = material;

@@ -15,6 +15,16 @@ import { track } from "./analytics.js";
 
 const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
 
+function disabledForDiagnostics() {
+  try {
+    return new URLSearchParams(location.search).has("debug") || navigator.webdriver === true;
+  } catch {
+    return false;
+  }
+}
+
+const whatsNewDisabled = disabledForDiagnostics();
+
 // Engagement funnel (shown → hovered → clicked). Clicks are already counted by
 // the item's `url` (a /r/{id} tracked redirect we use as the CTA href), so we
 // only ever report impression + hover — never a click (that would double-count).
@@ -449,8 +459,10 @@ async function initWhatsNew() {
   start(items, buildDom());
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initWhatsNew);
-} else {
-  initWhatsNew();
+if (!whatsNewDisabled) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initWhatsNew);
+  } else {
+    initWhatsNew();
+  }
 }
