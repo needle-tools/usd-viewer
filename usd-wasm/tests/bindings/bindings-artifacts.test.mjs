@@ -147,8 +147,10 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(buildInfo.modules.materialX, true);
         assert.equal(buildInfo.modules.openSubdiv, true);
         assert.equal(buildInfo.modules.usdGltf, true);
+        assert.equal(buildInfo.modules.usdGltfDraco, true);
         assert.match(buildInfo.toolchain.emscripten, /Emscripten/);
         assert.equal(buildInfo.dependencies.openSubdiv.version, "3.6.1");
+        assert.equal(buildInfo.dependencies.usdGltf.draco, true);
 
         const usda = `#usda 1.0
 (
@@ -214,6 +216,7 @@ def Xform "Root" {
         assert.equal(buildInfo.openusd.version, "0.26.5");
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);
+        assert.equal(buildInfo.modules.usdGltfDraco, true);
     });
 
     it("resolves parent-folder references from mounted file trees", async () => {
@@ -254,6 +257,45 @@ def Xform "Root" {
         assert.ok(stage.GetUsedLayers(false).some(layer => layer.realPath === referencedPath));
 
         USD.ReleaseStage(stage);
+    });
+
+    it("opens a Draco-compressed glTF through the embedded usdGltf plugin", async () => {
+        const USD = await loadUsdModuleFromTempCopy();
+        const rootPath = "/gltf-draco/Box/Box.gltf";
+
+        USD.FS_createPath("/", "gltf-draco/Box", true, true);
+        USD.FS_createDataFile(
+            "/gltf-draco/Box",
+            "Box.gltf",
+            await readFile("tests/fixtures/gltf-draco/Box/Box.gltf"),
+            true,
+            true,
+            true,
+        );
+        USD.FS_createDataFile(
+            "/gltf-draco/Box",
+            "Box.bin",
+            await readFile("tests/fixtures/gltf-draco/Box/Box.bin"),
+            true,
+            true,
+            true,
+        );
+
+        const stage = await USD.OpenStage(rootPath);
+        try {
+            assert.deepEqual(stage.GetCompositionErrors(), []);
+            assert.ok(stage.GetUsedLayers(false).some(layer => layer.realPath === rootPath));
+
+            const meshPrims = vectorToArray(stage.TraverseAll()).filter(prim => prim.GetTypeName() === "Mesh");
+            assert.equal(meshPrims.length, 1);
+            const mesh = meshPrims[0];
+            assert.equal(mesh.GetAttribute("points").HasAuthoredValue(), true);
+            assert.equal(mesh.GetAttribute("primvars:normals").HasAuthoredValue(), true);
+            assert.match(mesh.GetAttribute("points").GetValueString(), /\[/);
+            assert.match(mesh.GetAttribute("primvars:normals").GetValueString(), /\[/);
+        } finally {
+            USD.ReleaseStage(stage);
+        }
     });
 
     it("exposes usdview-style composed inspection APIs and ObjectsChanged notices", async () => {
