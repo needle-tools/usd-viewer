@@ -55,6 +55,7 @@ export type OpenUsdBuildInfo = {
         materialX: boolean,
         openSubdiv: boolean,
         usdGltf: boolean,
+        usdGltfDraco: boolean,
     },
     dependencies: {
         openSubdiv: {
@@ -69,6 +70,7 @@ export type OpenUsdBuildInfo = {
             prefix: string,
             gitSha: string,
             gitDirty: boolean,
+            draco: boolean,
         },
         emsdk: {
             gitSha: string,

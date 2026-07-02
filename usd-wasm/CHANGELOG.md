@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-07-02
+### Added
+- Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
+- Added build metadata for the `usdGltf` Draco capability.
+
+### Fixed
+- Fixed dropped GLB/GLTF/MTLX loading in the public viewer.
+- Fixed authored USD normals handling so authored data is not replaced by generated geometric normals.
+
 ## [1.0.0] - 2026-06-30
 ### Added
 - Added optional material readiness policy support for loaders that need to wait for asynchronous material generation and texture loading before reporting completion.
