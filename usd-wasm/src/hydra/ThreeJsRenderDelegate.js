@@ -13,6 +13,7 @@ const {
   Mesh,
   InstancedMesh,
   Matrix4,
+  BufferAttribute,
   Float32BufferAttribute,
   SRGBColorSpace,
   RGBAFormat,
@@ -693,6 +694,26 @@ class HydraMesh {
     }
   }
 
+  updateTypedOrder(attribute, attributeName, dimension = 3) {
+    if (debugMeshes) console.log("updateTypedOrder", attribute, attributeName, dimension);
+    if (!attribute || !this._indices) return;
+    const ArrayType = attribute.constructor || Float32Array;
+    const values = new ArrayType(this._indices.length * dimension);
+    for (let i = 0; i < this._indices.length; i++) {
+      const index = this._indices[i];
+      if ((dimension * index + dimension) > attribute.length) {
+        this._geometry.deleteAttribute(attributeName);
+        return;
+      }
+      const sourceOffset = dimension * index;
+      const targetOffset = dimension * i;
+      for (let j = 0; j < dimension; ++j) {
+        values[targetOffset + j] = attribute[sourceOffset + j];
+      }
+    }
+    this._geometry.setAttribute(attributeName, new BufferAttribute(values, dimension));
+  }
+
   updateIndices(indices) {
     return timeHydraUpdate(`Hydra updateIndices ${this.usdPath}`, () => {
       if (debugMeshes) console.log("updateIndices", indices);
@@ -715,6 +736,7 @@ class HydraMesh {
         this.updateOrder(this._uvs, 'uv', 2);
         this._geometry.attributes.uv2 = this._geometry.attributes.uv;
       }
+      this._applyVisibilityState();
     });
   }
 
@@ -733,7 +755,7 @@ class HydraMesh {
     const instanceCount = Number(count) || 0;
     if (instanceCount <= 0) {
       this._disposeInstancedMesh();
-      this._mesh.visible = this._visible && this._renderTag !== 'hidden';
+      this._applyVisibilityState();
       return;
     }
 
@@ -751,9 +773,8 @@ class HydraMesh {
     }
 
     this._instancedMesh.material = this._mesh.material;
-    this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
-    this._instancedMesh.userData.usdRenderTag = this._renderTag;
     this._mesh.visible = false;
+    this._applyVisibilityState();
 
     for (let i = 0; i < instanceCount; i++) {
       const offset = i * 16;
@@ -786,6 +807,23 @@ class HydraMesh {
       material.dispose?.();
     }
     this._materialSideClones.clear();
+  }
+
+  _hasRenderableGeometry() {
+    const position = this._geometry?.getAttribute?.('position') || this._geometry?.attributes?.position;
+    return Boolean(position && position.count > 0);
+  }
+
+  _applyVisibilityState() {
+    const visible = this._visible && this._renderTag !== 'hidden' && this._hasRenderableGeometry();
+    if (this._mesh) {
+      this._mesh.visible = !this._instancedMesh && visible;
+      this._mesh.userData.usdRenderTag = this._renderTag;
+    }
+    if (this._instancedMesh) {
+      this._instancedMesh.visible = visible;
+      this._instancedMesh.userData.usdRenderTag = this._renderTag;
+    }
   }
 
   _updateMeshSideState() {
@@ -850,14 +888,7 @@ class HydraMesh {
   setVisibilityState(visible, renderTag = 'geometry') {
     this._visible = Boolean(visible);
     this._renderTag = String(renderTag || 'geometry');
-    if (this._mesh) {
-      this._mesh.visible = !this._instancedMesh && this._visible && this._renderTag !== 'hidden';
-      this._mesh.userData.usdRenderTag = this._renderTag;
-    }
-    if (this._instancedMesh) {
-      this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
-      this._instancedMesh.userData.usdRenderTag = this._renderTag;
-    }
+    this._applyVisibilityState();
   }
 
   /**
@@ -914,7 +945,7 @@ class HydraMesh {
       hydraMaterial.assignToMesh(this._mesh);
     }
     else {
-      console.error("Material not found", materialId, this._interface.materials);
+      console.warn("Material not found", materialId, this._interface.materials);
     }
   }
 
@@ -997,6 +1028,22 @@ class HydraMesh {
       this._geometry.attributes.uv2 = this._geometry.attributes.uv;
   }
 
+  setGenericPrimvar(name, data, dimension, interpolation) {
+    const attributeName = `primvars:${name}`;
+    const itemSize = Math.max(1, Number(dimension) || 1);
+    const values = ArrayBuffer.isView(data) ? data.slice() : Float32Array.from(data || []);
+
+    if (interpolation === 'constant') {
+      this._mesh.userData.usdPrimvars ??= {};
+      this._mesh.userData.usdPrimvars[name] = Array.from(values);
+      this._geometry.deleteAttribute(attributeName);
+    } else if (interpolation === 'facevarying') {
+      this._geometry.setAttribute(attributeName, new BufferAttribute(values, itemSize));
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
+      this.updateTypedOrder(values, attributeName, itemSize);
+    }
+  }
+
   updatePrimvar(name, data, dimension, interpolation) {
     return timeHydraUpdate(`Hydra updatePrimvar ${name} ${this.usdPath}`, () => {
       if (!name) return;
@@ -1034,15 +1081,10 @@ class HydraMesh {
           this.setTangents(data, dimension, interpolation);
           break;
         case "rest":
+          this.setGenericPrimvar(name, data, dimension, interpolation);
           break;
         default:
-          if (warningMessagesToCount.has(name)) {
-            warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
-          }
-          else {
-            warningMessagesToCount.set(name, 1);
-            console.warn('Unsupported primvar: ', name);
-          }
+          this.setGenericPrimvar(name, data, dimension, interpolation);
       }
     });
   }
@@ -1051,6 +1093,7 @@ class HydraMesh {
     return timeHydraUpdate(`Hydra updatePoints ${this.usdPath}`, () => {
       this._points = Float32Array.from(points);
       this.updateOrder(this._points, 'position');
+      this._applyVisibilityState();
     });
   }
 
@@ -1058,6 +1101,7 @@ class HydraMesh {
     if (this._instancedMesh && this._mesh) {
       this._instancedMesh.material = this._mesh.material;
     }
+    this._applyVisibilityState();
   }
 
 }

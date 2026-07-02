@@ -3,7 +3,7 @@
   "openusd": {
     "version": "0.26.5",
     "pxrVersion": 2605,
-    "gitSha": "9f211a656877c26b39e8170f9ed53810094254d5",
+    "gitSha": "23b1435c8e1f82d21022e429020af30d5b60aa33",
     "gitDirty": false
   },
   "toolchain": {
@@ -16,7 +16,9 @@
     "hydraBridge": true,
     "materialX": true,
     "openSubdiv": true,
-    "usdGltf": true
+    "usdDraco": true,
+    "usdGltf": true,
+    "usdGltfDraco": true
   },
   "dependencies": {
     "openSubdiv": {
@@ -30,7 +32,8 @@
     "usdGltf": {
       "prefix": "/Users/herbst/USD-Fileformat-plugins-2026.03-wasm-probe",
       "gitSha": "ca3c2de5553648ae280077ddde079b6f3362a830",
-      "gitDirty": false
+      "gitDirty": false,
+      "draco": true
     },
     "emsdk": {
       "gitSha": "af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f",

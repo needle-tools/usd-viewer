@@ -106,6 +106,16 @@ function hydraTimingEnabled() {
     return params.get("hydraTiming") === "1" || params.get("hydraProfile") === "1";
 }
 
+function hydraAsyncDrawEnabled() {
+    if (typeof location !== "undefined") {
+        const params = new URLSearchParams(location.search);
+        if (params.get("hydraAsyncDraw") === "0") return false;
+        if (params.get("hydraAsyncDraw") === "1") return true;
+    }
+    if (globalThis.HDEMSCRIPTEN_ASYNC_DRAW === false) return false;
+    return true;
+}
+
 function disposeObjectTree(root) {
     if (!root) return;
     root.traverse?.((object) => {
@@ -292,6 +302,7 @@ export async function createThreeHydra(config) {
     if (debug) console.log("RENDER INTERFACE", renderInterface);
 
     const hydraTiming = hydraTimingEnabled();
+    const useAsyncDraw = hydraAsyncDrawEnabled();
     if (hydraTiming) console.time("Hydra driver constructor");
     driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, file);
     if (hydraTiming) console.timeEnd("Hydra driver constructor");
@@ -328,7 +339,7 @@ export async function createThreeHydra(config) {
         }
 
         try {
-            if (typeof driver.DrawAsync === "function") {
+            if (useAsyncDraw && typeof driver.DrawAsync === "function") {
                 drawInFlight = true;
                 if (hydraTiming) console.time("Hydra DrawAsync");
                 activeDrawPromise = runHydraDrawAsync(driver, hydraTiming)
@@ -533,6 +544,7 @@ export async function createThreeHydra(config) {
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
+            await drawPromise;
             await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
             return draw();
         },
@@ -622,7 +634,7 @@ export async function createThreeHydra(config) {
             };
 
             if (drawInFlight) {
-                console.warn("Waiting for pending Hydra draw before USD cleanup.");
+                console.debug("Waiting for pending Hydra draw before USD cleanup.");
             }
             await drawPromise.catch(() => {});
             await cleanup();
