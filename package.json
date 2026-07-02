@@ -1,6 +1,7 @@
 {
   "name": "usd-viewer",
   "version": "0.1.0",
+  "private": true,
   "description": "Basic USD viewer",
   "main": "server.js",
   "scripts": {

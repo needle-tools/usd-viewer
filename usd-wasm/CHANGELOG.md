@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
 - Added native `usdDraco` support for USD meshes that reference Draco `.drc` payloads.
 - Added build metadata for the `usdDraco` and `usdGltf` Draco capabilities.
+- Added viewer fixture coverage for custom geomprops, LIVERPS composition, custom MaterialX NodeDefs, Draco payloads, and local fixture thumbnails.
 
 ### Fixed
 - Fixed dropped GLB/GLTF/MTLX loading in the public viewer.
 - Fixed authored USD normals handling so authored data is not replaced by generated geometric normals.
+- Disabled analytics and marketer calls for debug and e2e runs so test results only report viewer/runtime activity.
+- Avoided repeated MaterialX tangent generation warnings for meshes that cannot produce tangents because they have no UVs.
 
 ## [1.0.0] - 2026-06-30
 ### Added
