@@ -130,7 +130,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 url: url,
                 files: files,
                 waitForMaterials: opts.waitForMaterials,
-                refineLevel: opts.refineLevel,
+                complexity: opts.complexity,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);

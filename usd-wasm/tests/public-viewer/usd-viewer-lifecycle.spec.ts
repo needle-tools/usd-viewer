@@ -298,7 +298,11 @@ test.describe('public usd-viewer lifecycle', () => {
         await waitForNeedleLoaderMode(page, 'Bishop_payload.usd');
 
         const state = await getNeedleMeshAttributeState(page, '/Bishop/Geom/Render');
-        const refineLevel = await page.evaluate(() => window.driver?.GetRefineLevelFallback?.());
+        const { complexity, refineLevel } = await page.evaluate(() => ({
+            complexity: window.driver?.GetComplexity?.(),
+            refineLevel: window.driver?.GetRefineLevelFallback?.(),
+        }));
+        expect(complexity).toBeCloseTo(1.0);
         expect(refineLevel).toBe(0);
         expect(state.positionCount).toBe(225168);
         expect(state.normalCount).toBe(state.positionCount);
@@ -1058,7 +1062,7 @@ test.describe('public usd-viewer lifecycle', () => {
         }));
 
         const sampleUrl = `${usdWgBaseUrl}test_assets/NormalsTextureBiasAndScale/NormalsTextureBiasAndScale.usdz`;
-        await page.goto(`/?file=${encodeURIComponent(sampleUrl)}&viewer=needle&waitForMaterials=1&refineLevel=2`);
+        await page.goto(`/?file=${encodeURIComponent(sampleUrl)}&viewer=needle&waitForMaterials=1&complexity=high`);
         await waitForNeedleLoaderMode(page, 'NormalsTextureBiasAndScale.usdz');
 
         const state = await page.evaluate(() => {
@@ -1101,7 +1105,7 @@ test.describe('public usd-viewer lifecycle', () => {
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
 
-        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_varying_color.usda&viewer=needle&refineLevel=2');
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_varying_color.usda&viewer=needle&complexity=high');
         await waitForNeedleLoaderMode(page, 'catmull_clark_varying_color.usda');
 
         const state = await getNeedleMeshAttributeState(page, '/World/SubdivVaryingColor');
@@ -1118,7 +1122,7 @@ test.describe('public usd-viewer lifecycle', () => {
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
 
-        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_facevarying_st.usda&viewer=needle&refineLevel=2');
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_facevarying_st.usda&viewer=needle&complexity=high');
         await waitForNeedleLoaderMode(page, 'catmull_clark_facevarying_st.usda');
 
         const state = await getNeedleMeshAttributeState(page, '/World/SubdivFaceVaryingSt');

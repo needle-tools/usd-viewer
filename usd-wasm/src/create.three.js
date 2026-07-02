@@ -31,6 +31,30 @@ function isPromiseLike(value) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {number | undefined}
+ */
+function normalizeComplexity(value) {
+    if (value === undefined || value === null || value === "") return undefined;
+    if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+    if (typeof value !== "string") return undefined;
+
+    switch (value.toLowerCase()) {
+        case "low": return 1.0;
+        case "medium": return 1.1;
+        case "high": return 1.2;
+        case "veryhigh":
+        case "very-high":
+        case "very_high":
+            return 1.3;
+        default: {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : undefined;
+        }
+    }
+}
+
+/**
  * @param {string} url
  */
 function isUsdPackageUrl(url) {
@@ -262,8 +286,9 @@ export async function createThreeHydra(config) {
     if (typeof driver.SetIncludedPurposes === "function") {
         driver.SetIncludedPurposes(config.includedPurposes ?? ["default", "render"]);
     }
-    if (Number.isInteger(config.refineLevel) && typeof driver.SetRefineLevelFallback === "function") {
-        driver.SetRefineLevelFallback(config.refineLevel);
+    const complexity = normalizeComplexity(config.complexity);
+    if (complexity !== undefined && typeof driver.SetComplexity === "function") {
+        driver.SetComplexity(complexity);
     }
 
     if (debug) console.log("DRIVER", driver);

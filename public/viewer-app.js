@@ -586,7 +586,7 @@ const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
 let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
-let refineLevel = numberUrlParam("refineLevel", undefined);
+let complexity = params.get("complexity") || undefined;
 const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
 var timeout = 40;
@@ -1288,7 +1288,7 @@ async function ensureNeedleEngineLoader() {
   if (!removeNeedleEngineUsdPlugin) {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
       waitForMaterials,
-      refineLevel,
+      complexity,
       getFiles: () => needleLoaderFiles,
     });
   }
@@ -1615,7 +1615,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         url: filesForHydra?.length ? undefined : path,
         files: filesForHydra,
         waitForMaterials,
-        refineLevel,
+        complexity,
       });
 
       if (generation !== loadGeneration) {

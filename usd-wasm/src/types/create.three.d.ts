@@ -50,10 +50,11 @@ export declare type createThreeHydraConfig = {
     includedPurposes?: Array<"default" | "render" | "proxy" | "guide" | string>,
 
     /**
-     * Hydra fallback refinement level for subdivision surfaces.
-     * Defaults to OpenUSD's low-complexity behavior, 0.
+     * OpenUSD refinement complexity for subdivision surfaces.
+     * Accepts OpenUSD's standard names ("low", "medium", "high", "veryhigh")
+     * or a numeric UsdImagingGL complexity value. Defaults to "low" (1.0).
      */
-    refineLevel?: number,
+    complexity?: "low" | "medium" | "high" | "veryhigh" | number,
 
     /**
      * Add Three.js helper objects for USD cameras and lights.
