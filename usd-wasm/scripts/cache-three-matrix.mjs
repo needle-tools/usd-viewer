@@ -116,11 +116,12 @@ async function writeUsdThreeMatrixPages(options) {
                     fixtureUrl: fixture.url,
                     fixtureFiles: fixture.files ?? null,
                     fixtureSource: fixture.source,
-                    fixtureExpectedRenderable: fixture.expectedRenderable,
-                    fixtureExpectedRenderableReason: fixture.expectedRenderableReason,
-                    fixtureExpectedMaterialXMaterials: fixture.expectedMaterialXMaterials ?? 0,
-                    pagePath: path.join(pageDir, "index.html"),
-                });
+                fixtureExpectedRenderable: fixture.expectedRenderable,
+                fixtureExpectedRenderableReason: fixture.expectedRenderableReason,
+                fixtureExpectedMaterialXMaterials: fixture.expectedMaterialXMaterials ?? 0,
+                fixtureComplexity: fixture.complexity ?? null,
+                pagePath: path.join(pageDir, "index.html"),
+            });
             }
         }
     }
@@ -304,6 +305,7 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedRenderable: true,
         expectedRenderableReason: null,
         expectedMaterialXMaterials: 0,
+        complexity: "high",
     }, {
         name: "local-native-instances-usda",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "native_instances.usda")}`,
@@ -503,6 +505,7 @@ function createCompatPage({ runtime, rendererMode, fixture }) {
                 fixtureExpectedRenderable: ${JSON.stringify(fixture.expectedRenderable ?? true)},
                 fixtureExpectedRenderableReason: ${JSON.stringify(fixture.expectedRenderableReason ?? null)},
                 fixtureExpectedMaterialXMaterials: ${JSON.stringify(fixture.expectedMaterialXMaterials ?? 0)},
+                fixtureComplexity: ${JSON.stringify(fixture.complexity ?? null)},
                 webgpuConfigured: ${Boolean(runtime.webgpuUrl)},
                 forceWebGLSupported: ${Boolean(runtime.forceWebGLSupported)}
             };

@@ -163,10 +163,12 @@ async function runSuite(THREE, renderer) {
         debug: false,
         USD,
         ...hydraFixture,
+        complexity: config.fixtureComplexity || undefined,
         scene: usdRoot,
         showScenePrimitiveHelpers: true,
     });
     setPhase("suite-hydra-update");
+    await handle?.ready?.();
     handle?.update?.(0);
     setPhase("suite-materials-ready");
     await handle?.materialsReady?.();
@@ -175,6 +177,10 @@ async function runSuite(THREE, renderer) {
     renderer.render(scene, camera);
     setPhase("suite-raf");
     await new Promise(resolve => requestAnimationFrame(resolve));
+    await waitForExpectedSceneState(usdRoot, config, time => {
+        handle?.update?.(time);
+        renderer.render(scene, camera);
+    });
 
     const handleMethods = {
         update: typeof handle?.update,
@@ -183,11 +189,19 @@ async function runSuite(THREE, renderer) {
         materialsReady: typeof handle?.materialsReady,
         dispose: typeof handle?.dispose,
     };
-    const fixtureChecks = await runFixtureChecks(handle, usdRoot, config);
+    const fixtureChecks = await runFixtureChecks(handle, usdRoot, config, async () => {
+        await waitForExpectedSceneState(usdRoot, config, time => {
+            handle?.update?.(time);
+            renderer.render(scene, camera);
+        });
+    });
     const childCount = usdRoot.children.length;
     const sceneStats = collectSceneStats(usdRoot);
 
+    setPhase("suite-before-dispose");
+    await waitForHydraIdleFrames(handle, renderer, scene, camera);
     handle?.dispose?.();
+    await new Promise(resolve => setTimeout(resolve, 50));
     renderer.dispose?.();
 
     setPhase("suite-complete");
@@ -219,7 +233,7 @@ async function runSuite(THREE, renderer) {
     };
 }
 
-async function runFixtureChecks(handle, usdRoot, config) {
+async function runFixtureChecks(handle, usdRoot, config, waitForScene) {
     const checks = {};
     if (!handle?.driver?.GetStage) return checks;
 
@@ -231,6 +245,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
         await handle.repopulate();
         await handle.materialsReady();
         handle.update?.(0);
+        await waitForScene();
         checks.afterMaterialVariant = collectMeshMaterialState(usdRoot);
     }
 
@@ -242,6 +257,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
         await handle.repopulate();
         await handle.materialsReady();
         handle.update?.(0);
+        await waitForScene();
         checks.afterShapeVariant = collectMeshMaterialState(usdRoot);
 
         const shape = stage.GetPrimAtPath("/World/Shape");
@@ -249,6 +265,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
         await handle.repopulate();
         await handle.materialsReady();
         handle.update?.(0);
+        await waitForScene();
         checks.afterFinishVariant = collectMeshMaterialState(usdRoot);
     }
 
@@ -345,6 +362,7 @@ async function runFixtureChecks(handle, usdRoot, config) {
         await handle.setIncludedPurposes?.(["default", "render", "proxy", "guide"]);
         await handle.materialsReady?.();
         handle.update?.(0);
+        await waitForScene();
         checks.purposeRenderIntent.afterAllPurposes = collectMeshMaterialState(usdRoot);
     }
 
@@ -364,9 +382,10 @@ async function runFixtureChecks(handle, usdRoot, config) {
     }
 
     if (config.fixtureName === "local-time-samples-usda") {
+        handle.setPlaying?.(false);
+        await handle.setTime?.(1);
         const before = collectMeshWorldState(usdRoot);
-        handle.update?.(1);
-        await handle.refresh?.();
+        await handle.setTime?.(24);
         await new Promise(resolve => requestAnimationFrame(resolve));
         const after = collectMeshWorldState(usdRoot);
         checks.timeSamples = {
@@ -447,7 +466,7 @@ function collectSceneStats(root) {
         if (!object.isMesh) return;
         stats.meshes++;
         if (object.isInstancedMesh) stats.instancedMeshes++;
-        if (object.geometry?.attributes?.position?.count > 0) {
+        if (getPositionAttribute(object.geometry)?.count > 0) {
             stats.geometriesWithPosition++;
         }
         const materials = Array.isArray(object.material) ? object.material : [object.material];
@@ -516,7 +535,7 @@ function collectMeshGeometryState(root) {
         if (!object.isMesh) return;
         meshes.push({
             name: object.name || "",
-            positionCount: object.geometry?.attributes?.position?.count ?? 0,
+            positionCount: getPositionAttribute(object.geometry)?.count ?? 0,
             indexCount: object.geometry?.index?.count ?? 0,
             bounds: object.geometry?.boundingBox ? {
                 min: object.geometry.boundingBox.min.toArray(),
@@ -574,6 +593,56 @@ function collectMeshWorldState(root) {
         visibleMaxAbsX: Math.max(0, ...visibleMeshes.map(mesh => Math.abs(mesh.worldPosition[0]))),
         visibleXPositions: visibleMeshes.map(mesh => Number(mesh.worldPosition[0].toFixed(3))).sort((a, b) => a - b),
     };
+}
+
+async function waitForExpectedSceneState(root, config, update) {
+    const start = performance.now();
+    let stats = collectSceneStats(root);
+    while (!isExpectedSceneStateReady(root, stats, config) && performance.now() - start < 30_000) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        update?.(0);
+        stats = collectSceneStats(root);
+    }
+    return stats;
+}
+
+function isExpectedSceneStateReady(root, stats, config) {
+    if (!config.fixtureExpectedRenderable) {
+        return true;
+    }
+    if (stats.meshes === 0 || stats.geometriesWithPosition === 0) {
+        return false;
+    }
+    if (config.fixtureExpectedMaterialXMaterials > 0 && stats.materialXMaterials < config.fixtureExpectedMaterialXMaterials) {
+        return false;
+    }
+    if (config.fixtureName === "local-catmull-clark-subdivision-usda" && collectMeshGeometryState(root).maxPositionCount <= 36) {
+        return false;
+    }
+    if (config.fixtureName === "local-native-instances-usda") {
+        const meshState = collectMeshMaterialState(root);
+        const visibleInstancedMesh = meshState.meshes.find(mesh => mesh.visible && mesh.instanced);
+        return Boolean(visibleInstancedMesh && visibleInstancedMesh.instanceCount === 2);
+    }
+    if (config.fixtureName === "local-point-instancer-usda") {
+        const meshState = collectMeshMaterialState(root);
+        const visibleMeshes = meshState.meshes.filter(mesh => mesh.visible);
+        return visibleMeshes.length === 2 && visibleMeshes.every(mesh => mesh.instanced);
+    }
+    return true;
+}
+
+async function waitForHydraIdleFrames(handle, renderer, scene, camera) {
+    for (let i = 0; i < 3; i++) {
+        handle?.update?.(0);
+        renderer.render(scene, camera);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 20));
+    }
+}
+
+function getPositionAttribute(geometry) {
+    return geometry?.attributes?.position || geometry?.getAttribute?.("position") || null;
 }
 
 function isUsdScenePrimitiveDescendant(object) {

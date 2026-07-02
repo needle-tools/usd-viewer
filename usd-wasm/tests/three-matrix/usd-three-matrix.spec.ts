@@ -10,6 +10,7 @@ type MatrixPage = {
     fixtureUrl: string;
     fixtureFiles: Array<{ path: string; url: string }> | null;
     fixtureSource: string;
+    fixtureComplexity?: string;
     fixtureExpectedRenderable: boolean;
     fixtureExpectedRenderableReason: string | null;
     fixtureExpectedMaterialXMaterials: number;
@@ -58,8 +59,9 @@ type MatrixResult = {
 };
 
 const caseTimeoutMs = Number(process.env.NEEDLE_USD_MATRIX_CASE_TIMEOUT_MS ?? 60_000);
+const matrixBaseURL = process.env.USD_THREE_MATRIX_BASE_URL ?? 'http://127.0.0.1:5192';
 
-test('USD WASM Three adapter loads a fixture across cached Three versions and renderer modes', async ({ page }) => {
+test('USD WASM Three adapter loads a fixture across cached Three versions and renderer modes', async ({ browser }) => {
     const manifest = JSON.parse(await readFile(resolve('.cache/usd-three-matrix-pages/manifest.json'), 'utf8')) as { pages: MatrixPage[] };
     expect(manifest.pages.length).toBeGreaterThan(0);
 
@@ -67,14 +69,19 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
     const failures: string[] = [];
 
     for (const matrixPage of manifest.pages) {
+        const matrixCaseContext = await browser.newContext();
+        const matrixCasePage = await matrixCaseContext.newPage();
         try {
-            const result = await runMatrixPage(page, matrixPage);
+            const result = await runMatrixPage(matrixCasePage, matrixPage);
             results.push(result);
             console.log(`[usd-three-matrix] ${result.version}/${result.rendererMode}/${result.fixtureName}: ${result.status} ${result.backendType}`);
         }
         catch (error) {
             const message = error instanceof Error ? error.stack || error.message : String(error);
             failures.push(`${matrixPage.id}: ${message}`);
+        }
+        finally {
+            await matrixCaseContext.close().catch(() => {});
         }
     }
 
@@ -117,7 +124,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         }
     });
 
-    await page.goto(`/__rawfs${matrixPage.pagePath}`);
+    await page.goto(new URL(`/__rawfs${matrixPage.pagePath}`, matrixBaseURL).href);
     const matrixStateHandle = await page.waitForFunction(() => (window as any).__USD_THREE_MATRIX__ || (window as any).__USD_THREE_MATRIX_ERROR__, null, { timeout: 120_000 });
     const state = await matrixStateHandle.jsonValue() as any;
     const error = await page.evaluate(() => (window as any).__USD_THREE_MATRIX_ERROR__ || null);
