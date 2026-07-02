@@ -1354,7 +1354,19 @@ button.cta-primary {
     height: 18px;
 }
 
-.converter-toggle button.active .conv-logo-needle {
+/* The glTF logo is a wide (2:1) wordmark — let it keep its aspect. */
+.conv-logo.conv-logo-gltf {
+    width: auto;
+    height: 12px;
+}
+
+/* Brand-coloured converter logos are whitened on the selected (dark-blue) pill
+   to match the white label. (three / omniverse use currentColor and turn white
+   on their own.) */
+.converter-toggle button.active .conv-logo-needle,
+.converter-toggle button.active .conv-logo-blender,
+.converter-toggle button.active .conv-logo-adobe,
+.converter-toggle button.active .conv-logo-gltf {
     filter: brightness(0) invert(1);
 }
 
