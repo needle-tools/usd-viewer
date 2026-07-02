@@ -1956,6 +1956,7 @@ async function init() {
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
+  const EXCLUDED_ASSET_EXPLORER_MODEL_KEYS = new Set(['nodeperformancetest']);
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
   const sampleGroupList = document.getElementById('sample-group-list');
@@ -2286,6 +2287,7 @@ async function init() {
   }
 
   function assetExplorerModelToCard(model) {
+    if (isExcludedAssetExplorerModel(model)) return null;
     const { conversions, order, metadata } = collectAssetExplorerConversions(model);
     const url = pickConversionUrl(conversions, selectedConverter, order);
     if (!url) return null;
@@ -2303,6 +2305,12 @@ async function init() {
 
   function normalizeModelKey(value) {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function isExcludedAssetExplorerModel(model) {
+    return [model?.slug, model?.name, model?.label]
+      .map(normalizeModelKey)
+      .some(key => EXCLUDED_ASSET_EXPLORER_MODEL_KEYS.has(key));
   }
 
   async function loadGltfTagIndex() {
