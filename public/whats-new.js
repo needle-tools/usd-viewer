@@ -17,6 +17,7 @@ const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
 
 function disabledForDiagnostics() {
   try {
+    if (window.__usdViewerDiagnosticsMode === true) return true;
     return new URLSearchParams(location.search).has("debug") || navigator.webdriver === true;
   } catch {
     return false;

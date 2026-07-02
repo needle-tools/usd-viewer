@@ -313,6 +313,8 @@ test.describe('public usd-viewer lifecycle', () => {
                 || url.includes('analytics-2.needle.tools')
                 || url.includes('rybbit')
                 || url.includes('marketer.needle.tools')
+                || url.includes('needle.tools/api/v1/rum/t')
+                || url.includes('needle.tools/api/v1/needle-engine/ping')
             ) {
                 blockedRequests.push(url);
             }
@@ -323,6 +325,16 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(blockedRequests).toEqual([]);
         await expect(page.locator('#debug-test-button')).toBeVisible();
         await expect(page.locator('.whats-new')).toHaveCount(0);
+
+        await page.goto('/?debug&viewer=needle&file=/test-fixtures/usd-concepts/camera_light.usda', { waitUntil: 'domcontentloaded' });
+        await waitForNeedleLoaderMode(page, 'camera_light.usda');
+        await page.evaluate(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+            window.dispatchEvent(new PageTransitionEvent('pagehide'));
+        });
+        await page.waitForTimeout(250);
+
+        expect(blockedRequests).toEqual([]);
     });
 
     test('loads authored Needle fixture coverage assets through the Needle Engine loader element', async ({ page }) => {

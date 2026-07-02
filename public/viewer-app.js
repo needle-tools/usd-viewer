@@ -775,7 +775,11 @@ function parseBooleanUrlParam(value) {
 }
 
 function hasDebugUrlParam() {
-  return params.has("debug");
+  return diagnosticsMode();
+}
+
+function diagnosticsMode() {
+  return window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
 }
 
 function setViewerModeUrlParam(url) {
@@ -1318,6 +1322,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.setAttribute("camera-controls", "true");
     needleEngineElement.setAttribute("auto-fit", "false");
     needleEngineElement.setAttribute("auto-rotate", "false");
+    if (diagnosticsMode()) needleEngineElement.setAttribute("no-telemetry", "true");
     needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
@@ -2937,7 +2942,27 @@ async function init() {
 
   async function runDebugAssetTest(options = {}) {
     const button = document.getElementById('debug-test-button');
-    if (button) button.disabled = true;
+    const originalButtonText = button?.textContent || 'Test';
+    let progressTimer = 0;
+    let currentProgress = { current: 0, completed: 0, total: 0, started: 0 };
+    const formatEta = (remainingMs) => {
+      const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      return `-${minutes}:${String(rest).padStart(2, '0')}`;
+    };
+    const updateProgressButton = () => {
+      if (!button || !currentProgress.total) return;
+      const elapsed = performance.now() - currentProgress.started;
+      const done = Math.max(0, currentProgress.completed);
+      const average = done > 0 ? elapsed / done : 0;
+      const remaining = done > 0 ? average * (currentProgress.total - done) : 0;
+      button.textContent = `${currentProgress.current}/${currentProgress.total}, ${formatEta(remaining)}`;
+    };
+    if (button) {
+      button.disabled = true;
+      button.textContent = '0/0, -0:00';
+    }
     const capture = createDebugTestConsoleCapture();
     capture.attach();
     try {
@@ -2945,10 +2970,15 @@ async function init() {
       const startedAt = new Date().toISOString();
       const targets = Array.isArray(options.targets) ? options.targets : await collectDebugLoadTargets();
       const results = [];
+      currentProgress = { current: 0, completed: 0, total: targets.length, started: performance.now() };
+      updateProgressButton();
+      progressTimer = window.setInterval(updateProgressButton, 1000);
       console.log(`[usd-viewer debug test] loading ${targets.length} assets`);
 
       for (let i = 0; i < targets.length; i++) {
         const target = targets[i];
+        currentProgress.current = i + 1;
+        updateProgressButton();
         const mark = capture.mark();
         const entry = {
           index: i,
@@ -2983,6 +3013,8 @@ async function init() {
         entry.warnings.push(...captured.warnings);
         entry.errors.push(...captured.errors);
         results.push(entry);
+        currentProgress.completed = i + 1;
+        updateProgressButton();
         console.log(`[usd-viewer debug test] ${i + 1}/${targets.length}`, entry);
       }
 
@@ -3000,7 +3032,11 @@ async function init() {
       return report;
     } finally {
       capture.detach();
-      if (button) button.disabled = false;
+      if (progressTimer) window.clearInterval(progressTimer);
+      if (button) {
+        button.disabled = false;
+        button.textContent = currentProgress.total ? button.textContent : originalButtonText;
+      }
     }
   }
 

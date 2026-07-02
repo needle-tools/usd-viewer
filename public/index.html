@@ -46,6 +46,13 @@
   }
   </script>
 
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      window.__usdViewerDiagnosticsMode = params.has("debug") || navigator.webdriver === true;
+    })();
+  </script>
+
   <!-- Privacy-friendly analytics (Rybbit). Outbound-link clicks are tracked
        automatically; in-app clicks and caught USD errors are reported
        explicitly via analytics.js.
@@ -60,7 +67,7 @@
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
-      const analyticsDisabled = params.has("debug") || navigator.webdriver === true;
+      const analyticsDisabled = window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
       if (analyticsDisabled) return;
 
       const originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -133,7 +140,7 @@
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
-      if (params.has("debug") || navigator.webdriver === true) return;
+      if (window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true) return;
       const script = document.createElement("script");
       script.defer = true;
       script.src = "https://marketer.needle.tools/whatsnew.js";

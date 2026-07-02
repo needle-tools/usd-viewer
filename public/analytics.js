@@ -14,6 +14,7 @@
 
 function analyticsDisabled() {
   try {
+    if (window.__usdViewerDiagnosticsMode === true) return true;
     const params = new URLSearchParams(window.location.search);
     return params.has("debug") || navigator.webdriver === true;
   } catch {
