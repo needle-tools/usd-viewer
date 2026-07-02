@@ -782,6 +782,17 @@ function diagnosticsMode() {
   return window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
 }
 
+async function waitForAssetCacheReady() {
+  try {
+    await Promise.race([
+      window.__usdViewerAssetCacheReady,
+      new Promise(resolve => setTimeout(resolve, 3000)),
+    ]);
+  } catch {
+    // Asset caching accelerates diagnostics but must not block diagnostics.
+  }
+}
+
 function setViewerModeUrlParam(url) {
   url.searchParams.set("viewer", viewerMode === VIEWER_MODE_NEEDLE_LOADER ? "needle" : viewerMode);
 }
@@ -2967,6 +2978,7 @@ async function init() {
     capture.attach();
     try {
       await usdModuleReadyPromise;
+      await waitForAssetCacheReady();
       const startedAt = new Date().toISOString();
       const targets = Array.isArray(options.targets) ? options.targets : await collectDebugLoadTargets();
       const results = [];

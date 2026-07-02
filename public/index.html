@@ -50,6 +50,27 @@
     (() => {
       const params = new URLSearchParams(location.search);
       window.__usdViewerDiagnosticsMode = params.has("debug") || navigator.webdriver === true;
+      window.__usdViewerAssetCacheMode = params.get("assetCache") !== "0" &&
+        (params.has("debug") || params.get("assetCache") === "1");
+      window.__usdViewerAssetCacheReady = Promise.resolve(null);
+      if (window.__usdViewerAssetCacheMode && "serviceWorker" in navigator) {
+        window.__usdViewerAssetCacheReady = navigator.serviceWorker
+          .register("/usd-asset-cache-sw.js", { scope: "/" })
+          .then(async registration => {
+            registration.update?.();
+            await navigator.serviceWorker.ready;
+            if (!navigator.serviceWorker.controller) {
+              await new Promise(resolve => {
+                navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true });
+              });
+            }
+            return registration;
+          })
+          .catch(error => {
+            console.warn("USD asset cache service worker unavailable", error);
+            return null;
+          });
+      }
     })();
   </script>
 

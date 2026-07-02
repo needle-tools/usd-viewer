@@ -337,6 +337,47 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(blockedRequests).toEqual([]);
     });
 
+    test('caches debug asset fetches through the service worker', async ({ page }) => {
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(async () => {
+            await (window as any).__usdViewerAssetCacheReady;
+            return !!navigator.serviceWorker.controller;
+        });
+
+        const probeUrl = `/test-fixtures/usd-concepts/camera_light.usda?cache-probe=${Date.now()}`;
+        const state = await page.evaluate(async url => {
+            const messages: any[] = [];
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data?.source === 'usd-viewer-asset-cache') messages.push(event.data);
+            });
+
+            const first = await fetch(url).then(response => response.text());
+            const cache = await caches.open('usd-viewer-asset-cache-v1');
+            let cached = await cache.match(url);
+            const deadline = performance.now() + 2000;
+            while (!cached && performance.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+                cached = await cache.match(url);
+            }
+            const second = await fetch(url).then(response => response.text());
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            return {
+                cached: !!cached,
+                firstLength: first.length,
+                secondLength: second.length,
+                hitCount: messages.filter(message => message.type === 'hit' && message.url.endsWith(url)).length,
+                storeCount: messages.filter(message => message.type === 'store' && message.url.endsWith(url)).length,
+            };
+        }, probeUrl);
+
+        expect(state.cached).toBe(true);
+        expect(state.firstLength).toBeGreaterThan(100);
+        expect(state.secondLength).toBe(state.firstLength);
+        expect(state.storeCount).toBeGreaterThanOrEqual(1);
+        expect(state.hitCount).toBeGreaterThanOrEqual(1);
+    });
+
     test('loads authored Needle fixture coverage assets through the Needle Engine loader element', async ({ page }) => {
         test.setTimeout(120000);
         const fatalDiagnostics = collectFatalDiagnostics(page);
