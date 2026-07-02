@@ -146,6 +146,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);
         assert.equal(buildInfo.modules.openSubdiv, true);
+        assert.equal(buildInfo.modules.usdDraco, true);
         assert.equal(buildInfo.modules.usdGltf, true);
         assert.equal(buildInfo.modules.usdGltfDraco, true);
         assert.match(buildInfo.toolchain.emscripten, /Emscripten/);
@@ -216,6 +217,7 @@ def Xform "Root" {
         assert.equal(buildInfo.openusd.version, "0.26.5");
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);
+        assert.equal(buildInfo.modules.usdDraco, true);
         assert.equal(buildInfo.modules.usdGltfDraco, true);
     });
 
@@ -293,6 +295,48 @@ def Xform "Root" {
             assert.equal(mesh.GetAttribute("primvars:normals").HasAuthoredValue(), true);
             assert.match(mesh.GetAttribute("points").GetValueString(), /\[/);
             assert.match(mesh.GetAttribute("primvars:normals").GetValueString(), /\[/);
+        } finally {
+            USD.ReleaseStage(stage);
+        }
+    });
+
+    it("opens a native usdDraco mesh reference", async () => {
+        const USD = await loadUsdModuleFromTempCopy();
+        const rootPath = "/usd-draco/CubeCompressedTriangles.usda";
+        const dracoPath = "/usd-draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc";
+
+        USD.FS_createPath("/", "usd-draco/CubeCompressedTriangles.usda.draco", true, true);
+        USD.FS_createDataFile(
+            "/usd-draco",
+            "CubeCompressedTriangles.usda",
+            await readFile("tests/fixtures/draco/CubeCompressedTriangles.usda"),
+            true,
+            true,
+            true,
+        );
+        USD.FS_createDataFile(
+            "/usd-draco/CubeCompressedTriangles.usda.draco",
+            "Cube_Geom_Cube.drc",
+            await readFile("tests/fixtures/draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc"),
+            true,
+            true,
+            true,
+        );
+
+        const stage = await USD.OpenStage(rootPath);
+        try {
+            assert.deepEqual(stage.GetCompositionErrors(), []);
+            assert.ok(stage.GetUsedLayers(false).some(layer => layer.realPath === dracoPath));
+
+            const mesh = stage.GetPrimAtPath("/Cube/Geom/Cube");
+            assert.equal(mesh.IsValid(), true);
+            assert.equal(mesh.GetTypeName(), "Mesh");
+            assert.equal(mesh.GetAttribute("points").HasAuthoredValue(), true);
+            assert.equal(mesh.GetAttribute("faceVertexCounts").HasAuthoredValue(), true);
+            assert.equal(mesh.GetAttribute("faceVertexIndices").HasAuthoredValue(), true);
+            assert.equal(mesh.GetAttribute("primvars:displayColor").GetValueString(), "[(0.217638, 0.217638, 0.217638)]");
+            assert.match(mesh.GetAttribute("points").GetValueString(), /\[/);
+            assert.match(mesh.GetAttribute("faceVertexIndices").GetValueString(), /\[/);
         } finally {
             USD.ReleaseStage(stage);
         }
