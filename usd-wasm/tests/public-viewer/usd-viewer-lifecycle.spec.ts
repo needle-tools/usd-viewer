@@ -89,6 +89,72 @@ const usdWgSamples = [
     },
 ];
 
+const needleCloudSamples = {
+    kitchenSet: {
+        label: 'Kitchen Set',
+        filename: 'file.usdz',
+        url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
+    },
+};
+
+const reportRegressionSamples = [
+    {
+        label: 'Kitchen Set scalar primvars',
+        filename: needleCloudSamples.kitchenSet.filename,
+        url: needleCloudSamples.kitchenSet.url,
+    },
+    {
+        label: 'MaterialX basic textures',
+        filename: 'basic.usda',
+        url: `${usdWgBaseUrl}test_assets/MaterialXTest/basic.usda`,
+    },
+    {
+        label: 'Vehicle missing material binding',
+        filename: 'tractorGeo.usd',
+        url: `${usdWgBaseUrl}full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/tractor/geo/tractorGeo.usd`,
+    },
+    {
+        label: 'Sublayered internal references',
+        filename: 'SublayeredInternalReferenceTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/SublayeredInternalReferenceTest.usda`,
+    },
+    {
+        label: 'Referenced assemblies internal references',
+        filename: 'ReferencedAssembliesWithInternalReferencesTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest.usda`,
+    },
+    {
+        label: 'Internal reference',
+        filename: 'InternalReferenceTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/InternalReferenceTest.usda`,
+    },
+    {
+        label: 'External bad target washer',
+        filename: 'washer.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ExternalReferenceBadTargetTest/washer.usda`,
+    },
+    {
+        label: 'External bad target bolt',
+        filename: 'bolt.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ExternalReferenceBadTargetTest/bolt.usda`,
+    },
+    {
+        label: 'Internal unencapsulated prototypes',
+        filename: 'InternalReferenceUnencapsulatedPrototypes.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest/InternalReferenceUnencapsulatedPrototypes.usda`,
+    },
+    {
+        label: 'Internal encapsulated prototypes',
+        filename: 'InternalReferenceEncapsulatedPrototypes.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest/InternalReferenceEncapsulatedPrototypes.usda`,
+    },
+    {
+        label: 'Sublayered modeling',
+        filename: 'hardware.modeling.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/SublayeredInternalReferenceTest/hardware.modeling.usda`,
+    },
+];
+
 const fatalConsolePatterns = [
     /out of memory/i,
     /Cannot enlarge memory/i,
@@ -110,6 +176,23 @@ const usdWgRegressionPatterns = [
     /EXR textures are not fully supported yet/i,
     /Failed to open USD stage/i,
     /Failed to load USD file/i,
+];
+
+const primvarRegressionPatterns = [
+    /Could not prepare face-varying primvar __faceindex/i,
+    /Unsupported interpolation type 'uniform' for primvar (?:__faceindex|sharp_face)/i,
+    /Unsupported primvar:\s+(?:__faceindex|sharp_face|PreMenvPosingRefPose)/i,
+];
+
+const rendererErrorPatterns = [
+    /\[MaterialX\] Failed to load texture/i,
+    /Material not found/i,
+    /Failed to open USD stage/i,
+    /Failed to load USD file/i,
+    /Could not prepare face-varying primvar/i,
+    /Unsupported interpolation type/i,
+    /Unsupported primvar/i,
+    /worker sent an error/i,
 ];
 
 test.describe('public usd-viewer lifecycle', () => {
@@ -193,6 +276,80 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(usdWgDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
+    });
+
+    test('loads report regression assets through the Needle Engine loader element without renderer errors', async ({ page }) => {
+        test.setTimeout(180000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        for (const sample of reportRegressionSamples) {
+            await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle&waitForMaterials=1`, {
+                waitUntil: 'domcontentloaded',
+            });
+            const state = await waitForNeedleLoaderMode(page, sample.filename);
+
+            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.activeButton, sample.label).toBe('needle-loader');
+            expect(state.hasHydraHandle, sample.label).toBe(true);
+            expect(state.driverAlive, sample.label).toBe(true);
+            expect(state.hasNeedleContext, sample.label).toBe(true);
+            expect(state.needleChildren, sample.label).toBeGreaterThan(0);
+        }
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('materializes scalar face-varying and uniform primvars as Needle geometry attributes', async ({ page }) => {
+        test.setTimeout(90000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        await page.goto(`/?file=${encodeURIComponent(needleCloudSamples.kitchenSet.url)}&viewer=needle&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, needleCloudSamples.kitchenSet.filename);
+        const faceIndex = await findNeedlePrimvarAttribute(page, 'primvars:__faceindex');
+
+        expect(faceIndex.count).toBeGreaterThan(0);
+        expect(faceIndex.count).toBe(faceIndex.positionCount);
+        expect(faceIndex.itemSize).toBe(1);
+        expect(faceIndex.arrayType).toMatch(/Int|Float/);
+        expect(faceIndex.allFinite).toBe(true);
+
+        const internalReferenceUrl = `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/InternalReferenceTest.usda`;
+        await page.goto(`/?file=${encodeURIComponent(internalReferenceUrl)}&viewer=needle&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'InternalReferenceTest.usda');
+        const sharpFace = await findNeedlePrimvarAttribute(page, 'primvars:sharp_face');
+
+        expect(sharpFace.count).toBeGreaterThan(0);
+        expect(sharpFace.count).toBe(sharpFace.positionCount);
+        expect(sharpFace.itemSize).toBe(1);
+        expect(sharpFace.arrayType).toMatch(/Int|Float/);
+        expect(sharpFace.allFinite).toBe(true);
+        expect(sharpFace.valuesAreBoolean).toBe(true);
+        expect(sharpFace.hasOne).toBe(true);
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('keeps shipped USD-WG manifest entries visible even when an upstream asset is broken', async ({ page }) => {
+        const manifest = await page.request.get('/data/usd-wg-assets.json');
+        expect(manifest.ok()).toBe(true);
+        const data = await manifest.json();
+        const entries = flattenUsdWgManifest(data.root);
+
+        expect(entries).toContain('full_assets/Teapot/TestLight.usda');
     });
 
     test('renders USD-WG bilinear cubes with usdview-style hull geometry and geometric normals', async ({ page }) => {
@@ -574,7 +731,7 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
 
         await page.locator('#export-gltf').hover();
-        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to convert');
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to share');
         expect(diagnostics).toEqual([]);
     });
 
@@ -1454,6 +1611,20 @@ function collectFatalDiagnostics(page: Page) {
     return collectConsoleMatches(page, fatalConsolePatterns);
 }
 
+function collectConsoleErrorsMatching(page: Page, patterns: RegExp[]) {
+    const diagnostics: Array<{ type: string, text: string }> = [];
+    page.on('console', message => {
+        const text = message.text();
+        if (message.type() === 'error' && patterns.some(pattern => pattern.test(text))) {
+            diagnostics.push({ type: message.type(), text });
+        }
+    });
+    page.on('pageerror', error => {
+        diagnostics.push({ type: 'pageerror', text: error.stack || error.message });
+    });
+    return diagnostics;
+}
+
 function collectConsoleMatches(page: Page, patterns: RegExp[]) {
     const diagnostics: Array<{ type: string, text: string }> = [];
     page.on('console', message => {
@@ -1466,6 +1637,27 @@ function collectConsoleMatches(page: Page, patterns: RegExp[]) {
         diagnostics.push({ type: 'pageerror', text: error.stack || error.message });
     });
     return diagnostics;
+}
+
+async function stubAnalytics(page: Page) {
+    await page.route('/api/script.js', route => route.fulfill({
+        contentType: 'application/javascript',
+        body: 'window.rybbit = { event() {}, pageview() {} };',
+    }));
+}
+
+function flattenUsdWgManifest(entry: any) {
+    const assetPaths: string[] = [];
+    const visit = (node: any) => {
+        for (const item of node?.items || []) {
+            if (item.assetPath) assetPaths.push(item.assetPath);
+        }
+        for (const child of node?.children || []) {
+            visit(child);
+        }
+    };
+    visit(entry);
+    return assetPaths;
 }
 
 async function loadPublicSample(page: Page, label: string) {
@@ -1879,6 +2071,49 @@ async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
             vertexColors: Boolean(material?.vertexColors),
         };
     }, usdPath);
+}
+
+async function findNeedlePrimvarAttribute(page: Page, attributeName: string) {
+    return await page.evaluate(name => {
+        const matches: Array<{
+            path: string;
+            count: number;
+            itemSize: number;
+            arrayType: string;
+            positionCount: number;
+            allFinite: boolean;
+            valuesAreBoolean: boolean;
+            hasOne: boolean;
+            sample: number[];
+        }> = [];
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!object.isMesh) return;
+            const attributes = object.geometry?.attributes || {};
+            const attribute = attributes[name] || object.geometry?.getAttribute?.(name);
+            const position = attributes.position;
+            if (!attribute || !position) return;
+
+            const values = Array.from(attribute.array || [], Number);
+            matches.push({
+                path: object.userData?.usdPath || object.name || '',
+                count: attribute.count || 0,
+                itemSize: attribute.itemSize || 0,
+                arrayType: attribute.array?.constructor?.name || '',
+                positionCount: position.count || 0,
+                allFinite: values.every(Number.isFinite),
+                valuesAreBoolean: values.every(value => value === 0 || value === 1),
+                hasOne: values.includes(1),
+                sample: values.slice(0, 16),
+            });
+        });
+
+        if (!matches.length) {
+            throw new Error(`Missing Needle primvar attribute ${name}`);
+        }
+
+        return matches.sort((a, b) => b.count - a.count)[0];
+    }, attributeName);
 }
 
 async function getNeedleMeshWindingState(page: Page, usdPath: string) {

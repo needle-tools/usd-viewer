@@ -860,6 +860,11 @@ try {
     locateFile: (file) => {
       return "/usd/bindings/" + file;
     },
+    printErr: (...args) => {
+      const text = args.join(" ");
+      if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);
+      else console.error(...args);
+    },
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
     resolveUsdModuleReady?.(USD);
