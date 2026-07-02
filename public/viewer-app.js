@@ -546,11 +546,13 @@ onDomReady(function() {
   // Override console methods - only warnings and errors
   console.warn = function(...args) {
     originalConsole.warn.apply(console, args);
+    window.dispatchEvent(new CustomEvent('usd-viewer-console-warn', { detail: args }));
     addToMessageLog(args.join(' '), 'warn');
   };
   
   console.error = function(...args) {
     originalConsole.error.apply(console, args);
+    window.dispatchEvent(new CustomEvent('usd-viewer-console-error', { detail: args }));
     addToMessageLog(args.join(' '), 'error');
   };
   
@@ -568,6 +570,12 @@ onDomReady(function() {
 let scene;
 let defaultTexture;
 let USD;
+let resolveUsdModuleReady;
+let rejectUsdModuleReady;
+const usdModuleReadyPromise = new Promise((resolve, reject) => {
+  resolveUsdModuleReady = resolve;
+  rejectUsdModuleReady = reject;
+});
 
 const debugFileHandling = false;
 
@@ -766,6 +774,10 @@ function parseBooleanUrlParam(value) {
   return value === "1" || value === "true" || value === "yes";
 }
 
+function hasDebugUrlParam() {
+  return params.has("debug");
+}
+
 function setViewerModeUrlParam(url) {
   url.searchParams.set("viewer", viewerMode === VIEWER_MODE_NEEDLE_LOADER ? "needle" : viewerMode);
 }
@@ -850,6 +862,7 @@ try {
     },
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
+    resolveUsdModuleReady?.(USD);
     updateOpenUsdBuildInfo(USD);
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
@@ -882,6 +895,7 @@ try {
     }
   }).catch((error) => {
     // Async rejections aren't caught by the surrounding try/catch — surface them.
+    rejectUsdModuleReady?.(error);
     if (window.setViewerLoading) window.setViewerLoading(false);
     const err = "Failed to load the USD module: " + error;
     console.error(err);
@@ -889,6 +903,7 @@ try {
   });
 }
 catch (error) {
+  rejectUsdModuleReady?.(error);
   if (window.setViewerLoading) window.setViewerLoading(false);
   if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
     let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
@@ -2702,6 +2717,280 @@ async function init() {
     }
   }
 
+  function normalizedTestUrl(value) {
+    try {
+      const url = new URL(value, window.location.href);
+      url.hash = '';
+      return url.href;
+    } catch {
+      return String(value || '');
+    }
+  }
+
+  function addDebugLoadTarget(targets, seen, target) {
+    const url = target?.url;
+    if (!url) return;
+    const key = [
+      target.source || '',
+      target.root || '',
+      target.converter || '',
+      normalizedTestUrl(url),
+    ].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({
+      source: target.source || 'unknown',
+      name: target.name || target.label || url.split('/').pop() || 'asset',
+      url,
+      root: target.root || '',
+      converter: target.converter || '',
+      files: Array.isArray(target.files) ? [...target.files] : [],
+    });
+  }
+
+  function addCardDebugLoadTargets(targets, seen, source, card) {
+    const conversions = card?.conversions || {};
+    const converter = pickConverterId(conversions, selectedConverter, card?.converterOrder || []);
+    if (converter) {
+      addDebugLoadTarget(targets, seen, {
+        source,
+        name: card.name,
+        url: conversions[converter],
+        converter,
+      });
+    } else {
+      addDebugLoadTarget(targets, seen, {
+        source,
+        name: card?.name,
+        url: card?.url,
+      });
+    }
+  }
+
+  async function collectDebugLoadTargets() {
+    const targets = [];
+    const seen = new Set();
+    const [assetExplorerCards, usdWgManifestValue] = await Promise.all([
+      loadAssetExplorerCards(),
+      loadUsdWgManifest().catch(err => {
+        console.warn("Debug test could not load USD-WG manifest", err);
+        return null;
+      }),
+    ]);
+
+    for (const card of assetExplorerCards || []) {
+      addCardDebugLoadTargets(targets, seen, 'gltf-conversions', card);
+    }
+
+    if (usdWgManifestValue?.root) {
+      for (const card of collectUsdWgCards(usdWgManifestValue.root)) {
+        addCardDebugLoadTargets(targets, seen, 'usd-wg', card);
+      }
+    }
+
+    for (const card of needleCloudCards) {
+      addCardDebugLoadTargets(targets, seen, 'needle-cloud', card);
+    }
+
+    for (const asset of testAssetLibrary) {
+      addDebugLoadTarget(targets, seen, {
+        source: 'needle-fixture',
+        name: asset.label || asset.root,
+        url: testFixtureUrl(asset.root),
+        root: asset.root,
+        files: asset.files || [],
+      });
+    }
+
+    return targets;
+  }
+
+  async function fetchContentLength(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      if (!response.ok) return null;
+      const length = Number(response.headers.get('content-length'));
+      return Number.isFinite(length) ? length : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function totalDebugTargetSize(target) {
+    const urls = target.files?.length
+      ? Array.from(new Set([...(target.files || []), target.root].filter(Boolean))).map(path => testFixtureUrl(path))
+      : [target.url];
+    let total = 0;
+    let known = true;
+    const files = [];
+    for (const url of urls) {
+      const size = await fetchContentLength(url);
+      files.push({ url, size });
+      if (typeof size === 'number') total += size;
+      else known = false;
+    }
+    return {
+      totalFileSize: known ? total : null,
+      totalFileSizeKnown: known,
+      files,
+    };
+  }
+
+  function countUsdFileSystemFiles(path = '/') {
+    if (!USD?.FS_readdir || !USD?.FS_analyzePath) return 0;
+    let count = 0;
+    const ignoredDirectories = new Set(['/dev/', '/proc/', '/home/', '/tmp/', '/usd/']);
+    const walk = (directory) => {
+      let entries = [];
+      try {
+        entries = USD.FS_readdir(directory);
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry === '.' || entry === '..') continue;
+        const directoryPath = `${directory}${entry}/`;
+        let data = null;
+        try {
+          data = USD.FS_analyzePath(directoryPath);
+        } catch {
+          data = null;
+        }
+        if (data?.object?.node_ops?.readdir) {
+          if (!ignoredDirectories.has(directoryPath)) walk(directoryPath);
+          continue;
+        }
+        count++;
+      }
+    };
+    walk(path);
+    return count;
+  }
+
+  function createDebugTestConsoleCapture() {
+    const warnings = [];
+    const errors = [];
+    const onWarning = (...args) => warnings.push(args.map(String).join(' '));
+    const onError = (...args) => errors.push(args.map(String).join(' '));
+    const warnListener = event => onWarning(...(event.detail || []));
+    const errorListener = event => onError(...(event.detail || []));
+    return {
+      warnings,
+      errors,
+      mark() {
+        return { warnings: warnings.length, errors: errors.length };
+      },
+      since(mark) {
+        return {
+          warnings: warnings.slice(mark.warnings),
+          errors: errors.slice(mark.errors),
+        };
+      },
+      attach() {
+        window.addEventListener('usd-viewer-console-warn', warnListener);
+        window.addEventListener('usd-viewer-console-error', errorListener);
+      },
+      detach() {
+        window.removeEventListener('usd-viewer-console-warn', warnListener);
+        window.removeEventListener('usd-viewer-console-error', errorListener);
+      },
+    };
+  }
+
+  async function loadDebugTarget(target) {
+    const link = {
+      href: sampleHref(target.url),
+      dataset: { name: target.name || '' },
+      textContent: target.name || target.url,
+    };
+    await loadFromFileLink(link);
+    if (!ready) {
+      throw new Error(`Viewer did not reach ready state for ${target.url}`);
+    }
+  }
+
+  async function runDebugAssetTest(options = {}) {
+    const button = document.getElementById('debug-test-button');
+    if (button) button.disabled = true;
+    const capture = createDebugTestConsoleCapture();
+    capture.attach();
+    try {
+      await usdModuleReadyPromise;
+      const startedAt = new Date().toISOString();
+      const targets = Array.isArray(options.targets) ? options.targets : await collectDebugLoadTargets();
+      const results = [];
+      console.log(`[usd-viewer debug test] loading ${targets.length} assets`);
+
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        const mark = capture.mark();
+        const entry = {
+          index: i,
+          source: target.source,
+          name: target.name,
+          url: target.url,
+          root: target.root || undefined,
+          converter: target.converter || undefined,
+          totalFileSize: null,
+          totalFileSizeKnown: false,
+          fileSizes: [],
+          loadTimeMs: null,
+          fileSystemFileCount: 0,
+          warnings: [],
+          errors: [],
+          ok: false,
+        };
+        try {
+          const size = await totalDebugTargetSize(target);
+          entry.totalFileSize = size.totalFileSize;
+          entry.totalFileSizeKnown = size.totalFileSizeKnown;
+          entry.fileSizes = size.files;
+          const started = performance.now();
+          await loadDebugTarget(target);
+          entry.loadTimeMs = Math.round(performance.now() - started);
+          entry.fileSystemFileCount = countUsdFileSystemFiles();
+          entry.ok = true;
+        } catch (error) {
+          entry.errors.push(error?.stack || error?.message || String(error));
+        }
+        const captured = capture.since(mark);
+        entry.warnings.push(...captured.warnings);
+        entry.errors.push(...captured.errors);
+        results.push(entry);
+        console.log(`[usd-viewer debug test] ${i + 1}/${targets.length}`, entry);
+      }
+
+      const report = {
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        viewerMode,
+        count: results.length,
+        passed: results.filter(result => result.ok && result.errors.length === 0).length,
+        failed: results.filter(result => !result.ok || result.errors.length > 0).length,
+        results,
+      };
+      console.log("usd-viewer asset test report", report);
+      console.log(JSON.stringify(report, null, 2));
+      return report;
+    } finally {
+      capture.detach();
+      if (button) button.disabled = false;
+    }
+  }
+
+  function setupDebugTestButton() {
+    const button = document.getElementById('debug-test-button');
+    if (!button || !hasDebugUrlParam()) return;
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      runDebugAssetTest().catch(error => {
+        console.error("USD Viewer debug asset test failed", error);
+        button.disabled = false;
+      });
+    });
+    window.runUsdViewerAssetTest = runDebugAssetTest;
+  }
+
   function buildGalleryCards(cards) {
     if (!galleryGrid) return;
     // Identity of the rendered set. Re-rendering the SAME set (e.g. re-clicking
@@ -3064,7 +3353,7 @@ async function init() {
   async function loadFromFileLink(link) {
     let params = new Map();
     try {
-      params = (new URL(link.href)).searchParams;
+      params = (new URL(link.href, window.location.href)).searchParams;
     }
     catch {}
     const requestedFilename = params.get("file");
@@ -3140,6 +3429,8 @@ async function init() {
     event.preventDefault();
     activateFileLink(link);
   });
+
+  setupDebugTestButton();
   
   render();
   
