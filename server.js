@@ -1,6 +1,6 @@
 const fastify = require('fastify')()
 const path = require('path')
-const { injectClientIpIntoTrackBody } = require('./rybbit-ip')
+const { injectClientIpIntoTrackBody, maskIp } = require('./rybbit-ip')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
 // Otherwise we wouldn't need a server at all.
@@ -58,11 +58,25 @@ async function proxyToRybbit(request, reply) {
   headers["x-forwarded-for"] = fwd ? `${fwd}, ${request.ip}` : request.ip;
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  const cfConnectingIp = request.headers["cf-connecting-ip"];
   // For track events, stamp the real visitor IP (CF-Connecting-IP) into the body
   // so geolocation is correct regardless of proxy header handling.
   const body = hasBody
-    ? injectClientIpIntoTrackBody(request.url, request.body, request.headers["cf-connecting-ip"])
+    ? injectClientIpIntoTrackBody(request.url, request.body, cfConnectingIp)
     : undefined;
+
+  // Debug the geolocation path via Haystack. Track events only (not a hot path).
+  // We log the COUNTRY Cloudflare detected for the visitor (the decisive signal:
+  // if this disagrees with the Rybbit dashboard, the IP isn't reaching Rybbit)
+  // plus a MASKED IP (first two octets only) so a leaking datacenter prefix is
+  // visible — never the full, PII-carrying address.
+  if (request.url.split("?")[0] === "/api/track") {
+    console.log("[rybbit] track", JSON.stringify({
+      cfCountry: request.headers["cf-ipcountry"] || "?",
+      ipPrefix: maskIp(cfConnectingIp),
+      stamped: Boolean(cfConnectingIp),
+    }));
+  }
 
   let upstream;
   try {

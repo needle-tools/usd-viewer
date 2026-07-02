@@ -47,4 +47,26 @@ function injectClientIpIntoTrackBody(url, body, cfConnectingIp) {
   return Buffer.from(JSON.stringify(payload), "utf8");
 }
 
-module.exports = { injectClientIpIntoTrackBody, TRACK_PATH };
+/**
+ * Mask an IP for debug logging — enough to tell a real/diverse address from a
+ * leaking datacenter IP (e.g. a Hetzner prefix), without logging the full,
+ * PII-carrying host. IPv4 keeps the first two octets (`212.122.x.x`); IPv6 keeps
+ * the first two hextets (`2a01:e0a:…`). Returns "" for anything unrecognisable.
+ *
+ * @param {string|undefined} ip
+ * @returns {string}
+ */
+function maskIp(ip) {
+  if (!ip || typeof ip !== "string") return "";
+  const trimmed = ip.trim();
+  if (trimmed.includes(":")) {
+    const hextets = trimmed.split(":").filter(Boolean);
+    if (hextets.length < 2) return "";
+    return `${hextets[0]}:${hextets[1]}:…`;
+  }
+  const octets = trimmed.split(".");
+  if (octets.length !== 4) return "";
+  return `${octets[0]}.${octets[1]}.x.x`;
+}
+
+module.exports = { injectClientIpIntoTrackBody, maskIp, TRACK_PATH };
