@@ -6,20 +6,21 @@
 
 def Xform "World"
 {
-    def Mesh "SubdivCube" (
+    def Mesh "LeftHandedSubdivCube" (
         prepend apiSchemas = ["MaterialBindingAPI"]
     )
     {
-        rel material:binding = </Looks/SubdivBlue>
+        rel material:binding = </Looks/SubdivGreen>
+        uniform token orientation = "leftHanded"
         uniform token subdivisionScheme = "catmullClark"
         int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
         int[] faceVertexIndices = [
-            3, 2, 1, 0,
-            5, 6, 7, 4,
-            1, 5, 4, 0,
-            2, 6, 5, 1,
-            3, 7, 6, 2,
-            0, 4, 7, 3
+            0, 1, 2, 3,
+            4, 7, 6, 5,
+            0, 4, 5, 1,
+            1, 5, 6, 2,
+            2, 6, 7, 3,
+            3, 7, 4, 0
         ]
         point3f[] points = [
             (-1, -1, -1),
@@ -31,20 +32,20 @@ def Xform "World"
             (1, 1, 1),
             (-1, 1, 1)
         ]
-        color3f[] primvars:displayColor = [(0.1, 0.35, 1)]
+        color3f[] primvars:displayColor = [(0.1, 0.6, 0.25)]
     }
 }
 
 def Scope "Looks"
 {
-    def Material "SubdivBlue"
+    def Material "SubdivGreen"
     {
-        token outputs:surface.connect = </Looks/SubdivBlue/Preview.outputs:surface>
+        token outputs:surface.connect = </Looks/SubdivGreen/Preview.outputs:surface>
 
         def Shader "Preview"
         {
             uniform token info:id = "UsdPreviewSurface"
-            color3f inputs:diffuseColor = (0.1, 0.35, 1)
+            color3f inputs:diffuseColor = (0.1, 0.6, 0.25)
             float inputs:roughness = 0.42
             token outputs:surface
         }

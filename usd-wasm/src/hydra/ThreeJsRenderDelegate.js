@@ -39,6 +39,23 @@ const disableMaterials = false;
 
 let materialXModulePromise = null;
 
+function hydraTimingEnabled() {
+  if (typeof location === "undefined") return false;
+  const params = new URLSearchParams(location.search);
+  return params.get("hydraTiming") === "1" || params.get("hydraProfile") === "1";
+}
+
+function timeHydraUpdate(label, callback) {
+  if (!hydraTimingEnabled()) return callback();
+  console.time(label);
+  try {
+    return callback();
+  }
+  finally {
+    console.timeEnd(label);
+  }
+}
+
 async function getMaterialXModule() {
   materialXModulePromise ??= import('@needle-tools/materialx').then(module => ({
     MaterialX: module.Experimental_API,
@@ -677,26 +694,28 @@ class HydraMesh {
   }
 
   updateIndices(indices) {
-    if (debugMeshes) console.log("updateIndices", indices);
-    this._indices = copyIndexArray(indices);
-    if (!this._indices) {
-      this._geometry.deleteAttribute('position');
-      this._geometry.deleteAttribute('normal');
-      this._geometry.deleteAttribute('color');
-      this._geometry.deleteAttribute('uv');
-      delete this._geometry.attributes.uv2;
-      return;
-    }
-    //this._geometry.setIndex( indicesArray );
-    this.updateOrder(this._points, 'position');
-    this.updateOrder(this._normals, 'normal');
-    if (this._colors) {
-      this.updateOrder(this._colors, 'color');
-    }
-    if (this._uvs) {
-      this.updateOrder(this._uvs, 'uv', 2);
-      this._geometry.attributes.uv2 = this._geometry.attributes.uv;
-    }
+    return timeHydraUpdate(`Hydra updateIndices ${this.usdPath}`, () => {
+      if (debugMeshes) console.log("updateIndices", indices);
+      this._indices = copyIndexArray(indices);
+      if (!this._indices) {
+        this._geometry.deleteAttribute('position');
+        this._geometry.deleteAttribute('normal');
+        this._geometry.deleteAttribute('color');
+        this._geometry.deleteAttribute('uv');
+        delete this._geometry.attributes.uv2;
+        return;
+      }
+      //this._geometry.setIndex( indicesArray );
+      this.updateOrder(this._points, 'position');
+      this.updateOrder(this._normals, 'normal');
+      if (this._colors) {
+        this.updateOrder(this._colors, 'color');
+      }
+      if (this._uvs) {
+        this.updateOrder(this._uvs, 'uv', 2);
+        this._geometry.attributes.uv2 = this._geometry.attributes.uv;
+      }
+    });
   }
 
   /**
@@ -846,19 +865,23 @@ class HydraMesh {
    * @param {} normals 
    */
   updateNormals(normals) {
-    // don't apply automatically generated normals if there are already authored normals.
-    if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
+    return timeHydraUpdate(`Hydra updateNormals ${this.usdPath}`, () => {
+      // don't apply automatically generated normals if there are already authored normals.
+      if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
-    this._normals = Float32Array.from(normals);
-    this.updateOrder(this._normals, 'normal');
+      this._normals = Float32Array.from(normals);
+      this.updateOrder(this._normals, 'normal');
+    });
   }
 
   updateOrderedNormals(normals) {
-    // don't apply automatically generated normals if there are already authored normals.
-    if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
+    return timeHydraUpdate(`Hydra updateOrderedNormals ${this.usdPath}`, () => {
+      // don't apply automatically generated normals if there are already authored normals.
+      if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
-    this._normals = Float32Array.from(normals);
-    this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
+      this._normals = Float32Array.from(normals);
+      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
+    });
   }
 
   setNormals(data, interpolation) {
@@ -975,56 +998,60 @@ class HydraMesh {
   }
 
   updatePrimvar(name, data, dimension, interpolation) {
-    if (!name) return;
+    return timeHydraUpdate(`Hydra updatePrimvar ${name} ${this.usdPath}`, () => {
+      if (!name) return;
 
-    if (name === 'points') { // || name === 'normals') {
-      // Points and normals are set separately
-      return;
-    }
+      if (name === 'points') { // || name === 'normals') {
+        // Points and normals are set separately
+        return;
+      }
 
-    // console.log('Setting PrimVar: ' + name + ", interpolation: " + interpolation);
+      // console.log('Setting PrimVar: ' + name + ", interpolation: " + interpolation);
 
-    // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
-    if (name.startsWith('st')) {
-      name = 'uv';
-    }
+      // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
+      if (name.startsWith('st')) {
+        name = 'uv';
+      }
 
-    switch (name) {
-      case 'displayColor':
-        this.setDisplayColor(data, interpolation);
-        break;
-      case 'uv':
-      case "UVMap":
-      case "uvmap":
-      case "uv0":
-      case "UVW":
-      case "uvw":
-      case "map1":
-        this.setUV(data, dimension, interpolation);
-        break;
-      case "normals":
-        this.setNormals(data, interpolation);
-        break;
-      case "tangent":
-      case "tangents":
-        this.setTangents(data, dimension, interpolation);
-        break;
-      case "rest":
-        break;
-      default:
-        if (warningMessagesToCount.has(name)) {
-          warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
-        }
-        else {
-          warningMessagesToCount.set(name, 1);
-          console.warn('Unsupported primvar: ', name);
-        }
-    }
+      switch (name) {
+        case 'displayColor':
+          this.setDisplayColor(data, interpolation);
+          break;
+        case 'uv':
+        case "UVMap":
+        case "uvmap":
+        case "uv0":
+        case "UVW":
+        case "uvw":
+        case "map1":
+          this.setUV(data, dimension, interpolation);
+          break;
+        case "normals":
+          this.setNormals(data, interpolation);
+          break;
+        case "tangent":
+        case "tangents":
+          this.setTangents(data, dimension, interpolation);
+          break;
+        case "rest":
+          break;
+        default:
+          if (warningMessagesToCount.has(name)) {
+            warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
+          }
+          else {
+            warningMessagesToCount.set(name, 1);
+            console.warn('Unsupported primvar: ', name);
+          }
+      }
+    });
   }
 
   updatePoints(points) {
-    this._points = Float32Array.from(points);
-    this.updateOrder(this._points, 'position');
+    return timeHydraUpdate(`Hydra updatePoints ${this.usdPath}`, () => {
+      this._points = Float32Array.from(points);
+      this.updateOrder(this._points, 'position');
+    });
   }
 
   commit() {

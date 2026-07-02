@@ -94,6 +94,8 @@ const fatalConsolePatterns = [
     /Cannot enlarge memory/i,
     /RuntimeError/i,
     /unreachable/i,
+    /worker sent an error/i,
+    /Cannot read properties of undefined/i,
     /Failed to load USD file/i,
     /wasm memory/i,
     /\babort\b/i,
@@ -270,7 +272,10 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
         await waitForNeedleLoaderMode(page, sample.filename);
 
-        const normalState = await getNeedleSceneNormalState(page);
+        const normalState = await waitForNeedleSceneNormalState(
+            page,
+            state => state.meshCount >= 20,
+        );
 
         expect(normalState.meshCount).toBeGreaterThanOrEqual(20);
         expect(normalState.zeroNormalMeshes).toEqual([]);
@@ -288,7 +293,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('uses low-complexity subdivision refinement by default for OpenChessSet pieces', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.route('/api/script.js', route => route.fulfill({
+        await page.route('**/api/script.js', route => route.fulfill({
             contentType: 'application/javascript',
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
@@ -311,6 +316,85 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('loads high-complexity OpenChessSet subdivision without stalling on primvars', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        const bishopUrl = `${usdWgBaseUrl}full_assets/OpenChessSet/assets/Bishop/Bishop_payload.usd`;
+        const start = Date.now();
+        await page.goto(
+            `/?file=${encodeURIComponent(bishopUrl)}&viewer=needle&complexity=high`,
+            { waitUntil: 'domcontentloaded' },
+        );
+        await page.waitForFunction(() => {
+            return document.body.classList.contains('viewer-mode-needle-loader')
+                && document.querySelector('.filename-text')?.textContent === 'Bishop_payload.usd'
+                && Boolean(window.driver)
+                && Boolean(window.usdHydra);
+        });
+
+        const state = await waitForNeedleMeshAttributeState(
+            page,
+            '/Bishop/Geom/Render',
+            mesh => mesh.positionCount === 3602688 && mesh.uvCount === 3602688,
+        );
+        const elapsed = Date.now() - start;
+        const { complexity, refineLevel } = await page.evaluate(() => ({
+            complexity: window.driver?.GetComplexity?.(),
+            refineLevel: window.driver?.GetRefineLevelFallback?.(),
+        }));
+        expect(complexity).toBeCloseTo(1.2);
+        expect(refineLevel).toBe(2);
+        expect(state.positionCount).toBe(3602688);
+        expect(state.normalCount).toBe(state.positionCount);
+        expect(state.uvCount).toBe(state.positionCount);
+        expect(elapsed).toBeLessThan(30000);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps high-complexity Catmull-Clark winding outward', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_cube.usda&viewer=needle&complexity=high');
+        await waitForNeedleLoaderMode(page, 'catmull_clark_cube.usda');
+
+        const state = await getNeedleMeshAttributeState(page, '/World/SubdivCube');
+        const { complexity, refineLevel } = await page.evaluate(() => ({
+            complexity: window.driver?.GetComplexity?.(),
+            refineLevel: window.driver?.GetRefineLevelFallback?.(),
+        }));
+        const winding = await getNeedleMeshWindingState(page, '/World/SubdivCube');
+
+        expect(complexity).toBeCloseTo(1.2);
+        expect(refineLevel).toBe(2);
+        expect(state.positionCount).toBeGreaterThan(36);
+        expect(state.normalCount).toBe(state.positionCount);
+        expect(winding.sampled).toBeGreaterThan(0);
+        expect(winding.aligned).toBeGreaterThan(winding.opposed * 100);
+        expect(winding.windingOut).toBeGreaterThan(winding.windingIn * 100);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps high-complexity left-handed Catmull-Clark winding outward', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_left_handed_cube.usda&viewer=needle&complexity=high');
+        await waitForNeedleLoaderMode(page, 'catmull_clark_left_handed_cube.usda');
+
+        const state = await getNeedleMeshAttributeState(page, '/World/LeftHandedSubdivCube');
+        const winding = await getNeedleMeshWindingState(page, '/World/LeftHandedSubdivCube');
+
+        expect(state.positionCount).toBeGreaterThan(36);
+        expect(state.normalCount).toBe(state.positionCount);
+        expect(winding.sampled).toBeGreaterThan(0);
+        expect(winding.aligned).toBeGreaterThan(winding.opposed * 100);
+        expect(winding.windingOut).toBeGreaterThan(winding.windingIn * 100);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('preserves indexed and non-indexed face-varying normals through triangulation', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route('/api/script.js', route => route.fulfill({
@@ -318,7 +402,7 @@ test.describe('public usd-viewer lifecycle', () => {
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
 
-        await page.goto('/?file=/test-fixtures/primvars/facevarying_normals_matrix.usda&viewer=needle');
+        await page.goto('/?file=/test-fixtures/primvars/facevarying_normals_matrix.usda&viewer=needle&complexity=high');
         await waitForNeedleLoaderMode(page, 'facevarying_normals_matrix.usda');
 
         const state = await getNeedleFaceVaryingNormalMatrixState(page);
@@ -1701,6 +1785,24 @@ async function getNeedleSceneNormalState(page: Page) {
     });
 }
 
+async function waitForNeedleSceneNormalState(
+    page: Page,
+    predicate: (state: Awaited<ReturnType<typeof getNeedleSceneNormalState>>) => boolean,
+) {
+    const deadline = Date.now() + 30000;
+    let lastState: Awaited<ReturnType<typeof getNeedleSceneNormalState>> | null = null;
+
+    while (Date.now() < deadline) {
+        lastState = await getNeedleSceneNormalState(page);
+        if (predicate(lastState)) {
+            return lastState;
+        }
+        await page.waitForTimeout(500);
+    }
+
+    throw new Error(`Timed out waiting for Needle scene normals; last state ${JSON.stringify(lastState)}`);
+}
+
 async function getNeedleFaceVaryingNormalMatrixState(page: Page) {
     return await page.evaluate(() => {
         const result: Record<string, {
@@ -1777,6 +1879,138 @@ async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
             vertexColors: Boolean(material?.vertexColors),
         };
     }, usdPath);
+}
+
+async function getNeedleMeshWindingState(page: Page, usdPath: string) {
+    return await page.evaluate(path => {
+        let target: any = null;
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!target && object.isMesh && object.userData?.usdPath === path) {
+                target = object;
+            }
+        });
+        if (!target) throw new Error(`Missing Needle USD mesh at ${path}`);
+
+        const position = target.geometry?.attributes?.position;
+        const normal = target.geometry?.attributes?.normal;
+        const index = target.geometry?.index;
+        if (!position || !normal) {
+            throw new Error(`Missing position/normal attributes for ${path}`);
+        }
+
+        const positions = position.array;
+        const normals = normal.array;
+        const indices = index?.array;
+        const center = { x: 0, y: 0, z: 0 };
+        for (let i = 0; i < position.count; i++) {
+            const offset = i * 3;
+            center.x += positions[offset];
+            center.y += positions[offset + 1];
+            center.z += positions[offset + 2];
+        }
+        center.x /= position.count;
+        center.y /= position.count;
+        center.z /= position.count;
+
+        const triangleCount = index ? index.count / 3 : position.count / 3;
+        const sampleTarget = Math.min(5000, triangleCount);
+        const step = Math.max(1, Math.floor(triangleCount / sampleTarget));
+        const getIndex = (i: number) => indices ? indices[i] : i;
+        let windingOut = 0;
+        let windingIn = 0;
+        let aligned = 0;
+        let opposed = 0;
+        let sampled = 0;
+
+        for (let triangle = 0; triangle < triangleCount && sampled < sampleTarget; triangle += step, sampled++) {
+            const i0 = getIndex(triangle * 3);
+            const i1 = getIndex(triangle * 3 + 1);
+            const i2 = getIndex(triangle * 3 + 2);
+            const p0 = i0 * 3;
+            const p1 = i1 * 3;
+            const p2 = i2 * 3;
+            const ax = positions[p0];
+            const ay = positions[p0 + 1];
+            const az = positions[p0 + 2];
+            const bx = positions[p1];
+            const by = positions[p1 + 1];
+            const bz = positions[p1 + 2];
+            const cx = positions[p2];
+            const cy = positions[p2 + 1];
+            const cz = positions[p2 + 2];
+            const abx = bx - ax;
+            const aby = by - ay;
+            const abz = bz - az;
+            const acx = cx - ax;
+            const acy = cy - ay;
+            const acz = cz - az;
+            let fnx = aby * acz - abz * acy;
+            let fny = abz * acx - abx * acz;
+            let fnz = abx * acy - aby * acx;
+            const faceLength = Math.hypot(fnx, fny, fnz);
+            if (faceLength <= 1e-12) continue;
+            fnx /= faceLength;
+            fny /= faceLength;
+            fnz /= faceLength;
+
+            const nx = (normals[p0] + normals[p1] + normals[p2]) / 3;
+            const ny = (normals[p0 + 1] + normals[p1 + 1] + normals[p2 + 1]) / 3;
+            const nz = (normals[p0 + 2] + normals[p1 + 2] + normals[p2 + 2]) / 3;
+            const normalLength = Math.hypot(nx, ny, nz);
+            if (normalLength <= 1e-12) continue;
+
+            const faceNormalDot = fnx * nx / normalLength + fny * ny / normalLength + fnz * nz / normalLength;
+            if (faceNormalDot > 0.2) aligned++;
+            else if (faceNormalDot < -0.2) opposed++;
+
+            const faceCenterX = (ax + bx + cx) / 3;
+            const faceCenterY = (ay + by + cy) / 3;
+            const faceCenterZ = (az + bz + cz) / 3;
+            const rx = faceCenterX - center.x;
+            const ry = faceCenterY - center.y;
+            const rz = faceCenterZ - center.z;
+            const radialLength = Math.hypot(rx, ry, rz);
+            if (radialLength <= 1e-12) continue;
+            const radialDot = (fnx * rx + fny * ry + fnz * rz) / radialLength;
+            if (radialDot > 0.05) windingOut++;
+            else if (radialDot < -0.05) windingIn++;
+        }
+
+        return {
+            sampled,
+            windingOut,
+            windingIn,
+            aligned,
+            opposed,
+        };
+    }, usdPath);
+}
+
+async function waitForNeedleMeshAttributeState(
+    page: Page,
+    usdPath: string,
+    predicate: (state: Awaited<ReturnType<typeof getNeedleMeshAttributeState>>) => boolean,
+) {
+    const deadline = Date.now() + 30000;
+    let lastState: Awaited<ReturnType<typeof getNeedleMeshAttributeState>> | null = null;
+    let lastError: unknown = null;
+
+    while (Date.now() < deadline) {
+        try {
+            lastState = await getNeedleMeshAttributeState(page, usdPath);
+            if (predicate(lastState)) {
+                return lastState;
+            }
+        } catch (error) {
+            lastError = error;
+        }
+        await page.waitForTimeout(500);
+    }
+
+    if (lastState) {
+        throw new Error(`Timed out waiting for ${usdPath}; last state ${JSON.stringify(lastState)}`);
+    }
+    throw lastError || new Error(`Timed out waiting for ${usdPath}`);
 }
 
 async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {

@@ -329,6 +329,10 @@ declare type HdWebSyncDriver = {
     SetTime(timecode: number): void,
     GetTime(): number,
     Draw(): MaybePromise<void>,
+    DrawAsync(resolve: () => void, reject: (error: string) => void): boolean,
+    StartDraw(): boolean,
+    IsDrawPending(): boolean,
+    ConsumeDrawError(): string,
     Repopulate(): MaybePromise<void>,
 
     /** ??? */
