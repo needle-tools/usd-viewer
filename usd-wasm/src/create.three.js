@@ -87,6 +87,25 @@ function withTimeout(promise, label, timeoutMs = 15000) {
     return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
 }
 
+function runHydraDrawAsync(driver, hydraTiming = false) {
+    return new Promise((resolve, reject) => {
+        const started = driver.DrawAsync(
+            () => resolve(),
+            (error) => reject(new Error(String(error || "Hydra draw failed"))),
+        );
+        if (hydraTiming) console.log("Hydra DrawAsync returned", started);
+        if (!started) {
+            resolve();
+        }
+    });
+}
+
+function hydraTimingEnabled() {
+    if (typeof location === "undefined") return false;
+    const params = new URLSearchParams(location.search);
+    return params.get("hydraTiming") === "1" || params.get("hydraProfile") === "1";
+}
+
 function disposeObjectTree(root) {
     if (!root) return;
     root.traverse?.((object) => {
@@ -272,9 +291,14 @@ export async function createThreeHydra(config) {
 
     if (debug) console.log("RENDER INTERFACE", renderInterface);
 
+    const hydraTiming = hydraTimingEnabled();
+    if (hydraTiming) console.time("Hydra driver constructor");
     driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, file);
+    if (hydraTiming) console.timeEnd("Hydra driver constructor");
     if (driverOrPromise instanceof Promise) {
+        if (hydraTiming) console.time("Hydra driver constructor promise");
         driverOrPromise = await driverOrPromise;
+        if (hydraTiming) console.timeEnd("Hydra driver constructor promise");
     }
 
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
@@ -304,6 +328,19 @@ export async function createThreeHydra(config) {
         }
 
         try {
+            if (typeof driver.DrawAsync === "function") {
+                drawInFlight = true;
+                if (hydraTiming) console.time("Hydra DrawAsync");
+                activeDrawPromise = runHydraDrawAsync(driver, hydraTiming)
+                    .finally(() => {
+                        if (hydraTiming) console.timeEnd("Hydra DrawAsync");
+                    })
+                    .catch((error) => console.error("Hydra draw failed", error))
+                    .finally(() => drawInFlight = false);
+                drawPromise = withTimeout(activeDrawPromise, "Hydra draw", 30000);
+                return drawPromise;
+            }
+
             const result = driver.Draw();
             if (isPromiseLike(result)) {
                 drawInFlight = true;
