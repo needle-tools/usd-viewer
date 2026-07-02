@@ -50,6 +50,12 @@ export declare type createThreeHydraConfig = {
     includedPurposes?: Array<"default" | "render" | "proxy" | "guide" | string>,
 
     /**
+     * Hydra fallback refinement level for subdivision surfaces.
+     * Defaults to OpenUSD's low-complexity behavior, 0.
+     */
+    refineLevel?: number,
+
+    /**
      * Add Three.js helper objects for USD cameras and lights.
      * The cameras and lights themselves are created through Hydra Sprim sync either way.
      */

@@ -262,6 +262,9 @@ export async function createThreeHydra(config) {
     if (typeof driver.SetIncludedPurposes === "function") {
         driver.SetIncludedPurposes(config.includedPurposes ?? ["default", "render"]);
     }
+    if (Number.isInteger(config.refineLevel) && typeof driver.SetRefineLevelFallback === "function") {
+        driver.SetRefineLevelFallback(config.refineLevel);
+    }
 
     if (debug) console.log("DRIVER", driver);
 

@@ -286,6 +286,27 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('uses low-complexity subdivision refinement by default for OpenChessSet pieces', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.route('/api/script.js', route => route.fulfill({
+            contentType: 'application/javascript',
+            body: 'window.rybbit = { event() {}, pageview() {} };',
+        }));
+
+        const bishopUrl = `${usdWgBaseUrl}full_assets/OpenChessSet/assets/Bishop/Bishop_payload.usd`;
+        await page.goto(`/?file=${encodeURIComponent(bishopUrl)}&viewer=needle&waitForMaterials=1`);
+        await waitForNeedleLoaderMode(page, 'Bishop_payload.usd');
+
+        const state = await getNeedleMeshAttributeState(page, '/Bishop/Geom/Render');
+        const refineLevel = await page.evaluate(() => window.driver?.GetRefineLevelFallback?.());
+        expect(refineLevel).toBe(0);
+        expect(state.positionCount).toBe(225168);
+        expect(state.normalCount).toBe(state.positionCount);
+        expect(state.uvCount).toBe(state.positionCount);
+        expect(state.tangentCount).toBe(state.positionCount);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('preserves indexed and non-indexed face-varying normals through triangulation', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route('/api/script.js', route => route.fulfill({
@@ -1013,8 +1034,8 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto(`/?file=${encodeURIComponent(catmullUrl)}&viewer=needle`);
         await waitForNeedleLoaderMode(page, 'subdiv_catmullClark.usda');
         const catmull = await getNeedleUsdMeshNormalState(page);
-        expect(catmull.positionCount).toBeGreaterThan(36);
-        expect(catmull.triangleCount).toBeGreaterThan(12);
+        expect(catmull.positionCount).toBe(36);
+        expect(catmull.triangleCount).toBe(12);
         expect(catmull.faceConstantNormals).toBe(0);
         expect(catmull.sampledFaces).toBeGreaterThan(0);
         expect(catmull.sharedPositionDifferentNormalGroups).toBe(0);
@@ -1037,7 +1058,7 @@ test.describe('public usd-viewer lifecycle', () => {
         }));
 
         const sampleUrl = `${usdWgBaseUrl}test_assets/NormalsTextureBiasAndScale/NormalsTextureBiasAndScale.usdz`;
-        await page.goto(`/?file=${encodeURIComponent(sampleUrl)}&viewer=needle&waitForMaterials=1`);
+        await page.goto(`/?file=${encodeURIComponent(sampleUrl)}&viewer=needle&waitForMaterials=1&refineLevel=2`);
         await waitForNeedleLoaderMode(page, 'NormalsTextureBiasAndScale.usdz');
 
         const state = await page.evaluate(() => {
@@ -1080,7 +1101,7 @@ test.describe('public usd-viewer lifecycle', () => {
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
 
-        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_varying_color.usda&viewer=needle');
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_varying_color.usda&viewer=needle&refineLevel=2');
         await waitForNeedleLoaderMode(page, 'catmull_clark_varying_color.usda');
 
         const state = await getNeedleMeshAttributeState(page, '/World/SubdivVaryingColor');
@@ -1097,7 +1118,7 @@ test.describe('public usd-viewer lifecycle', () => {
             body: 'window.rybbit = { event() {}, pageview() {} };',
         }));
 
-        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_facevarying_st.usda&viewer=needle');
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_facevarying_st.usda&viewer=needle&refineLevel=2');
         await waitForNeedleLoaderMode(page, 'catmull_clark_facevarying_st.usda');
 
         const state = await getNeedleMeshAttributeState(page, '/World/SubdivFaceVaryingSt');
@@ -1748,6 +1769,7 @@ async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
             colorCount: attributes.color?.count || 0,
             uvCount: attributes.uv?.count || 0,
             uv2Count: attributes.uv2?.count || 0,
+            tangentCount: attributes.tangent?.count || 0,
             vertexColors: Boolean(material?.vertexColors),
         };
     }, usdPath);
