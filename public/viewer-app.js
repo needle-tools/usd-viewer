@@ -821,8 +821,14 @@ function updateUrl() {
   if (quickLookLink) quickLookLink.href = url;
   
   const currentUrl = new URL(window.location.href);
-  // set the file query parameter
-  currentUrl.searchParams.set("file", filename);
+  // Only carry the file query parameter when something is actually loaded —
+  // otherwise drop it so the URL isn't cluttered with an empty "?file=" (e.g. on
+  // first load or after Clear).
+  if (filename) {
+    currentUrl.searchParams.set("file", filename);
+  } else {
+    currentUrl.searchParams.delete("file");
+  }
   setViewerModeUrlParam(currentUrl);
   setWaitForMaterialsUrlParam(currentUrl);
   window.history.pushState({}, filename, currentUrl);
