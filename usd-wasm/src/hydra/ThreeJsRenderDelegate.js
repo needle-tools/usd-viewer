@@ -90,6 +90,17 @@ function isFiniteArray(values, dimension = 3) {
   return true;
 }
 
+function copyIndexArray(indices) {
+  if (!indices || !Number.isInteger(indices.length)) return null;
+  const values = new Uint32Array(indices.length);
+  for (let i = 0; i < indices.length; i++) {
+    const index = indices[i];
+    if (!Number.isInteger(index) || index < 0) return null;
+    values[i] = index;
+  }
+  return values;
+}
+
 function cullStyleToThreeSide(doubleSided, cullStyle) {
   switch (cullStyle) {
     case "nothing":
@@ -639,24 +650,23 @@ class HydraMesh {
   updateOrder(attribute, attributeName, dimension = 3) {
     if (debugMeshes) console.log("updateOrder", attribute, attributeName, dimension);
     if (attribute && this._indices) {
-      if (!isFiniteArray(attribute, dimension)) {
-        this._geometry.deleteAttribute(attributeName);
-        return;
-      }
-      let values = [];
+      const values = new Float32Array(this._indices.length * dimension);
       for (let i = 0; i < this._indices.length; i++) {
-        let index = this._indices[i]
-        if (!Number.isInteger(index) || index < 0 || (dimension * index + dimension) > attribute.length) {
+        const index = this._indices[i];
+        if ((dimension * index + dimension) > attribute.length) {
           this._geometry.deleteAttribute(attributeName);
           return;
         }
+        const sourceOffset = dimension * index;
+        const targetOffset = dimension * i;
         for (let j = 0; j < dimension; ++j) {
-          values.push(attribute[dimension * index + j]);
+          const value = attribute[sourceOffset + j];
+          if (!Number.isFinite(value)) {
+            this._geometry.deleteAttribute(attributeName);
+            return;
+          }
+          values[targetOffset + j] = value;
         }
-      }
-      if (!isFiniteArray(values, dimension)) {
-        this._geometry.deleteAttribute(attributeName);
-        return;
       }
       this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
       if (attributeName === 'position') {
@@ -668,9 +678,14 @@ class HydraMesh {
 
   updateIndices(indices) {
     if (debugMeshes) console.log("updateIndices", indices);
-    this._indices = [];
-    for (let i = 0; i < indices.length; i++) {
-      this._indices.push(indices[i]);
+    this._indices = copyIndexArray(indices);
+    if (!this._indices) {
+      this._geometry.deleteAttribute('position');
+      this._geometry.deleteAttribute('normal');
+      this._geometry.deleteAttribute('color');
+      this._geometry.deleteAttribute('uv');
+      delete this._geometry.attributes.uv2;
+      return;
     }
     //this._geometry.setIndex( indicesArray );
     this.updateOrder(this._points, 'position');
@@ -834,7 +849,7 @@ class HydraMesh {
     // don't apply automatically generated normals if there are already authored normals.
     if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
-    this._normals = normals.slice(0);
+    this._normals = Float32Array.from(normals);
     this.updateOrder(this._normals, 'normal');
   }
 
@@ -842,7 +857,7 @@ class HydraMesh {
     // don't apply automatically generated normals if there are already authored normals.
     if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
 
-    this._normals = normals.slice(0);
+    this._normals = Float32Array.from(normals);
     this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
   }
 
@@ -854,7 +869,7 @@ class HydraMesh {
       this._geometry.setAttribute('normal', new Float32BufferAttribute(data, 3));
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
-      this._normals = data.slice(0);
+      this._normals = Float32Array.from(data);
       this.updateOrder(this._normals, 'normal');
     }
   }
@@ -863,7 +878,7 @@ class HydraMesh {
     if (interpolation === 'facevarying') {
       this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, dimension));
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
-      this._tangents = data.slice(0);
+      this._tangents = Float32Array.from(data);
       this.updateOrder(this._tangents, 'tangent', dimension);
     }
   }
@@ -929,7 +944,7 @@ class HydraMesh {
         // Reset the pink debugging color
         this._mesh.material.color = new Color(0xffffff);
       }
-      this._colors = data.slice(0);
+      this._colors = Float32Array.from(data);
       this.updateOrder(this._colors, 'color');
     } else {
       if (warningMessagesToCount.has(interpolation)) {
@@ -951,7 +966,7 @@ class HydraMesh {
       this._geometry.setAttribute('uv', new Float32BufferAttribute(data, dimension));
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
-      this._uvs = data.slice(0);
+      this._uvs = Float32Array.from(data);
       this.updateOrder(this._uvs, 'uv', 2);
     }
 
@@ -1008,7 +1023,7 @@ class HydraMesh {
   }
 
   updatePoints(points) {
-    this._points = points.slice(0);
+    this._points = Float32Array.from(points);
     this.updateOrder(this._points, 'position');
   }
 

@@ -7,6 +7,11 @@ export type PluginContext = {
      * Hydra handle's ready() promise. Defaults to false.
      */
     waitForMaterials?: boolean,
+    /**
+     * Hydra fallback refinement level for subdivision surfaces.
+     * Defaults to OpenUSD's low-complexity behavior, 0.
+     */
+    refineLevel?: number,
     getFiles: () => Array<import("../types").HydraFile>
 }
 

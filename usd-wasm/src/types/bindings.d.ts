@@ -322,6 +322,8 @@ declare type HdWebSyncDriver = {
     GetStageEndTimeCode(): number,
     GetStageTimeCodesPerSecond(): number,
     SetIncludedPurposes(includedPurposes: string[]): void,
+    GetRefineLevelFallback(): number,
+    SetRefineLevelFallback(level: number): void,
     SetTime(timecode: number): void,
     GetTime(): number,
     Draw(): MaybePromise<void>,
