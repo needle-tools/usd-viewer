@@ -1735,26 +1735,35 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     if (viewerMode === VIEWER_MODE_THREE) {
       fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
     }
-    console.log("Loading done. Scene: ", window.usdRoot);
+    if (!diagnosticsMode()) {
+      console.log("Loading done. Scene: ", window.usdRoot);
+    }
+    else {
+      console.log(`Loading done: ${currentDisplayFilename || filename || "USD asset"}`);
+    }
     ready = true;
 
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     messageLog.textContent = "";
 
-    try {
-      console.log("Currently Exposed API", {
-        "Stage": Object.getPrototypeOf(stage),
-        "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-        "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-      });
-    } catch(e) {
-      console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
+    if (!diagnosticsMode()) {
+      try {
+        console.log("Currently Exposed API", {
+          "Stage": Object.getPrototypeOf(stage),
+          "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+          "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+        });
+      } catch(e) {
+        console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
+      }
     }
 
-    const root = {};
-    addPath(root, "/");
-    console.log("File system", root, USD.FS_analyzePath("/"));
+    if (!diagnosticsMode()) {
+      const root = {};
+      addPath(root, "/");
+      console.log("File system", root, USD.FS_analyzePath("/"));
+    }
   } catch (err) {
     try {
       await handle?.dispose?.();
@@ -1898,14 +1907,25 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
   camera.position.copy(controls.target).sub(direction);
   controls.update(0);
 
-  console.log("Fitting camera to selection", {
-    size,
-    center,
-    maxSize,
-    distance,
-    near: camera.near,
-    far: camera.far,
-  });
+  if (!diagnosticsMode()) {
+    console.log("Fitting camera to selection", {
+      size,
+      center,
+      maxSize,
+      distance,
+      near: camera.near,
+      far: camera.far,
+    });
+  }
+  else {
+    console.log("Fitting camera to selection", {
+      maxSize,
+      distance,
+      near: camera.near,
+      far: camera.far,
+      selectionCount: Array.isArray(selection) ? selection.length : undefined,
+    });
+  }
 }
 
 async function init() {

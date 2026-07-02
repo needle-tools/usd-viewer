@@ -1,4 +1,4 @@
-const CACHE_NAME = "usd-viewer-asset-cache-v1";
+const CACHE_NAME = "usd-viewer-asset-cache-v2";
 const MAX_CACHEABLE_BYTES = 64 * 1024 * 1024;
 
 const SAME_ORIGIN_PREFIXES = [

@@ -352,7 +352,7 @@ test.describe('public usd-viewer lifecycle', () => {
             });
 
             const first = await fetch(url).then(response => response.text());
-            const cache = await caches.open('usd-viewer-asset-cache-v1');
+            const cache = await caches.open('usd-viewer-asset-cache-v2');
             let cached = await cache.match(url);
             const deadline = performance.now() + 2000;
             while (!cached && performance.now() < deadline) {
@@ -437,6 +437,71 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(rendererErrors).toEqual([]);
         expect(tangentPreconditionWarnings).toEqual([]);
         expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('loads TGA roughness textures without WebGL upload or ORM packing errors', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /TGA textures are not fully supported yet/i,
+            /texSubImage2D: no pixels/i,
+            /Something went wrong with the texture promise/i,
+            /Something went wrong while packing occlusion\/metallic\/roughness textures/i,
+        ]);
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}test_assets/RoughnessTest/RoughnessTest.usdz`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'RoughnessTest.usdz');
+        await page.evaluate(async () => {
+            await (window as any).usdHydra?.materialsReady?.();
+        });
+
+        const packedTextureState = await page.evaluate(() => {
+            const materials: any[] = [];
+            (window as any).usdRoot?.traverse?.((object: any) => {
+                const list = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+                materials.push(...list.filter((material: any) => material.roughnessMap));
+            });
+            return materials.map(material => ({
+                isCanvasTexture: material.roughnessMap?.isCanvasTexture === true,
+                isDataTexture: material.roughnessMap?.isDataTexture === true,
+                sameMetalness: material.roughnessMap === material.metalnessMap,
+                width: material.roughnessMap?.image?.width,
+                height: material.roughnessMap?.image?.height,
+            }));
+        });
+
+        expect(packedTextureState.length).toBeGreaterThan(0);
+        expect(packedTextureState.every(texture => texture.isCanvasTexture && !texture.isDataTexture)).toBe(true);
+        expect(packedTextureState.every(texture => texture.sameMetalness && texture.width === 256 && texture.height === 256)).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('merges authored custom MaterialX NodeDefs from staged sidecars', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /Could not find a nodedef/i,
+            /Tangents are required for this material/i,
+            /Failed to create MaterialX material/i,
+        ]);
+
+        await page.goto('/?debug&file=/test-fixtures/materialx/custom_nodedef_materialx.usda&viewer=three&waitForMaterials=1', {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'custom_nodedef_materialx.usda');
+        await page.evaluate(async () => {
+            await (window as any).usdHydra?.materialsReady?.();
+        });
+
+        const materialTypes = await page.evaluate(() => {
+            const types: string[] = [];
+            (window as any).usdRoot?.traverse?.((object: any) => {
+                const list = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+                for (const material of list) types.push(material.constructor?.name || '');
+            });
+            return types;
+        });
+
+        expect(materialTypes).toContain('MaterialXMaterial');
+        expect(diagnostics).toEqual([]);
     });
 
     test('attributes delayed MaterialX texture failures to the debug target that caused them', async ({ page }) => {

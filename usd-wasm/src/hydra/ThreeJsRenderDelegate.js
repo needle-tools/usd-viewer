@@ -19,6 +19,7 @@ const {
   RGBAFormat,
   RepeatWrapping,
   LinearSRGBColorSpace,
+  CanvasTexture,
   Vector2,
   CameraHelper,
   DirectionalLight,
@@ -112,7 +113,7 @@ function prepareMaterialXMaterialForGeometry(material) {
     const needsTangents = material._needsTangents && !geometry?.attributes?.tangent;
     const canGenerateTangents = geometry?.attributes?.position && geometry?.attributes?.uv;
     if (needsTangents && !canGenerateTangents) {
-      if (!material._missingTangentsWarned) {
+      if (debugMaterials && !material._missingTangentsWarned) {
         material._missingTangentsWarned = true;
         console.warn(`[MaterialX] Tangents are required for this material (${material.name}) but could not be generated for the geometry.`);
       }
@@ -212,6 +213,7 @@ class TextureRegistry {
     this.textures = [];
     this.loadedTextures = new Set();
     this.objectUrls = new Set();
+    this.materialXDefinitionCache = new Map();
     this.disposed = false;
     this.loader = new TextureLoader();
     this.tgaLoader = new TGALoader();
@@ -269,6 +271,67 @@ class TextureRegistry {
     const path = String(resourcePath ?? "").toLowerCase();
     const extensionMatches = [...path.matchAll(/\.([a-z0-9]+)(?=\]|$|[?#])/g)];
     return extensionMatches.length ? extensionMatches[extensionMatches.length - 1][1] : "";
+  }
+
+  async readResourceText(resourcePath) {
+    const candidates = this.materialResourcePathCandidates(resourcePath)
+      .flatMap(candidate => candidate.startsWith("/") ? [candidate] : [candidate, `/${candidate}`]);
+    for (const candidate of candidates) {
+      const file = this.readResolvedResource(candidate);
+      if (file) return new TextDecoder().decode(file);
+    }
+
+    for (const candidate of candidates) {
+      const file = await new Promise(resolve => {
+        try {
+          this.config.driver().getFile(candidate, resolve);
+        } catch {
+          resolve(null);
+        }
+      });
+      if (file) return new TextDecoder().decode(file);
+    }
+
+    return "";
+  }
+
+  async materialXDefinitionsFor(nodeDefNames) {
+    const missing = new Set(nodeDefNames);
+    if (!missing.size || typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") {
+      return "";
+    }
+
+    const serializer = new XMLSerializer();
+    const definitions = [];
+    const knownPaths = Array.isArray(this.allPaths) ? this.allPaths : [];
+    for (const path of knownPaths) {
+      if (this.getResourceExtension(path) !== "mtlx") continue;
+
+      let xml = this.materialXDefinitionCache.get(path);
+      if (xml === undefined) {
+        xml = await this.readResourceText(path).catch(() => "");
+        this.materialXDefinitionCache.set(path, xml || "");
+      }
+      if (!xml) continue;
+
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      const root = doc.documentElement;
+      if (!root || root.nodeName.toLowerCase() === "parsererror") continue;
+
+      const topLevelElements = [...root.children];
+      for (const nodeDef of topLevelElements.filter(element => element.localName === "nodedef" && element.hasAttribute("name"))) {
+        const name = nodeDef.getAttribute("name");
+        if (missing.has(name)) definitions.push(serializer.serializeToString(nodeDef));
+      }
+
+      for (const nodeGraph of topLevelElements.filter(element => element.localName === "nodegraph" && element.hasAttribute("nodedef"))) {
+        if (missing.has(nodeGraph.getAttribute("nodedef"))) {
+          definitions.push(serializer.serializeToString(nodeGraph));
+        }
+      }
+    }
+
+    return [...new Set(definitions)].join("\n");
   }
 
   readResolvedResource(resourcePath) {
@@ -369,8 +432,6 @@ class TextureRegistry {
     } else if (extension === 'exr') {
       filetype = 'image/x-exr';
     } else if (extension === 'tga') {
-      console.warn("TGA textures are not fully supported yet", resourcePath);
-      // using TGALoader explicitly
       filetype = 'image/tga';
     } else {
       console.error("Error when loading texture: unknown filetype", resourcePath);
@@ -1295,6 +1356,31 @@ class HydraMaterial {
       .replace(/\/\.\//g, "/");
   }
 
+  static missingMaterialXNodeDefs(xml) {
+    if (typeof DOMParser === "undefined") return [];
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const root = doc.documentElement;
+    if (!root || root.nodeName.toLowerCase() === "parsererror") return [];
+
+    const declared = new Set([...root.querySelectorAll("nodedef[name]")]
+      .map(node => node.getAttribute("name"))
+      .filter(Boolean));
+    const referenced = new Set([...root.querySelectorAll("[nodedef]")]
+      .map(node => node.getAttribute("nodedef"))
+      .filter(Boolean));
+    return [...referenced].filter(name => !declared.has(name));
+  }
+
+  async _withAuthoredMaterialXDefinitions(xml) {
+    const missingNodeDefs = HydraMaterial.missingMaterialXNodeDefs(xml);
+    if (!missingNodeDefs.length) return xml;
+
+    const definitions = await this._interface.registry.materialXDefinitionsFor(missingNodeDefs);
+    if (!definitions) return xml;
+
+    return xml.replace(/(<materialx\b[^>]*>)/, `$1\n${definitions}`);
+  }
+
   _rememberResolvedAssetPath(authoredPath, resolvedPath) {
     if (!authoredPath || !resolvedPath) {
       return;
@@ -1689,8 +1775,7 @@ class HydraMaterial {
 
     context.putImageData(imageData, 0, 0);
 
-    const packedTexture = sourceTexture.clone();
-    packedTexture.image = canvas;
+    const packedTexture = new CanvasTexture(canvas);
     packedTexture.format = RGBAFormat;
     packedTexture.colorSpace = LinearSRGBColorSpace;
     packedTexture.name = [
@@ -1723,9 +1808,9 @@ class HydraMaterial {
         haveOcclusionMap,
         haveRoughnessMap,
         haveMetalnessMap,
-        aoMap,
-        roughnessMap,
-        metalnessMap,
+        aoMap: aoMap?.name || null,
+        roughnessMap: roughnessMap?.name || null,
+        metalnessMap: metalnessMap?.name || null,
       });
       return;
     }
@@ -1733,9 +1818,9 @@ class HydraMaterial {
     const packedMap = HydraMaterial._packMetallicRoughnessMap({ aoMap, roughnessMap, metalnessMap });
     if (!packedMap) {
       console.error("Something went wrong while packing occlusion/metallic/roughness textures.", {
-        aoMap,
-        roughnessMap,
-        metalnessMap,
+        aoMap: aoMap?.name || null,
+        roughnessMap: roughnessMap?.name || null,
+        metalnessMap: metalnessMap?.name || null,
       });
       return;
     }
@@ -1874,7 +1959,7 @@ class HydraMaterial {
     }
     this._interface.diagnostics.materialXCreateAttempts++;
 
-    const xml = materialXDocument?.xml;
+    let xml = materialXDocument?.xml;
     if (!xml) {
       return null;
     }
@@ -1883,6 +1968,7 @@ class HydraMaterial {
       const { MaterialX, MaterialXMaterial } = await getMaterialXModule();
       const materialName = this._id.split('/').pop() || this._id;
       const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
+      xml = await this._withAuthoredMaterialXDefinitions(xml);
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
         cacheKey: `${this._id}:${materialXDocument.terminal}`,
         getTexture: async (url) => {
