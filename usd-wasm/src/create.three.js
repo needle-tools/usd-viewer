@@ -240,6 +240,7 @@ export async function createThreeHydra(config) {
         showLightHelpers: config.showLightHelpers,
         paths: loadedFilePaths,
         USD,
+        rootFile: file,
         driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
     };
 

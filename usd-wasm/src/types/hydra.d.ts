@@ -24,6 +24,7 @@ export type threeJsRenderDelegateConfig = {
     showCameraHelpers?: boolean,
     showLightHelpers?: boolean,
     scenePrimitiveLightIntensityScale?: number,
+    rootFile?: string,
     /** Paths for resolving textures */
     paths?: string[],
     /** @deprecated */
