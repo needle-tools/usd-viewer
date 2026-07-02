@@ -54,6 +54,7 @@ export type OpenUsdBuildInfo = {
         hydraBridge: boolean,
         materialX: boolean,
         openSubdiv: boolean,
+        usdDraco: boolean,
         usdGltf: boolean,
         usdGltfDraco: boolean,
     },

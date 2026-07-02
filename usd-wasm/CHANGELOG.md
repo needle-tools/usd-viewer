@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.0.1] - 2026-07-02
 ### Added
 - Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
-- Added build metadata for the `usdGltf` Draco capability.
+- Added native `usdDraco` support for USD meshes that reference Draco `.drc` payloads.
+- Added build metadata for the `usdDraco` and `usdGltf` Draco capabilities.
 
 ### Fixed
 - Fixed dropped GLB/GLTF/MTLX loading in the public viewer.

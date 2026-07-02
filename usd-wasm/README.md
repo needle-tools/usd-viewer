@@ -13,7 +13,8 @@ npm install @needle-tools/usd@1.0.1 three
 
 Version 1.0 uses upstream OpenUSD 26.05 and ships a Hydra imaging bridge for
 three.js. The wasm bundle includes Adobe `usdGltf` with Draco-compressed
-glTF/GLB import, MaterialX, and OpenSubdiv support.
+glTF/GLB import, native `usdDraco` mesh payloads, MaterialX, and OpenSubdiv
+support.
 
 ## Runtime Requirements
 
