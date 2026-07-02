@@ -1870,7 +1870,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
 
   if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
       Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
-    console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", selection, size);
+    console.debug("Fit Camera skipped: NaN bounds, some objects may not have any mesh data.", selection, size);
     if (controls) 
       controls.update(0);
     return;
@@ -1887,7 +1887,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
   const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
 
   if (distance == 0) {
-    console.warn("Fit Camera failed: distance is 0, some objects may not have any mesh data.");
+    console.debug("Fit Camera skipped: zero bounds, some objects may not have any mesh data.");
     return;
   }
 
@@ -2939,6 +2939,20 @@ async function init() {
     }
   }
 
+  async function preflightDebugTarget(target) {
+    if (target.files?.length) return null;
+    try {
+      const response = await fetch(target.url, { method: 'HEAD', cache: 'no-store' });
+      if (response.ok) return null;
+      return {
+        status: response.status,
+        reason: `Skipped unavailable asset: HTTP ${response.status}`,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async function totalDebugTargetSize(target) {
     const urls = target.files?.length
       ? Array.from(new Set([...(target.files || []), target.root].filter(Boolean))).map(path => testFixtureUrl(path))
@@ -3095,12 +3109,25 @@ async function init() {
           warnings: [],
           errors: [],
           ok: false,
+          skipped: false,
         };
         try {
           const size = await totalDebugTargetSize(target);
           entry.totalFileSize = size.totalFileSize;
           entry.totalFileSizeKnown = size.totalFileSizeKnown;
           entry.fileSizes = size.files;
+          const unavailable = await preflightDebugTarget(target);
+          if (unavailable) {
+            entry.skipped = true;
+            entry.ok = true;
+            entry.skipReason = unavailable.reason;
+            entry.status = unavailable.status;
+            results.push(entry);
+            currentProgress.completed = i + 1;
+            updateProgressButton();
+            console.log(`[usd-viewer debug test] ${i + 1}/${targets.length}`, entry);
+            continue;
+          }
           const started = performance.now();
           await loadDebugTarget(target);
           entry.loadTimeMs = Math.round(performance.now() - started);
@@ -3123,8 +3150,9 @@ async function init() {
         finishedAt: new Date().toISOString(),
         viewerMode,
         count: results.length,
-        passed: results.filter(result => result.ok && result.errors.length === 0).length,
-        failed: results.filter(result => !result.ok || result.errors.length > 0).length,
+        passed: results.filter(result => !result.skipped && result.ok && result.errors.length === 0).length,
+        skipped: results.filter(result => result.skipped).length,
+        failed: results.filter(result => !result.skipped && (!result.ok || result.errors.length > 0)).length,
         results,
       };
       console.log("usd-viewer asset test report", report);

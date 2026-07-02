@@ -335,17 +335,26 @@ class TextureRegistry {
   }
 
   readResolvedResource(resourcePath) {
-    if (!resourcePath?.startsWith("/") || typeof this.config.USD?.ReadFile !== "function") {
+    if (!resourcePath || typeof this.config.USD?.ReadFile !== "function") {
       return null;
     }
 
-    try {
-      const file = this.config.USD.ReadFile(resourcePath);
-      return file?.byteLength ? file : null;
+    const path = String(resourcePath);
+    const candidates = path.startsWith("/")
+      ? [path]
+      : this.materialResourcePathCandidates(path)
+        .flatMap(candidate => candidate.startsWith("/") ? [candidate] : [candidate, `/${candidate}`]);
+
+    for (const candidate of candidates) {
+      try {
+        const file = this.config.USD.ReadFile(candidate);
+        if (file?.byteLength) return file;
+      }
+      catch {
+      }
     }
-    catch {
-      return null;
-    }
+
+    return null;
   }
 
   resolveHttpResourceUrl(resourcePath) {
@@ -1035,7 +1044,8 @@ class HydraMesh {
       hydraMaterial.assignToMesh(this._mesh);
     }
     else {
-      console.warn("Material not found", materialId, this._interface.materials);
+      this._interface.rememberPendingMaterialAssignment(materialId, this._mesh);
+      if (debugMaterials) console.debug("Material assignment is pending until material sprim arrives", materialId);
     }
   }
 
@@ -1406,9 +1416,8 @@ class HydraMaterial {
     }
 
     const authored = String(authoredPath);
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(authored)) {
-      return authored;
-    }
+    const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(authored);
+    const isPackageInternalUrl = /\.[a-z0-9]+(?:\?[^[]*)?\[[^\]]+\]/i.test(authored);
 
     const candidates = this._interface.registry.materialResourcePathCandidates(authored);
     for (const candidate of candidates) {
@@ -1420,6 +1429,10 @@ class HydraMaterial {
     for (const candidate of candidates) {
       const resolved = this._interface.registry.resolveResourcePath(candidate);
       if (resolved) return resolved;
+    }
+
+    if (isAbsoluteUrl && !isPackageInternalUrl) {
+      return authored;
     }
 
     return "";
@@ -1473,7 +1486,7 @@ class HydraMaterial {
       }
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
-        const textureFileName = nodeIn.resolvedUrl || this._resolveMaterialTexturePath(nodeIn.resolvedPath || nodeIn.file);
+        const textureFileName = this._resolveMaterialTexturePath(nodeIn.resolvedPath || nodeIn.resolvedUrl || nodeIn.file);
         if (!textureFileName) {
           if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
           this._material[materialParameterMapName] = undefined;
@@ -2026,6 +2039,7 @@ export class ThreeRenderDelegateInterface {
     this.meshes = {};
     this.scenePrimitives = {};
     this.pendingMaterialUpdates = new Set();
+    this.pendingMaterialAssignments = new Map();
     this.diagnostics = {
       materialSPrims: 0,
       sceneSPrims: 0,
@@ -2094,6 +2108,7 @@ export class ThreeRenderDelegateInterface {
       this.destroySPrim(id);
       let material = new HydraMaterial(id, this);
       this.materials[id] = material;
+      this.applyPendingMaterialAssignments(id);
       if (this.diagnostics.materialIds.length < 20) {
         this.diagnostics.materialIds.push(id);
       }
@@ -2141,11 +2156,35 @@ export class ThreeRenderDelegateInterface {
     }
     this.registry.dispose();
     this.pendingMaterialUpdates.clear();
+    this.pendingMaterialAssignments.clear();
+  }
+
+  rememberPendingMaterialAssignment(materialId, mesh) {
+    if (!materialId || !mesh) return;
+    let meshes = this.pendingMaterialAssignments.get(materialId);
+    if (!meshes) {
+      meshes = new Set();
+      this.pendingMaterialAssignments.set(materialId, meshes);
+    }
+    meshes.add(mesh);
+  }
+
+  applyPendingMaterialAssignments(materialId) {
+    const material = this.materials[materialId];
+    const meshes = this.pendingMaterialAssignments.get(materialId);
+    if (!material || !meshes) return;
+    for (const mesh of meshes) {
+      material.assignToMesh(mesh);
+    }
+    this.pendingMaterialAssignments.delete(materialId);
   }
 
   unassignMeshFromMaterials(mesh) {
     for (const material of Object.values(this.materials)) {
       material.unassignMesh(mesh);
+    }
+    for (const meshes of this.pendingMaterialAssignments.values()) {
+      meshes.delete(mesh);
     }
   }
 

@@ -533,6 +533,67 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(basic.errors.join('\n')).not.toMatch(/\[MaterialX\] Failed to load texture/i);
     });
 
+    test('loads package-internal USDZ textures through the staged filesystem', async ({ page }) => {
+        test.setTimeout(120000);
+        const diagnostics = collectConsoleMatches(page, [
+            /Something went wrong with the texture promise/i,
+            /Error when loading texture/i,
+            /Material not found/i,
+        ]);
+        const packageTextureRequests: string[] = [];
+        page.on('request', request => {
+            const url = request.url();
+            if (url.includes('UsdCookie.usdz[') || url.includes('UsdCookie.usdz%5B')) {
+                packageTextureRequests.push(url);
+            }
+        });
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}full_assets/UsdCookie/UsdCookie.usdz`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'UsdCookie.usdz');
+
+        expect(packageTextureRequests).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('reports missing upstream debug targets as skipped instead of Hydra failures', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /Failed to open USD stage/i,
+            /Failed to load USD file/i,
+            /Runtime Error/i,
+        ]);
+
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).runUsdViewerAssetTest === 'function');
+
+        const report = await page.evaluate(async url => {
+            return await (window as any).runUsdViewerAssetTest({
+                targets: [
+                    {
+                        source: 'usd-wg',
+                        name: 'TestLight',
+                        url,
+                    },
+                ],
+            });
+        }, `${usdWgBaseUrl}full_assets/Teapot/TestLight.usda`);
+
+        expect(report.count).toBe(1);
+        expect(report.passed).toBe(0);
+        expect(report.skipped).toBe(1);
+        expect(report.failed).toBe(0);
+        expect(report.results[0]).toMatchObject({
+            name: 'TestLight',
+            ok: true,
+            skipped: true,
+            status: 404,
+            warnings: [],
+            errors: [],
+        });
+        expect(diagnostics).toEqual([]);
+    });
+
     test('materializes scalar face-varying and uniform primvars as Needle geometry attributes', async ({ page }) => {
         test.setTimeout(120000);
         const fatalDiagnostics = collectFatalDiagnostics(page);
