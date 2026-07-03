@@ -662,6 +662,50 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(fatalDiagnostics).toEqual([]);
     });
 
+    test('materializes authored custom vertex geomprops as Needle geometry attributes', async ({ page }) => {
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        await page.goto('/?file=%2Ftest-fixtures%2Fusd-concepts%2Fcustom_vertex_geomprops.usda&viewer=needle&waitForMaterials=1', {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'custom_vertex_geomprops.usda');
+
+        const meshState = await getNeedleMeshAttributeState(page, '/World/CustomVertexGeomprops');
+        expect(meshState.positionCount).toBeGreaterThan(0);
+        expect(meshState.normalCount).toBe(meshState.positionCount);
+        expect(meshState.colorCount).toBe(meshState.positionCount);
+        expect(meshState.vertexColors).toBe(true);
+
+        const temperature = await findNeedlePrimvarAttribute(page, 'primvars:temperature');
+        expect(temperature.path).toBe('/World/CustomVertexGeomprops');
+        expect(temperature.count).toBe(temperature.positionCount);
+        expect(temperature.itemSize).toBe(1);
+        expect(temperature.allFinite).toBe(true);
+        expect(Math.min(...temperature.sample)).toBeCloseTo(0.05, 5);
+        expect(Math.max(...temperature.sample)).toBeCloseTo(1.0, 5);
+
+        const flow = await findNeedlePrimvarAttribute(page, 'primvars:flow');
+        expect(flow.path).toBe('/World/CustomVertexGeomprops');
+        expect(flow.count).toBe(flow.positionCount);
+        expect(flow.itemSize).toBe(3);
+        expect(flow.allFinite).toBe(true);
+
+        const cornerId = await findNeedlePrimvarAttribute(page, 'primvars:cornerId');
+        expect(cornerId.path).toBe('/World/CustomVertexGeomprops');
+        expect(cornerId.count).toBe(cornerId.positionCount);
+        expect(cornerId.itemSize).toBe(1);
+        expect(cornerId.allFinite).toBe(true);
+        expect(cornerId.sample).toContain(0);
+        expect(cornerId.sample).toContain(7);
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
     test('keeps shipped USD-WG manifest entries visible even when an upstream asset is broken', async ({ page }) => {
         const manifest = await page.request.get('/data/usd-wg-assets.json');
         expect(manifest.ok()).toBe(true);

@@ -19,6 +19,7 @@ export const testAssetLibrary = [
   { group: "USD Concepts", label: "Point Instancer", root: "usd-concepts/point_instancer.usda", files: ["usd-concepts/point_instancer.usda"] },
   { group: "USD Concepts", label: "Reference Override", root: "usd-concepts/reference_override.usda", files: ["usd-concepts/reference_override.usda", "usd-concepts/reference_base.usda"] },
   { group: "USD Concepts", label: "Custom Geomprops + USDShade", root: "usd-concepts/custom_geomprops_usdshade.usda", files: ["usd-concepts/custom_geomprops_usdshade.usda"] },
+  { group: "USD Concepts", label: "Custom Vertex Geomprops", root: "usd-concepts/custom_vertex_geomprops.usda", files: ["usd-concepts/custom_vertex_geomprops.usda"] },
   { group: "USD Concepts", label: "Referenced Geomprop Overrides", root: "usd-concepts/referenced_geomprop_overrides.usda", files: ["usd-concepts/referenced_geomprop_overrides.usda", "usd-concepts/referenced_geomprop_source.usda"] },
   { group: "USD Concepts", label: "Inherits + Specializes", root: "usd-concepts/inherits_specializes.usda", files: ["usd-concepts/inherits_specializes.usda"] },
   { group: "USD Concepts", label: "Collection Binding", root: "usd-concepts/collection_binding.usda", files: ["usd-concepts/collection_binding.usda"] },
