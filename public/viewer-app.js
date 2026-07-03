@@ -219,9 +219,14 @@ async function uploadToNeedleCloud() {
   }
 
   if (!files.length || !rootFilename) return false;
+  // Stable content-item name (upsert key on the cloud) = the asset filename
+  // without its extension, so re-uploading the same asset updates the same item
+  // as a new version instead of creating a new one.
+  const name = rootFilename.replace(/\.[^./\\]+$/, '') || rootFilename;
   const payload = {
     type: 'needle-cloud-import',
     source: 'usd-viewer',
+    name,
     rootFilename,
     files: files.map(f => ({ relativePath: f.relativePath, bytes: f.bytes })),
   };
