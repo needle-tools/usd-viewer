@@ -17,7 +17,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load USD, USDA, USDC, USDZ, and glTF/GLB assets in the browser.
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
-- Use OpenSubdiv, Adobe `usdGltf`, and Hydra-provided MaterialX documents in the modern OpenUSD 26.05 wasm bundle.
+- Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the modern OpenUSD 26.05 wasm bundle.
 - Inspect stages with usdview-style stage, prim, property, layer-stack, composition, notices, and timeline UI in the development viewer.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 
@@ -60,6 +60,13 @@ cd usd-wasm
 npm run test:bindings
 npm run test:three-matrix
 npm run test:viewer-visual
+```
+
+`test:three-matrix` runs a representative compatibility set. To regenerate the
+full cross-version renderer status matrix, run:
+
+```sh
+npm run test:three-matrix:full
 ```
 
 For headed browser validation:

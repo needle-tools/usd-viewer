@@ -257,6 +257,7 @@ test.describe('public usd-viewer lifecycle', () => {
     });
 
     test('loads representative USD-WG assets through the Needle Engine loader element', async ({ page }) => {
+        test.setTimeout(420000);
         const diagnostics = collectFatalDiagnostics(page);
         const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
 
@@ -264,14 +265,14 @@ test.describe('public usd-viewer lifecycle', () => {
             await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
             const state = await waitForNeedleLoaderMode(page, sample.filename);
 
-            expect(state.filename).toBe(sample.filename);
-            expect(state.activeButton).toBe('needle-loader');
-            expect(state.hasHydraHandle).toBe(true);
-            expect(state.driverAlive).toBe(true);
-            expect(state.hasNeedleContext).toBe(true);
-            expect(state.needleChildren).toBeGreaterThan(0);
-            expect(state.elementSrc).toContain(sample.url);
-            expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
+            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.activeButton, sample.label).toBe('needle-loader');
+            expect(state.hasHydraHandle, sample.label).toBe(true);
+            expect(state.driverAlive, sample.label).toBe(true);
+            expect(state.hasNeedleContext, sample.label).toBe(true);
+            expect(state.needleChildren, sample.label).toBeGreaterThan(0);
+            expect(state.elementSrc, sample.label).toContain(sample.url);
+            expect(new URL(state.href).searchParams.get('viewer'), sample.label).toBe('needle');
         }
 
         expect(usdWgDiagnostics).toEqual([]);

@@ -4,18 +4,29 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2026-07-02
+## [1.0.1] - 2026-07-03
 ### Added
 - Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
 - Added native `usdDraco` support for USD meshes that reference Draco `.drc` payloads.
 - Added build metadata for the `usdDraco` and `usdGltf` Draco capabilities.
 - Added viewer fixture coverage for custom geomprops, LIVERPS composition, custom MaterialX NodeDefs, Draco payloads, and local fixture thumbnails.
+- Added debug asset sweep tooling in the public viewer with byte progress, service-worker-backed asset caching, per-asset timing, filesystem counts, and warning/error capture.
+
+### Changed
+- Updated public viewer sample loading so Needle fixtures, Needle Cloud assets, USD-WG assets, and glTF conversion variants are organized consistently in the sample browser.
+- Updated the public viewer to use AgX tone mapping in both the three.js Hydra and Needle Engine loader paths.
 
 ### Fixed
 - Fixed dropped GLB/GLTF/MTLX loading in the public viewer.
 - Fixed authored USD normals handling so authored data is not replaced by generated geometric normals.
 - Disabled analytics and marketer calls for debug and e2e runs so test results only report viewer/runtime activity.
 - Avoided repeated MaterialX tangent generation warnings for meshes that cannot produce tangents because they have no UVs.
+- Fixed async Hydra draw/subdivision readiness regressions across repeated stage loads and three.js/Needle Engine matrix coverage.
+- Fixed package-internal USDZ texture paths so authored paths like `asset.usdz[0/texture.png]` resolve through the staged USD filesystem instead of leaking to browser HTTP loading.
+- Fixed missing or late material sprim assignment ordering so meshes can bind materials that arrive after the mesh assignment call.
+- Fixed MaterialX and UsdPreviewSurface texture diagnostics so missing authored textures are attributed to the asset that caused them without retaining large texture/scene objects in console logs.
+- Fixed debug asset sweeps so unavailable upstream catalog entries are reported as skipped with HTTP status instead of becoming Hydra stage-open failures.
+- Fixed empty or meshless assets in the public viewer so zero-size camera fitting is skipped without warning noise.
 
 ## [1.0.0] - 2026-06-30
 ### Added

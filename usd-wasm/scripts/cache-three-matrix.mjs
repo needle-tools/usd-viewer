@@ -19,6 +19,7 @@ const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const examplesRoot = path.join(repoRoot, "examples");
 const rawArgs = process.argv.slice(2);
 const args = parseMatrixArgs(rawArgs);
+const matrixScope = resolveMatrixScope(rawArgs);
 const sharedCacheRoot = getDefaultCacheRoot({ cacheRoot: args.cacheRoot, cwd: repoRoot });
 const threeCacheRoot = path.join(sharedCacheRoot, "three-versions");
 const pagesRoot = path.join(repoRoot, ".cache", "usd-three-matrix-pages");
@@ -29,7 +30,7 @@ const localThreeVersion = examplesPackageJson.dependencies?.three ?? "three";
 const versions = resolveRequestedVersions({
     versions: args.versions,
     fromRevision: args.fromRevision,
-    defaultVersions: [...defaultThreeVersions],
+    defaultVersions: matrixScope === "full" ? [...defaultThreeVersions] : [defaultThreeVersions.at(-1)],
     cwd: repoRoot,
 });
 
@@ -59,11 +60,11 @@ const runtimes = [
     }))),
 ];
 
-const fixtures = await prepareFixtures({
+const fixtures = selectFixtures(await prepareFixtures({
     cacheRoot: fixtureCacheRoot,
     refresh: args.refresh,
-});
-const selectedRendererModes = resolveRendererModes(rawArgs);
+}), matrixScope);
+const selectedRendererModes = resolveRendererModes(rawArgs, matrixScope);
 
 const pagesManifest = await writeUsdThreeMatrixPages({
     pagesRoot,
@@ -76,12 +77,24 @@ const pagesManifest = await writeUsdThreeMatrixPages({
 console.log(`Wrote USD Three matrix manifest for ${pagesManifest.pages.length} cases to ${path.join(pagesRoot, "manifest.json")}`);
 console.log(`Using Three cache at ${threeCacheRoot}`);
 console.log(`Using USD fixture cache at ${fixtureCacheRoot}`);
+console.log(`Using matrix scope: ${matrixScope}`);
 console.log(`Using renderer modes: ${selectedRendererModes.join(", ")}`);
 
-function resolveRendererModes(rawArgs) {
+function resolveMatrixScope(rawArgs) {
+    if (rawArgs.includes("--full") || rawArgs.includes("--exhaustive")) return "full";
+    const argIndex = rawArgs.findIndex(arg => arg === "--scope" || arg === "--matrix-scope");
+    const rawValue = argIndex >= 0 ? rawArgs[argIndex + 1] : process.env.USD_THREE_MATRIX_SCOPE;
+    if (!rawValue) return "representative";
+
+    const scope = rawValue.trim().toLowerCase();
+    if (scope === "representative" || scope === "full") return scope;
+    throw new Error(`Unknown USD Three matrix scope: ${rawValue}. Expected "representative" or "full".`);
+}
+
+function resolveRendererModes(rawArgs, scope) {
     const argIndex = rawArgs.findIndex(arg => arg === "--renderer-modes" || arg === "--rendererModes");
     const rawValue = argIndex >= 0 ? rawArgs[argIndex + 1] : process.env.USD_THREE_MATRIX_RENDERER_MODES;
-    if (!rawValue) return rendererModes;
+    if (!rawValue) return scope === "full" ? rendererModes : rendererModes.filter(mode => mode !== "webgpu-force-webgl2");
 
     const requested = rawValue.split(",").map(mode => mode.trim()).filter(Boolean);
     const unknown = requested.filter(mode => !rendererModes.includes(mode));
@@ -89,6 +102,21 @@ function resolveRendererModes(rawArgs) {
         throw new Error(`Unknown renderer mode(s): ${unknown.join(", ")}. Expected one of: ${rendererModes.join(", ")}`);
     }
     return rendererModes.filter(mode => requested.includes(mode));
+}
+
+function selectFixtures(fixtures, scope) {
+    if (scope === "full") return fixtures;
+
+    const representativeFixtures = new Set([
+        "local-test-usdz",
+        "local-materialx-procedural-brick-usda",
+        "local-binding-override-variants-usda",
+        "local-catmull-clark-subdivision-usda",
+        "local-reference-override-usda",
+        "local-usdz-nested-material",
+        "local-damaged-helmet-raw-glb",
+    ]);
+    return fixtures.filter(fixture => representativeFixtures.has(fixture.name));
 }
 
 async function writeUsdThreeMatrixPages(options) {
@@ -126,7 +154,7 @@ async function writeUsdThreeMatrixPages(options) {
         }
     }
 
-    const manifest = { pages };
+    const manifest = { scope: matrixScope, pages };
     await fs.writeFile(path.join(root, "manifest.json"), JSON.stringify(manifest, null, 2));
     return manifest;
 }

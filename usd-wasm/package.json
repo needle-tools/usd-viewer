@@ -64,6 +64,7 @@
     "test:needle-engine-matrix": "npm run needle-engine-matrix:cache && playwright test -c tests/needle-engine-matrix/playwright.config.ts",
     "test:public-viewer-lifecycle": "playwright test -c tests/public-viewer/playwright.config.ts",
     "test:three-matrix": "node scripts/run-three-matrix.mjs",
+    "test:three-matrix:full": "node scripts/run-three-matrix.mjs --full",
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readFile } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 type MatrixPage = {
@@ -59,16 +59,29 @@ type MatrixResult = {
 };
 
 const caseTimeoutMs = Number(process.env.NEEDLE_USD_MATRIX_CASE_TIMEOUT_MS ?? 60_000);
+const chunkSize = Math.max(1, Number(process.env.NEEDLE_USD_MATRIX_CHUNK_SIZE ?? 30));
 const matrixBaseURL = process.env.USD_THREE_MATRIX_BASE_URL ?? 'http://127.0.0.1:5192';
+const manifest = JSON.parse(readFileSync(resolve('.cache/usd-three-matrix-pages/manifest.json'), 'utf8')) as { scope?: string; pages: MatrixPage[] };
 
-test('USD WASM Three adapter loads a fixture across cached Three versions and renderer modes', async ({ browser }) => {
-    const manifest = JSON.parse(await readFile(resolve('.cache/usd-three-matrix-pages/manifest.json'), 'utf8')) as { pages: MatrixPage[] };
+test.describe.configure({ mode: 'serial' });
+
+for (let chunkStart = 0; chunkStart < manifest.pages.length; chunkStart += chunkSize) {
+    const chunk = manifest.pages.slice(chunkStart, chunkStart + chunkSize);
+    const chunkIndex = Math.floor(chunkStart / chunkSize) + 1;
+    const chunkCount = Math.ceil(manifest.pages.length / chunkSize);
+
+    test(`USD WASM Three adapter matrix chunk ${chunkIndex}/${chunkCount}`, async ({ browser }) => {
+        await runMatrixChunk(browser, chunk, chunkStart, manifest.pages.length);
+    });
+}
+
+async function runMatrixChunk(browser, pages: MatrixPage[], chunkStart: number, totalCases: number) {
     expect(manifest.pages.length).toBeGreaterThan(0);
 
     const results: MatrixResult[] = [];
     const failures: string[] = [];
 
-    for (const matrixPage of manifest.pages) {
+    for (const matrixPage of pages) {
         const matrixCaseContext = await browser.newContext();
         const matrixCasePage = await matrixCaseContext.newPage();
         try {
@@ -87,7 +100,10 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
 
     const artifact = {
         generatedAt: new Date().toISOString(),
-        totalCases: manifest.pages.length,
+        scope: manifest.scope ?? 'custom',
+        totalCases,
+        chunkStart,
+        chunkSize: pages.length,
         results,
         failures,
         summary: {
@@ -101,8 +117,8 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
     if (failures.length) {
         throw new Error(`USD Three matrix failures:\n${failures.join('\n\n')}`);
     }
-    expect(results).toHaveLength(manifest.pages.length);
-});
+    expect(results).toHaveLength(pages.length);
+}
 
 async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult> {
     const started = Date.now();
