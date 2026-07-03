@@ -711,6 +711,7 @@ class HydraMesh {
     this._interface = hydraInterface;
     this._points = undefined;
     this._normals = undefined;
+    this._constantNormal = undefined;
     this._hasAuthoredNormals = false;
     this._tangents = undefined;
     this._colors = undefined;
@@ -828,6 +829,7 @@ class HydraMesh {
       //this._geometry.setIndex( indicesArray );
       this.updateOrder(this._points, 'position');
       this.updateOrder(this._normals, 'normal');
+      this._applyConstantNormal();
       if (this._colors) {
         this.updateOrder(this._colors, 'color');
       }
@@ -1014,8 +1016,23 @@ class HydraMesh {
     });
   }
 
+  _applyConstantNormal() {
+    if (!this._constantNormal) return;
+    const position = this._geometry.getAttribute('position');
+    if (!position?.count) return;
+
+    const values = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+      values[i * 3 + 0] = this._constantNormal[0];
+      values[i * 3 + 1] = this._constantNormal[1];
+      values[i * 3 + 2] = this._constantNormal[2];
+    }
+    this._geometry.setAttribute('normal', new Float32BufferAttribute(values, 3));
+  }
+
   setNormals(data, interpolation) {
     this._hasAuthoredNormals = true;
+    this._constantNormal = undefined;
 
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
@@ -1024,6 +1041,12 @@ class HydraMesh {
       // Per-point data is sorted into the expanded triangle order.
       this._normals = Float32Array.from(data);
       this.updateOrder(this._normals, 'normal');
+    } else if (interpolation === 'constant' || interpolation === 'uniform') {
+      const values = Float32Array.from(data || []);
+      if (values.length >= 3) {
+        this._constantNormal = values.slice(0, 3);
+        this._applyConstantNormal();
+      }
     }
   }
 
@@ -1193,6 +1216,7 @@ class HydraMesh {
     return timeHydraUpdate(`Hydra updatePoints ${this.usdPath}`, () => {
       this._points = Float32Array.from(points);
       this.updateOrder(this._points, 'position');
+      this._applyConstantNormal();
       this._applyVisibilityState();
     });
   }

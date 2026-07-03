@@ -416,6 +416,34 @@ test.describe('public usd-viewer lifecycle', () => {
             expect(state.driverAlive, fixture.filename).toBe(true);
             expect(state.hasNeedleContext, fixture.filename).toBe(true);
             expect(state.needleChildren, fixture.filename).toBeGreaterThan(0);
+
+            if (fixture.filename === 'referenced_geomprop_overrides.usda') {
+                const meshes = await getNeedleMeshSummaries(page);
+                const left = meshes.find(mesh => mesh.path === '/World/LeftReference/Shape');
+                const right = meshes.find(mesh => mesh.path === '/World/RightReference/Shape');
+                expect(left?.normalCount, 'left referenced geomprop normals').toBe(left?.positionCount);
+                expect(right?.normalCount, 'right referenced geomprop normals').toBe(right?.positionCount);
+                expect(left?.materialColor, 'left referenced geomprop color').toBe('f9e53f');
+                expect(right?.materialColor, 'right referenced geomprop override color').toBe('5099ff');
+            }
+
+            if (fixture.filename === 'liverps_all.usda') {
+                const meshes = await getNeedleMeshSummaries(page);
+                const expectedMaterials = new Map([
+                    ['/World/Local/Shape', 'LocalRed'],
+                    ['/World/Inherits/Shape', 'InheritsYellow'],
+                    ['/World/Variants/Shape', 'VariantOrange'],
+                    ['/World/References/Shape', 'ReferenceBlue'],
+                    ['/World/Payloads/Shape', 'PayloadCyan'],
+                    ['/World/Specializes/Shape', 'SpecializesGreen'],
+                ]);
+                for (const [path, materialName] of expectedMaterials) {
+                    const mesh = meshes.find(entry => entry.path === path);
+                    expect(mesh, path).toBeTruthy();
+                    expect(mesh?.normalCount, `${path} authored normals`).toBe(mesh?.positionCount);
+                    expect(mesh?.materialName, `${path} material`).toBe(materialName);
+                }
+            }
         }
 
         expect(rendererErrors).toEqual([]);
@@ -2370,6 +2398,34 @@ async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
             vertexColors: Boolean(material?.vertexColors),
         };
     }, usdPath);
+}
+
+async function getNeedleMeshSummaries(page: Page) {
+    return await page.evaluate(() => {
+        const meshes: Array<{
+            path: string;
+            name: string;
+            positionCount: number;
+            normalCount: number;
+            materialName: string;
+            materialColor: string;
+        }> = [];
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!object.isMesh || !object.userData?.usdPath) return;
+            const material = Array.isArray(object.material)
+                ? object.material[0]
+                : object.material;
+            meshes.push({
+                path: String(object.userData.usdPath),
+                name: String(object.name || ''),
+                positionCount: object.geometry?.attributes?.position?.count || 0,
+                normalCount: object.geometry?.attributes?.normal?.count || 0,
+                materialName: String(material?.name || ''),
+                materialColor: String(material?.color?.getHexString?.() || ''),
+            });
+        });
+        return meshes;
+    });
 }
 
 async function findNeedlePrimvarAttribute(page: Page, attributeName: string) {

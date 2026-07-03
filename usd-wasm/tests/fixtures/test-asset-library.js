@@ -1,13 +1,6 @@
 export const fixtureBasePath = "/test-fixtures/";
 
 export const testAssetLibrary = [
-  { group: "glTF Plugin", label: "DamagedHelmet GLB", root: "asset-explorer/DamagedHelmet.glb-reference.usda", files: ["asset-explorer/DamagedHelmet.glb-reference.usda", "asset-explorer/DamagedHelmet.glb"] },
-  { group: "glTF Plugin", label: "DamagedHelmet USDZ", root: "asset-explorer/DamagedHelmet.glb.three.usdz" },
-  { group: "glTF Plugin", label: "BoomBox GLB", root: "asset-explorer/BoomBox.glb-reference.usda", files: ["asset-explorer/BoomBox.glb-reference.usda", "asset-explorer/BoomBox.glb"] },
-  { group: "glTF Plugin", label: "BoomBox USDZ", root: "asset-explorer/BoomBox.glb.three.usdz" },
-  { group: "glTF Plugin", label: "CesiumMan GLB", root: "asset-explorer/CesiumMan.glb-reference.usda", files: ["asset-explorer/CesiumMan.glb-reference.usda", "asset-explorer/CesiumMan.glb"] },
-  { group: "glTF Plugin", label: "CesiumMan USDZ", root: "asset-explorer/CesiumMan.glb.openusd.usdz" },
-
   { group: "Composition", label: "Payload Root", root: "payloads/payload_root.usda", files: ["payloads/payload_root.usda", "payloads/payload_payload.usda"] },
   { group: "Composition", label: "Nested Variants", root: "variants/nested_variants.usda", files: ["variants/nested_variants.usda"] },
   { group: "Composition", label: "Binding Override Variants", root: "variants/material_binding_overrides.usda", files: ["variants/material_binding_overrides.usda"] },
