@@ -333,12 +333,31 @@ export async function createThreeHydra(config) {
     let editInFlight = false;
     let drawPromise = Promise.resolve();
     let activeDrawPromise = Promise.resolve();
+    const refreshDrawInFlight = () => {
+        if (!drawInFlight || typeof driver.IsDrawPending !== "function") return;
+        try {
+            if (!driver.IsDrawPending()) {
+                drawInFlight = false;
+            }
+        }
+        catch {
+        }
+    };
+    const waitForDrawCompletion = async () => {
+        await drawPromise;
+        refreshDrawInFlight();
+        if (drawInFlight) {
+            await activeDrawPromise;
+            refreshDrawInFlight();
+        }
+    };
     const draw = (force = false) => {
         if (disposed || drawInFlight || driver.isDeleted() || (editInFlight && !force)) {
             return drawPromise;
         }
 
         try {
+            renderInterface.beginHydraDraw?.();
             if (useAsyncDraw && typeof driver.DrawAsync === "function") {
                 drawInFlight = true;
                 if (hydraTiming) console.time("Hydra DrawAsync");
@@ -347,7 +366,10 @@ export async function createThreeHydra(config) {
                         if (hydraTiming) console.timeEnd("Hydra DrawAsync");
                     })
                     .catch((error) => console.error("Hydra draw failed", error))
-                    .finally(() => drawInFlight = false);
+                    .finally(() => {
+                        renderInterface.endHydraDraw?.();
+                        drawInFlight = false;
+                    });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw", 30000);
                 return drawPromise;
             }
@@ -357,14 +379,19 @@ export async function createThreeHydra(config) {
                 drawInFlight = true;
                 activeDrawPromise = result
                     .catch((error) => console.error("Hydra draw failed", error))
-                    .finally(() => drawInFlight = false);
+                    .finally(() => {
+                        renderInterface.endHydraDraw?.();
+                        drawInFlight = false;
+                    });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw");
             }
             else {
+                renderInterface.endHydraDraw?.();
                 drawPromise = Promise.resolve();
             }
         }
         catch (error) {
+            renderInterface.endHydraDraw?.();
             console.error("Hydra draw failed", error);
             drawPromise = Promise.resolve();
         }
@@ -425,14 +452,14 @@ export async function createThreeHydra(config) {
     applyStageMetadata(readStageMetadata());
 
     /** Draw once, after stage metadata has been applied to the root scene. */
-    const initialDrawPromise = draw();
+    draw();
     const readyPromise = config.waitForMaterials
-        ? initialDrawPromise.then(() => renderInterface.waitForMaterialsReady())
-        : initialDrawPromise;
+        ? waitForDrawCompletion().then(() => renderInterface.waitForMaterialsReady())
+        : waitForDrawCompletion();
 
     let time = 0;
     let currentTimeCode = stageStartTimeCode;
-    let playing = true;
+    let playing = config.autoPlay === true;
 
     const stageDuration = () => stageEndTimeCode - stageStartTimeCode;
 
@@ -477,16 +504,17 @@ export async function createThreeHydra(config) {
             if (drawInFlight || editInFlight) {
                 return;
             }
-            if (playing) {
-                time += dt;
-                const startTimeCode = stageStartTimeCode;
-                const duration = stageDuration();
-                let timecode = startTimeCode + time * stageTimeCodesPerSecond;
-                if (duration > 0) {
-                    timecode = startTimeCode + ((timecode - startTimeCode) % duration);
-                    currentTimeCode = timecode;
-                    driver.SetTime(timecode);
-                }
+            if (!playing) {
+                return;
+            }
+            time += dt;
+            const startTimeCode = stageStartTimeCode;
+            const duration = stageDuration();
+            let timecode = startTimeCode + time * stageTimeCodesPerSecond;
+            if (duration > 0) {
+                timecode = startTimeCode + ((timecode - startTimeCode) % duration);
+                currentTimeCode = timecode;
+                driver.SetTime(timecode);
             }
             draw();
         },
@@ -494,7 +522,7 @@ export async function createThreeHydra(config) {
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
-            await drawPromise;
+            await waitForDrawCompletion();
             setHydraTime(timeCode);
             return draw(true);
         },
@@ -508,19 +536,24 @@ export async function createThreeHydra(config) {
             if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {
                 return Promise.resolve();
             }
-            await drawPromise;
+            await waitForDrawCompletion();
             driver.SetIncludedPurposes(includedPurposes);
+            return draw(true);
+        },
+        setComplexity: async (complexity) => {
+            const normalizedComplexity = normalizeComplexity(complexity);
+            if (normalizedComplexity === undefined || disposed || driver.isDeleted() || typeof driver.SetComplexity !== "function") {
+                return Promise.resolve();
+            }
+            await waitForDrawCompletion();
+            driver.SetComplexity(normalizedComplexity);
             return draw(true);
         },
         editStage: async (callback) => {
             if (disposed || driver.isDeleted()) {
                 return undefined;
             }
-            await drawPromise;
-            if (drawInFlight) {
-                console.warn("Skipping USD stage edit while Hydra draw is still pending.");
-                return undefined;
-            }
+            await waitForDrawCompletion();
             if (disposed || driver.isDeleted()) {
                 return undefined;
             }
@@ -531,7 +564,6 @@ export async function createThreeHydra(config) {
                 if (disposed || driver.isDeleted()) {
                     return result;
                 }
-                await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
                 editInFlight = false;
                 await draw(true);
                 return result;
@@ -544,7 +576,7 @@ export async function createThreeHydra(config) {
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
-            await drawPromise;
+            await waitForDrawCompletion();
             await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
             return draw();
         },
@@ -636,7 +668,7 @@ export async function createThreeHydra(config) {
             if (drawInFlight) {
                 console.debug("Waiting for pending Hydra draw before USD cleanup.");
             }
-            await drawPromise.catch(() => {});
+            await waitForDrawCompletion().catch(() => {});
             await cleanup();
 
             if (debug) console.warn("Disposed Three Hydra");
