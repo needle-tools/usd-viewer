@@ -31,7 +31,8 @@ for (const copy of copies) {
     recursive: true,
     dereference: true,
     filter(source) {
-      return !source.includes(`${copy.from}/node_modules/`)
+      const relativeSource = source.startsWith(copy.from) ? source.slice(copy.from.length) : source;
+      return !relativeSource.split(/[\\/]/).includes("node_modules")
         && !source.endsWith("/dist")
         && !source.endsWith("/.DS_Store");
     },

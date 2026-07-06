@@ -1692,6 +1692,15 @@ class HydraMaterial {
     this._interface.diagnostics.materialNodes++;
     this._nodes[path] = parameters;
     this._rememberResolvedAssetPath(parameters?.file, parameters?.resolvedPath);
+    // TODO: Replace the bridge's string-suffixed asset metadata keys with a
+    // structured asset-parameter payload in a future C++/JS bridge revision.
+    for (const key of Object.keys(parameters || {})) {
+      if (!key.endsWith(':resolvedPath')) {
+        continue;
+      }
+      const parameterName = key.slice(0, -':resolvedPath'.length);
+      this._rememberResolvedAssetPath(parameters?.[parameterName], parameters?.[key]);
+    }
   }
 
   updateMaterialXDocument(document) {

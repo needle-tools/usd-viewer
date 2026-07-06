@@ -338,8 +338,8 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(blockedRequests).toEqual([]);
     });
 
-    test('caches debug asset fetches through the service worker', async ({ page }) => {
-        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+    test('caches viewer asset fetches through the service worker', async ({ page }) => {
+        await page.goto('/?viewer=three', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(async () => {
             await (window as any).__usdViewerAssetCacheReady;
             return !!navigator.serviceWorker.controller;
@@ -872,6 +872,51 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.normalCount).toBe(state.positionCount);
         expect(state.uvCount).toBe(state.positionCount);
         expect(elapsed).toBeLessThan(30000);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('renders OpenChessSet MaterialX pawn instances at their authored positions', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await stubAnalytics(page);
+
+        const chessSetUrl = `${usdWgBaseUrl}full_assets/OpenChessSet/chess_set.usda`;
+        await page.goto(`/?file=${encodeURIComponent(chessSetUrl)}&viewer=needle&waitForMaterials=1`);
+        await waitForNeedleLoaderMode(page, 'chess_set.usda');
+
+        const expectedBlack = [
+            [-0.03125, 0, 0.09375],
+            [-0.21875, 0, 0.15625],
+            [-0.15625, 0, 0.15625],
+            [-0.09375, 0, 0.15625],
+            [0.03125, 0, 0.15625],
+            [0.09375, 0, 0.15625],
+            [0.15625, 0, 0.15625],
+            [0.21875, 0, 0.15625],
+        ];
+        const expectedWhite = [
+            [-0.21875, 0, -0.15625],
+            [-0.15625, 0, -0.15625],
+            [-0.09375, 0, -0.15625],
+            [-0.03125, 0, -0.15625],
+            [0.15625, 0, -0.15625],
+            [0.21875, 0, -0.15625],
+            [0.09375, 0, -0.09375],
+            [0.03125, 0, -0.03125],
+        ];
+
+        const state = await readOpenChessSetPawnInstances(page);
+        expect(state.prototypes).toHaveLength(4);
+        expect(state.prototypes.every(entry => entry.visible === false)).toBe(true);
+        expect(state.instanced).toHaveLength(4);
+        for (const entry of state.instanced) {
+            expect(entry.visible).toBe(true);
+            expect(entry.count).toBe(8);
+            expect(entry.matrices).toEqual(entry.path.includes('/Black/') ? expectedBlack : expectedWhite);
+        }
+
+        const render = await countNeedlePawnRenderComponents(page);
+        expect(render.components).toBeGreaterThanOrEqual(12);
+        expect(render.maskedPixels).toBeGreaterThan(1000);
         expect(diagnostics).toEqual([]);
     });
 
@@ -3397,6 +3442,150 @@ async function waitForNeedleMeshAttributeState(
         throw new Error(`Timed out waiting for ${usdPath}; last state ${JSON.stringify(lastState)}`);
     }
     throw lastError || new Error(`Timed out waiting for ${usdPath}`);
+}
+
+async function readOpenChessSetPawnInstances(page: Page) {
+    return await page.evaluate(() => {
+        const round = (value: number) => Number(value.toFixed(6));
+        const entries: Array<{
+            path: string;
+            visible: boolean;
+            isInstancedMesh: boolean;
+            count: number | null;
+            positionCount: number;
+            matrices: number[][];
+        }> = [];
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            const path = String(object.userData?.usdPath || object.name || '');
+            if (!/\/ChessSet\/(Black|White)\/Pawns\//.test(path)) return;
+            if (!object.isMesh && !object.isInstancedMesh) return;
+
+            const entry = {
+                path,
+                visible: Boolean(object.visible),
+                isInstancedMesh: Boolean(object.isInstancedMesh),
+                count: object.isInstancedMesh ? Number(object.count) : null,
+                positionCount: object.geometry?.attributes?.position?.count ?? 0,
+                matrices: [] as number[][],
+            };
+
+            if (object.isInstancedMesh) {
+                const matrix = new object.matrixWorld.constructor();
+                object.updateMatrixWorld(true);
+                for (let i = 0; i < object.count; i++) {
+                    object.getMatrixAt(i, matrix);
+                    matrix.premultiply(object.matrixWorld);
+                    entry.matrices.push([
+                        round(matrix.elements[12]),
+                        round(matrix.elements[13]),
+                        round(matrix.elements[14]),
+                    ]);
+                }
+            }
+            entries.push(entry);
+        });
+
+        const byPath = (a: { path: string; isInstancedMesh: boolean }, b: { path: string; isInstancedMesh: boolean }) =>
+            a.path.localeCompare(b.path) || Number(a.isInstancedMesh) - Number(b.isInstancedMesh);
+        return {
+            prototypes: entries.filter(entry => !entry.isInstancedMesh).sort(byPath),
+            instanced: entries.filter(entry => entry.isInstancedMesh).sort(byPath),
+        };
+    });
+}
+
+async function countNeedlePawnRenderComponents(page: Page) {
+    return await page.evaluate(async () => {
+        const context = window.needleEngineContext;
+        const renderer = context?.renderer;
+        const scene = context?.scene;
+        const camera = context?.mainCamera;
+        if (!renderer || !scene || !camera) {
+            throw new Error('Needle renderer, scene, or camera is missing');
+        }
+
+        scene.traverse((object: any) => {
+            const path = String(object.userData?.usdPath || object.name || '');
+            if (object.isMesh || object.isInstancedMesh) {
+                object.visible = path.includes('/Pawns/');
+            }
+        });
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        camera.updateProjectionMatrix?.();
+        await new Promise(requestAnimationFrame);
+
+        renderer.render(scene, camera);
+        const gl = renderer.getContext();
+        const width = gl.drawingBufferWidth;
+        const height = gl.drawingBufferHeight;
+        const pixels = new Uint8Array(width * height * 4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        const background = [pixels[0], pixels[1], pixels[2]];
+        const step = 4;
+        const sampleWidth = Math.floor(width / step);
+        const sampleHeight = Math.floor(height / step);
+        const mask = new Uint8Array(sampleWidth * sampleHeight);
+        let maskedPixels = 0;
+        for (let y = 0; y < sampleHeight; y++) {
+            for (let x = 0; x < sampleWidth; x++) {
+                const px = Math.min(width - 1, x * step + Math.floor(step / 2));
+                const py = Math.min(height - 1, y * step + Math.floor(step / 2));
+                const pixelOffset = (py * width + px) * 4;
+                const difference =
+                    Math.abs(pixels[pixelOffset] - background[0]) +
+                    Math.abs(pixels[pixelOffset + 1] - background[1]) +
+                    Math.abs(pixels[pixelOffset + 2] - background[2]);
+                if (difference > 45) {
+                    mask[y * sampleWidth + x] = 1;
+                    maskedPixels++;
+                }
+            }
+        }
+
+        const visited = new Uint8Array(mask.length);
+        const queueX: number[] = [];
+        const queueY: number[] = [];
+        let components = 0;
+        let largestComponent = 0;
+        for (let y = 0; y < sampleHeight; y++) {
+            for (let x = 0; x < sampleWidth; x++) {
+                const index = y * sampleWidth + x;
+                if (!mask[index] || visited[index]) continue;
+                visited[index] = 1;
+                queueX.length = 0;
+                queueY.length = 0;
+                queueX.push(x);
+                queueY.push(y);
+                let head = 0;
+                let count = 0;
+                while (head < queueX.length) {
+                    const cx = queueX[head];
+                    const cy = queueY[head++];
+                    count++;
+                    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                    for (const [dx, dy] of neighbors) {
+                        const nx = cx + dx;
+                        const ny = cy + dy;
+                        if (nx < 0 || nx >= sampleWidth || ny < 0 || ny >= sampleHeight) continue;
+                        const neighborIndex = ny * sampleWidth + nx;
+                        if (!mask[neighborIndex] || visited[neighborIndex]) continue;
+                        visited[neighborIndex] = 1;
+                        queueX.push(nx);
+                        queueY.push(ny);
+                    }
+                }
+                if (count > 8) {
+                    components++;
+                    largestComponent = Math.max(largestComponent, count);
+                }
+            }
+        }
+
+        return { components, maskedPixels, largestComponent };
+    });
 }
 
 async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {

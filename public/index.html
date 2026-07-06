@@ -50,8 +50,7 @@
     (() => {
       const params = new URLSearchParams(location.search);
       window.__usdViewerDiagnosticsMode = params.has("debug") || navigator.webdriver === true;
-      window.__usdViewerAssetCacheMode = params.get("assetCache") !== "0" &&
-        (params.has("debug") || params.get("assetCache") === "1");
+      window.__usdViewerAssetCacheMode = params.get("assetCache") !== "0";
       window.__usdViewerAssetCacheReady = Promise.resolve(null);
       if (window.__usdViewerAssetCacheMode && "serviceWorker" in navigator) {
         window.__usdViewerAssetCacheReady = navigator.serviceWorker

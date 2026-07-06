@@ -4,28 +4,22 @@ const MAX_CACHEABLE_BYTES = 64 * 1024 * 1024;
 const SAME_ORIGIN_PREFIXES = [
   "/data/",
   "/environments/",
-  "/materialx/",
-  "/needle-engine/",
-  "/needle-three/",
   "/test-fixtures/",
-  "/three/",
-  "/usd/",
 ];
 
-function diagnosticsCacheEnabled(clientUrl) {
+function assetCacheEnabled(clientUrl) {
   try {
     const url = new URL(clientUrl);
-    if (url.searchParams.get("assetCache") === "0") return false;
-    return url.searchParams.has("debug") || url.searchParams.get("assetCache") === "1";
+    return url.searchParams.get("assetCache") !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
 async function cacheEnabledForClient(clientId) {
-  if (!clientId) return false;
+  if (!clientId) return true;
   const client = await clients.get(clientId);
-  return client ? diagnosticsCacheEnabled(client.url) : false;
+  return client ? assetCacheEnabled(client.url) : true;
 }
 
 function isCacheableSameOriginPath(url) {

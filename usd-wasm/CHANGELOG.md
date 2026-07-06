@@ -4,6 +4,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-06
+### Changed
+- Updated the MaterialX runtime dependency to `@needle-tools/materialx@1.7.2`.
+- Improved viewer asset caching for USD/glTF sample assets so repeated loads are less dependent on remote host availability.
+
+### Fixed
+- Fixed MaterialX texture resolution for USD/Hydra materials whose texture filenames are carried by non-`file` asset parameters.
+- Fixed variant and stage edits so normal USD change processing can update Hydra without forcing full scene repopulation for every edit.
+- Fixed subdivision normals at low complexity so subdivision surface normals are smooth even when topology is not tessellated.
+- Fixed OpenChessSet MaterialX pawn rendering and added coverage for authored instance positions.
+
 ## [1.0.1] - 2026-07-03
 ### Added
 - Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
