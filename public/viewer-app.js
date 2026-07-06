@@ -25,7 +25,7 @@ import {
   OrbitControls,
   runtimeViewerMode,
 } from 'viewer-runtime';
-import { track, trackError } from './analytics.js';
+import { track, trackError, bucketBytes } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 
@@ -922,7 +922,7 @@ function doGltfExport() {
     exporter.parse( window.usdRoot, function ( gltf ) {
       const blob = new Blob([gltf], {type: 'application/octet-stream'});
       // Completed export: full source name + the exported glb size in bytes.
-      track('export_gltf', { file: currentDisplayFilename || undefined, bytes: blob.size });
+      track('export_gltf', { file: currentDisplayFilename || undefined, size: bucketBytes(blob.size) });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -3173,7 +3173,7 @@ async function testAndLoadFile(file) {
     track('load_file', {
       method: 'drop',
       files: 1,
-      bytes: file.size,
+      size: bucketBytes(file.size),
       types: extOf(file.name),
       name: safeName(file.name),
     });
@@ -3187,7 +3187,7 @@ async function testAndLoadFile(file) {
     track('load_file', {
       method: 'drop',
       files: 2,
-      bytes: file.size,
+      size: bucketBytes(file.size),
       types: extOf(file.name) + ',usda',
       name: safeName(file.name),
     });
@@ -3200,7 +3200,7 @@ async function testAndLoadFile(file) {
     track('load_file', {
       method: 'drop',
       files: 2,
-      bytes: file.size,
+      size: bucketBytes(file.size),
       types: extOf(file.name) + ',usda',
       name: safeName(file.name),
     });
@@ -3453,7 +3453,7 @@ async function handleFilesystemEntries(entries) {
         track('load_file', {
           method: 'drop',
           files: allFiles.length + 2, // sidecars + glTF root + generated USDA wrapper
-          bytes: droppedBytes,
+          size: bucketBytes(droppedBytes),
           types: [...droppedExts, 'usda'].sort().join(','),
           name: safeName(rootFile.name),
         });
@@ -3465,7 +3465,7 @@ async function handleFilesystemEntries(entries) {
         track('load_file', {
           method: 'drop',
           files: allFiles.length + 2, // sidecars + MaterialX root + generated USDA wrapper
-          bytes: droppedBytes,
+          size: bucketBytes(droppedBytes),
           types: [...droppedExts, 'usda'].sort().join(','),
           name: safeName(rootFile.name),
         });
@@ -3480,7 +3480,7 @@ async function handleFilesystemEntries(entries) {
       track('load_file', {
         method: 'drop',
         files: allFiles.length + 1, // non-root files + the root file
-        bytes: droppedBytes,
+        size: bucketBytes(droppedBytes),
         types: [...droppedExts].sort().join(','),
         name: safeName(rootFile.name),
       });

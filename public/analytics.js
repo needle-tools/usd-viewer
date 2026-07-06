@@ -38,3 +38,25 @@ export function trackError(context, error, props = {}) {
   const message = error && error.message ? error.message : String(error);
   track("viewer_error", { context, message: message.slice(0, 500), ...props });
 }
+
+/**
+ * Bucket a byte count into a coarse, low-cardinality label for analytics. The
+ * exact size of a loaded/exported model isn't useful and would be a unique value
+ * per file; buckets let us see the distribution (e.g. "most drops are 5-25MB").
+ * Ranges are upper-exclusive, so exactly 5 MB → "5-10MB". Invalid/missing → "unknown".
+ * @param {number} bytes
+ * @returns {string} e.g. "<1MB", "1-5MB", "500MB+", "unknown"
+ */
+export function bucketBytes(bytes) {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) return "unknown";
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1) return "<1MB";
+  if (mb < 5) return "1-5MB";
+  if (mb < 10) return "5-10MB";
+  if (mb < 25) return "10-25MB";
+  if (mb < 50) return "25-50MB";
+  if (mb < 100) return "50-100MB";
+  if (mb < 250) return "100-250MB";
+  if (mb < 500) return "250-500MB";
+  return "500MB+";
+}
