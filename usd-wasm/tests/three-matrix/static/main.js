@@ -169,6 +169,7 @@ async function runSuite(THREE, renderer) {
     });
     setPhase("suite-hydra-update");
     await handle?.ready?.();
+    const playbackState = collectPlaybackState(handle);
     handle?.update?.(0);
     setPhase("suite-materials-ready");
     await handle?.materialsReady?.();
@@ -224,6 +225,7 @@ async function runSuite(THREE, renderer) {
             sceneStats,
             fixtureChecks,
             handleMethods,
+            playbackState,
             hydraDiagnostics: handle?.diagnostics?.() ?? null,
         },
         diagnostics: {
@@ -233,16 +235,31 @@ async function runSuite(THREE, renderer) {
     };
 }
 
+function collectPlaybackState(handle) {
+    const before = handle?.getTime?.();
+    const defaultPlaying = handle?.isPlaying?.();
+    handle?.update?.(1.25);
+    const afterStaticUpdate = handle?.getTime?.();
+    handle?.setPlaying?.(false);
+    return {
+        before,
+        defaultPlaying,
+        afterStaticUpdate,
+        finalPlaying: handle?.isPlaying?.(),
+    };
+}
+
 async function runFixtureChecks(handle, usdRoot, config, waitForScene) {
     const checks = {};
     if (!handle?.driver?.GetStage) return checks;
 
     if (config.fixtureName === "local-binding-override-variants-usda") {
-        const stage = handle.driver.GetStage();
-        const world = stage.GetPrimAtPath("/World");
         checks.beforeMaterialVariant = collectMeshMaterialState(usdRoot);
-        world.SetVariantSelection("material", "metal");
-        await handle.repopulate();
+        const editPromise = handle.editStage(stage => {
+            const world = stage.GetPrimAtPath("/World");
+            return world.SetVariantSelection("material", "metal");
+        });
+        checks.materialVariantTransition = await observeVisibleMeshCountsDuring(editPromise, usdRoot);
         await handle.materialsReady();
         handle.update?.(0);
         await waitForScene();
@@ -484,6 +501,26 @@ function collectSceneStats(root) {
     });
 
     return stats;
+}
+
+async function observeVisibleMeshCountsDuring(operation, root) {
+    let done = false;
+    const counts = [];
+    const wrapped = Promise.resolve(operation).finally(() => {
+        done = true;
+    });
+
+    while (!done) {
+        counts.push(collectMeshMaterialState(root).visibleMeshCount);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    await wrapped;
+    counts.push(collectMeshMaterialState(root).visibleMeshCount);
+    return {
+        counts,
+        minVisibleMeshCount: Math.min(...counts),
+    };
 }
 
 function collectMeshMaterialState(root) {

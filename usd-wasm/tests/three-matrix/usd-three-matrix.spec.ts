@@ -51,6 +51,7 @@ type MatrixResult = {
                 textureNames: string[];
             };
             handleMethods: Record<string, string>;
+            playbackState: Record<string, any>;
             fixtureChecks: Record<string, any>;
             hydraDiagnostics: Record<string, unknown> | null;
         };
@@ -218,6 +219,9 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     expect(suite.usd.handleMethods.repopulate).toBe('function');
     expect(suite.usd.handleMethods.setIncludedPurposes).toBe('function');
     expect(suite.usd.handleMethods.materialsReady).toBe('function');
+    expect(suite.usd.playbackState.defaultPlaying).toBe(false);
+    expect(suite.usd.playbackState.afterStaticUpdate).toBe(suite.usd.playbackState.before);
+    expect(suite.usd.playbackState.finalPlaying).toBe(false);
     assertFixtureChecks(matrixPage.fixtureName, suite.usd.fixtureChecks);
     if (
         matrixPage.fixtureName === 'local-materialx-texture-noise-usda' ||
@@ -250,6 +254,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
 function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
     if (fixtureName === 'local-binding-override-variants-usda') {
         expect(checks.beforeMaterialVariant.meshCount).toBe(1);
+        expect(checks.materialVariantTransition.minVisibleMeshCount).toBeGreaterThan(0);
         expect(checks.afterMaterialVariant.meshCount).toBe(1);
         expect(checks.afterMaterialVariant.materialNames).toContain('Metal');
         expect(checks.afterMaterialVariant.meshes[0].materials[0].metalness).toBe(1);

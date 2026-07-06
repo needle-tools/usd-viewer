@@ -46,6 +46,10 @@ export const testAssetLibrary = [
   { group: "Edge Cases", label: "Face-Varying Normals Matrix", root: "primvars/facevarying_normals_matrix.usda", files: ["primvars/facevarying_normals_matrix.usda"] },
 
   { group: "Subdivision", label: "Catmull-Clark Cube", root: "subdivision/catmull_clark_cube.usda", files: ["subdivision/catmull_clark_cube.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Left-Handed Cube", root: "subdivision/catmull_clark_left_handed_cube.usda", files: ["subdivision/catmull_clark_left_handed_cube.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Face-Varying ST", root: "subdivision/catmull_clark_facevarying_st.usda", files: ["subdivision/catmull_clark_facevarying_st.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Varying Color", root: "subdivision/catmull_clark_varying_color.usda", files: ["subdivision/catmull_clark_varying_color.usda"] },
+  { group: "Subdivision", label: "Loop Non-Triangle Fallback", root: "subdivision/loop_non_triangle_fallback.usda", files: ["subdivision/loop_non_triangle_fallback.usda"] },
 
   { group: "Draco", label: "Draco Compressed Variants", root: "draco/CubeCompressedTriangles.usda", files: ["draco/CubeCompressedTriangles.usda", "draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc"] },
   { group: "Draco", label: "Draco Mixed Overrides", root: "draco/draco_mixed_overrides.usda", files: ["draco/draco_mixed_overrides.usda", "draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc"] },
