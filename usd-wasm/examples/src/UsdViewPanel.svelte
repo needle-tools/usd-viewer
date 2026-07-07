@@ -1,316 +1,20 @@
 <script lang="ts">
-  import { usdViewState, type USDAttributeLike, type USDCompositionArc, type USDLayerInfo, type USDPrimLike, type USDPcpNode, type USDRelationshipLike, type USDStageLike, type USDVectorLike, type USDSpecStackEntry } from "./usdViewStore.svelte";
+  import UsdHierarchy from "./UsdHierarchy.svelte";
+  import { usdViewState, type UsdViewState } from "./usdViewStore.svelte";
+  import { buildUsdViewModel, type AttributeRow, type LayerRow, type LayerTableRow, type RelationshipRow, type USDPcpNode, type USDSpecStackEntry } from "./usdViewModel";
 
-  type TreeNode = {
-    name: string;
-    path: string;
-    typeName: string;
-    children: TreeNode[];
-  };
-
-  type AttributeRow = {
-    name: string;
-    path: string;
-    typeName: string;
-    value: string;
-    resolveSource: string;
-    timeSamples: number[];
-    connections: string[];
-    metadata: Record<string, string>;
-    stack: USDSpecStackEntry[];
-  };
-
-  type RelationshipRow = {
-    name: string;
-    path: string;
-    targets: string[];
-    metadata: Record<string, string>;
-    stack: USDSpecStackEntry[];
-  };
-
-  type VariantRow = {
-    setName: string;
-    selection: string;
-    names: string[];
-  };
-
-  type InspectorModel = {
-    tree: TreeNode | null;
-    selectedPrim: PrimDetails | null;
-    attributes: AttributeRow[];
-    relationships: RelationshipRow[];
-    variants: VariantRow[];
-    primStack: USDSpecStackEntry[];
-    selectedProperty: AttributeRow | RelationshipRow | null;
-    selectedPropertyStack: USDSpecStackEntry[];
-    primIndex: USDPcpNode | null;
-    compositionArcs: USDCompositionArc[];
-    layerStack: LayerRow[];
-    usedLayers: LayerRow[];
-    layerRows: LayerTableRow[];
-    selectedLayer: LayerTableRow | null;
-    stageTime: StageTimeInfo;
-    compositionErrors: string[];
-  };
-
-  type PrimDetails = {
-    path: string;
-    name: string;
-    displayName: string;
-    typeName: string;
-    specifier: string;
-    isActive: boolean;
-    isDefined: boolean;
-    isAbstract: boolean;
-    isInstance: boolean;
-    isInPrototype: boolean;
-    isPrototype: boolean;
-    isLoaded: boolean;
-    hasPayloads: boolean;
-    hasReferences: boolean;
-    hasInherits: boolean;
-    hasSpecializes: boolean;
-    hasInstanceable: boolean;
-    metadata: Record<string, string>;
-  };
-
-  type LayerRow = {
-    identifier: string;
-    displayName: string;
-    realPath: string;
-  };
-
-  type LayerTableRow = LayerRow & {
-    source: "Layer Stack" | "Used Layers" | "Prim Stack" | "Property Stack";
-    path?: string;
-    value?: string;
-    metadata?: Record<string, string>;
-    offset?: string;
-  };
-
-  type StageTimeInfo = {
-    startTimeCode: number;
-    endTimeCode: number;
-    timeCodesPerSecond: number;
-    currentTime: number;
-    hasRange: boolean;
-    step: number;
-  };
-
-  const emptyModel: InspectorModel = {
-    tree: null,
-    selectedPrim: null,
-    attributes: [],
-    relationships: [],
-    variants: [],
-    primStack: [],
-    selectedProperty: null,
-    selectedPropertyStack: [],
-    primIndex: null,
-    compositionArcs: [],
-    layerStack: [],
-    usedLayers: [],
-    layerRows: [],
-    selectedLayer: null,
-    stageTime: {
-      startTimeCode: 0,
-      endTimeCode: 0,
-      timeCodesPerSecond: 24,
-      currentTime: 0,
-      hasRange: false,
-      step: 1,
-    },
-    compositionErrors: [],
-  };
-
-  const state = usdViewState;
-  let model = $derived(buildModel(state.stage, state.selectedPath, state.revision, state.currentTime, state.selectedPropertyPath, state.selectedLayerIdentifier, state.selectedLayerSource));
+  let { state = usdViewState } = $props<{ state?: UsdViewState }>();
+  let model = $derived(buildUsdViewModel({
+    stage: state.stage,
+    selectedPath: state.selectedPath,
+    revision: state.revision,
+    currentTime: state.currentTime,
+    selectedPropertyPath: state.selectedPropertyPath,
+    selectedLayerIdentifier: state.selectedLayerIdentifier,
+    selectedLayerSource: state.selectedLayerSource,
+    stageMetadata: state.handle?.stageMetadata?.() ?? null,
+  }));
   let lastNotice = $derived(state.notice);
-
-  function buildModel(stage: USDStageLike | null, selectedPath: string, revision: number, currentTime: number, selectedPropertyPath: string, selectedLayerIdentifier: string, selectedLayerSource: string): InspectorModel {
-    void revision;
-    if (!stage) return { ...emptyModel, stageTime: readStageTime(currentTime) };
-
-    const pseudoRoot = stage.GetPseudoRoot();
-    const selectedPrim = selectedPath === "/" ? pseudoRoot : stage.GetPrimAtPath(selectedPath);
-    const attributes = readAttributes(selectedPrim, currentTime);
-    const relationships = readRelationships(selectedPrim, currentTime);
-    const selectedProperty = [...attributes, ...relationships].find((property) => property.path === selectedPropertyPath) ?? null;
-    const selectedPropertyStack = selectedProperty?.stack ?? [];
-    const primStack = vectorToArray(safe(() => selectedPrim.GetPrimStackWithLayerOffsets?.(), []));
-    const layerStack = readLayers(safe(() => stage.GetLayerStack?.(true) ?? [], []));
-    const usedLayers = readLayers(safe(() => stage.GetUsedLayers?.(false) ?? [], []));
-    const stageTime = readStageTime(currentTime);
-    const layerRows = [
-      ...layerStack.map((layer): LayerTableRow => ({ ...layer, source: "Layer Stack" })),
-      ...usedLayers.map((layer): LayerTableRow => ({ ...layer, source: "Used Layers" })),
-      ...primStack.map(specToLayerRow("Prim Stack")),
-      ...selectedPropertyStack.map(specToLayerRow("Property Stack")),
-    ];
-    const selectedLayer = layerRows.find((row) =>
-      row.identifier === selectedLayerIdentifier && row.source === selectedLayerSource) ?? null;
-
-    return {
-      tree: safe(() => buildTreeNode(pseudoRoot), null),
-      selectedPrim: readPrimDetails(selectedPrim),
-      attributes,
-      relationships,
-      variants: readVariants(selectedPrim),
-      primStack,
-      selectedProperty,
-      selectedPropertyStack,
-      primIndex: safe(() => selectedPrim.GetPrimIndex().rootNode ?? null, null),
-      compositionArcs: vectorToArray(safe(() => selectedPrim.GetCompositionArcs?.(), [])),
-      layerStack,
-      usedLayers,
-      layerRows,
-      selectedLayer,
-      stageTime,
-      compositionErrors: vectorToArray(safe(() => stage.GetCompositionErrors?.() ?? [], [])),
-    };
-  }
-
-  function buildTreeNode(prim: USDPrimLike): TreeNode {
-    if (!prim?.GetPath || !prim?.GetChildren) {
-      return {
-        name: "Unavailable",
-        path: "",
-        typeName: "",
-        children: [],
-      };
-    }
-    return {
-      name: prim.GetPath() === "/" ? "PseudoRoot" : prim.GetName(),
-      path: prim.GetPath(),
-      typeName: prim.GetTypeName(),
-      children: vectorToArray(prim.GetChildren()).map(buildTreeNode),
-    };
-  }
-
-  function readPrimDetails(prim: USDPrimLike): PrimDetails | null {
-    if (!prim?.IsValid?.()) return null;
-    return {
-      path: prim.GetPath(),
-      name: prim.GetName(),
-      displayName: prim.GetDisplayName(),
-      typeName: prim.GetTypeName(),
-      specifier: prim.GetSpecifier(),
-      isActive: prim.IsActive(),
-      isDefined: prim.IsDefined(),
-      isAbstract: prim.IsAbstract(),
-      isInstance: prim.IsInstance(),
-      isInPrototype: prim.IsInPrototype(),
-      isPrototype: prim.IsPrototype(),
-      isLoaded: prim.IsLoaded(),
-      hasPayloads: prim.HasAuthoredPayloads(),
-      hasReferences: prim.HasAuthoredReferences(),
-      hasInherits: prim.HasAuthoredInherits(),
-      hasSpecializes: prim.HasAuthoredSpecializes(),
-      hasInstanceable: prim.HasAuthoredInstanceable(),
-      metadata: prim.GetAllMetadata(),
-    };
-  }
-
-  function readAttributes(prim: USDPrimLike, currentTime: number): AttributeRow[] {
-    if (!prim?.IsValid?.()) return [];
-    return vectorToArray(prim.GetAttributes()).map((attribute: USDAttributeLike) => ({
-      name: attribute.GetName(),
-      path: attribute.GetPath(),
-      typeName: attribute.GetTypeName(),
-      value: safe(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
-      resolveSource: safe(() => attribute.GetResolveInfo(currentTime).source, ""),
-      timeSamples: vectorToArray(attribute.GetTimeSamples()),
-      connections: vectorToArray(attribute.GetConnections()),
-      metadata: attribute.GetAllMetadata(),
-      stack: vectorToArray(safe(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
-    }));
-  }
-
-  function readRelationships(prim: USDPrimLike, currentTime: number): RelationshipRow[] {
-    if (!prim?.IsValid?.()) return [];
-    return vectorToArray(prim.GetRelationships()).map((relationship: USDRelationshipLike) => ({
-      name: relationship.GetName(),
-      path: relationship.GetPath(),
-      targets: vectorToArray(relationship.GetTargets()),
-      metadata: relationship.GetAllMetadata(),
-      stack: vectorToArray(safe(() => relationship.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
-    }));
-  }
-
-  function readVariants(prim: USDPrimLike): VariantRow[] {
-    if (!prim?.IsValid?.()) return [];
-    return vectorToArray(prim.GetVariantSetNames()).map((setName: string) => ({
-      setName,
-      selection: prim.GetVariantSelection(setName),
-      names: vectorToArray(prim.GetVariantNames(setName)),
-    }));
-  }
-
-  function readLayers(layers: USDLayerInfo[] | USDVectorLike<USDLayerInfo>): LayerRow[] {
-    return vectorToArray(layers).map((layer) => ({
-      identifier: layer.identifier,
-      displayName: layer.displayName,
-      realPath: layer.realPath,
-    }));
-  }
-
-  function readStageTime(currentTime: number): StageTimeInfo {
-    const metadata = state.handle?.stageMetadata?.();
-    const startTimeCode = metadata?.startTimeCode ?? 0;
-    const endTimeCode = metadata?.endTimeCode ?? startTimeCode;
-    const timeCodesPerSecond = metadata?.timeCodesPerSecond ?? 24;
-    const hasRange = endTimeCode > startTimeCode;
-    return {
-      startTimeCode,
-      endTimeCode,
-      timeCodesPerSecond,
-      currentTime: Number.isFinite(currentTime) ? currentTime : startTimeCode,
-      hasRange,
-      step: 1,
-    };
-  }
-
-  function specToLayerRow(source: LayerTableRow["source"]) {
-    return (spec: USDSpecStackEntry): LayerTableRow => ({
-      identifier: spec.layer.identifier,
-      displayName: spec.layer.displayName,
-      realPath: spec.layer.realPath,
-      source,
-      path: spec.path,
-      value: spec.typeName || spec.specifier || "",
-      metadata: spec.metadata,
-      offset: formatLayerOffset(spec.layerOffset),
-    });
-  }
-
-  function formatLayerOffset(offset: USDSpecStackEntry["layerOffset"]) {
-    if (!offset || offset.isIdentity) return "";
-    return `${offset.offset}, scale ${offset.scale}`;
-  }
-
-  function vectorToArray<T>(vector: USDVectorLike<T> | T[] | null | undefined): T[] {
-    if (!vector) return [];
-    if (Array.isArray(vector)) return vector;
-    if (typeof vector.size !== "function" || typeof vector.get !== "function") return [];
-    const values: T[] = [];
-    try {
-      for (let i = 0; i < vector.size(); i++) {
-        values.push(vector.get(i));
-      }
-    } finally {
-      vector.delete?.();
-    }
-    return values;
-  }
-
-  function safe<T>(callback: () => T, fallback: T): T {
-    try {
-      return callback();
-    } catch (error) {
-      console.warn("USD inspector query failed", error);
-      return fallback;
-    }
-  }
 
   function metadataEntries(metadata: Record<string, string>) {
     return Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b));
@@ -326,6 +30,14 @@
 
   function selectLayer(row: LayerTableRow) {
     state.selectLayer(row.identifier, row.source);
+  }
+
+  function propertyType(property: AttributeRow | RelationshipRow) {
+    return property.kind === "attribute" ? property.typeName : "relationship";
+  }
+
+  function propertyValue(property: AttributeRow | RelationshipRow) {
+    return property.kind === "attribute" ? property.value : property.targets.join(", ");
   }
 
   async function setTimelineValue(event: Event) {
@@ -356,7 +68,12 @@
     <div class="panel-grid">
       <section class="hierarchy">
         <h3>Prim Browser</h3>
-        {@render TreeView({ node: model.tree, selectedPath: state.selectedPath })}
+        <UsdHierarchy
+          tree={model.tree}
+          selectedPath={state.selectedPath}
+          revision={state.revision}
+          onSelectPath={(path) => state.selectPath(path)}
+        />
       </section>
 
       <section>
@@ -423,47 +140,32 @@
       </section>
 
       <section>
-        <h3>Properties</h3>
+        <h3>Property View</h3>
+        {@render PropertyTable({ properties: [...model.attributes, ...model.relationships] })}
         {#if model.attributes.length === 0 && model.relationships.length === 0}
           <p class="empty">No authored or built-in properties.</p>
         {/if}
-        {#each model.attributes as attribute}
-          <details class="property">
-            <summary>{attribute.name} <small>{attribute.typeName}</small></summary>
-            <button
-              class:selected={state.selectedPropertyPath === attribute.path}
-              class="select-property"
-              type="button"
-              onclick={() => selectProperty(attribute.path)}
-            >
-              {attribute.path}
-            </button>
-            <dl class="kv">
-              <dt>Value</dt><dd>{attribute.value}</dd>
-              <dt>Resolve</dt><dd>{attribute.resolveSource}</dd>
-              <dt>Connections</dt><dd>{attribute.connections.join(", ") || "-"}</dd>
-              <dt>Samples</dt><dd>{attribute.timeSamples.join(", ") || "-"}</dd>
-            </dl>
-            {@render SpecStack({ stack: attribute.stack })}
-          </details>
-        {/each}
-        {#each model.relationships as relationship}
-          <details class="property">
-            <summary>{relationship.name} <small>relationship</small></summary>
-            <button
-              class:selected={state.selectedPropertyPath === relationship.path}
-              class="select-property"
-              type="button"
-              onclick={() => selectProperty(relationship.path)}
-            >
-              {relationship.path}
-            </button>
-            <dl class="kv">
-              <dt>Targets</dt><dd>{relationship.targets.join(", ") || "-"}</dd>
-            </dl>
-            {@render SpecStack({ stack: relationship.stack })}
-          </details>
-        {/each}
+      </section>
+
+      <section>
+        <h3>Value</h3>
+        {#if model.selectedProperty}
+          <dl class="kv">
+            <dt>Property Name</dt><dd>{model.selectedProperty.name}</dd>
+            <dt>Type</dt><dd>{propertyType(model.selectedProperty)}</dd>
+            <dt>Value</dt><dd>{propertyValue(model.selectedProperty) || "-"}</dd>
+            {#if model.selectedProperty.kind === "attribute"}
+              <dt>Resolve</dt><dd>{model.selectedProperty.resolveSource || "-"}</dd>
+              <dt>Connections</dt><dd>{model.selectedProperty.connections.join(", ") || "-"}</dd>
+              <dt>Samples</dt><dd>{model.selectedProperty.timeSamples.join(", ") || "-"}</dd>
+            {:else}
+              <dt>Targets</dt><dd>{model.selectedProperty.targets.join(", ") || "-"}</dd>
+            {/if}
+          </dl>
+          {@render SpecStack({ stack: model.selectedPropertyStack })}
+        {:else}
+          <p class="empty">Select a property.</p>
+        {/if}
       </section>
 
       <section>
@@ -531,7 +233,7 @@
       </section>
 
       <section>
-        <h3>Metadata</h3>
+        <h3>Meta Data</h3>
         {#if model.selectedPrim && metadataEntries(model.selectedPrim.metadata).length}
           {#each metadataEntries(model.selectedPrim.metadata) as [key, value]}
             <dl class="kv"><dt>{key}</dt><dd>{value}</dd></dl>
@@ -560,18 +262,26 @@
   {/if}
 </aside>
 
-{#snippet TreeView({ node, selectedPath }: { node: TreeNode; selectedPath: string })}
-  <button class:selected={node.path === selectedPath} class="tree-row" type="button" onclick={() => state.selectPath(node.path)}>
-    <span>{node.name}</span>
-    <small>{node.typeName}</small>
-  </button>
-  {#if node.children.length}
-    <div class="tree-children">
-      {#each node.children as child}
-        {@render TreeView({ node: child, selectedPath })}
-      {/each}
+{#snippet PropertyTable({ properties }: { properties: Array<AttributeRow | RelationshipRow> })}
+  <div class="property-table">
+    <div class="property-table-header">
+      <span>Type</span>
+      <span>Property Name</span>
+      <span>Value</span>
     </div>
-  {/if}
+    {#each properties as property}
+      <button
+        class:selected={state.selectedPropertyPath === property.path}
+        class="property-row"
+        type="button"
+        onclick={() => selectProperty(property.path)}
+      >
+        <span>{propertyType(property)}</span>
+        <span>{property.name}</span>
+        <span>{propertyValue(property) || "-"}</span>
+      </button>
+    {/each}
+  </div>
 {/snippet}
 
 {#snippet SpecStack({ stack }: { stack: USDSpecStackEntry[] })}
@@ -724,23 +434,6 @@
     overflow: auto;
   }
 
-  .tree-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    margin: 1px 0;
-    padding: 3px 4px;
-    color: inherit;
-    text-align: left;
-    background: transparent;
-    border: 0;
-    border-radius: 3px;
-    font: inherit;
-    cursor: pointer;
-  }
-
   .timeline {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) 72px;
@@ -751,9 +444,9 @@
 
   .timeline button,
   .timeline input,
-  .select-property,
   .layer-actions button,
-  .layer-row {
+  .layer-row,
+  .property-row {
     color: inherit;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
@@ -762,9 +455,9 @@
   }
 
   .timeline button,
-  .select-property,
   .layer-actions button,
-  .layer-row {
+  .layer-row,
+  .property-row {
     cursor: pointer;
   }
 
@@ -774,22 +467,20 @@
     padding: 2px 4px;
   }
 
-  .tree-row:hover,
-  .tree-row.selected,
-  .select-property:hover,
-  .select-property.selected,
   .layer-row:hover,
-  .layer-row.selected {
+  .layer-row.selected,
+  .property-row:hover,
+  .property-row.selected {
     background: rgba(94, 151, 246, 0.35);
   }
 
-  .tree-row span,
-  .tree-row small,
   dd,
   .arc,
   .error,
   .stack li,
   .layers li,
+  .property-row span,
+  .property-table-header span,
   .layer-row span,
   .layer-table-header span {
     min-width: 0;
@@ -840,24 +531,6 @@
     background: rgba(255, 255, 255, 0.07);
   }
 
-  .property {
-    margin-top: 4px;
-    padding: 5px;
-    background: rgba(0, 0, 0, 0.18);
-    border-radius: 3px;
-  }
-
-  summary {
-    cursor: pointer;
-  }
-
-  .select-property {
-    width: 100%;
-    margin: 5px 0;
-    padding: 3px 5px;
-    text-align: left;
-  }
-
   .stack,
   .layers {
     display: grid;
@@ -871,10 +544,21 @@
     gap: 1px;
   }
 
+  .property-table,
   .layer-table {
     display: grid;
     gap: 3px;
     margin-bottom: 8px;
+  }
+
+  .property-table-header,
+  .property-row {
+    display: grid;
+    grid-template-columns: minmax(70px, 0.75fr) minmax(110px, 1.1fr) minmax(120px, 1.4fr);
+    gap: 5px;
+    align-items: center;
+    padding: 3px 4px;
+    text-align: left;
   }
 
   .layer-table-header,
@@ -887,6 +571,7 @@
     text-align: left;
   }
 
+  .property-table-header,
   .layer-table-header {
     color: rgba(255, 255, 255, 0.58);
     font-size: 11px;
