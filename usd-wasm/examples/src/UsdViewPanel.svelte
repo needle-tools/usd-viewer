@@ -40,6 +40,11 @@
     return property.kind === "attribute" ? property.value : property.targets.join(", ");
   }
 
+  function yesNo(value: boolean | undefined) {
+    if (value === undefined) return "-";
+    return value ? "yes" : "no";
+  }
+
   async function setTimelineValue(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     state.setPlaying(false);
@@ -77,7 +82,7 @@
       </section>
 
       <section>
-        <h3>Timeline</h3>
+        <h3>Animation</h3>
         <div class="timeline">
           <button type="button" onclick={togglePlayback} data-testid="usdview-timeline-play">
             {state.isPlaying ? "Pause" : "Play"}
@@ -104,8 +109,11 @@
           />
         </div>
         <dl class="kv">
-          <dt>Range</dt><dd>{model.stageTime.startTimeCode} - {model.stageTime.endTimeCode}</dd>
-          <dt>FPS</dt><dd>{model.stageTime.timeCodesPerSecond}</dd>
+          <dt>Current Frame</dt><dd>{Number(model.stageTime.currentTime.toFixed(3))}</dd>
+          <dt>Start TimeCode</dt><dd>{model.stageTime.startTimeCode}</dd>
+          <dt>End TimeCode</dt><dd>{model.stageTime.endTimeCode}</dd>
+          <dt>TimeCodes/Sec</dt><dd>{model.stageTime.timeCodesPerSecond}</dd>
+          <dt>Up Axis</dt><dd>{model.stageTime.upAxis || "-"}</dd>
         </dl>
       </section>
 
@@ -156,6 +164,10 @@
             <dt>Value</dt><dd>{propertyValue(model.selectedProperty) || "-"}</dd>
             {#if model.selectedProperty.kind === "attribute"}
               <dt>Resolve</dt><dd>{model.selectedProperty.resolveSource || "-"}</dd>
+              <dt>Authored Value</dt><dd>{yesNo(model.selectedProperty.resolveInfo?.hasAuthoredValue)}</dd>
+              <dt>Value Opinion</dt><dd>{yesNo(model.selectedProperty.resolveInfo?.hasAuthoredValueOpinion)}</dd>
+              <dt>Blocked</dt><dd>{yesNo(model.selectedProperty.resolveInfo?.valueIsBlocked)}</dd>
+              <dt>May Vary</dt><dd>{yesNo(model.selectedProperty.resolveInfo?.valueSourceMightBeTimeVarying)}</dd>
               <dt>Connections</dt><dd>{model.selectedProperty.connections.join(", ") || "-"}</dd>
               <dt>Samples</dt><dd>{model.selectedProperty.timeSamples.join(", ") || "-"}</dd>
             {:else}
@@ -235,9 +247,7 @@
       <section>
         <h3>Meta Data</h3>
         {#if model.selectedPrim && metadataEntries(model.selectedPrim.metadata).length}
-          {#each metadataEntries(model.selectedPrim.metadata) as [key, value]}
-            <dl class="kv"><dt>{key}</dt><dd>{value}</dd></dl>
-          {/each}
+          {@render MetadataTable({ entries: metadataEntries(model.selectedPrim.metadata) })}
         {:else}
           <p class="empty">No metadata.</p>
         {/if}
@@ -284,6 +294,21 @@
   </div>
 {/snippet}
 
+{#snippet MetadataTable({ entries }: { entries: [string, string][] })}
+  <div class="metadata-table">
+    <div class="metadata-table-header">
+      <span>Field Name</span>
+      <span>Value</span>
+    </div>
+    {#each entries as [key, value]}
+      <div class="metadata-row">
+        <span>{key}</span>
+        <span>{value}</span>
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 {#snippet SpecStack({ stack }: { stack: USDSpecStackEntry[] })}
   {#if stack.length === 0}
     <p class="empty">No spec stack.</p>
@@ -309,8 +334,7 @@
     <div class="layer-table">
       <div class="layer-table-header">
         <span>Layer</span>
-        <span>Source</span>
-        <span>Offset</span>
+        <span>Offset , Scale</span>
         <span>Path</span>
         <span>Value</span>
       </div>
@@ -323,7 +347,6 @@
           onclick={() => selectLayer(row)}
         >
           <span>{row.displayName}</span>
-          <span>{row.source}</span>
           <span>{row.offset || "-"}</span>
           <span>{row.path || row.realPath || row.identifier}</span>
           <span>{row.value || "-"}</span>
@@ -481,6 +504,8 @@
   .layers li,
   .property-row span,
   .property-table-header span,
+  .metadata-row span,
+  .metadata-table-header span,
   .layer-row span,
   .layer-table-header span {
     min-width: 0;
@@ -545,6 +570,7 @@
   }
 
   .property-table,
+  .metadata-table,
   .layer-table {
     display: grid;
     gap: 3px;
@@ -561,10 +587,19 @@
     text-align: left;
   }
 
+  .metadata-table-header,
+  .metadata-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.9fr) minmax(140px, 1.3fr);
+    gap: 5px;
+    align-items: center;
+    padding: 3px 4px;
+  }
+
   .layer-table-header,
   .layer-row {
     display: grid;
-    grid-template-columns: minmax(72px, 1.1fr) minmax(68px, 0.8fr) minmax(38px, 0.45fr) minmax(86px, 1.35fr) minmax(42px, 0.45fr);
+    grid-template-columns: minmax(72px, 1.1fr) minmax(58px, 0.55fr) minmax(92px, 1.35fr) minmax(42px, 0.45fr);
     gap: 5px;
     align-items: center;
     padding: 3px 4px;
@@ -572,9 +607,15 @@
   }
 
   .property-table-header,
+  .metadata-table-header,
   .layer-table-header {
     color: rgba(255, 255, 255, 0.58);
     font-size: 11px;
+  }
+
+  .metadata-row {
+    background: rgba(255, 255, 255, 0.055);
+    border-radius: 3px;
   }
 
   .layer-actions {

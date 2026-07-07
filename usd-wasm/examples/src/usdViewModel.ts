@@ -12,6 +12,10 @@ export type USDStageLike = {
   GetLayerStack(includeSessionLayers: boolean): USDLayerInfo[];
   GetUsedLayers(includeClipLayers: boolean): USDLayerInfo[];
   GetCompositionErrors(): string[];
+  GetStartTimeCode?(): number;
+  GetEndTimeCode?(): number;
+  GetTimeCodesPerSecond?(): number;
+  GetUpAxis?(): number;
   RegisterObjectsChanged?(callback: (notice: USDObjectsChangedNotice) => void): number;
   RevokeObjectsChanged?(listenerId: number): boolean;
 };
@@ -154,6 +158,7 @@ export type AttributeRow = {
   typeName: string;
   value: string;
   resolveSource: string;
+  resolveInfo: USDResolveInfo | null;
   timeSamples: number[];
   connections: string[];
   metadata: Record<string, string>;
@@ -211,6 +216,7 @@ export type LayerTableRow = LayerRow & {
 };
 
 export type StageTimeInfo = {
+  upAxis: string;
   startTimeCode: number;
   endTimeCode: number;
   timeCodesPerSecond: number;
@@ -265,6 +271,7 @@ export const emptyModel: InspectorModel = {
   layerRows: [],
   selectedLayer: null,
   stageTime: {
+    upAxis: "",
     startTimeCode: 0,
     endTimeCode: 0,
     timeCodesPerSecond: 24,
@@ -301,7 +308,7 @@ export function buildUsdViewModel(options: BuildUsdViewModelOptions): InspectorM
   const primStack = vectorToArray(safeUsdQuery(() => selectedPrim.GetPrimStackWithLayerOffsets?.(), []));
   const layerStack = readLayers(safeUsdQuery(() => stage.GetLayerStack?.(true) ?? [], []));
   const usedLayers = readLayers(safeUsdQuery(() => stage.GetUsedLayers?.(false) ?? [], []));
-  const stageTime = readStageTime(currentTime, stageMetadata);
+  const stageTime = readStageTime(currentTime, readStageMetadata(stage, stageMetadata));
   const layerRows = [
     ...layerStack.map((layer): LayerTableRow => ({ ...layer, source: "Layer Stack" })),
     ...usedLayers.map((layer): LayerTableRow => ({ ...layer, source: "Used Layers" })),
@@ -374,18 +381,22 @@ export function readPrimDetails(prim: USDPrimLike): PrimDetails | null {
 
 export function readAttributes(prim: USDPrimLike, currentTime: number): AttributeRow[] {
   if (!prim?.IsValid?.()) return [];
-  return vectorToArray(prim.GetAttributes()).map((attribute: USDAttributeLike) => ({
-    kind: "attribute",
-    name: attribute.GetName(),
-    path: attribute.GetPath(),
-    typeName: attribute.GetTypeName(),
-    value: safeUsdQuery(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
-    resolveSource: safeUsdQuery(() => attribute.GetResolveInfo(currentTime).source, ""),
-    timeSamples: vectorToArray(attribute.GetTimeSamples()),
-    connections: vectorToArray(attribute.GetConnections()),
-    metadata: attribute.GetAllMetadata(),
-    stack: vectorToArray(safeUsdQuery(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
-  }));
+  return vectorToArray(prim.GetAttributes()).map((attribute: USDAttributeLike) => {
+    const resolveInfo = safeUsdQuery(() => attribute.GetResolveInfo(currentTime), null);
+    return {
+      kind: "attribute",
+      name: attribute.GetName(),
+      path: attribute.GetPath(),
+      typeName: attribute.GetTypeName(),
+      value: safeUsdQuery(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
+      resolveSource: resolveInfo?.source ?? "",
+      resolveInfo,
+      timeSamples: vectorToArray(attribute.GetTimeSamples()),
+      connections: vectorToArray(attribute.GetConnections()),
+      metadata: attribute.GetAllMetadata(),
+      stack: vectorToArray(safeUsdQuery(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
+    };
+  });
 }
 
 export function readRelationships(prim: USDPrimLike, currentTime: number): RelationshipRow[] {
@@ -423,6 +434,7 @@ export function readStageTime(currentTime: number, metadata: USDStageMetadata | 
   const timeCodesPerSecond = metadata?.timeCodesPerSecond ?? 24;
   const hasRange = endTimeCode > startTimeCode;
   return {
+    upAxis: metadata?.upAxis ?? "",
     startTimeCode,
     endTimeCode,
     timeCodesPerSecond,
@@ -430,6 +442,21 @@ export function readStageTime(currentTime: number, metadata: USDStageMetadata | 
     hasRange,
     step: 1,
   };
+}
+
+export function readStageMetadata(stage: USDStageLike, fallback: USDStageMetadata | null | undefined): USDStageMetadata {
+  return {
+    upAxis: safeUsdQuery(() => normalizeUpAxis(stage.GetUpAxis?.()), fallback?.upAxis ?? ""),
+    startTimeCode: safeUsdQuery(() => stage.GetStartTimeCode?.() ?? fallback?.startTimeCode ?? 0, fallback?.startTimeCode ?? 0),
+    endTimeCode: safeUsdQuery(() => stage.GetEndTimeCode?.() ?? fallback?.endTimeCode ?? fallback?.startTimeCode ?? 0, fallback?.endTimeCode ?? fallback?.startTimeCode ?? 0),
+    timeCodesPerSecond: safeUsdQuery(() => stage.GetTimeCodesPerSecond?.() ?? fallback?.timeCodesPerSecond ?? 24, fallback?.timeCodesPerSecond ?? 24),
+  };
+}
+
+function normalizeUpAxis(value: number | string | undefined) {
+  if (typeof value === "string") return value;
+  if (!Number.isFinite(value)) return "";
+  return String.fromCharCode(Number(value));
 }
 
 export function vectorToArray<T>(vector: USDVectorLike<T> | T[] | null | undefined): T[] {
