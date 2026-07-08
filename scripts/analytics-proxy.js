@@ -1,26 +1,11 @@
 "use strict";
 
-// Stamp the real visitor IP into Rybbit track events.
-//
-// Our self-hosted Rybbit (v2.6.0) geolocates the visitor from
-// `payload.ip_address || request.ip` (see rybbit trackEvent.ts). This viewer's
-// analytics reach Rybbit through Cloudflare + Coolify/Traefik, where the
-// `X-Forwarded-For` / `request.ip` chain is not a reliable carrier of the real
-// visitor IP (Traefik only preserves it when configured to trust Cloudflare, and
-// that config can be reset). Cloudflare, however, ALWAYS provides the real
-// client IP in `CF-Connecting-IP`, which passes through untouched.
-//
-// So for track events we read CF-Connecting-IP and write it into the event body
-// as `ip_address`, which Rybbit uses directly — bypassing every header/proxy
-// hop. This is deterministic and independent of any Traefik/Cloudflare config.
-
-// The Rybbit tracker derives its API base from /api/script.js and posts events
-// to <base>/track — i.e. this path on our same-origin proxy.
+// Stamp the real visitor IP into same-origin analytics track events.
 const TRACK_PATH = "/api/track";
 
 /**
  * Return the request body, with `ip_address` set to the real visitor IP for
- * Rybbit track events. Never throws: an empty/non-JSON/non-object body, a
+ * analytics track events. Never throws: an empty/non-JSON/non-object body, a
  * non-track path, or a missing CF-Connecting-IP all forward the body unchanged,
  * so analytics is never dropped.
  *
@@ -29,7 +14,7 @@ const TRACK_PATH = "/api/track";
  * @param {string|undefined} cfConnectingIp value of the CF-Connecting-IP header
  * @returns {Buffer|undefined} the (possibly rewritten) body
  */
-function injectClientIpIntoTrackBody(url, body, cfConnectingIp) {
+function injectClientIpIntoAnalyticsTrackBody(url, body, cfConnectingIp) {
   if (!cfConnectingIp || !body || body.length === 0) return body;
   const pathname = String(url).split("?")[0];
   if (pathname !== TRACK_PATH) return body;
@@ -56,7 +41,7 @@ function injectClientIpIntoTrackBody(url, body, cfConnectingIp) {
  * @param {string|undefined} ip
  * @returns {string}
  */
-function maskIp(ip) {
+function maskIpForLog(ip) {
   if (!ip || typeof ip !== "string") return "";
   const trimmed = ip.trim();
   if (trimmed.includes(":")) {
@@ -69,4 +54,4 @@ function maskIp(ip) {
   return `${octets[0]}.${octets[1]}.x.x`;
 }
 
-module.exports = { injectClientIpIntoTrackBody, maskIp, TRACK_PATH };
+module.exports = { injectClientIpIntoAnalyticsTrackBody, maskIpForLog, TRACK_PATH };

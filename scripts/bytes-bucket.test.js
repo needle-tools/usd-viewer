@@ -10,7 +10,7 @@ const assert = require("node:assert");
 const MB = 1024 * 1024;
 let bucketBytes;
 test.before(async () => {
-  ({ bucketBytes } = await import("./public/analytics.js"));
+  ({ bucketBytes } = await import("../public/analytics.js"));
 });
 
 test("buckets across the whole range (upper-exclusive)", () => {

@@ -7,7 +7,6 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test rybbit-ip.test.js bytes-bucket.test.js",
     "prepare:public": "node scripts/prepare-public-runtime.mjs",
     "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs"
   },

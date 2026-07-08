@@ -4,6 +4,13 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-08
+### Changed
+- Expanded the browser USD API surface for common `Usd`, `UsdGeom`, `UsdShade`, `Sdf`, `Gf`, and `Vt` workflows.
+
+### Fixed
+- Fixed empty geom subset material handling so unmaterialed empty subsets work.
+
 ## [1.0.2] - 2026-07-06
 ### Changed
 - Updated the MaterialX runtime dependency to `@needle-tools/materialx@1.7.2`.

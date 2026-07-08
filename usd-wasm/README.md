@@ -8,7 +8,7 @@ For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.0.2 three
+npm install @needle-tools/usd@1.1.0 three
 ```
 
 Version 1.0 uses upstream OpenUSD 26.05 and ships a Hydra imaging bridge for
