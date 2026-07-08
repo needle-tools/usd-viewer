@@ -227,6 +227,17 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
+    test('Face-varying normals fixture keeps unmaterialed meshes on single materials', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page);
+        await loadAssetsInOrder(page, ['Face-Varying Normals Matrix']);
+
+        const state = await getViewerState(page);
+        expect(state?.sceneDiagnostics.meshCount).toBeGreaterThan(1);
+        expect(state?.sceneDiagnostics.materialArrayMeshCount).toBe(0);
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
     test('Needle Engine host completes USDA and API scene loads after prior assets', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page, 'needle-engine');
