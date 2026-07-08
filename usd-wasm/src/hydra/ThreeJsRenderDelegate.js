@@ -1284,7 +1284,7 @@ class HydraMesh {
     this._materials = [this._ownedMaterial || defaultMaterial];
     if (this._reprStyle === 'points' || !sections?.length) {
       if (this._mesh && !this._mesh.isPoints) {
-        this._mesh.material = this._materials[0];
+        this._mesh.material = this._applyMaterialSide(this._materials[0]);
         this._applyHydraReprMaterialState();
       }
       return;
