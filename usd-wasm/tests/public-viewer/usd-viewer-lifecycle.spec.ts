@@ -849,12 +849,13 @@ test.describe('public usd-viewer lifecycle', () => {
             `/?file=${encodeURIComponent(bishopUrl)}&viewer=needle&complexity=high`,
             { waitUntil: 'domcontentloaded' },
         );
-        await page.waitForFunction(() => {
+        const expectedBishopDisplayName = viewerDisplayFilename('Bishop_payload.usd');
+        await page.waitForFunction(expectedFilename => {
             return document.body.classList.contains('viewer-mode-needle-loader')
-                && document.querySelector('.filename-text')?.textContent === 'Bishop_payload.usd'
+                && document.querySelector('.filename-text')?.textContent === expectedFilename
                 && Boolean(window.driver)
                 && Boolean(window.usdHydra);
-        });
+        }, expectedBishopDisplayName);
 
         const state = await waitForNeedleMeshAttributeState(
             page,
@@ -2850,6 +2851,12 @@ async function clickSyntheticFileLink(page: Page, url: string) {
     }, url);
 }
 
+function viewerDisplayFilename(filename: string) {
+    const base = filename.split('/').pop()?.split('#')[0].split('?')[0] || filename;
+    const dot = base.indexOf('.');
+    return dot > 0 ? base.slice(0, dot) : base;
+}
+
 async function waitForPublicViewerLoad(page: Page, filename: string) {
     await page.waitForFunction(expectedFilename => {
         const overlay = document.getElementById('loading-overlay');
@@ -2858,7 +2865,7 @@ async function waitForPublicViewerLoad(page: Page, filename: string) {
         const driverAlive = Boolean(driver) && (typeof driver.isDeleted !== 'function' || !driver.isDeleted());
         const actualFilename = document.querySelector('.filename-text')?.textContent || '';
         return overlayHidden && driverAlive && actualFilename === expectedFilename;
-    }, filename);
+    }, viewerDisplayFilename(filename));
     await page.waitForTimeout(1000);
     return await page.evaluate(() => ({
         href: location.href,
@@ -2884,7 +2891,7 @@ async function waitForNativeGltfLoad(page: Page, filename: string, mode: 'three'
             && !window.usdHydra
             && !window.usdStage
             && (nativeThreeLoaded || nativeNeedleLoaded);
-    }, { expectedFilename: filename, expectedMode: mode });
+    }, { expectedFilename: viewerDisplayFilename(filename), expectedMode: mode });
     await page.waitForTimeout(1000);
     return await page.evaluate(expectedMode => {
         let cameraFit: any = null;
@@ -3009,7 +3016,7 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
             && Boolean(window.needleEngineContext)
             && Boolean(window.usdHydra)
             && driverAlive;
-    }, filename);
+    }, viewerDisplayFilename(filename));
     await page.waitForTimeout(1000);
     return await page.evaluate(() => ({
         href: location.href,
