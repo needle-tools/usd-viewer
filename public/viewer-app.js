@@ -11,6 +11,7 @@ import {
   WebGLRenderer,
   SRGBColorSpace,
   AgXToneMapping,
+  CubeUVReflectionMapping,
   PMREMGenerator,
   EquirectangularReflectionMapping,
   createThreeHydra,
@@ -18,7 +19,10 @@ import {
   addPluginForNeedleEngine,
   fitNeedleCameraToObjects,
   getHydraHandleFromNeedleEngineAsset,
+  EXRLoader,
   RGBELoader,
+  KTX2Loader,
+  RoomEnvironment,
   GLTFExporter,
   GLTFLoader,
   OrbitControls,
@@ -29,6 +33,37 @@ import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 
 const SHOW_OPENUSD_TEST_ASSETS = false;
+const DEFAULT_ENVIRONMENT = "neutral";
+const NEEDLE_MAGIC_ENVIRONMENTS = {
+  "studio": "https://cdn.needle.tools/static/skybox/modelviewer-Neutral.pmrem4x4.ktx2?pmrem",
+  "blurred-skybox": "https://cdn.needle.tools/static/skybox/blurred-skybox.pmrem4x4.ktx2?pmrem",
+  "quicklook": "https://cdn.needle.tools/static/skybox/QuickLook-ObjectMode.pmrem4x4.ktx2?pmrem",
+  "quicklook-ar": "https://cdn.needle.tools/static/skybox/QuickLook-ARMode.pmrem4x4.ktx2?pmrem",
+};
+const FASTHDR_ENVIRONMENTS = {
+  "fasthdr-studio": "https://cdn.needle.tools/static/hdris/studio_small_09_2k.pmrem.ktx2",
+  "photo-studio": "https://cdn.needle.tools/static/hdris/photo_studio_01_2k.pmrem.ktx2",
+  "brown-photostudio": "https://cdn.needle.tools/static/hdris/brown_photostudio_02_2k.pmrem.ktx2",
+  "venice-sunset": "https://cdn.needle.tools/static/hdris/venice_sunset_2k.pmrem.ktx2",
+  "spruit-sunrise": "https://cdn.needle.tools/static/hdris/spruit_sunrise_2k.pmrem.ktx2",
+  "meadow": "https://cdn.needle.tools/static/hdris/meadow_2k.pmrem.ktx2",
+  "canary-wharf": "https://cdn.needle.tools/static/hdris/canary_wharf_2k.pmrem.ktx2",
+  "shanghai-bund": "https://cdn.needle.tools/static/hdris/shanghai_bund_2k.pmrem.ktx2",
+  "cayley-interior": "https://cdn.needle.tools/static/hdris/cayley_interior_2k.pmrem.ktx2",
+  "fireplace": "https://cdn.needle.tools/static/hdris/fireplace_2k.pmrem.ktx2",
+  "sky-on-fire": "https://cdn.needle.tools/static/hdris/the_sky_is_on_fire_2k.pmrem.ktx2",
+  "dikhololo-night": "https://cdn.needle.tools/static/hdris/dikhololo_night_2k.pmrem.ktx2",
+};
+const LOCAL_ENVIRONMENTS = {
+  "neutral": "environments/neutral.hdr",
+  "helicopter": "environments/helicopter-landing-pad-vis-4K.hdr",
+  "helicopter-landing-pad": "environments/helicopter-landing-pad-vis-4K.hdr",
+};
+const ENVIRONMENT_PRESETS = {
+  ...LOCAL_ENVIRONMENTS,
+  ...NEEDLE_MAGIC_ENVIRONMENTS,
+  ...FASTHDR_ENVIRONMENTS,
+};
 
 // Vanilla counterpart of needle-cloud's Svelte `use:tooltip` action
 // (`needle-share-admin/src/lib/actions/tooltip.ts`): one shared body-level
@@ -614,6 +649,8 @@ let filename = params.get("file") || ""; // || 'https://cdn.glitch.global/bee386
 let messageLog = document.querySelector("#message-log");
 let currentDisplayFilename = "";
 const testFixtureBaseUrl = testFixtureUrl("");
+const hasEnvironmentUrlParam = params.has("environment") || params.has("env");
+const selectedEnvironment = resolveEnvironment(environmentUrlParam());
 const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
@@ -781,6 +818,101 @@ function applyAgXToneMapping(rendererLike) {
     if (!renderer || typeof renderer !== "object") continue;
     renderer.toneMapping = AgXToneMapping;
     if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = 1;
+  }
+}
+
+function normalizeEnvironmentName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function environmentUrlParam() {
+  return params.get("environment") || params.get("env") || options.hdrPath || DEFAULT_ENVIRONMENT;
+}
+
+function resolveEnvironment(value) {
+  const raw = String(value || DEFAULT_ENVIRONMENT).trim();
+  const key = normalizeEnvironmentName(raw);
+  if (!key || key === "default") return resolveEnvironment(DEFAULT_ENVIRONMENT);
+  if (key === "none" || key === "off") {
+    return { id: key, source: "", needleValue: "", threeValue: "", type: "none" };
+  }
+  if (key === "room" || key === "roomenvironment" || key === "room-environment") {
+    return { id: "room", source: "room", needleValue: "studio", threeValue: "room", type: "room" };
+  }
+  const preset = ENVIRONMENT_PRESETS[key];
+  if (preset) {
+    return {
+      id: key,
+      source: preset,
+      needleValue: NEEDLE_MAGIC_ENVIRONMENTS[key] ? key : preset,
+      threeValue: preset,
+      type: preset.includes(".ktx2") ? "ktx2" : "texture",
+    };
+  }
+  if (/^(https?:|\/|\.\/|\.\.\/|blob:|data:)/i.test(raw) || /\.(hdr|exr|ktx2|png|jpe?g)([?#].*)?$/i.test(raw)) {
+    return {
+      id: raw,
+      source: raw,
+      needleValue: raw,
+      threeValue: raw,
+      type: raw.toLowerCase().includes(".ktx2") ? "ktx2" : "texture",
+    };
+  }
+  console.warn(`Unknown environment "${raw}", using ${DEFAULT_ENVIRONMENT}.`);
+  return resolveEnvironment(DEFAULT_ENVIRONMENT);
+}
+
+function applyNeedleEngineEnvironment(element, environment) {
+  if (!element) return;
+  if (!environment?.needleValue) {
+    element.removeAttribute("environment-image");
+    return;
+  }
+  element.setAttribute("environment-image", environment.needleValue);
+}
+
+function isPmremEnvironmentUrl(url) {
+  return /\.ktx2([?#].*)?$/i.test(url) && /pmrem/i.test(url);
+}
+
+async function loadThreeEnvironment(scene, renderer, environment) {
+  if (!environment || environment.type === "none") {
+    scene.environment = null;
+    return;
+  }
+
+  const pmremGenerator = new PMREMGenerator(renderer);
+  try {
+    if (environment.type === "room") {
+      scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+      return;
+    }
+
+    const url = environment.threeValue;
+    if (!url) return;
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes(".ktx2")) {
+      const loader = new KTX2Loader()
+        .setTranscoderPath("/three/examples/jsm/libs/basis/")
+        .detectSupport(renderer);
+      const texture = await loader.loadAsync(url);
+      texture.mapping = isPmremEnvironmentUrl(url) ? CubeUVReflectionMapping : EquirectangularReflectionMapping;
+      texture.needsUpdate = true;
+      scene.environment = texture;
+      loader.dispose();
+      return;
+    }
+
+    const loader = lowerUrl.includes(".exr") ? new EXRLoader() : new RGBELoader();
+    const texture = await loader.loadAsync(url);
+    texture.mapping = EquirectangularReflectionMapping;
+    texture.needsUpdate = true;
+    scene.environment = pmremGenerator.fromEquirectangular(texture).texture;
+    texture.dispose?.();
+  } catch (err) {
+    console.error(`An error occurred loading the ${environment.id} environment map.`, err);
+  } finally {
+    pmremGenerator.dispose();
   }
 }
 
@@ -1394,6 +1526,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
+    if (hasEnvironmentUrlParam) applyNeedleEngineEnvironment(needleEngineElement, selectedEnvironment);
     needleEngineElement.addEventListener("loadstart", () => {
       ready = false;
     });
@@ -1522,6 +1655,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   needleLoaderFiles = filesForHydra || [];
   const source = sourceForNeedleEngine(path, filesForHydra);
   if (!source) throw new Error("Needle Engine USD load requires a source path");
+  if (hasEnvironmentUrlParam) applyNeedleEngineEnvironment(element, selectedEnvironment);
 
   const loadPromise = new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -1986,22 +2120,7 @@ async function init() {
   renderer.shadowMap.enabled = false;
   renderer.setClearColor( 0x000000, 0 ); // the default
 
-  const envMapPromise = new Promise(resolve => {
-    const pmremGenerator = new PMREMGenerator(renderer);
-            pmremGenerator.compileCubemapShader();
-            
-    new RGBELoader().load(options.hdrPath, (texture) => {
-      const hdrRenderTarget = pmremGenerator.fromEquirectangular(texture);
-
-      texture.mapping = EquirectangularReflectionMapping;
-      texture.needsUpdate = true;
-      scene.environment = hdrRenderTarget.texture;
-      resolve();
-    }, undefined, (err) => {
-        console.error('An error occurred loading the HDR environment map.', err);
-        resolve();
-    });
-  });
+  const envMapPromise = loadThreeEnvironment(scene, renderer, selectedEnvironment);
 
   document.body.appendChild( renderer.domElement );
   renderer.domElement.classList.add("usd-viewer-three-canvas");
