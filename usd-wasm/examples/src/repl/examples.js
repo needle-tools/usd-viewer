@@ -454,6 +454,85 @@ stage = await Usd.Stage.Open("/tmp/arcs-root.usda");
 print(stage.GetPrimAtPath("/World").GetCompositionArcs());`,
   },
   {
+    title: "Fixture: Unmaterialed Empty Subset",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Unmaterialed Empty Subset");
+
+print({
+  prims: listPrims(stage),
+  mesh: inspectPrim(stage.GetPrimAtPath("/World/PlainTriangle")),
+});`,
+  },
+  {
+    title: "Fixture: Face-Varying Normals Matrix",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Face-Varying Normals Matrix");
+
+print(listPrims(stage).filter((path) => {
+  return stage.GetPrimAtPath(path).GetTypeName() === "Mesh";
+}));`,
+  },
+  {
+    title: "Fixture: Parent Folder Reference",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Parent Folder References");
+
+print({
+  usedLayers: stage.GetUsedLayers(false).map((layer) => layer.displayName),
+  world: inspectPrim(stage.GetPrimAtPath("/World")),
+  referencedCube: inspectPrim(stage.GetPrimAtPath("/World/Shape")),
+});`,
+  },
+  {
+    title: "Fixture: Payload Root",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Payload Root");
+
+const payloadPrim = stage.GetPrimAtPath("/World/PayloadHolder");
+print({
+  loaded: payloadPrim.IsLoaded(),
+  prims: listPrims(stage),
+});`,
+  },
+  {
+    title: "Fixture: Native Instances",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Native Instances");
+
+print(listPrims(stage).map((path) => {
+  const prim = stage.GetPrimAtPath(path);
+  return { path, typeName: prim.GetTypeName(), instance: prim.IsInstance?.() ?? false };
+}));`,
+  },
+  {
+    title: "Fixture: Point Instancer",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Point Instancer");
+
+print(inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
+  },
+  {
+    title: "Fixture: Camera + Light",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("Camera + Light");
+
+print({
+  camera: inspectPrim(stage.GetPrimAtPath("/World/ShotCam")),
+  light: inspectPrim(stage.GetPrimAtPath("/World/KeyLight")),
+});`,
+  },
+  {
+    title: "Fixture: MaterialX Texture + Noise",
+    group: "Fixture Smoke",
+    code: `stage = await openFixture("MaterialX Texture + Noise");
+
+print({
+  fixture: findFixture("MaterialX Texture + Noise"),
+  usedLayers: stage.GetUsedLayers(false).map((layer) => layer.displayName),
+  prims: listPrims(stage),
+});`,
+  },
+  {
     title: "Objects Changed",
     group: "Inspection",
     code: `stage = Usd.Stage.CreateNew("/tmp/notices.usda");

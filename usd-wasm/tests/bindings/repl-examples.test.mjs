@@ -9,6 +9,7 @@ import { replExamples } from "../../examples/src/repl/examples.js";
 import { testAssetLibrary } from "../fixtures/test-asset-library.js";
 
 const bindingsDir = resolve("src/bindings");
+const fixturesDir = resolve("tests/fixtures");
 const require = createRequire(import.meta.url);
 
 async function loadUsdModuleFromTempCopy() {
@@ -91,6 +92,43 @@ describe("OpenUSD browser REPL examples", () => {
       return path;
     }
 
+    function mountBytes(path, bytes) {
+      ensureParentPath(path);
+      try {
+        USD.FS_unlink(path);
+      }
+      catch {}
+      const parts = path.split("/");
+      const file = parts.pop();
+      const parent = parts.join("/") || "/";
+      USD.FS_createDataFile(parent, file, bytes, true, true, true);
+      return path;
+    }
+
+    function findFixture(query) {
+      const normalized = String(query).toLowerCase();
+      return testAssetLibrary.find((asset) => (
+        asset.label.toLowerCase() === normalized ||
+        asset.root.toLowerCase() === normalized
+      ));
+    }
+
+    async function openFixture(rootOrLabel, files) {
+      const fixture = findFixture(rootOrLabel);
+      const root = fixture?.root ?? rootOrLabel;
+      const paths = files ?? fixture?.files ?? [root];
+      const orderedPaths = [root, ...paths.filter((path) => path !== root)];
+
+      for (const path of orderedPaths) {
+        const bytes = await readFile(join(fixturesDir, path));
+        mountBytes(`/tmp/repl-fixtures/${path}`, bytes);
+      }
+
+      const opened = await pxr.Usd.Stage.Open(`/tmp/repl-fixtures/${root}`);
+      context.stage = opened;
+      return opened;
+    }
+
     const logs = [];
     const context = {
       USD,
@@ -103,6 +141,10 @@ describe("OpenUSD browser REPL examples", () => {
       listPrims,
       inspectPrim,
       mountText,
+      mountBytes,
+      openFixture,
+      fixtureCatalog: testAssetLibrary,
+      findFixture,
     };
 
     const runner = new Function("context", "code", `

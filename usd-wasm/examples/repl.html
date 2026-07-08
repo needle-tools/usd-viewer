@@ -520,6 +520,11 @@
     const usdviewHostEl = document.getElementById("usdview-host");
 
     const encoder = new TextEncoder();
+    const fixtureUrls = import.meta.glob("../tests/fixtures/**/*", {
+      eager: true,
+      import: "default",
+      query: "?url",
+    });
     const storage = window.localStorage;
     const storageKeys = {
       code: "openusd-repl.code",
@@ -607,6 +612,75 @@
       const parent = parts.join("/") || "/";
       USD.FS_createDataFile(parent, file, encoder.encode(text), true, true, true);
       return path;
+    }
+
+    function mountBytes(path, bytes) {
+      ensureParentPath(path);
+      try {
+        USD.FS_unlink(path);
+      }
+      catch {}
+      const parts = path.split("/");
+      const file = parts.pop();
+      const parent = parts.join("/") || "/";
+      USD.FS_createDataFile(parent, file, bytes, true, true, true);
+      return path;
+    }
+
+    function fixtureUrl(path) {
+      const url = fixtureUrls[`../tests/fixtures/${path}`];
+      if (!url) throw new Error(`Missing test fixture URL for ${path}`);
+      return url;
+    }
+
+    function findFixture(query) {
+      const normalized = String(query).toLowerCase();
+      return testAssetLibrary.find((asset) => (
+        asset.label.toLowerCase() === normalized ||
+        asset.root.toLowerCase() === normalized
+      ));
+    }
+
+    async function buildFixtureFiles(rootOrLabel, files) {
+      const fixture = findFixture(rootOrLabel);
+      const root = fixture?.root ?? rootOrLabel;
+      const paths = files ?? fixture?.files ?? [root];
+      const orderedPaths = [root, ...paths.filter((path) => path !== root)];
+      const buffers = new Map();
+
+      for (const path of orderedPaths) {
+        const response = await fetch(fixtureUrl(path));
+        if (!response.ok) {
+          throw new Error(`Failed to fetch fixture ${path}: ${response.status} ${response.statusText}`);
+        }
+        const buffer = await response.arrayBuffer();
+        buffers.set(path, buffer);
+        mountBytes(`/tmp/repl-fixtures/${path}`, new Uint8Array(buffer));
+      }
+
+      return {
+        label: fixture?.label ?? root,
+        root,
+        mountedRoot: `/tmp/repl-fixtures/${root}`,
+        files: orderedPaths.map((path) => {
+          const buffer = buffers.get(path);
+          return {
+            name: path.split("/").pop() || path,
+            path,
+            arrayBuffer: async () => buffer.slice(0),
+          };
+        }),
+      };
+    }
+
+    async function openFixture(rootOrLabel, files) {
+      const fixture = await buildFixtureFiles(rootOrLabel, files);
+      const opened = await pxr.Usd.Stage.Open(fixture.mountedRoot);
+      context.stage = opened;
+      context.__previewStage = opened;
+      context.__previewFiles = fixture.files;
+      context.__previewLabel = fixture.label;
+      return opened;
     }
 
     function copyToArrayBuffer(bytes) {
@@ -760,21 +834,24 @@
           }
           previewStatusEl.textContent = "Rendering...";
           const id = ++previewLoadId;
-          const filename = `repl-preview-${id}.usda`;
-          const path = `/tmp/${filename}`;
-          if (!stage.Export(path)) throw new Error(`Could not export ${path} for preview`);
-          const buffer = copyToArrayBuffer(USD.ReadFile(path));
+          let files = context.__previewStage === stage ? context.__previewFiles : null;
+          if (!files) {
+            const filename = `repl-preview-${id}.usda`;
+            const path = `/tmp/${filename}`;
+            if (!stage.Export(path)) throw new Error(`Could not export ${path} for preview`);
+            const buffer = copyToArrayBuffer(USD.ReadFile(path));
+            files = [{
+              name: filename,
+              path: `generated/${filename}`,
+              arrayBuffer: async () => buffer,
+            }, {
+              name: filename,
+              path: filename,
+              arrayBuffer: async () => buffer,
+            }];
+          }
           await clear();
           if (id !== previewLoadId) return;
-          const files = [{
-            name: filename,
-            path: `generated/${filename}`,
-            arrayBuffer: async () => buffer,
-          }, {
-            name: filename,
-            path: filename,
-            arrayBuffer: async () => buffer,
-          }];
           handle = await createThreeHydra({
             USD,
             files,
@@ -823,6 +900,12 @@
         listPrims,
         inspectPrim,
         mountText,
+        openFixture,
+        fixtureCatalog: testAssetLibrary,
+        findFixture,
+        __previewStage: null,
+        __previewFiles: null,
+        __previewLabel: "",
       };
     }
 
@@ -856,7 +939,10 @@
         lastRunAt = Date.now();
         consoleMetaEl.textContent = `Console - ${duration.toFixed(1)} ms`;
         if (context.stage?.Export) {
-          await preview.loadStage(context.stage, selection ? "Selection result" : "REPL stage");
+          const previewLabel = context.__previewStage === context.stage && context.__previewLabel
+            ? context.__previewLabel
+            : selection ? "Selection result" : "REPL stage";
+          await preview.loadStage(context.stage, previewLabel);
         }
         statusEl.textContent = "Ready";
       }
