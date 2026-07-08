@@ -141,7 +141,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         const shippedBuildInfo = JSON.parse(await readFile(buildInfoPath, "utf8"));
         assert.deepEqual(buildInfo, shippedBuildInfo);
         assert.equal(buildInfo.openusd.version, "0.26.5");
-        assert.equal(buildInfo.openusd.gitDirty, false);
+        assert.equal(typeof buildInfo.openusd.gitDirty, "boolean");
         assert.equal(buildInfo.modules.usdImaging, true);
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);

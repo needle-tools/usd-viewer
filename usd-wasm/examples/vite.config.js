@@ -11,6 +11,14 @@ export default defineConfig({
     resolve: {
         dedupe: ['three'],
     },
+    build: {
+        rollupOptions: {
+            input: {
+                index: 'index.html',
+                repl: 'repl.html',
+            },
+        },
+    },
     server: {
         fs: {
             allow: ['..'],

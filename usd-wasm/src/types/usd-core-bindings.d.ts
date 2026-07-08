@@ -3,41 +3,32 @@
 
 declare type MaybePromise<T> = T | Promise<T>
 
-declare type IntVector = {
+/** @internal Low-level Emscripten std::vector wrapper, not a USD authoring API. */
+declare type EmbindVector<T> = {
     size(): number,
-    get(index: number): number,
+    get(index: number): T,
+    /** @internal C++ std::vector append hook exposed by embind. */
+    push_back(value: T): void,
     delete(): void,
 }
 
-declare type DoubleVector = {
-    size(): number,
-    get(index: number): number,
-    delete(): void,
-}
+declare type IntVector = EmbindVector<number>
 
-declare type StringVector = {
-    size(): number,
-    get(index: number): string,
-    delete(): void,
-}
+declare type FloatVector = EmbindVector<number>
 
-declare type USDPrimVector = {
-    size(): number,
-    get(index: number): USDPrim,
-    delete(): void,
-}
+declare type DoubleVector = EmbindVector<number>
 
-declare type USDAttributeVector = {
-    size(): number,
-    get(index: number): USDAttribute,
-    delete(): void,
-}
+declare type StringVector = EmbindVector<string>
 
-declare type USDRelationshipVector = {
-    size(): number,
-    get(index: number): USDRelationship,
-    delete(): void,
-}
+declare type GfVec3fVector = EmbindVector<GfVec3f>
+
+declare type GfVec3dVector = EmbindVector<GfVec3d>
+
+declare type USDPrimVector = EmbindVector<USDPrim>
+
+declare type USDAttributeVector = EmbindVector<USDAttribute>
+
+declare type USDRelationshipVector = EmbindVector<USDRelationship>
 
 declare type USDLayerOffset = {
     offset: number,
@@ -105,6 +96,66 @@ declare type USDObjectsChangedNotice = {
     changedFields: Record<string, string[]>,
 }
 
+declare type SdfPath = {
+    AppendChild(childName: string): SdfPath,
+    AppendProperty(propertyName: string): SdfPath,
+    GetString(): string,
+    GetAsString(): string,
+    IsAbsolutePath(): boolean,
+    delete(): void,
+}
+
+declare type GfVec3f = { GetString(): string, delete(): void }
+declare type GfVec3d = { GetString(): string, delete(): void }
+declare type GfMatrix4d = {
+    SetTranslate(value: GfVec3d): GfMatrix4d,
+    GetString(): string,
+    delete(): void,
+}
+
+declare type UsdGeomXformOp = {
+    GetAttr(): USDAttribute,
+    IsDefined(): boolean,
+    GetOpName(): string,
+    GetTypeName(): string,
+    Set(value: unknown, timeCode: number): boolean,
+    Get(timeCode: number): string,
+    delete(): void,
+}
+
+declare type UsdShadeInput = {
+    GetAttr(): USDAttribute,
+    GetFullName(): string,
+    GetBaseName(): string,
+    GetPrim(): USDPrim,
+    GetTypeName(): string,
+    Set(value: unknown, timeCode: number): boolean,
+    ConnectToSource(output: UsdShadeOutput): boolean,
+    ConnectToSourcePath(path: string): boolean,
+    delete(): void,
+}
+
+declare type UsdShadeOutput = {
+    GetAttr(): USDAttribute,
+    GetFullName(): string,
+    GetBaseName(): string,
+    GetPrim(): USDPrim,
+    GetTypeName(): string,
+    Set(value: unknown, timeCode: number): boolean,
+    ConnectToSource(output: UsdShadeOutput): boolean,
+    ConnectToSourcePath(path: string): boolean,
+    delete(): void,
+}
+
+declare type UsdShadeMaterialBindingAPI = { Bind(material: UsdShadeMaterial): boolean, delete(): void }
+
+declare type UsdGeomXformCommonAPI = {
+    SetTranslate(value: GfVec3d, timeCode: number): boolean,
+    SetRotate(value: GfVec3f, timeCode: number): boolean,
+    SetScale(value: GfVec3f, timeCode: number): boolean,
+    delete(): void,
+}
+
 declare type USDLayer = {
     GetIdentifier(): string,
     GetDisplayName(): string,
@@ -138,6 +189,7 @@ declare type USDAttribute = {
     SetDouble(value: number, timeCode: number): boolean,
     SetString(value: string, timeCode: number): boolean,
     SetToken(value: string, timeCode: number): boolean,
+    Set(value: unknown, timeCode: number): boolean,
     AddConnection(path: string): boolean,
     SetColor3f(r: number, g: number, b: number, timeCode: number): boolean,
     SetVec3f(x: number, y: number, z: number, timeCode: number): boolean,
@@ -231,6 +283,121 @@ declare type USDStage = {
     SetUpAxis(upAxis: string): boolean,
     Export(path: string): boolean,
     ExportToString(): string,
+}
+
+declare type UsdGeomXform = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    AddTranslateOp(): UsdGeomXformOp,
+    AddRotateXYZOp(): UsdGeomXformOp,
+    AddScaleOp(): UsdGeomXformOp,
+    AddTransformOp(): UsdGeomXformOp,
+    delete(): void,
+}
+
+declare type UsdGeomScope = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    delete(): void,
+}
+
+declare type UsdGeomSphere = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    GetRadiusAttr(): USDAttribute,
+    CreateRadiusAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetDisplayColorAttr(): USDAttribute,
+    CreateDisplayColorAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetPurposeAttr(): USDAttribute,
+    CreatePurposeAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    AddTranslateOp(): UsdGeomXformOp,
+    AddRotateXYZOp(): UsdGeomXformOp,
+    AddScaleOp(): UsdGeomXformOp,
+    AddTransformOp(): UsdGeomXformOp,
+    MakeVisible(): void,
+    MakeInvisible(): void,
+    delete(): void,
+}
+
+declare type UsdGeomCube = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    GetSizeAttr(): USDAttribute,
+    CreateSizeAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetDisplayColorAttr(): USDAttribute,
+    CreateDisplayColorAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetPurposeAttr(): USDAttribute,
+    CreatePurposeAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    AddTranslateOp(): UsdGeomXformOp,
+    AddRotateXYZOp(): UsdGeomXformOp,
+    AddScaleOp(): UsdGeomXformOp,
+    AddTransformOp(): UsdGeomXformOp,
+    MakeVisible(): void,
+    MakeInvisible(): void,
+    delete(): void,
+}
+
+declare type UsdGeomMesh = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    GetPointsAttr(): USDAttribute,
+    CreatePointsAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetFaceVertexCountsAttr(): USDAttribute,
+    CreateFaceVertexCountsAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetFaceVertexIndicesAttr(): USDAttribute,
+    CreateFaceVertexIndicesAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetDisplayColorAttr(): USDAttribute,
+    CreateDisplayColorAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetPurposeAttr(): USDAttribute,
+    CreatePurposeAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    AddTranslateOp(): UsdGeomXformOp,
+    AddRotateXYZOp(): UsdGeomXformOp,
+    AddScaleOp(): UsdGeomXformOp,
+    AddTransformOp(): UsdGeomXformOp,
+    MakeVisible(): void,
+    MakeInvisible(): void,
+    delete(): void,
+}
+
+declare type UsdGeomCamera = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    GetFocalLengthAttr(): USDAttribute,
+    CreateFocalLengthAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    GetFocusDistanceAttr(): USDAttribute,
+    CreateFocusDistanceAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    AddTranslateOp(): UsdGeomXformOp,
+    AddRotateXYZOp(): UsdGeomXformOp,
+    AddScaleOp(): UsdGeomXformOp,
+    AddTransformOp(): UsdGeomXformOp,
+    MakeVisible(): void,
+    MakeInvisible(): void,
+    delete(): void,
+}
+
+declare type UsdShadeMaterial = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    CreateSurfaceOutput(renderContext: string): UsdShadeOutput,
+    delete(): void,
+}
+
+declare type UsdShadeShader = {
+    IsValid(): boolean,
+    GetPrim(): USDPrim,
+    GetPath(): SdfPath,
+    GetIdAttr(): USDAttribute,
+    CreateIdAttr(defaultValue: unknown, writeSparsely: boolean): USDAttribute,
+    CreateInput(name: string, typeName: string): UsdShadeInput,
+    CreateOutput(name: string, typeName: string): UsdShadeOutput,
+    delete(): void,
 }
 
 declare function CreateStage(path: string): USDStage

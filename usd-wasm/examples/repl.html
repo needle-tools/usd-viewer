@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenUSD Browser REPL</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111315;
+      color: #eef2f4;
+      --panel: #181b1e;
+      --panel-2: #202428;
+      --line: #343b42;
+      --text-dim: #a8b2ba;
+      --accent: #72c79b;
+      --accent-2: #f1b15f;
+      --accent-3: #82b8ff;
+      --danger: #ff7777;
+      --code: #0a0c0e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(114, 199, 155, 0.08), transparent 240px),
+        #111315;
+    }
+
+    button, textarea, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: #f7fafb;
+      min-height: 34px;
+      border-radius: 6px;
+      padding: 0 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #52606a;
+      background: #273038;
+    }
+
+    button.primary {
+      border-color: #82d9aa;
+      background: #1e5a3c;
+    }
+
+    button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: #ffffff;
+      background: #234b38;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100vh;
+      min-height: 100vh;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 18px;
+      background: rgba(17, 19, 21, 0.92);
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 680;
+    }
+
+    .status {
+      margin-top: 4px;
+      min-height: 18px;
+      color: var(--text-dim);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .toolbar button {
+      white-space: nowrap;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 300px minmax(360px, 1.05fr) minmax(420px, 1fr);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    aside, section {
+      min-height: 0;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .examples {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .examples-head, .workspace-head, .inspect-head {
+      border-bottom: 1px solid var(--line);
+      padding: 12px;
+    }
+
+    .examples-head h2, .workspace-head h2, .inspect-head h2 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .search {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search input {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: #0f1113;
+      color: #edf2f4;
+    }
+
+    .example-list {
+      overflow: auto;
+      padding: 8px;
+    }
+
+    .group-title {
+      margin: 12px 6px 6px;
+      color: var(--accent-2);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .example-button {
+      display: block;
+      width: 100%;
+      margin: 3px 0;
+      text-align: left;
+      border-color: transparent;
+      background: transparent;
+      color: #d8dee3;
+    }
+
+    .example-button:hover,
+    .example-button[aria-pressed="true"] {
+      background: #242b31;
+      border-color: #38434c;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) minmax(150px, 0.36fr);
+      background: #121416;
+    }
+
+    .workspace-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .workspace-meta {
+      margin-top: 4px;
+      color: var(--text-dim);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-actions,
+    .console-actions,
+    .path-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .editor {
+      display: grid;
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+      padding: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      background: var(--code);
+      color: #e9f1f5;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      tab-size: 2;
+      white-space: pre;
+    }
+
+    .console {
+      min-height: 0;
+      border-top: 1px solid var(--line);
+      background: #0b0d0f;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .console-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border-bottom: 1px solid #20252a;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .console-actions button {
+      min-height: 28px;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .viewer {
+      display: grid;
+      grid-template-rows: minmax(340px, 0.52fr) minmax(0, 1fr);
+      border-right: 0;
+      background: #101315;
+    }
+
+    .preview {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-height: 0;
+      border-bottom: 1px solid var(--line);
+      background: #0a0c0e;
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #20252a;
+    }
+
+    .preview-head h2 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .preview-actions button {
+      min-height: 28px;
+      font-size: 12px;
+    }
+
+    .preview-canvas {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .preview-canvas canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .usdview-host {
+      position: relative;
+      min-height: 0;
+      overflow: auto;
+      background: #111416;
+    }
+
+    .usdview-host .usdview-panel {
+      position: static;
+      width: 100%;
+      max-height: none;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .usdview-host .usdview-panel header {
+      position: sticky;
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 8px 10px;
+    }
+
+    .error {
+      color: var(--danger);
+    }
+
+    .api-reference {
+      color: #dce7ee;
+    }
+
+    .api-reference strong {
+      color: var(--accent-3);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1080px) {
+      main {
+        grid-template-columns: 250px minmax(320px, 1fr);
+      }
+
+      .viewer {
+        grid-column: 1 / -1;
+        min-height: 720px;
+        border-top: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+      }
+
+      header {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .workspace-head {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        overflow: visible;
+      }
+
+      aside, section {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .examples {
+        max-height: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>OpenUSD Browser REPL</h1>
+        <div id="status" class="status">Loading OpenUSD wasm...</div>
+      </div>
+      <div class="toolbar">
+        <button id="reset" type="button">Reset</button>
+        <button id="run-selection" type="button">Run Selection</button>
+        <button id="copy-usda" type="button">Copy USDA</button>
+        <button id="export-usda" type="button">Export USDA</button>
+        <button id="run" type="button" class="primary">Run</button>
+      </div>
+    </header>
+    <main>
+      <aside class="examples">
+        <div class="examples-head">
+          <h2>Examples</h2>
+        </div>
+        <div class="search">
+          <input id="search" type="search" placeholder="Filter examples" autocomplete="off" />
+        </div>
+        <div id="examples" class="example-list"></div>
+      </aside>
+      <section class="workspace">
+        <div class="workspace-head">
+          <div>
+            <h2 id="example-title">Hello World</h2>
+            <div id="example-meta" class="workspace-meta"></div>
+          </div>
+          <div class="workspace-actions">
+            <button id="restore-example" type="button">Restore Example</button>
+          </div>
+        </div>
+        <div class="editor">
+          <textarea id="editor" spellcheck="false"></textarea>
+        </div>
+        <div class="console">
+          <div class="console-title">
+            <span id="console-meta">Console</span>
+            <div class="console-actions">
+              <button id="copy-console" type="button">Copy</button>
+              <button id="clear-console" type="button">Clear</button>
+            </div>
+          </div>
+          <pre id="console"></pre>
+        </div>
+      </section>
+      <section class="viewer">
+        <div class="preview">
+          <div class="preview-head">
+            <h2>Preview</h2>
+            <div class="preview-actions">
+              <span id="preview-status">No stage</span>
+              <button id="fit-preview" type="button">Fit</button>
+            </div>
+          </div>
+          <div id="preview-canvas" class="preview-canvas"></div>
+        </div>
+        <div id="usdview-host" class="usdview-host"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { getUsdModule } from "../src/index.js";
+    import { createThreeHydra } from "../src/create.three.js";
+    import { createPxrFacade } from "./src/repl/pxr.js";
+    import { replExamples } from "./src/repl/examples.js";
+    import { testAssetLibrary } from "../tests/fixtures/test-asset-library.js";
+    import { mount } from "svelte";
+    import UsdViewPanel from "./src/UsdViewPanel.svelte";
+    import { usdViewState } from "./src/usdViewStore.svelte.ts";
+    import {
+      AmbientLight,
+      Box3,
+      Clock,
+      DirectionalLight,
+      GridHelper,
+      HemisphereLight,
+      Object3D,
+      PerspectiveCamera,
+      Scene,
+      SRGBColorSpace,
+      NeutralToneMapping,
+      Vector3,
+      WebGLRenderer,
+    } from "three";
+    import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
+    const statusEl = document.getElementById("status");
+    const editorEl = document.getElementById("editor");
+    const consoleEl = document.getElementById("console");
+    const consoleMetaEl = document.getElementById("console-meta");
+    const examplesEl = document.getElementById("examples");
+    const titleEl = document.getElementById("example-title");
+    const metaEl = document.getElementById("example-meta");
+    const searchEl = document.getElementById("search");
+    const previewCanvasEl = document.getElementById("preview-canvas");
+    const previewStatusEl = document.getElementById("preview-status");
+    const fitPreviewButton = document.getElementById("fit-preview");
+    const usdviewHostEl = document.getElementById("usdview-host");
+
+    const encoder = new TextEncoder();
+    const storage = window.localStorage;
+    const storageKeys = {
+      code: "openusd-repl.code",
+      exampleTitle: "openusd-repl.exampleTitle",
+      search: "openusd-repl.search",
+    };
+    let USD;
+    let pxr;
+    let context;
+    let selectedExample = replExamples[0];
+    let lastObjectUrl = "";
+    let lastRunAt = 0;
+    let preview;
+    let previewLoadId = 0;
+
+    function log(value) {
+      const text = format(value);
+      consoleEl.textContent += `${text}\n`;
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function format(value) {
+      if (value === undefined) return "undefined";
+      if (typeof value === "string") return value;
+      if (value instanceof Error) return value.stack || value.message;
+      try {
+        return JSON.stringify(value, replacer, 2);
+      }
+      catch {
+        return String(value);
+      }
+    }
+
+    function replacer(key, value) {
+      if (typeof value === "bigint") return value.toString();
+      if (value?.GetPath && value?.GetTypeName) {
+        return { path: value.GetPath(), typeName: value.GetTypeName(), valid: value.IsValid?.() };
+      }
+      if (value?.GetName && value?.GetValueString) {
+        return { name: value.GetName(), path: value.GetPath(), typeName: value.GetTypeName(), value: value.GetValueString() };
+      }
+      return value;
+    }
+
+    function copyText(text) {
+      if (!text) return;
+      navigator.clipboard?.writeText(text).catch(() => {});
+    }
+
+    function vectorToArray(vector) {
+      return pxr.vectorToArray(vector);
+    }
+
+    function listPrims(stage = context.stage) {
+      if (!stage) return [];
+      return vectorToArray(stage.TraverseAll()).map((prim) => prim.GetPath());
+    }
+
+    function inspectPrim(prim) {
+      if (!prim?.IsValid?.()) return null;
+      return {
+        path: prim.GetPath(),
+        typeName: prim.GetTypeName(),
+        active: prim.IsActive(),
+        attributes: vectorToArray(prim.GetAttributes()).map((attr) => ({
+          name: attr.GetName(),
+          typeName: attr.GetTypeName(),
+          value: attr.GetValueString(),
+        })),
+        relationships: vectorToArray(prim.GetRelationships()).map((rel) => ({
+          name: rel.GetName(),
+          targets: vectorToArray(rel.GetTargets()),
+        })),
+      };
+    }
+
+    function mountText(path, text) {
+      ensureParentPath(path);
+      try {
+        USD.FS_unlink(path);
+      }
+      catch {}
+      const parts = path.split("/");
+      const file = parts.pop();
+      const parent = parts.join("/") || "/";
+      USD.FS_createDataFile(parent, file, encoder.encode(text), true, true, true);
+      return path;
+    }
+
+    function copyToArrayBuffer(bytes) {
+      const copy = new Uint8Array(bytes.byteLength);
+      copy.set(bytes);
+      return copy.buffer;
+    }
+
+    function createPreviewSurface() {
+      const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+      renderer.outputColorSpace = SRGBColorSpace;
+      renderer.toneMapping = NeutralToneMapping;
+      renderer.setClearColor(0x0a0c0e, 1);
+      previewCanvasEl.append(renderer.domElement);
+
+      const scene = new Scene();
+      const camera = new PerspectiveCamera(45, 1, 0.1, 1000);
+      camera.position.set(3, 2.5, 6);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0.5, 0);
+      controls.update();
+
+      const grid = new GridHelper(20, 20, 0x31404a, 0x1b242a);
+      for (const material of Array.isArray(grid.material) ? grid.material : [grid.material]) {
+        material.transparent = true;
+        material.opacity = 0.42;
+      }
+      scene.add(grid);
+      scene.add(new AmbientLight(0xffffff, 0.42));
+      scene.add(new HemisphereLight(0xe8f3ff, 0x182027, 1.35));
+      const key = new DirectionalLight(0xffffff, 2.2);
+      key.position.set(4, 8, 5);
+      scene.add(key);
+
+      let content = new Object3D();
+      scene.add(content);
+      let handle = null;
+      let disposed = false;
+      const clock = new Clock();
+
+      function resize() {
+        const rect = previewCanvasEl.getBoundingClientRect();
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+
+      function animate() {
+        if (disposed) return;
+        const dt = clock.getDelta();
+        handle?.update(dt);
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      function clearObject(object) {
+        for (const child of [...object.children]) {
+          object.remove(child);
+        }
+      }
+
+      async function clear() {
+        const oldHandle = handle;
+        handle = null;
+        if (oldHandle) await oldHandle.dispose().catch(console.warn);
+        scene.remove(content);
+        clearObject(content);
+        content = new Object3D();
+        scene.add(content);
+        usdViewState.setStage(null, null);
+        previewStatusEl.textContent = "No stage";
+      }
+
+      function fit() {
+        setTimeout(() => {
+          const box = new Box3();
+          const childBox = new Box3();
+          box.makeEmpty();
+          content.updateWorldMatrix(true, true);
+          content.traverse((object) => {
+            if (!object.isMesh || !object.visible) return;
+            childBox.setFromObject(object);
+            if (!childBox.isEmpty()) box.union(childBox);
+          });
+          if (box.isEmpty()) return;
+          const size = new Vector3();
+          const center = new Vector3();
+          box.getSize(size);
+          box.getCenter(center);
+          const maxSize = Math.max(size.x, size.y, size.z);
+          if (!Number.isFinite(maxSize) || maxSize <= 0) return;
+          const distance = (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * 1.6;
+          camera.position.copy(center).add(new Vector3(distance, distance * 0.55, distance));
+          camera.near = Math.max(distance / 1000, 0.01);
+          camera.far = Math.max(distance * 100, 1000);
+          camera.updateProjectionMatrix();
+          controls.target.copy(center);
+          controls.update();
+        }, 0);
+      }
+
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(previewCanvasEl);
+      resize();
+      animate();
+
+      function sceneStats() {
+        const stats = {
+          meshes: 0,
+          visibleMeshes: 0,
+          positionAttributes: 0,
+          maxPositionCount: 0,
+          bounds: [],
+          diagnostics: handle?.diagnostics?.() ?? null,
+        };
+        content.traverse((object) => {
+          if (!object.isMesh) return;
+          stats.meshes += 1;
+          if (object.visible) stats.visibleMeshes += 1;
+          const position = object.geometry?.attributes?.position;
+          if (position) {
+            stats.positionAttributes += 1;
+            stats.maxPositionCount = Math.max(stats.maxPositionCount, position.count ?? 0);
+          }
+          object.geometry?.computeBoundingBox?.();
+          const box = object.geometry?.boundingBox;
+          if (box && stats.bounds.length < 10) {
+            stats.bounds.push({
+              name: object.name,
+              visible: object.visible,
+              min: box.min.toArray(),
+              max: box.max.toArray(),
+              positionCount: position?.count ?? 0,
+            });
+          }
+        });
+        return stats;
+      }
+
+      window.__usdReplPreview = { scene, content: () => content, camera, controls, fit, stats: sceneStats };
+
+      return {
+        async loadStage(stage, label = "REPL stage") {
+          if (!stage) {
+            await clear();
+            return;
+          }
+          previewStatusEl.textContent = "Rendering...";
+          const id = ++previewLoadId;
+          const filename = `repl-preview-${id}.usda`;
+          const path = `/tmp/${filename}`;
+          if (!stage.Export(path)) throw new Error(`Could not export ${path} for preview`);
+          const buffer = copyToArrayBuffer(USD.ReadFile(path));
+          await clear();
+          if (id !== previewLoadId) return;
+          const files = [{
+            name: filename,
+            path: `generated/${filename}`,
+            arrayBuffer: async () => buffer,
+          }, {
+            name: filename,
+            path: filename,
+            arrayBuffer: async () => buffer,
+          }];
+          handle = await createThreeHydra({
+            USD,
+            files,
+            scene: content,
+            showScenePrimitiveHelpers: true,
+          });
+          await handle.ready();
+          usdViewState.setStage(await handle.driver.GetStage(), handle);
+          usdViewState.refresh();
+          fit();
+          const stats = sceneStats();
+          previewStatusEl.textContent = `${label} - ${stats.visibleMeshes}/${stats.meshes} meshes`;
+        },
+        fit,
+        clear,
+        dispose() {
+          disposed = true;
+          resizeObserver.disconnect();
+          handle?.dispose().catch(console.warn);
+          renderer.dispose();
+        },
+      };
+    }
+
+    function ensureParentPath(path) {
+      const parts = path.split("/").filter(Boolean);
+      parts.pop();
+      let current = "/";
+      for (const part of parts) {
+        const next = `${current}${current.endsWith("/") ? "" : "/"}${part}`;
+        try {
+          USD.FS_createPath(current, part, true, true);
+        }
+        catch {}
+        current = next;
+      }
+    }
+
+    function createContext() {
+      return {
+        USD,
+        ...pxr,
+        stage: null,
+        print: log,
+        vectorToArray,
+        listPrims,
+        inspectPrim,
+        mountText,
+      };
+    }
+
+    function selectedEditorText() {
+      const start = editorEl.selectionStart;
+      const end = editorEl.selectionEnd;
+      return start === end ? "" : editorEl.value.slice(start, end);
+    }
+
+    async function runCode({ selection = false } = {}) {
+      if (!USD) return;
+      const code = selection ? selectedEditorText() || editorEl.value : editorEl.value;
+      const runButton = document.getElementById("run");
+      const selectionButton = document.getElementById("run-selection");
+      statusEl.textContent = selection ? "Running selection" : "Running";
+      consoleEl.classList.remove("error");
+      runButton.disabled = true;
+      selectionButton.disabled = true;
+      const started = performance.now();
+      try {
+        const runner = new Function("context", "code", `
+          return (async () => {
+            with (context) {
+              return await eval("(async () => {\\n" + code + "\\n})()");
+            }
+          })();
+        `);
+        const result = await runner(context, code);
+        if (result !== undefined) log(result);
+        const duration = performance.now() - started;
+        lastRunAt = Date.now();
+        consoleMetaEl.textContent = `Console - ${duration.toFixed(1)} ms`;
+        if (context.stage?.Export) {
+          await preview.loadStage(context.stage, selection ? "Selection result" : "REPL stage");
+        }
+        statusEl.textContent = "Ready";
+      }
+      catch (error) {
+        console.error(error);
+        consoleEl.textContent += `${format(error)}\n`;
+        consoleEl.classList.add("error");
+        statusEl.textContent = "Error";
+      }
+      finally {
+        runButton.disabled = false;
+        selectionButton.disabled = false;
+      }
+    }
+
+    function renderExamples() {
+      const query = searchEl.value.trim().toLowerCase();
+      const groups = new Map();
+      for (const example of replExamples) {
+        if (query && !`${example.group} ${example.title} ${example.code}`.toLowerCase().includes(query)) continue;
+        if (!groups.has(example.group)) groups.set(example.group, []);
+        groups.get(example.group).push(example);
+      }
+
+      examplesEl.textContent = "";
+      for (const [group, items] of groups) {
+        const title = document.createElement("div");
+        title.className = "group-title";
+        title.textContent = group;
+        examplesEl.append(title);
+        for (const example of items) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "example-button";
+          button.textContent = example.title;
+          button.setAttribute("aria-pressed", String(example === selectedExample));
+          button.addEventListener("click", () => selectExample(example));
+          examplesEl.append(button);
+        }
+      }
+    }
+
+    function selectExample(example) {
+      selectedExample = example;
+      titleEl.textContent = example.title;
+      metaEl.textContent = `${example.group} - ${replExamples.indexOf(example) + 1} of ${replExamples.length}`;
+      editorEl.value = example.code;
+      storage.setItem(storageKeys.exampleTitle, example.title);
+      storage.setItem(storageKeys.code, editorEl.value);
+      renderExamples();
+    }
+
+    function downloadUsda() {
+      const stage = context?.stage;
+      if (!stage) return;
+      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+      const blob = new Blob([stage.ExportToString()], { type: "text/plain" });
+      lastObjectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = lastObjectUrl;
+      link.download = "browser-repl.usda";
+      link.click();
+    }
+
+    async function reset() {
+      context = createContext();
+      consoleEl.textContent = "";
+      consoleEl.classList.remove("error");
+      consoleMetaEl.textContent = "Console";
+      statusEl.textContent = "Ready";
+      await preview.clear();
+    }
+
+    async function init() {
+      try {
+        USD = await getUsdModule({
+          setStatus: (status) => {
+            if (status) statusEl.textContent = status;
+          },
+        });
+        pxr = createPxrFacade(USD);
+        preview = createPreviewSurface();
+        mount(UsdViewPanel, { target: usdviewHostEl });
+        context = createContext();
+        const storedTitle = storage.getItem(storageKeys.exampleTitle);
+        selectedExample = replExamples.find((example) => example.title === storedTitle) || selectedExample;
+        selectExample(selectedExample);
+        const storedCode = storage.getItem(storageKeys.code);
+        if (storedCode) editorEl.value = storedCode;
+        if (editorEl.value !== selectedExample.code) {
+          titleEl.textContent = "Scratch";
+          metaEl.textContent = "Unsaved editor";
+        }
+        searchEl.value = storage.getItem(storageKeys.search) || "";
+        renderExamples();
+        statusEl.textContent = "Ready";
+      }
+      catch (error) {
+        statusEl.textContent = "Failed to load OpenUSD";
+        consoleEl.textContent = format(error);
+      }
+    }
+
+    document.getElementById("run").addEventListener("click", () => runCode());
+    document.getElementById("run-selection").addEventListener("click", () => runCode({ selection: true }));
+    document.getElementById("reset").addEventListener("click", reset);
+    document.getElementById("export-usda").addEventListener("click", downloadUsda);
+    document.getElementById("copy-usda").addEventListener("click", () => copyText(context?.stage?.ExportToString?.() || ""));
+    document.getElementById("restore-example").addEventListener("click", () => selectExample(selectedExample));
+    document.getElementById("copy-console").addEventListener("click", () => copyText(consoleEl.textContent));
+    fitPreviewButton.addEventListener("click", () => preview?.fit());
+    document.getElementById("clear-console").addEventListener("click", () => {
+      consoleEl.textContent = "";
+      consoleEl.classList.remove("error");
+      consoleMetaEl.textContent = "Console";
+    });
+    searchEl.addEventListener("input", () => {
+      storage.setItem(storageKeys.search, searchEl.value);
+      renderExamples();
+    });
+    editorEl.addEventListener("input", () => {
+      storage.setItem(storageKeys.code, editorEl.value);
+      if (editorEl.value !== selectedExample.code) {
+        titleEl.textContent = "Scratch";
+        metaEl.textContent = "Unsaved editor";
+      }
+    });
+    editorEl.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        runCode({ selection: event.shiftKey });
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const start = editorEl.selectionStart;
+        const end = editorEl.selectionEnd;
+        editorEl.setRangeText("  ", start, end, "end");
+      }
+    });
+    init();
+  </script>
+</body>
+</html>
