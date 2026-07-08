@@ -17,16 +17,25 @@ def Xform "World"
 
     def SphereLight "KeyLight"
     {
-        float inputs:intensity = 450
-        color3f inputs:color = (1, 0.92, 0.82)
-        float inputs:radius = 0.3
-        double3 xformOp:translate = (0, -1.2, 1.8)
+        float inputs:intensity = 260
+        color3f inputs:color = (1, 0.34, 0.12)
+        float inputs:radius = 0.25
+        double3 xformOp:translate = (-1.4, -1.2, 1.05)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def SphereLight "FillLight"
+    {
+        float inputs:intensity = 260
+        color3f inputs:color = (0.1, 0.38, 1)
+        float inputs:radius = 0.25
+        double3 xformOp:translate = (1.4, -1.2, 1.05)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def DistantLight "SunLight"
     {
-        float inputs:intensity = 250
+        float inputs:intensity = 10
         float inputs:angle = 0.53
         double3 xformOp:translate = (1.2, -1.4, 2.2)
         float3 xformOp:rotateXYZ = (45, 25, 0)
@@ -35,8 +44,8 @@ def Xform "World"
 
     def DomeLight "SkyLight"
     {
-        float inputs:intensity = 80
-        color3f inputs:color = (0.55, 0.65, 1)
+        float inputs:intensity = 3
+        color3f inputs:color = (0.05, 0.055, 0.07)
     }
 
     def Xform "ApiLight" (
@@ -55,6 +64,8 @@ def Xform "World"
     {
         double size = 0.65
         rel material:binding = </Looks/Neutral>
+        float xformOp:rotateZ = 28
+        uniform token[] xformOpOrder = ["xformOp:rotateZ"]
     }
 }
 
@@ -67,8 +78,8 @@ def Scope "Looks"
         def Shader "Preview"
         {
             uniform token info:id = "UsdPreviewSurface"
-            color3f inputs:diffuseColor = (0.55, 0.58, 0.62)
-            float inputs:roughness = 0.32
+            color3f inputs:diffuseColor = (0.32, 0.32, 0.32)
+            float inputs:roughness = 0.65
             token outputs:surface
         }
     }
