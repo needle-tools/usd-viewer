@@ -2519,11 +2519,15 @@ async function init() {
       : '';
   }
 
-  function needleFolderGroupId(folder) {
-    return `needle:${encodeURIComponent(folder)}`;
+  function needleFixtureGroup(asset) {
+    return String(asset?.group || 'Other').trim() || 'Other';
   }
 
-  function needleFolderFromGroupId(groupId) {
+  function needleFixtureGroupId(group) {
+    return `needle:${encodeURIComponent(group)}`;
+  }
+
+  function needleFixtureGroupFromId(groupId) {
     return String(groupId || '').startsWith('needle:')
       ? decodeURIComponent(String(groupId).slice('needle:'.length))
       : '';
@@ -2643,10 +2647,10 @@ async function init() {
     }, 1);
   }
 
-  function createNeedleTreeControl(folder, count) {
+  function createNeedleTreeControl(group, count) {
     return createSampleTreeControl({
-      groupId: folder === 'cloud' ? NEEDLE_CLOUD_GROUP_ID : needleFolderGroupId(folder),
-      name: folder === 'cloud' ? 'Needle Cloud' : prettyNeedleFolderLabel(folder),
+      groupId: group === 'cloud' ? NEEDLE_CLOUD_GROUP_ID : needleFixtureGroupId(group),
+      name: group === 'cloud' ? 'Needle Cloud' : prettyNeedleFixtureGroupLabel(group),
       count,
       hasChildren: false,
     }, 1);
@@ -2692,11 +2696,6 @@ async function init() {
     syncSampleTreeVisibility();
   }
 
-  function needleFixtureFolder(asset) {
-    const path = String(asset?.root || asset?.files?.[0] || '').replace(/^\/+/, '');
-    return path.includes('/') ? path.split('/')[0] : 'root';
-  }
-
   function fixtureThumbnailPath(asset) {
     if (asset?.thumbnail) return asset.thumbnail;
     const root = String(asset?.root || '').trim();
@@ -2708,35 +2707,43 @@ async function init() {
     return slug ? `thumbnails/${slug}.png` : '';
   }
 
-  function needleFixtureFolders() {
-    const folders = new Map();
+  function needleFixtureGroups() {
+    const groups = new Map();
     for (const asset of testAssetLibrary) {
-      const folder = needleFixtureFolder(asset);
-      const cards = folders.get(folder) || [];
-      cards.push(needleFixtureCard(asset, folder));
-      folders.set(folder, cards);
+      const group = needleFixtureGroup(asset);
+      const cards = groups.get(group) || [];
+      cards.push(needleFixtureCard(asset, group));
+      groups.set(group, cards);
     }
-    for (const cards of folders.values()) {
+    for (const cards of groups.values()) {
       cards.sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }
-    return folders;
+    return groups;
   }
 
-  function needleFixtureCard(asset, folder = needleFixtureFolder(asset)) {
+  function needleFixtureCard(asset, group = needleFixtureGroup(asset)) {
     const thumbnail = fixtureThumbnailPath(asset);
+    const rootFolder = String(asset?.root || asset?.files?.[0] || '').replace(/^\/+/, '').split('/')[0] || '';
+    const groupLabel = prettyNeedleFixtureGroupLabel(group);
+    const folderLabel = prettyNeedleFixtureFolderLabel(rootFolder);
+    const meta = [groupLabel, folderLabel].filter((label, index, labels) => label && labels.indexOf(label) === index);
     return {
       name: asset.label || asset.root || 'Fixture',
-      meta: [prettyNeedleFolderLabel(folder), asset.group].filter(Boolean).join(' · '),
+      meta: meta.join(' · '),
       url: testFixtureUrl(asset.root),
       thumbnail: thumbnail ? testFixtureUrl(thumbnail) : undefined,
     };
   }
 
-  function sortedNeedleFixtureFolders() {
-    return [...needleFixtureFolders().keys()].sort((a, b) => prettyNeedleFolderLabel(a).localeCompare(prettyNeedleFolderLabel(b)));
+  function sortedNeedleFixtureGroups() {
+    return [...needleFixtureGroups().keys()].sort((a, b) => prettyNeedleFixtureGroupLabel(a).localeCompare(prettyNeedleFixtureGroupLabel(b)));
   }
 
-  function prettyNeedleFolderLabel(folder) {
+  function prettyNeedleFixtureGroupLabel(group) {
+    return String(group || 'Other');
+  }
+
+  function prettyNeedleFixtureFolderLabel(folder) {
     const labels = new Map([
       ['asset-explorer', 'Asset Explorer'],
       ['materialx', 'MaterialX'],
@@ -2750,20 +2757,20 @@ async function init() {
     if (!needleGroupTree || needleTreeRendered) return;
     needleGroupTree.textContent = '';
     needleGroupTree.appendChild(createNeedleTreeControl('cloud', needleCloudCards.length));
-    const folders = needleFixtureFolders();
-    for (const folder of sortedNeedleFixtureFolders()) {
-      needleGroupTree.appendChild(createNeedleTreeControl(folder, folders.get(folder)?.length || 0));
+    const groups = needleFixtureGroups();
+    for (const group of sortedNeedleFixtureGroups()) {
+      needleGroupTree.appendChild(createNeedleTreeControl(group, groups.get(group)?.length || 0));
     }
     needleTreeRendered = true;
     syncSampleTreeVisibility();
   }
 
-  function loadNeedleCards(folder) {
+  function loadNeedleCards(group) {
     renderNeedleTree();
-    if (folder === 'cloud') return needleCloudCards;
-    const folders = needleFixtureFolders();
-    if (folder) return folders.get(folder) || [];
-    const fixtureCards = sortedNeedleFixtureFolders().flatMap((name) => folders.get(name) || []);
+    if (group === 'cloud') return needleCloudCards;
+    const groups = needleFixtureGroups();
+    if (group) return groups.get(group) || [];
+    const fixtureCards = sortedNeedleFixtureGroups().flatMap((name) => groups.get(name) || []);
     return [...needleCloudCards, ...fixtureCards];
   }
 
@@ -3286,13 +3293,13 @@ async function init() {
       };
     }
     if (!group && String(groupId || '').startsWith('needle:')) {
-      const folder = needleFolderFromGroupId(groupId);
+      const fixtureGroup = needleFixtureGroupFromId(groupId);
       group = {
-        title: folder === 'cloud' ? 'Needle Cloud' : prettyNeedleFolderLabel(folder),
-        subtitle: folder === 'cloud'
+        title: fixtureGroup === 'cloud' ? 'Needle Cloud' : prettyNeedleFixtureGroupLabel(fixtureGroup),
+        subtitle: fixtureGroup === 'cloud'
           ? 'Hosted USDZ assets with automatic optimization'
-          : `Needle fixture folder: ${folder}`,
-        load: () => loadNeedleCards(folder),
+          : `Needle fixture group: ${fixtureGroup}`,
+        load: () => loadNeedleCards(fixtureGroup),
       };
     }
     group = group || sampleGroups.get('usd-wg');
