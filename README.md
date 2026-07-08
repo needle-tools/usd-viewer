@@ -45,6 +45,25 @@ Hydra bridge live under `usd-wasm/`.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 
+## Viewer URL Options
+
+The viewer environment can be selected with `?environment=` or `?env=`.
+Supported values include:
+
+- `neutral` - local default HDR environment.
+- `helicopter` or `helicopter-landing-pad` - local HDR test environment.
+- `room` - three.js `RoomEnvironment`; maps to Needle's studio environment for the Needle Engine loader.
+- `none` or `off` - disables the authored viewer environment.
+- Needle Engine magic names: `studio`, `blurred-skybox`, `quicklook`, `quicklook-ar`.
+- FastHDR aliases: `fasthdr-studio`, `photo-studio`, `brown-photostudio`, `venice-sunset`, `spruit-sunrise`, `meadow`, `canary-wharf`, `shanghai-bund`, `cayley-interior`, `fireplace`, `sky-on-fire`, `dikhololo-night`.
+- Direct `.hdr`, `.exr`, `.ktx2`, `.png`, `.jpg`, or `.jpeg` URLs.
+
+Example:
+
+```txt
+http://localhost:3003/?viewer=needle&environment=fasthdr-studio&file=/test-fixtures/usd-concepts/camera_light.usda
+```
+
 ## OpenUSD Wasm Runtime
 
 The checked-in OpenUSD wasm runtime is maintained by Needle. Internal rebuild
