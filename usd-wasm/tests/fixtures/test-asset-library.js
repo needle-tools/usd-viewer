@@ -43,6 +43,7 @@ export const testAssetLibrary = [
   { group: "Composition", label: "LIVERPS Composition", root: "composition/liverps_all.usda", files: ["composition/liverps_all.usda", "composition/liverps_reference.usda", "composition/liverps_payload.usda"] },
 
   { group: "Edge Cases", label: "Animated Shared Material Mixed Cull", root: "edge-cases/shared_material_mixed_cull_animated.usda", files: ["edge-cases/shared_material_mixed_cull_animated.usda"] },
+  { group: "Edge Cases", label: "Unmaterialed Empty Subset", root: "edge-cases/unmaterialed_empty_subset.usda", files: ["edge-cases/unmaterialed_empty_subset.usda"] },
   { group: "Edge Cases", label: "Face-Varying Normals Matrix", root: "primvars/facevarying_normals_matrix.usda", files: ["primvars/facevarying_normals_matrix.usda"] },
 
   { group: "Subdivision", label: "Catmull-Clark Cube", root: "subdivision/catmull_clark_cube.usda", files: ["subdivision/catmull_clark_cube.usda"] },

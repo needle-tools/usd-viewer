@@ -306,6 +306,13 @@ async function runFixtureChecks(handle, usdRoot, config, waitForScene) {
         checks.subdivision = collectMeshGeometryState(usdRoot);
     }
 
+    if (config.fixtureName === "local-unmaterialed-empty-subset-usda") {
+        checks.unmaterialedEmptySubset = {
+            materials: collectMeshMaterialState(usdRoot),
+            geometry: collectMeshGeometryState(usdRoot),
+        };
+    }
+
     if (config.fixtureName === "local-native-instances-usda") {
         checks.nativeInstances = {
             meshState: collectMeshMaterialState(usdRoot),
@@ -534,6 +541,7 @@ function collectMeshMaterialState(root) {
             visible: Boolean(object.visible),
             instanced: Boolean(object.isInstancedMesh),
             instanceCount: object.isInstancedMesh ? object.count : 0,
+            materialArray: Array.isArray(object.material),
             renderTag: object.userData?.usdRenderTag || "",
             materials: materials.filter(Boolean).map(material => ({
                 name: material.name || "",
@@ -574,6 +582,7 @@ function collectMeshGeometryState(root) {
             name: object.name || "",
             positionCount: getPositionAttribute(object.geometry)?.count ?? 0,
             indexCount: object.geometry?.index?.count ?? 0,
+            groupCount: object.geometry?.groups?.length ?? 0,
             bounds: object.geometry?.boundingBox ? {
                 min: object.geometry.boundingBox.min.toArray(),
                 max: object.geometry.boundingBox.max.toArray(),

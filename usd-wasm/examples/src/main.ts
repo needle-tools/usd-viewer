@@ -1039,6 +1039,8 @@ function summarizeTexture(texture: unknown) {
 function collectSceneDiagnostics(root: Object3D | null | undefined) {
   const diagnostics = {
     meshCount: 0,
+    materialArrayMeshCount: 0,
+    maxGeometryGroupCount: 0,
     maxPositionCount: 0,
     maxAbsBound: 0,
     materialXMaterialCount: 0,
@@ -1064,6 +1066,11 @@ function collectSceneDiagnostics(root: Object3D | null | undefined) {
     if (entry.type === "CameraHelper") diagnostics.cameraHelperCount++;
     if (entry.isMesh) {
       diagnostics.meshCount++;
+      if (Array.isArray(entry.material)) diagnostics.materialArrayMeshCount++;
+      diagnostics.maxGeometryGroupCount = Math.max(
+        diagnostics.maxGeometryGroupCount,
+        (entry.geometry as { groups?: unknown[] } | undefined)?.groups?.length ?? 0,
+      );
       const position = entry.geometry?.attributes?.position;
       diagnostics.maxPositionCount = Math.max(diagnostics.maxPositionCount, position?.count ?? 0);
       const array = position?.array;

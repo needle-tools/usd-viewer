@@ -305,6 +305,16 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
         expect(checks.subdivision.maxAbsBound).toBeLessThan(0.95);
     }
 
+    if (fixtureName === 'local-unmaterialed-empty-subset-usda') {
+        expect(checks.unmaterialedEmptySubset.materials.meshCount).toBe(1);
+        expect(checks.unmaterialedEmptySubset.materials.visibleMeshCount).toBe(1);
+        expect(checks.unmaterialedEmptySubset.materials.meshes[0].materialArray).toBe(false);
+        expect(checks.unmaterialedEmptySubset.materials.meshes[0].materials).toHaveLength(1);
+        expect(checks.unmaterialedEmptySubset.geometry.meshCount).toBe(1);
+        expect(checks.unmaterialedEmptySubset.geometry.meshes[0].groupCount).toBe(0);
+        expect(checks.unmaterialedEmptySubset.geometry.meshes[0].positionCount).toBe(3);
+    }
+
     if (fixtureName === 'local-native-instances-usda') {
         expect(checks.nativeInstances.stageTypes['/Prototype/Shape'].typeName).toBe('Cube');
         expect(checks.nativeInstances.stageTypes['/World/InstanceA'].valid).toBe(true);

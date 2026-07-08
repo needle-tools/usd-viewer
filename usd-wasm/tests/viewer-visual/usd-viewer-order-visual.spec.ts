@@ -213,6 +213,20 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
+    test('Needle Engine host renders unmaterialed meshes without material-array groups', async ({ page }) => {
+        const diagnostics = collectConsoleDiagnostics(page);
+        await openViewer(page, 'needle-engine');
+        await loadAssetsInOrder(page, ['Unmaterialed Empty Subset'], 'needle-engine');
+
+        const state = await getViewerState(page);
+        expect(state?.renderHost).toBe('needle-engine');
+        expect(state?.sceneDiagnostics.meshCount).toBe(1);
+        expect(state?.sceneDiagnostics.maxPositionCount).toBe(3);
+        expect(state?.sceneDiagnostics.materialArrayMeshCount).toBe(0);
+        expect(state?.sceneDiagnostics.maxGeometryGroupCount).toBe(0);
+        expectForbiddenDiagnostics(diagnostics);
+    });
+
     test('Needle Engine host completes USDA and API scene loads after prior assets', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page, 'needle-engine');
@@ -339,6 +353,8 @@ async function getViewerState(page) {
                 stageMetadata: { upAxis: string } | null;
                 sceneDiagnostics: {
                     meshCount: number;
+                    materialArrayMeshCount: number;
+                    maxGeometryGroupCount: number;
                     maxPositionCount: number;
                     maxAbsBound: number;
                     materialXMaterialCount: number;

@@ -335,6 +335,17 @@ async function prepareFixtures({ cacheRoot, refresh }) {
         expectedMaterialXMaterials: 0,
         complexity: "high",
     }, {
+        name: "local-unmaterialed-empty-subset-usda",
+        url: `/@fs${path.join(repoRoot, "tests", "fixtures", "edge-cases", "unmaterialed_empty_subset.usda")}`,
+        files: [{
+            path: "unmaterialed_empty_subset.usda",
+            url: `/@fs${path.join(repoRoot, "tests", "fixtures", "edge-cases", "unmaterialed_empty_subset.usda")}`,
+        }],
+        source: "usd-wasm/tests/fixtures/edge-cases/unmaterialed_empty_subset.usda",
+        expectedRenderable: true,
+        expectedRenderableReason: null,
+        expectedMaterialXMaterials: 0,
+    }, {
         name: "local-native-instances-usda",
         url: `/@fs${path.join(repoRoot, "tests", "fixtures", "usd-concepts", "native_instances.usda")}`,
         files: [{
