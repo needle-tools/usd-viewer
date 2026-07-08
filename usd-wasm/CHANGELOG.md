@@ -4,15 +4,38 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2026-07-02
+## [1.0.2] - 2026-07-06
+### Changed
+- Updated the MaterialX runtime dependency to `@needle-tools/materialx@1.7.2`.
+- Improved viewer asset caching for USD/glTF sample assets so repeated loads are less dependent on remote host availability.
+
+### Fixed
+- Fixed MaterialX texture resolution for USD/Hydra materials whose texture filenames are carried by non-`file` asset parameters.
+- Fixed variant and stage edits so normal USD change processing can update Hydra without forcing full scene repopulation for every edit.
+- Fixed subdivision normals at low complexity so subdivision surface normals are smooth even when topology is not tessellated.
+- Fixed OpenChessSet MaterialX pawn rendering and added coverage for authored instance positions.
+
+## [1.0.1] - 2026-07-03
 ### Added
 - Added Draco support to the wasm Adobe `usdGltf` plugin so Draco-compressed glTF/GLB assets can be imported through OpenUSD.
 - Added native `usdDraco` support for USD meshes that reference Draco `.drc` payloads.
 - Added build metadata for the `usdDraco` and `usdGltf` Draco capabilities.
+- Added sample assets that cover custom geomprops, LIVERPS composition, custom MaterialX NodeDefs, Draco payloads, and nested USD references.
+
+### Changed
+- Updated sample browsing so local examples, hosted assets, USD-WG assets, and glTF conversion variants are organized consistently.
+- Updated the three.js Hydra and Needle Engine loader paths to use AgX tone mapping.
 
 ### Fixed
-- Fixed dropped GLB/GLTF/MTLX loading in the public viewer.
+- Fixed dropped GLB, GLTF, and MTLX loading.
 - Fixed authored USD normals handling so authored data is not replaced by generated geometric normals.
+- Avoided repeated MaterialX tangent generation warnings for meshes that cannot produce tangents because they have no UVs.
+- Fixed async Hydra draw and subdivision readiness regressions across repeated stage loads.
+- Fixed package-internal USDZ texture paths so authored paths like `asset.usdz[0/texture.png]` resolve through the staged USD filesystem instead of leaking to browser HTTP loading.
+- Fixed missing or late material sprim assignment ordering so meshes can bind materials that arrive after the mesh assignment call.
+- Fixed MaterialX and UsdPreviewSurface texture diagnostics so missing authored textures are reported without retaining large texture or scene objects in console logs.
+- Fixed unavailable remote asset handling so HTTP failures are reported before Hydra stage opening.
+- Fixed empty or meshless asset handling so zero-size camera fitting is skipped cleanly.
 
 ## [1.0.0] - 2026-06-30
 ### Added

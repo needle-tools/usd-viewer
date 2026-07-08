@@ -271,6 +271,20 @@ body.drag-active .dropzone-title {
     min-width: 0;
 }
 
+.loading-overlay-progress {
+    color: var(--color-green-dark);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 4ch;
+    text-align: right;
+}
+
+.loading-overlay-progress[hidden] {
+    display: none;
+}
+
 .loading-overlay-sep {
     color: var(--color-text-muted);
     flex-shrink: 0;
@@ -465,6 +479,28 @@ body.drag-active .dropzone-title {
 
 .dropdown-button:hover {
     color: var(--color-text);
+}
+
+.debug-test-button {
+    margin: 0 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.15s linear, background 0.15s linear;
+}
+
+.debug-test-button:hover {
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.debug-test-button:disabled {
+    opacity: 0.55;
+    cursor: progress;
 }
 
 .viewer-mode-toggle {

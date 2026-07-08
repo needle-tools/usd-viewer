@@ -1,13 +1,6 @@
 export const fixtureBasePath = "/test-fixtures/";
 
 export const testAssetLibrary = [
-  { group: "glTF Plugin", label: "DamagedHelmet GLB", root: "asset-explorer/DamagedHelmet.glb-reference.usda", files: ["asset-explorer/DamagedHelmet.glb-reference.usda", "asset-explorer/DamagedHelmet.glb"] },
-  { group: "glTF Plugin", label: "DamagedHelmet USDZ", root: "asset-explorer/DamagedHelmet.glb.three.usdz" },
-  { group: "glTF Plugin", label: "BoomBox GLB", root: "asset-explorer/BoomBox.glb-reference.usda", files: ["asset-explorer/BoomBox.glb-reference.usda", "asset-explorer/BoomBox.glb"] },
-  { group: "glTF Plugin", label: "BoomBox USDZ", root: "asset-explorer/BoomBox.glb.three.usdz" },
-  { group: "glTF Plugin", label: "CesiumMan GLB", root: "asset-explorer/CesiumMan.glb-reference.usda", files: ["asset-explorer/CesiumMan.glb-reference.usda", "asset-explorer/CesiumMan.glb"] },
-  { group: "glTF Plugin", label: "CesiumMan USDZ", root: "asset-explorer/CesiumMan.glb.openusd.usdz" },
-
   { group: "Composition", label: "Payload Root", root: "payloads/payload_root.usda", files: ["payloads/payload_root.usda", "payloads/payload_payload.usda"] },
   { group: "Composition", label: "Nested Variants", root: "variants/nested_variants.usda", files: ["variants/nested_variants.usda"] },
   { group: "Composition", label: "Binding Override Variants", root: "variants/material_binding_overrides.usda", files: ["variants/material_binding_overrides.usda"] },
@@ -25,6 +18,9 @@ export const testAssetLibrary = [
   { group: "USD Concepts", label: "Native Instances", root: "usd-concepts/native_instances.usda", files: ["usd-concepts/native_instances.usda"] },
   { group: "USD Concepts", label: "Point Instancer", root: "usd-concepts/point_instancer.usda", files: ["usd-concepts/point_instancer.usda"] },
   { group: "USD Concepts", label: "Reference Override", root: "usd-concepts/reference_override.usda", files: ["usd-concepts/reference_override.usda", "usd-concepts/reference_base.usda"] },
+  { group: "USD Concepts", label: "Custom Geomprops + USDShade", root: "usd-concepts/custom_geomprops_usdshade.usda", files: ["usd-concepts/custom_geomprops_usdshade.usda"] },
+  { group: "USD Concepts", label: "Custom Vertex Geomprops", root: "usd-concepts/custom_vertex_geomprops.usda", files: ["usd-concepts/custom_vertex_geomprops.usda"] },
+  { group: "USD Concepts", label: "Referenced Geomprop Overrides", root: "usd-concepts/referenced_geomprop_overrides.usda", files: ["usd-concepts/referenced_geomprop_overrides.usda", "usd-concepts/referenced_geomprop_source.usda"] },
   { group: "USD Concepts", label: "Inherits + Specializes", root: "usd-concepts/inherits_specializes.usda", files: ["usd-concepts/inherits_specializes.usda"] },
   { group: "USD Concepts", label: "Collection Binding", root: "usd-concepts/collection_binding.usda", files: ["usd-concepts/collection_binding.usda"] },
   { group: "USD Concepts", label: "Visibility + Purpose", root: "usd-concepts/visibility_purpose.usda", files: ["usd-concepts/visibility_purpose.usda"] },
@@ -44,15 +40,25 @@ export const testAssetLibrary = [
   },
   { group: "USD Concepts", label: "Nested Material USDZ", root: "usdz-nested-material.usdz" },
 
+  { group: "Composition", label: "LIVERPS Composition", root: "composition/liverps_all.usda", files: ["composition/liverps_all.usda", "composition/liverps_reference.usda", "composition/liverps_payload.usda"] },
+
   { group: "Edge Cases", label: "Animated Shared Material Mixed Cull", root: "edge-cases/shared_material_mixed_cull_animated.usda", files: ["edge-cases/shared_material_mixed_cull_animated.usda"] },
   { group: "Edge Cases", label: "Face-Varying Normals Matrix", root: "primvars/facevarying_normals_matrix.usda", files: ["primvars/facevarying_normals_matrix.usda"] },
 
   { group: "Subdivision", label: "Catmull-Clark Cube", root: "subdivision/catmull_clark_cube.usda", files: ["subdivision/catmull_clark_cube.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Left-Handed Cube", root: "subdivision/catmull_clark_left_handed_cube.usda", files: ["subdivision/catmull_clark_left_handed_cube.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Face-Varying ST", root: "subdivision/catmull_clark_facevarying_st.usda", files: ["subdivision/catmull_clark_facevarying_st.usda"] },
+  { group: "Subdivision", label: "Catmull-Clark Varying Color", root: "subdivision/catmull_clark_varying_color.usda", files: ["subdivision/catmull_clark_varying_color.usda"] },
+  { group: "Subdivision", label: "Loop Non-Triangle Fallback", root: "subdivision/loop_non_triangle_fallback.usda", files: ["subdivision/loop_non_triangle_fallback.usda"] },
+
+  { group: "Draco", label: "Draco Compressed Variants", root: "draco/CubeCompressedTriangles.usda", files: ["draco/CubeCompressedTriangles.usda", "draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc"] },
+  { group: "Draco", label: "Draco Mixed Overrides", root: "draco/draco_mixed_overrides.usda", files: ["draco/draco_mixed_overrides.usda", "draco/CubeCompressedTriangles.usda.draco/Cube_Geom_Cube.drc"] },
 
   { group: "MaterialX", label: "MaterialX External Ref", root: "materialx/mxSimple.usda", files: ["materialx/mxSimple.usda", "materialx/mtlxFiles/standard_surface_default.mtlx"] },
   { group: "MaterialX", label: "MaterialX Nested Ref", root: "materialx/materialx_nested_reference.usda", files: ["materialx/materialx_nested_reference.usda", "materialx/mtlxFiles/standard_surface_default.mtlx"] },
   { group: "MaterialX", label: "MaterialX Variants", root: "materialx/materialx_variant_bindings.usda", files: ["materialx/materialx_variant_bindings.usda", "materialx/mtlxFiles/standard_surface_default.mtlx"] },
   { group: "MaterialX", label: "Preview + MaterialX", root: "materialx/usdshade_preview_with_mtlx_peer.usda", files: ["materialx/usdshade_preview_with_mtlx_peer.usda", "materialx/mtlxFiles/standard_surface_default.mtlx"] },
+  { group: "MaterialX", label: "Custom NodeDef MaterialX", root: "materialx/custom_nodedef_materialx.usda", files: ["materialx/custom_nodedef_materialx.usda", "materialx/mtlxFiles/custom_nodedef_surface.mtlx"] },
   { group: "MaterialX", label: "MaterialX Texture + Noise", root: "materialx/materialx_texture_noise.usda", files: ["materialx/materialx_texture_noise.usda", "materialx/mtlxFiles/texture_noise_surface.mtlx", "materialx/textures/checker.png"] },
   { group: "MaterialX", label: "MaterialX Marble", root: "materialx/materialx_marble.usda", files: ["materialx/materialx_marble.usda", "materialx/mtlxFiles/standard_surface_marble_solid.mtlx"] },
   {

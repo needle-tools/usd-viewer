@@ -12,13 +12,24 @@
 //
 // Analytics must never break the viewer, so every call is guarded.
 
+function analyticsDisabled() {
+  try {
+    if (window.__usdViewerDiagnosticsMode === true) return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.has("debug") || navigator.webdriver === true;
+  } catch {
+    return true;
+  }
+}
+
 /**
- * Send a custom event to Rybbit. No-ops silently if the script hasn't loaded
- * (blocked, offline, still deferred) so callers never need to null-check.
+ * Send a custom event to Rybbit. No-ops silently if analytics is disabled, the
+ * script hasn't loaded, or the browser blocks it.
  * @param {string} name
  * @param {Record<string, unknown>} [props]
  */
 export function track(name, props = {}) {
+  if (analyticsDisabled()) return;
   try {
     window.rybbit?.event?.(name, props);
   } catch {

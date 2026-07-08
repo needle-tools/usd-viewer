@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/usd",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
@@ -64,6 +64,7 @@
     "test:needle-engine-matrix": "npm run needle-engine-matrix:cache && playwright test -c tests/needle-engine-matrix/playwright.config.ts",
     "test:public-viewer-lifecycle": "playwright test -c tests/public-viewer/playwright.config.ts",
     "test:three-matrix": "node scripts/run-three-matrix.mjs",
+    "test:three-matrix:full": "node scripts/run-three-matrix.mjs --full",
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
   "devDependencies": {
@@ -78,9 +79,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.7.0"
+    "@needle-tools/materialx": "1.7.2"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.0"
+    "@needle-tools/materialx": "1.7.2"
   }
 }

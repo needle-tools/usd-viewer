@@ -11,13 +11,20 @@ const {
   DoubleSide,
   Color,
   Mesh,
+  Points,
+  PointsMaterial,
   InstancedMesh,
   Matrix4,
+  BufferAttribute,
   Float32BufferAttribute,
+  WireframeGeometry,
+  LineSegments,
+  LineBasicMaterial,
   SRGBColorSpace,
   RGBAFormat,
   RepeatWrapping,
   LinearSRGBColorSpace,
+  CanvasTexture,
   Vector2,
   CameraHelper,
   DirectionalLight,
@@ -97,6 +104,40 @@ function disposeObjectResources(object) {
     disposeMaterialResources(entry.material);
   });
   object.parent?.remove(object);
+}
+
+function prepareMaterialXMaterialForGeometry(material) {
+  if (!material || typeof material.onBeforeRender !== 'function') return material;
+  if (material.userData?.usdHydraMaterialXGeometryGuard) return material;
+  if (!material.isMaterialXMaterial && material.constructor?.name !== 'MaterialXMaterial') return material;
+
+  material.userData ??= {};
+  material.userData.usdHydraMaterialXGeometryGuard = true;
+  const originalOnBeforeRender = material.onBeforeRender.bind(material);
+  material.onBeforeRender = (renderer, scene, camera, geometry, object, group) => {
+    const needsTangents = material._needsTangents && !geometry?.attributes?.tangent;
+    const canGenerateTangents = geometry?.attributes?.position && geometry?.attributes?.uv;
+    const hasHydraNormals = geometry?.attributes?.normal;
+    if (needsTangents && !hasHydraNormals) {
+      material.needsUpdate = true;
+      return;
+    }
+    if (needsTangents && !canGenerateTangents) {
+      if (debugMaterials && !material._missingTangentsWarned) {
+        material._missingTangentsWarned = true;
+        console.warn(`[MaterialX] Tangents are required for this material (${material.name}) but could not be generated for the geometry.`);
+      }
+      const previousGenerateTangents = material.generateTangents;
+      material.generateTangents = false;
+      try {
+        return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
+      } finally {
+        material.generateTangents = previousGenerateTangents;
+      }
+    }
+    return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
+  };
+  return material;
 }
 
 function isFiniteArray(values, dimension = 3) {
@@ -182,6 +223,7 @@ class TextureRegistry {
     this.textures = [];
     this.loadedTextures = new Set();
     this.objectUrls = new Set();
+    this.materialXDefinitionCache = new Map();
     this.disposed = false;
     this.loader = new TextureLoader();
     this.tgaLoader = new TGALoader();
@@ -241,18 +283,88 @@ class TextureRegistry {
     return extensionMatches.length ? extensionMatches[extensionMatches.length - 1][1] : "";
   }
 
+  async readResourceText(resourcePath) {
+    const candidates = this.materialResourcePathCandidates(resourcePath)
+      .flatMap(candidate => candidate.startsWith("/") ? [candidate] : [candidate, `/${candidate}`]);
+    for (const candidate of candidates) {
+      const file = this.readResolvedResource(candidate);
+      if (file) return new TextDecoder().decode(file);
+    }
+
+    for (const candidate of candidates) {
+      const file = await new Promise(resolve => {
+        try {
+          this.config.driver().getFile(candidate, resolve);
+        } catch {
+          resolve(null);
+        }
+      });
+      if (file) return new TextDecoder().decode(file);
+    }
+
+    return "";
+  }
+
+  async materialXDefinitionsFor(nodeDefNames) {
+    const missing = new Set(nodeDefNames);
+    if (!missing.size || typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") {
+      return "";
+    }
+
+    const serializer = new XMLSerializer();
+    const definitions = [];
+    const knownPaths = Array.isArray(this.allPaths) ? this.allPaths : [];
+    for (const path of knownPaths) {
+      if (this.getResourceExtension(path) !== "mtlx") continue;
+
+      let xml = this.materialXDefinitionCache.get(path);
+      if (xml === undefined) {
+        xml = await this.readResourceText(path).catch(() => "");
+        this.materialXDefinitionCache.set(path, xml || "");
+      }
+      if (!xml) continue;
+
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      const root = doc.documentElement;
+      if (!root || root.nodeName.toLowerCase() === "parsererror") continue;
+
+      const topLevelElements = [...root.children];
+      for (const nodeDef of topLevelElements.filter(element => element.localName === "nodedef" && element.hasAttribute("name"))) {
+        const name = nodeDef.getAttribute("name");
+        if (missing.has(name)) definitions.push(serializer.serializeToString(nodeDef));
+      }
+
+      for (const nodeGraph of topLevelElements.filter(element => element.localName === "nodegraph" && element.hasAttribute("nodedef"))) {
+        if (missing.has(nodeGraph.getAttribute("nodedef"))) {
+          definitions.push(serializer.serializeToString(nodeGraph));
+        }
+      }
+    }
+
+    return [...new Set(definitions)].join("\n");
+  }
+
   readResolvedResource(resourcePath) {
-    if (!resourcePath?.startsWith("/") || typeof this.config.USD?.ReadFile !== "function") {
+    if (!resourcePath || typeof this.config.USD?.ReadFile !== "function") {
       return null;
     }
 
-    try {
-      const file = this.config.USD.ReadFile(resourcePath);
-      return file?.byteLength ? file : null;
+    const path = String(resourcePath);
+    const candidates = path.startsWith("/")
+      ? [path]
+      : this.materialResourcePathCandidates(path)
+        .flatMap(candidate => candidate.startsWith("/") ? [candidate] : [candidate, `/${candidate}`]);
+
+    for (const candidate of candidates) {
+      try {
+        const file = this.config.USD.ReadFile(candidate);
+        if (file?.byteLength) return file;
+      }
+      catch {
+      }
     }
-    catch {
-      return null;
-    }
+
+    return null;
   }
 
   resolveHttpResourceUrl(resourcePath) {
@@ -339,8 +451,6 @@ class TextureRegistry {
     } else if (extension === 'exr') {
       filetype = 'image/x-exr';
     } else if (extension === 'tga') {
-      console.warn("TGA textures are not fully supported yet", resourcePath);
-      // using TGALoader explicitly
       filetype = 'image/tga';
     } else {
       console.error("Error when loading texture: unknown filetype", resourcePath);
@@ -610,9 +720,13 @@ class HydraMesh {
     this._id = id;
     this._interface = hydraInterface;
     this._points = undefined;
-    this._normals = undefined;
+    this._indexedNormals = undefined;
+    this._orderedNormals = undefined;
+    this._constantNormal = undefined;
     this._hasAuthoredNormals = false;
     this._tangents = undefined;
+    this._tangentDimension = 4;
+    this._tangentInterpolation = undefined;
     this._colors = undefined;
     this._uvs = undefined;
     this._indices = undefined;
@@ -621,7 +735,9 @@ class HydraMesh {
     this._side = DoubleSide;
     this._visible = false;
     this._renderTag = 'geometry';
+    this._reprStyle = 'surface';
     this._instancedMesh = null;
+    this._wireObject = null;
     this._instanceMatrix = new Matrix4();
 
     let material = new MeshPhysicalMaterial({
@@ -630,6 +746,19 @@ class HydraMesh {
       // envMap: hydraInterface.config.envMap,
     });
     this._ownedMaterial = material;
+    this._ownedPointsMaterial = new PointsMaterial({
+      size: 4,
+      sizeAttenuation: false,
+      vertexColors: true,
+      color: new Color(0xB4B4B4),
+    });
+    this._ownedWireMaterial = new LineBasicMaterial({
+      color: new Color(0x202020),
+      transparent: true,
+      opacity: 0.45,
+      depthTest: true,
+      depthWrite: false,
+    });
     this._materials.push(material);
     this._mesh = new Mesh(this._geometry, material);
     this._installMeshHooks(this._mesh);
@@ -654,14 +783,100 @@ class HydraMesh {
     if (!this._mesh) return;
     this._interface.unassignMeshFromMaterials(this._mesh);
     this._disposeInstancedMesh();
+    this._disposeWireObject();
     this._disposeMaterialSideClones();
     if (this._mesh.parent) {
       this._mesh.parent.remove(this._mesh);
     }
     this._geometry.dispose();
     disposeMaterialResources(this._ownedMaterial);
+    disposeMaterialResources(this._ownedPointsMaterial);
+    disposeMaterialResources(this._ownedWireMaterial);
     this._ownedMaterial = null;
+    this._ownedPointsMaterial = null;
+    this._ownedWireMaterial = null;
     this._mesh = null;
+  }
+
+  _makeRenderableObject() {
+    if (this._reprStyle === 'points') {
+      return new Points(this._geometry, this._ownedPointsMaterial);
+    }
+    const material = this._mesh?.isPoints ? undefined : this._mesh?.material;
+    return new Mesh(this._geometry, material || this._ownedMaterial || defaultMaterial);
+  }
+
+  _replaceRenderableObject(nextObject) {
+    const previous = this._mesh;
+    if (!previous || previous.type === nextObject.type) {
+      if (previous) this._applyHydraReprMaterialState();
+      return;
+    }
+
+    nextObject.name = previous.name;
+    nextObject.matrix.copy(previous.matrix);
+    nextObject.matrixAutoUpdate = previous.matrixAutoUpdate;
+    nextObject.castShadow = previous.castShadow;
+    nextObject.receiveShadow = previous.receiveShadow;
+    nextObject.visible = previous.visible;
+    this._interface.unassignMeshFromMaterials(previous);
+    if (previous.parent) previous.parent.remove(previous);
+    this._mesh = nextObject;
+    this._installMeshHooks(this._mesh);
+    this._interface.config.usdRoot.add(this._mesh);
+    this._applyCullSideToMeshes();
+    this._applyHydraReprMaterialState();
+    this._applyVisibilityState();
+  }
+
+  _applyHydraReprMaterialState() {
+    const wireframe = this._reprStyle === 'wire';
+    const apply = material => {
+      if (!material || !('wireframe' in material)) return;
+      material.wireframe = wireframe;
+      material.needsUpdate = true;
+    };
+    if (Array.isArray(this._mesh?.material)) {
+      for (const material of this._mesh.material) apply(material);
+    } else {
+      apply(this._mesh?.material);
+    }
+    this._refreshWireObject();
+  }
+
+  _disposeWireObject() {
+    if (!this._wireObject) return;
+    this._wireObject.parent?.remove(this._wireObject);
+    this._wireObject.geometry?.dispose?.();
+    this._wireObject = null;
+  }
+
+  _refreshWireObject() {
+    const wantsWireOnSurface = this._reprStyle === 'wireOnSurface';
+    this._disposeWireObject();
+    if (!wantsWireOnSurface || this._mesh?.isPoints || !this._geometry.getAttribute('position')) {
+      return;
+    }
+    const wireGeometry = new WireframeGeometry(this._geometry);
+    this._wireObject = new LineSegments(wireGeometry, this._ownedWireMaterial);
+    this._wireObject.name = `${this._mesh.name}_wire`;
+    this._wireObject.matrix.copy(this._mesh.matrix);
+    this._wireObject.matrixAutoUpdate = this._mesh.matrixAutoUpdate;
+    this._installMeshHooks(this._wireObject);
+    this._interface.config.usdRoot.add(this._wireObject);
+    this._applyVisibilityState();
+  }
+
+  setHydraReprStyle(style) {
+    this._reprStyle = String(style || 'surface');
+    const wantsPoints = this._reprStyle === 'points';
+    const isPoints = this._mesh?.isPoints;
+    if (wantsPoints !== Boolean(isPoints)) {
+      this._disposeInstancedMesh();
+      this._replaceRenderableObject(this._makeRenderableObject());
+    } else {
+      this._applyHydraReprMaterialState();
+    }
   }
 
   updateOrder(attribute, attributeName, dimension = 3) {
@@ -672,6 +887,9 @@ class HydraMesh {
         const index = this._indices[i];
         if ((dimension * index + dimension) > attribute.length) {
           this._geometry.deleteAttribute(attributeName);
+          if (attributeName === 'normal') {
+            this._markMaterialsNeedUpdate();
+          }
           return;
         }
         const sourceOffset = dimension * index;
@@ -680,17 +898,43 @@ class HydraMesh {
           const value = attribute[sourceOffset + j];
           if (!Number.isFinite(value)) {
             this._geometry.deleteAttribute(attributeName);
+            if (attributeName === 'normal') {
+              this._markMaterialsNeedUpdate();
+            }
             return;
           }
           values[targetOffset + j] = value;
         }
       }
       this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
+      if (attributeName === 'normal') {
+        this._markMaterialsNeedUpdate();
+      }
       if (attributeName === 'position') {
         this._geometry.computeBoundingBox();
         this._geometry.computeBoundingSphere();
       }
     }
+  }
+
+  updateTypedOrder(attribute, attributeName, dimension = 3) {
+    if (debugMeshes) console.log("updateTypedOrder", attribute, attributeName, dimension);
+    if (!attribute || !this._indices) return;
+    const ArrayType = attribute.constructor || Float32Array;
+    const values = new ArrayType(this._indices.length * dimension);
+    for (let i = 0; i < this._indices.length; i++) {
+      const index = this._indices[i];
+      if ((dimension * index + dimension) > attribute.length) {
+        this._geometry.deleteAttribute(attributeName);
+        return;
+      }
+      const sourceOffset = dimension * index;
+      const targetOffset = dimension * i;
+      for (let j = 0; j < dimension; ++j) {
+        values[targetOffset + j] = attribute[sourceOffset + j];
+      }
+    }
+    this._geometry.setAttribute(attributeName, new BufferAttribute(values, dimension));
   }
 
   updateIndices(indices) {
@@ -700,14 +944,16 @@ class HydraMesh {
       if (!this._indices) {
         this._geometry.deleteAttribute('position');
         this._geometry.deleteAttribute('normal');
+        this._markMaterialsNeedUpdate();
         this._geometry.deleteAttribute('color');
         this._geometry.deleteAttribute('uv');
+        this._geometry.deleteAttribute('tangent');
         delete this._geometry.attributes.uv2;
         return;
       }
       //this._geometry.setIndex( indicesArray );
       this.updateOrder(this._points, 'position');
-      this.updateOrder(this._normals, 'normal');
+      this._applyNormalStateForGeometry();
       if (this._colors) {
         this.updateOrder(this._colors, 'color');
       }
@@ -715,6 +961,13 @@ class HydraMesh {
         this.updateOrder(this._uvs, 'uv', 2);
         this._geometry.attributes.uv2 = this._geometry.attributes.uv;
       }
+      if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
+        this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
+      } else {
+        this._geometry.deleteAttribute('tangent');
+      }
+      this._refreshWireObject();
+      this._applyVisibilityState();
     });
   }
 
@@ -726,6 +979,10 @@ class HydraMesh {
     this._mesh.matrix.set(...matrix);
     this._mesh.matrix.transpose();
     this._mesh.matrixAutoUpdate = false;
+    if (this._wireObject) {
+      this._wireObject.matrix.copy(this._mesh.matrix);
+      this._wireObject.matrixAutoUpdate = this._mesh.matrixAutoUpdate;
+    }
   }
 
   setInstanceTransforms(matrices, count = 0) {
@@ -733,7 +990,7 @@ class HydraMesh {
     const instanceCount = Number(count) || 0;
     if (instanceCount <= 0) {
       this._disposeInstancedMesh();
-      this._mesh.visible = this._visible && this._renderTag !== 'hidden';
+      this._applyVisibilityState();
       return;
     }
 
@@ -751,9 +1008,8 @@ class HydraMesh {
     }
 
     this._instancedMesh.material = this._mesh.material;
-    this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
-    this._instancedMesh.userData.usdRenderTag = this._renderTag;
     this._mesh.visible = false;
+    this._applyVisibilityState();
 
     for (let i = 0; i < instanceCount; i++) {
       const offset = i * 16;
@@ -786,6 +1042,42 @@ class HydraMesh {
       material.dispose?.();
     }
     this._materialSideClones.clear();
+  }
+
+  _hasRenderableGeometry() {
+    const position = this._geometry?.getAttribute?.('position') || this._geometry?.attributes?.position;
+    const positionCount = position?.count || 0;
+    if (positionCount <= 0) return false;
+
+    for (const attribute of Object.values(this._geometry?.attributes || {})) {
+      if (attribute && attribute.count < positionCount) {
+        return false;
+      }
+    }
+
+    for (const group of this._geometry?.groups || []) {
+      if ((group.start + group.count) > positionCount) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  _applyVisibilityState() {
+    const visible = this._visible && this._renderTag !== 'hidden' && this._hasRenderableGeometry();
+    if (this._mesh) {
+      this._mesh.visible = !this._instancedMesh && visible;
+      this._mesh.userData.usdRenderTag = this._renderTag;
+    }
+    if (this._instancedMesh) {
+      this._instancedMesh.visible = visible;
+      this._instancedMesh.userData.usdRenderTag = this._renderTag;
+    }
+    if (this._wireObject) {
+      this._wireObject.visible = visible && !this._instancedMesh;
+      this._wireObject.userData.usdRenderTag = this._renderTag;
+    }
   }
 
   _updateMeshSideState() {
@@ -842,6 +1134,19 @@ class HydraMesh {
     }
   }
 
+  _markMaterialsNeedUpdate() {
+    const mark = material => {
+      if (!material) return;
+      if (Array.isArray(material)) {
+        for (const entry of material) mark(entry);
+        return;
+      }
+      material.needsUpdate = true;
+    };
+    mark(this._mesh?.material);
+    mark(this._instancedMesh?.material);
+  }
+
   setCullStyle(doubleSided, cullStyle) {
     this._side = cullStyleToThreeSide(Boolean(doubleSided), String(cullStyle || "dontCare"));
     this._applyCullSideToMeshes();
@@ -850,14 +1155,7 @@ class HydraMesh {
   setVisibilityState(visible, renderTag = 'geometry') {
     this._visible = Boolean(visible);
     this._renderTag = String(renderTag || 'geometry');
-    if (this._mesh) {
-      this._mesh.visible = !this._instancedMesh && this._visible && this._renderTag !== 'hidden';
-      this._mesh.userData.usdRenderTag = this._renderTag;
-    }
-    if (this._instancedMesh) {
-      this._instancedMesh.visible = this._visible && this._renderTag !== 'hidden';
-      this._instancedMesh.userData.usdRenderTag = this._renderTag;
-    }
+    this._applyVisibilityState();
   }
 
   /**
@@ -866,60 +1164,131 @@ class HydraMesh {
    */
   updateNormals(normals) {
     return timeHydraUpdate(`Hydra updateNormals ${this.usdPath}`, () => {
-      // don't apply automatically generated normals if there are already authored normals.
-      if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
-
-      this._normals = Float32Array.from(normals);
-      this.updateOrder(this._normals, 'normal');
+      this._hasAuthoredNormals = false;
+      this._orderedNormals = undefined;
+      this._constantNormal = undefined;
+      this._indexedNormals = Float32Array.from(normals);
+      this.updateOrder(this._indexedNormals, 'normal');
     });
   }
 
   updateOrderedNormals(normals) {
     return timeHydraUpdate(`Hydra updateOrderedNormals ${this.usdPath}`, () => {
-      // don't apply automatically generated normals if there are already authored normals.
-      if (this._hasAuthoredNormals || this._geometry.hasAttribute('normal')) return;
-
-      this._normals = Float32Array.from(normals);
-      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._normals, 3));
+      this._hasAuthoredNormals = false;
+      this._indexedNormals = undefined;
+      this._constantNormal = undefined;
+      this._orderedNormals = Float32Array.from(normals);
+      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+      this._markMaterialsNeedUpdate();
     });
+  }
+
+  _applyNormalStateForGeometry() {
+    if (this._indexedNormals) {
+      this.updateOrder(this._indexedNormals, 'normal');
+      return;
+    }
+
+    if (this._constantNormal) {
+      this._applyConstantNormal();
+      return;
+    }
+
+    if (this._orderedNormals) {
+      const position = this._geometry.getAttribute('position');
+      if (position?.count && this._orderedNormals.length === position.count * 3) {
+        this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+        this._markMaterialsNeedUpdate();
+      } else {
+        this._geometry.deleteAttribute('normal');
+        this._markMaterialsNeedUpdate();
+      }
+    }
+  }
+
+  _applyConstantNormal() {
+    if (!this._constantNormal) return;
+    const position = this._geometry.getAttribute('position');
+    if (!position?.count) return;
+
+    const values = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+      values[i * 3 + 0] = this._constantNormal[0];
+      values[i * 3 + 1] = this._constantNormal[1];
+      values[i * 3 + 2] = this._constantNormal[2];
+    }
+    this._geometry.setAttribute('normal', new Float32BufferAttribute(values, 3));
+    this._markMaterialsNeedUpdate();
   }
 
   setNormals(data, interpolation) {
     this._hasAuthoredNormals = true;
+    this._constantNormal = undefined;
 
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
-      this._geometry.setAttribute('normal', new Float32BufferAttribute(data, 3));
+      this._indexedNormals = undefined;
+      this._orderedNormals = Float32Array.from(data);
+      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+      this._markMaterialsNeedUpdate();
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
-      this._normals = Float32Array.from(data);
-      this.updateOrder(this._normals, 'normal');
+      this._orderedNormals = undefined;
+      this._indexedNormals = Float32Array.from(data);
+      this.updateOrder(this._indexedNormals, 'normal');
+    } else if (interpolation === 'constant' || interpolation === 'uniform') {
+      this._indexedNormals = undefined;
+      this._orderedNormals = undefined;
+      const values = Float32Array.from(data || []);
+      if (values.length >= 3) {
+        this._constantNormal = values.slice(0, 3);
+        this._applyConstantNormal();
+      }
     }
   }
 
   setTangents(data, dimension, interpolation) {
+    this._tangentDimension = Math.max(1, Number(dimension) || 4);
+    this._tangentInterpolation = interpolation;
     if (interpolation === 'facevarying') {
-      this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, dimension));
+      this._tangents = undefined;
+      this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, this._tangentDimension));
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       this._tangents = Float32Array.from(data);
-      this.updateOrder(this._tangents, 'tangent', dimension);
+      this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
     }
   }
 
   // This is always called before prims are updated
   setMaterial(materialId) {
     if (debugMaterials) console.log('Setting material on hydra prim: ' + materialId, this._mesh, materialId, this._interface.materials[materialId]);
+    if (this._reprStyle === 'points') {
+      return;
+    }
     const hydraMaterial = this._interface.materials[materialId];
+    this._interface.unassignMeshFromMaterials(this._mesh);
     if (hydraMaterial) {
       hydraMaterial.assignToMesh(this._mesh);
+      this._applyHydraReprMaterialState();
     }
     else {
-      console.error("Material not found", materialId, this._interface.materials);
+      this._interface.rememberPendingMaterialAssignment(materialId, this._mesh);
+      if (debugMaterials) console.debug("Material assignment is pending until material sprim arrives", materialId);
     }
   }
 
   setGeomSubsetMaterial(sections) {
     //console.log("setting subset material: ", this._id, sections)
+    this._geometry.clearGroups();
+    this._interface.unassignMeshFromMaterials(this._mesh);
+    this._materials = [this._ownedMaterial || defaultMaterial];
+    if (this._reprStyle === 'points' || !sections?.length) {
+      if (this._mesh && !this._mesh.isPoints) {
+        this._mesh.material = this._materials[0];
+        this._applyHydraReprMaterialState();
+      }
+      return;
+    }
 
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
@@ -937,6 +1306,7 @@ class HydraMesh {
     this._installMeshHooks(this._mesh);
     this.setVisibilityState(this._visible, this._renderTag);
     this._applyCullSideToMeshes();
+    this._applyHydraReprMaterialState();
     this._interface.config.usdRoot.add(this._mesh);
 
     for (let i = 0; i < sections.length; i++) {
@@ -997,6 +1367,22 @@ class HydraMesh {
       this._geometry.attributes.uv2 = this._geometry.attributes.uv;
   }
 
+  setGenericPrimvar(name, data, dimension, interpolation) {
+    const attributeName = `primvars:${name}`;
+    const itemSize = Math.max(1, Number(dimension) || 1);
+    const values = ArrayBuffer.isView(data) ? data.slice() : Float32Array.from(data || []);
+
+    if (interpolation === 'constant') {
+      this._mesh.userData.usdPrimvars ??= {};
+      this._mesh.userData.usdPrimvars[name] = Array.from(values);
+      this._geometry.deleteAttribute(attributeName);
+    } else if (interpolation === 'facevarying') {
+      this._geometry.setAttribute(attributeName, new BufferAttribute(values, itemSize));
+    } else if (interpolation === 'vertex' || interpolation === 'varying') {
+      this.updateTypedOrder(values, attributeName, itemSize);
+    }
+  }
+
   updatePrimvar(name, data, dimension, interpolation) {
     return timeHydraUpdate(`Hydra updatePrimvar ${name} ${this.usdPath}`, () => {
       if (!name) return;
@@ -1034,15 +1420,10 @@ class HydraMesh {
           this.setTangents(data, dimension, interpolation);
           break;
         case "rest":
+          this.setGenericPrimvar(name, data, dimension, interpolation);
           break;
         default:
-          if (warningMessagesToCount.has(name)) {
-            warningMessagesToCount.set(name, warningMessagesToCount.get(name) + 1);
-          }
-          else {
-            warningMessagesToCount.set(name, 1);
-            console.warn('Unsupported primvar: ', name);
-          }
+          this.setGenericPrimvar(name, data, dimension, interpolation);
       }
     });
   }
@@ -1051,6 +1432,17 @@ class HydraMesh {
     return timeHydraUpdate(`Hydra updatePoints ${this.usdPath}`, () => {
       this._points = Float32Array.from(points);
       this.updateOrder(this._points, 'position');
+      this._applyNormalStateForGeometry();
+      if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
+        this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
+      } else {
+        const position = this._geometry.getAttribute('position');
+        const tangent = this._geometry.getAttribute('tangent');
+        if (position?.count && tangent?.count !== position.count) {
+          this._geometry.deleteAttribute('tangent');
+        }
+      }
+      this._applyVisibilityState();
     });
   }
 
@@ -1058,6 +1450,7 @@ class HydraMesh {
     if (this._instancedMesh && this._mesh) {
       this._instancedMesh.material = this._mesh.material;
     }
+    this._applyVisibilityState();
   }
 
 }
@@ -1163,9 +1556,9 @@ class HydraMaterial {
 
   _applyMaterialToMesh(mesh, materialIndex) {
     const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
-    const material = typeof applyMaterialSide === 'function'
+    const material = prepareMaterialXMaterialForGeometry(typeof applyMaterialSide === 'function'
       ? applyMaterialSide(this._material, this)
-      : this._material;
+      : this._material);
 
     if (materialIndex === null || materialIndex === undefined) {
       mesh.material = material;
@@ -1222,6 +1615,31 @@ class HydraMaterial {
       .replace(/\/\.\//g, "/");
   }
 
+  static missingMaterialXNodeDefs(xml) {
+    if (typeof DOMParser === "undefined") return [];
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const root = doc.documentElement;
+    if (!root || root.nodeName.toLowerCase() === "parsererror") return [];
+
+    const declared = new Set([...root.querySelectorAll("nodedef[name]")]
+      .map(node => node.getAttribute("name"))
+      .filter(Boolean));
+    const referenced = new Set([...root.querySelectorAll("[nodedef]")]
+      .map(node => node.getAttribute("nodedef"))
+      .filter(Boolean));
+    return [...referenced].filter(name => !declared.has(name));
+  }
+
+  async _withAuthoredMaterialXDefinitions(xml) {
+    const missingNodeDefs = HydraMaterial.missingMaterialXNodeDefs(xml);
+    if (!missingNodeDefs.length) return xml;
+
+    const definitions = await this._interface.registry.materialXDefinitionsFor(missingNodeDefs);
+    if (!definitions) return xml;
+
+    return xml.replace(/(<materialx\b[^>]*>)/, `$1\n${definitions}`);
+  }
+
   _rememberResolvedAssetPath(authoredPath, resolvedPath) {
     if (!authoredPath || !resolvedPath) {
       return;
@@ -1247,9 +1665,8 @@ class HydraMaterial {
     }
 
     const authored = String(authoredPath);
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(authored)) {
-      return authored;
-    }
+    const isAbsoluteUrl = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(authored);
+    const isPackageInternalUrl = /\.[a-z0-9]+(?:\?[^[]*)?\[[^\]]+\]/i.test(authored);
 
     const candidates = this._interface.registry.materialResourcePathCandidates(authored);
     for (const candidate of candidates) {
@@ -1263,6 +1680,10 @@ class HydraMaterial {
       if (resolved) return resolved;
     }
 
+    if (isAbsoluteUrl && !isPackageInternalUrl) {
+      return authored;
+    }
+
     return "";
   }
 
@@ -1271,6 +1692,15 @@ class HydraMaterial {
     this._interface.diagnostics.materialNodes++;
     this._nodes[path] = parameters;
     this._rememberResolvedAssetPath(parameters?.file, parameters?.resolvedPath);
+    // TODO: Replace the bridge's string-suffixed asset metadata keys with a
+    // structured asset-parameter payload in a future C++/JS bridge revision.
+    for (const key of Object.keys(parameters || {})) {
+      if (!key.endsWith(':resolvedPath')) {
+        continue;
+      }
+      const parameterName = key.slice(0, -':resolvedPath'.length);
+      this._rememberResolvedAssetPath(parameters?.[parameterName], parameters?.[key]);
+    }
   }
 
   updateMaterialXDocument(document) {
@@ -1314,7 +1744,7 @@ class HydraMaterial {
       }
       if (mainMaterial[parameterName] && mainMaterial[parameterName].nodeIn) {
         const nodeIn = mainMaterial[parameterName].nodeIn;
-        const textureFileName = nodeIn.resolvedUrl || this._resolveMaterialTexturePath(nodeIn.resolvedPath || nodeIn.file);
+        const textureFileName = this._resolveMaterialTexturePath(nodeIn.resolvedPath || nodeIn.resolvedUrl || nodeIn.file);
         if (!textureFileName) {
           if (debugTextures) console.debug("Texture node has no file; skipping optional texture input.", nodeIn);
           this._material[materialParameterMapName] = undefined;
@@ -1616,8 +2046,7 @@ class HydraMaterial {
 
     context.putImageData(imageData, 0, 0);
 
-    const packedTexture = sourceTexture.clone();
-    packedTexture.image = canvas;
+    const packedTexture = new CanvasTexture(canvas);
     packedTexture.format = RGBAFormat;
     packedTexture.colorSpace = LinearSRGBColorSpace;
     packedTexture.name = [
@@ -1650,9 +2079,9 @@ class HydraMaterial {
         haveOcclusionMap,
         haveRoughnessMap,
         haveMetalnessMap,
-        aoMap,
-        roughnessMap,
-        metalnessMap,
+        aoMap: aoMap?.name || null,
+        roughnessMap: roughnessMap?.name || null,
+        metalnessMap: metalnessMap?.name || null,
       });
       return;
     }
@@ -1660,9 +2089,9 @@ class HydraMaterial {
     const packedMap = HydraMaterial._packMetallicRoughnessMap({ aoMap, roughnessMap, metalnessMap });
     if (!packedMap) {
       console.error("Something went wrong while packing occlusion/metallic/roughness textures.", {
-        aoMap,
-        roughnessMap,
-        metalnessMap,
+        aoMap: aoMap?.name || null,
+        roughnessMap: roughnessMap?.name || null,
+        metalnessMap: metalnessMap?.name || null,
       });
       return;
     }
@@ -1801,7 +2230,7 @@ class HydraMaterial {
     }
     this._interface.diagnostics.materialXCreateAttempts++;
 
-    const xml = materialXDocument?.xml;
+    let xml = materialXDocument?.xml;
     if (!xml) {
       return null;
     }
@@ -1810,6 +2239,7 @@ class HydraMaterial {
       const { MaterialX, MaterialXMaterial } = await getMaterialXModule();
       const materialName = this._id.split('/').pop() || this._id;
       const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
+      xml = await this._withAuthoredMaterialXDefinitions(xml);
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
         cacheKey: `${this._id}:${materialXDocument.terminal}`,
         getTexture: async (url) => {
@@ -1865,8 +2295,12 @@ export class ThreeRenderDelegateInterface {
     this.registry = new TextureRegistry(config);
     this.materials = {};
     this.meshes = {};
+    this.retiredMeshes = new Map();
+    this.retiredMeshReleaseFrames = new Map();
+    this.hydraDrawDepth = 0;
     this.scenePrimitives = {};
     this.pendingMaterialUpdates = new Set();
+    this.pendingMaterialAssignments = new Map();
     this.diagnostics = {
       materialSPrims: 0,
       sceneSPrims: 0,
@@ -1907,18 +2341,78 @@ export class ThreeRenderDelegateInterface {
    */
   createRPrim(typeId, id, instancerId) {
     if (debugPrims) console.log('Creating RPrim: ', typeId, id, typeof id);
-    this.destroyRPrim(id);
+    const existing = this.meshes[id];
+    if (existing) {
+      this._retireRPrim(id, existing, false);
+      delete this.meshes[id];
+    }
+    this._cancelRetiredRPrimRelease(id);
     let mesh = new HydraMesh(id, this);
     this.meshes[id] = mesh;
     return mesh;
+  }
+
+  beginHydraDraw() {
+    this.hydraDrawDepth++;
+  }
+
+  endHydraDraw() {
+    this.hydraDrawDepth = Math.max(0, this.hydraDrawDepth - 1);
+    if (this.hydraDrawDepth > 0) return;
+
+    for (const id of [...this.retiredMeshes.keys()]) {
+      const replacement = this.meshes[id];
+      if (replacement && !replacement._hasRenderableGeometry?.()) continue;
+      this.releaseRetiredRPrims(id);
+    }
   }
 
   destroyRPrim(id) {
     if (debugPrims) console.log('Destroying RPrim: ', id);
     const mesh = this.meshes[id];
     if (!mesh) return;
-    mesh.dispose();
     delete this.meshes[id];
+    this._retireRPrim(id, mesh, this.hydraDrawDepth === 0);
+  }
+
+  _retireRPrim(id, mesh, scheduleRelease) {
+    let retired = this.retiredMeshes.get(id);
+    if (!retired) {
+      retired = new Set();
+      this.retiredMeshes.set(id, retired);
+    }
+    retired.add(mesh);
+    if (scheduleRelease) {
+      this._scheduleRetiredRPrimRelease(id);
+    }
+  }
+
+  _scheduleRetiredRPrimRelease(id) {
+    this._cancelRetiredRPrimRelease(id);
+    const requestFrame = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 16));
+    const frame = requestFrame(() => {
+      this.retiredMeshReleaseFrames.delete(id);
+      this.releaseRetiredRPrims(id);
+    });
+    this.retiredMeshReleaseFrames.set(id, frame);
+  }
+
+  _cancelRetiredRPrimRelease(id) {
+    const frame = this.retiredMeshReleaseFrames.get(id);
+    if (frame === undefined) return;
+    const cancelFrame = globalThis.cancelAnimationFrame || clearTimeout;
+    cancelFrame(frame);
+    this.retiredMeshReleaseFrames.delete(id);
+  }
+
+  releaseRetiredRPrims(id) {
+    this._cancelRetiredRPrimRelease(id);
+    const retired = this.retiredMeshes.get(id);
+    if (!retired) return;
+    this.retiredMeshes.delete(id);
+    for (const mesh of retired) {
+      mesh.dispose();
+    }
   }
 
   createBPrim(typeId, id) {
@@ -1935,6 +2429,7 @@ export class ThreeRenderDelegateInterface {
       this.destroySPrim(id);
       let material = new HydraMaterial(id, this);
       this.materials[id] = material;
+      this.applyPendingMaterialAssignments(id);
       if (this.diagnostics.materialIds.length < 20) {
         this.diagnostics.materialIds.push(id);
       }
@@ -1974,6 +2469,9 @@ export class ThreeRenderDelegateInterface {
     for (const id of Object.keys(this.meshes)) {
       this.destroyRPrim(id);
     }
+    for (const id of [...this.retiredMeshes.keys()]) {
+      this.releaseRetiredRPrims(id);
+    }
     for (const id of Object.keys(this.materials)) {
       this.destroySPrim(id);
     }
@@ -1982,11 +2480,35 @@ export class ThreeRenderDelegateInterface {
     }
     this.registry.dispose();
     this.pendingMaterialUpdates.clear();
+    this.pendingMaterialAssignments.clear();
+  }
+
+  rememberPendingMaterialAssignment(materialId, mesh) {
+    if (!materialId || !mesh) return;
+    let meshes = this.pendingMaterialAssignments.get(materialId);
+    if (!meshes) {
+      meshes = new Set();
+      this.pendingMaterialAssignments.set(materialId, meshes);
+    }
+    meshes.add(mesh);
+  }
+
+  applyPendingMaterialAssignments(materialId) {
+    const material = this.materials[materialId];
+    const meshes = this.pendingMaterialAssignments.get(materialId);
+    if (!material || !meshes) return;
+    for (const mesh of meshes) {
+      material.assignToMesh(mesh);
+    }
+    this.pendingMaterialAssignments.delete(materialId);
   }
 
   unassignMeshFromMaterials(mesh) {
     for (const material of Object.values(this.materials)) {
       material.unassignMesh(mesh);
+    }
+    for (const meshes of this.pendingMaterialAssignments.values()) {
+      meshes.delete(mesh);
     }
   }
 

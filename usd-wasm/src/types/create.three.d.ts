@@ -85,6 +85,13 @@ export declare type createThreeHydraConfig = {
      * Call handle.materialsReady() when you need an explicit material barrier.
      */
     waitForMaterials?: boolean,
+
+    /**
+     * Start advancing USD stage time from update().
+     * Defaults to false for static viewers. Animated viewers can opt in here
+     * or call handle.setPlaying(true).
+     */
+    autoPlay?: boolean,
 }
 
 /**
@@ -116,10 +123,14 @@ export declare type NeedleThreeHydraHandle = {
     /** Change the visible USD geometry purposes for the current Hydra view.
      */
     setIncludedPurposes: (includedPurposes: Array<"default" | "render" | "proxy" | "guide" | string>) => Promise<void>,
+    /** Set the OpenUSD imaging complexity for subdivision refinement and redraw.
+     */
+    setComplexity: (complexity: NeedleThreeHydraConfig["complexity"]) => Promise<void>,
     /** Rebuild Hydra population for the current USD stage after composition edits.
      */
     repopulate: () => Promise<void>,
-    /** Run an imperative USD stage edit after the current draw settles, then repopulate and redraw.
+    /** Run an imperative USD stage edit after the current draw settles, then redraw.
+     * USD object-change notices and Hydra dirty/resync processing drive the update.
      */
     editStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T | undefined>,
     /** Resolves after the initial Hydra draw has settled.

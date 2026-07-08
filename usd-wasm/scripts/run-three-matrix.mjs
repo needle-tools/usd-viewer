@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
-import { extractArtifact, renderRendererMatrixMarkdown } from "@needle-tools/three-test-matrix";
+import { renderRendererMatrixMarkdown } from "@needle-tools/three-test-matrix";
 
 const repoRoot = process.cwd();
 const statusPath = path.join(repoRoot, "tests", "three-matrix", "THREE-MATRIX-STATUS.md");
@@ -30,7 +30,7 @@ const testResult = await runCommand("npx", ["playwright", "test", "--config", "t
 process.stdout.write(testResult.output);
 process.stderr.write(testResult.errorOutput);
 
-const artifact = extractArtifact(testResult.output + "\n" + testResult.errorOutput, artifactPrefix);
+const artifact = mergeArtifacts(extractArtifacts(testResult.output + "\n" + testResult.errorOutput, artifactPrefix));
 if (artifact) {
     await mkdir(path.dirname(jsonPath), { recursive: true });
     await mkdir(path.dirname(statusPath), { recursive: true });
@@ -39,6 +39,35 @@ if (artifact) {
 }
 
 process.exit(testResult.exitCode);
+
+function extractArtifacts(output, prefix) {
+    const marker = `${prefix} `;
+    return output
+        .split(/\r?\n/)
+        .filter(entry => entry.startsWith(marker))
+        .map(entry => JSON.parse(entry.slice(marker.length)));
+}
+
+function mergeArtifacts(artifacts) {
+    if (!artifacts.length) return null;
+    if (artifacts.length === 1 && artifacts[0].chunkStart === undefined) return artifacts[0];
+
+    const sortedArtifacts = [...artifacts].sort((a, b) => (a.chunkStart ?? 0) - (b.chunkStart ?? 0));
+    const results = sortedArtifacts.flatMap(artifact => artifact.results ?? []);
+    const failures = sortedArtifacts.flatMap(artifact => artifact.failures ?? []);
+    return {
+        generatedAt: new Date().toISOString(),
+        scope: sortedArtifacts[0].scope ?? "custom",
+        totalCases: sortedArtifacts[0].totalCases ?? results.length + failures.length,
+        results,
+        failures,
+        summary: {
+            passed: results.filter(result => result.status === "ready").length,
+            unsupported: results.filter(result => result.status === "unsupported").length,
+            failed: failures.length,
+        },
+    };
+}
 
 async function runCommand(command, args, options) {
     return await new Promise(resolve => {
@@ -70,7 +99,7 @@ function renderMarkdown(artifact) {
     return renderRendererMatrixMarkdown({
         artifact,
         title: "USD WASM Three Matrix Status",
-        generatedBy: "npm run test:three-matrix",
+        generatedBy: artifact.scope === "full" ? "npm run test:three-matrix:full" : "npm run test:three-matrix",
         rawArtifactPath: ".cache/usd-three-matrix-status.json",
     });
 }

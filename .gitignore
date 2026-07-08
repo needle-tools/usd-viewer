@@ -8,3 +8,5 @@ node_modules
 public/usd
 public/materialx
 public/test-fixtures
+/repros
+/test-results

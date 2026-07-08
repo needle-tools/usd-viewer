@@ -489,10 +489,23 @@ onDomReady(function() {
   // Centered "Loading <filename>" overlay shown while a file is loading.
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingOverlayFilename = document.getElementById('loading-overlay-filename');
+  const loadingOverlayProgress = document.getElementById('loading-overlay-progress');
+  function formatLoadingPercent(progress) {
+    if (!progress) return '';
+    let ratio = Number.NaN;
+    if (typeof progress.ratio === 'number') ratio = progress.ratio;
+    else if (typeof progress.loaded === 'number' && typeof progress.total === 'number' && progress.total > 0) {
+      ratio = progress.loaded / progress.total;
+    }
+    if (!Number.isFinite(ratio)) return progress.text || '';
+    const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+    return progress.text || `${percent}%`;
+  }
   window.showLoadingOverlay = function(name) {
     if (!loadingOverlay) return;
     // A new load supersedes any previous failure.
     if (window.hideLoadError) window.hideLoadError();
+    if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
     const display = String(name || '').split('/').pop().split('#')[0].split('?')[0] || 'file';
     if (loadingOverlayFilename) {
       loadingOverlayFilename.textContent = display;
@@ -500,8 +513,15 @@ onDomReady(function() {
     }
     loadingOverlay.classList.add('visible');
   };
+  window.updateLoadingOverlayProgress = function(progress) {
+    if (!loadingOverlayProgress) return;
+    const text = formatLoadingPercent(progress);
+    loadingOverlayProgress.textContent = text;
+    loadingOverlayProgress.hidden = !text;
+  };
   window.hideLoadingOverlay = function() {
     if (loadingOverlay) loadingOverlay.classList.remove('visible');
+    if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
   };
 
   // Centered load-error card (shown when a file fails to load, e.g. a 404).
@@ -551,11 +571,13 @@ onDomReady(function() {
   // Override console methods - only warnings and errors
   console.warn = function(...args) {
     originalConsole.warn.apply(console, args);
+    window.dispatchEvent(new CustomEvent('usd-viewer-console-warn', { detail: args }));
     addToMessageLog(args.join(' '), 'warn');
   };
   
   console.error = function(...args) {
     originalConsole.error.apply(console, args);
+    window.dispatchEvent(new CustomEvent('usd-viewer-console-error', { detail: args }));
     addToMessageLog(args.join(' '), 'error');
   };
   
@@ -573,6 +595,12 @@ onDomReady(function() {
 let scene;
 let defaultTexture;
 let USD;
+let resolveUsdModuleReady;
+let rejectUsdModuleReady;
+const usdModuleReadyPromise = new Promise((resolve, reject) => {
+  resolveUsdModuleReady = resolve;
+  rejectUsdModuleReady = reject;
+});
 
 const debugFileHandling = false;
 
@@ -778,6 +806,41 @@ function parseBooleanUrlParam(value) {
   return value === "1" || value === "true" || value === "yes";
 }
 
+function hasDebugUrlParam() {
+  return diagnosticsMode();
+}
+
+function diagnosticsMode() {
+  return window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
+}
+
+function updateLoadingByteProgress(loaded, total, label = currentDisplayFilename || "file") {
+  if (!(total > 0) || !(loaded >= 0)) return;
+  const clampedLoaded = Math.min(loaded, total);
+  window.updateLoadingOverlayProgress?.({ loaded: clampedLoaded, total });
+  if (messageLog) {
+    const percent = Math.round((clampedLoaded / total) * 100);
+    messageLog.textContent = `Loading ${label} ${percent}%`;
+  }
+}
+
+function updateUsdAssetFetchProgress(progress) {
+  const loaded = Number(progress?.loadedTotal ?? progress?.loaded ?? 0);
+  const total = Number(progress?.totalBytes ?? progress?.total ?? 0);
+  if (total > 0) updateLoadingByteProgress(loaded, total);
+}
+
+async function waitForAssetCacheReady() {
+  try {
+    await Promise.race([
+      window.__usdViewerAssetCacheReady,
+      new Promise(resolve => setTimeout(resolve, 3000)),
+    ]);
+  } catch {
+    // Asset caching accelerates diagnostics but must not block diagnostics.
+  }
+}
+
 function setViewerModeUrlParam(url) {
   url.searchParams.set("viewer", viewerMode === VIEWER_MODE_NEEDLE_LOADER ? "needle" : viewerMode);
 }
@@ -839,9 +902,8 @@ function updateUrl() {
   if (quickLookLink) quickLookLink.href = url;
   
   const currentUrl = new URL(window.location.href);
-  // Only carry the file query parameter when something is actually loaded —
-  // otherwise drop it so the URL isn't cluttered with an empty "?file=" (e.g. on
-  // first load or after Clear).
+  // Only carry the file query parameter when something is actually loaded,
+  // otherwise drop it so the URL is not cluttered with an empty "?file=".
   if (filename) {
     currentUrl.searchParams.set("file", filename);
   } else {
@@ -866,8 +928,16 @@ try {
     locateFile: (file) => {
       return "/usd/bindings/" + file;
     },
+    printErr: (...args) => {
+      const text = args.join(" ");
+      if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);
+      else console.error(...args);
+    },
+    onDownloadProgress: (downloaded, total) => updateLoadingByteProgress(downloaded, total, "OpenUSD runtime"),
+    onAssetFetchProgress: updateUsdAssetFetchProgress,
   }), initPromise]).then(async ([Usd]) => {
     USD = Usd;
+    resolveUsdModuleReady?.(USD);
     updateOpenUsdBuildInfo(USD);
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
@@ -881,7 +951,9 @@ try {
       // full URL, which can carry signed-link tokens or private asset ids.
       let host = "";
       try { host = new URL(filename).hostname; } catch { /* relative/odd URL */ }
-      track('load_url', { method: 'url', type: extOf(filename), host });
+      if (!diagnosticsMode()) {
+        track('load_url', { method: 'url', type: extOf(filename), host });
+      }
 
       await clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
@@ -900,6 +972,7 @@ try {
     }
   }).catch((error) => {
     // Async rejections aren't caught by the surrounding try/catch — surface them.
+    rejectUsdModuleReady?.(error);
     if (window.setViewerLoading) window.setViewerLoading(false);
     const err = "Failed to load the USD module: " + error;
     console.error(err);
@@ -907,6 +980,7 @@ try {
   });
 }
 catch (error) {
+  rejectUsdModuleReady?.(error);
   if (window.setViewerLoading) window.setViewerLoading(false);
   if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
     let err = "Your current browser doesn't support SharedArrayBuffer which is required for USD.";
@@ -1316,6 +1390,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.setAttribute("camera-controls", "true");
     needleEngineElement.setAttribute("auto-fit", "false");
     needleEngineElement.setAttribute("auto-rotate", "false");
+    if (diagnosticsMode()) needleEngineElement.setAttribute("no-telemetry", "true");
     needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
@@ -1324,8 +1399,11 @@ async function ensureNeedleEngineLoader() {
     });
     needleEngineElement.addEventListener("progress", event => {
       const progress = event.detail?.totalProgress01;
-      if (typeof progress === "number" && messageLog) {
-        messageLog.textContent = `Loading ${currentDisplayFilename || "file"} ${Math.round(progress * 100)}%`;
+      if (typeof progress === "number") {
+        window.updateLoadingOverlayProgress?.({ ratio: progress });
+        if (messageLog) {
+          messageLog.textContent = `Loading ${currentDisplayFilename || "file"} ${Math.round(progress * 100)}%`;
+        }
       }
     });
     needleEngineElement.addEventListener("drop", dropHandler);
@@ -1531,9 +1609,8 @@ function loadThreeGltf(path) {
       path,
       resolve,
       event => {
-        if (!event.lengthComputable || !messageLog) return;
-        const percent = Math.round((event.loaded / event.total) * 100);
-        messageLog.textContent = `Loading ${currentDisplayFilename || "glTF"} ${percent}%`;
+        if (!event.lengthComputable) return;
+        updateLoadingByteProgress(event.loaded, event.total, currentDisplayFilename || "glTF");
       },
       reject,
     );
@@ -1675,26 +1752,35 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     if (viewerMode === VIEWER_MODE_THREE) {
       fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
     }
-    console.log("Loading done. Scene: ", window.usdRoot);
+    if (!diagnosticsMode()) {
+      console.log("Loading done. Scene: ", window.usdRoot);
+    }
+    else {
+      console.log(`Loading done: ${currentDisplayFilename || filename || "USD asset"}`);
+    }
     ready = true;
 
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     messageLog.textContent = "";
 
-    try {
-      console.log("Currently Exposed API", {
-        "Stage": Object.getPrototypeOf(stage),
-        "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
-        "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
-      });
-    } catch(e) {
-      console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
+    if (!diagnosticsMode()) {
+      try {
+        console.log("Currently Exposed API", {
+          "Stage": Object.getPrototypeOf(stage),
+          "Layer": Object.getPrototypeOf(stage.GetRootLayer()),
+          "Prim": Object.getPrototypeOf(stage.GetPrimAtPath("/")),
+        });
+      } catch(e) {
+        console.warn("Couldn't log state root layer / root prim", e, stage, Object.getPrototypeOf(stage));
+      }
     }
 
-    const root = {};
-    addPath(root, "/");
-    console.log("File system", root, USD.FS_analyzePath("/"));
+    if (!diagnosticsMode()) {
+      const root = {};
+      addPath(root, "/");
+      console.log("File system", root, USD.FS_analyzePath("/"));
+    }
   } catch (err) {
     try {
       await handle?.dispose?.();
@@ -1721,13 +1807,31 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   }
 }
 
-async function fetchCatalogFile(path) {
+async function responseBlobWithProgress(response, onProgress) {
+  const total = Number(response.headers.get('content-length'));
+  if (!response.body || !Number.isFinite(total) || total <= 0) {
+    return response.blob();
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onProgress?.(loaded, total);
+  }
+  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
+}
+
+async function fetchCatalogFile(path, onProgress) {
   const url = testFixtureUrl(path);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch " + url + ": " + response.status + " " + response.statusText);
   }
-  const blob = await response.blob();
+  const blob = await responseBlobWithProgress(response, onProgress);
   const name = path.split('/').pop() || path;
   return new File([blob], name);
 }
@@ -1738,17 +1842,18 @@ async function loadCatalogAssetBundle(asset, displayName) {
   const dependencyPaths = allPaths.filter(path => path !== rootPath);
   const rootIndex = allPaths.indexOf(rootPath);
   const totalFiles = dependencyPaths.length + 1;
+  if (window.showLoadingOverlay) window.showLoadingOverlay(displayName || asset.label || rootPath);
 
   try {
     for (let i = 0; i < dependencyPaths.length; i++) {
       const path = dependencyPaths[i];
       if (messageLog) messageLog.textContent = "Downloading " + asset.label + " dependency " + (i + 1) + " / " + totalFiles + "...";
-      const file = await fetchCatalogFile(path);
+      const file = await fetchCatalogFile(path, (loaded, total) => updateLoadingByteProgress(loaded, total, asset.label || displayName));
       await loadFile(file, false, path);
     }
 
     if (messageLog) messageLog.textContent = "Opening " + asset.label + "...";
-    const rootFile = await fetchCatalogFile(rootPath);
+    const rootFile = await fetchCatalogFile(rootPath, (loaded, total) => updateLoadingByteProgress(loaded, total, asset.label || displayName));
     await loadFile(rootFile, true, rootPath);
 
     track('load_test_asset_bundle', {
@@ -1782,7 +1887,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
 
   if (Number.isNaN(size.x) || Number.isNaN(size.y) || Number.isNaN(size.z) || 
       Number.isNaN(center.x) || Number.isNaN(center.y) || Number.isNaN(center.z)) {
-    console.warn("Fit Camera failed: NaN values found, some objects may not have any mesh data.", selection, size);
+    console.debug("Fit Camera skipped: NaN bounds, some objects may not have any mesh data.", selection, size);
     if (controls) 
       controls.update(0);
     return;
@@ -1799,7 +1904,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
   const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
 
   if (distance == 0) {
-    console.warn("Fit Camera failed: distance is 0, some objects may not have any mesh data.");
+    console.debug("Fit Camera skipped: zero bounds, some objects may not have any mesh data.");
     return;
   }
 
@@ -1819,14 +1924,25 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
   camera.position.copy(controls.target).sub(direction);
   controls.update(0);
 
-  console.log("Fitting camera to selection", {
-    size,
-    center,
-    maxSize,
-    distance,
-    near: camera.near,
-    far: camera.far,
-  });
+  if (!diagnosticsMode()) {
+    console.log("Fitting camera to selection", {
+      size,
+      center,
+      maxSize,
+      distance,
+      near: camera.near,
+      far: camera.far,
+    });
+  }
+  else {
+    console.log("Fitting camera to selection", {
+      maxSize,
+      distance,
+      near: camera.near,
+      far: camera.far,
+      selectionCount: Array.isArray(selection) ? selection.length : undefined,
+    });
+  }
 }
 
 async function init() {
@@ -1959,6 +2075,7 @@ async function init() {
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
+  const EXCLUDED_ASSET_EXPLORER_MODEL_KEYS = new Set(['nodeperformancetest']);
   const dropdownEl = document.querySelector('.dropdown');
   const dropdownMenu = document.querySelector('.dropdown-menu');
   const sampleGroupList = document.getElementById('sample-group-list');
@@ -2009,8 +2126,6 @@ async function init() {
     // IDs are needle-scoped (_ndl*) so they don't collide with the same logo in
     // the export dialog.
     needle: '<svg class="conv-logo conv-logo-needle notranslate" translate="no" viewBox="0 0 813 813" aria-hidden="true" style="fill-rule:evenodd;clip-rule:evenodd;"><g transform="matrix(4.16667,0,0,4.16667,0,0)"><g transform="matrix(0.806379,0,0,0.806379,43.028,21.9214)"><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M79.32,36.98L79.32,187.74L95,174.54L101.59,18.23L79.32,36.98Z" style="fill:url(#_ndl1);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M79.32,36.98L57.05,18.23L63.64,174.54L79.32,187.74L79.32,36.98Z" style="fill:url(#_ndl2);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M25.19,104.83L33.82,153.87L46.32,138.92L43.86,82.5L25.19,104.83Z" style="fill:url(#_ndl3);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M25.19,104.83L0,90.24L16.97,144.1L33.82,153.87L25.19,104.83Z" style="fill:url(#_ndl4);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M43.86,82.5L18.69,67.98L0,90.24L25.18,104.83L43.86,82.5Z" style="fill:rgb(153,204,51);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M134.82,78.69L124.85,135.19L140.43,126.15L160,64.1L134.82,78.69Z" style="fill:url(#_ndl5);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M134.82,78.69L116.14,56.36L113.28,121.36L124.85,135.19L134.82,78.69Z" style="fill:url(#_ndl6);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M160,64.1L141.31,41.84L116.14,56.36L134.81,78.69L160,64.1Z" style="fill:rgb(255,225,19);fill-rule:nonzero;"/></g><g transform="matrix(1,0,0,1,-11.7712,0.101354)"><path d="M101.59,18.23L79.32,0L57.05,18.23L79.32,36.98L101.59,18.23Z" style="fill:rgb(243,230,0);fill-rule:nonzero;"/></g></g></g><defs><linearGradient id="_ndl1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.84,-162.96,162.96,0.84,89.64,184.81)"><stop offset="0" style="stop-color:rgb(98,211,153);stop-opacity:1"/><stop offset="0.51" style="stop-color:rgb(172,216,66);stop-opacity:1"/><stop offset="0.9" style="stop-color:rgb(215,219,10);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(215,219,10);stop-opacity:1"/></linearGradient><linearGradient id="_ndl2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.6,-162.13,162.13,-1.6,69.68,178.9)"><stop offset="0" style="stop-color:rgb(11,163,152);stop-opacity:1"/><stop offset="0.5" style="stop-color:rgb(76,163,82);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(118,163,10);stop-opacity:1"/></linearGradient><linearGradient id="_ndl3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.9,-67.98,67.98,-1.9,36.6,152.17)"><stop offset="0" style="stop-color:rgb(54,163,130);stop-opacity:1"/><stop offset="0.19" style="stop-color:rgb(54,163,130);stop-opacity:1"/><stop offset="0.54" style="stop-color:rgb(73,164,89);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(118,163,11);stop-opacity:1"/></linearGradient><linearGradient id="_ndl4" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(2.18,-62.38,62.38,2.18,15.82,153.24)"><stop offset="0" style="stop-color:rgb(38,120,128);stop-opacity:1"/><stop offset="0.51" style="stop-color:rgb(69,122,92);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(113,117,22);stop-opacity:1"/></linearGradient><linearGradient id="_ndl5" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(13.85,-71.96,71.96,13.85,135.08,135.43)"><stop offset="0" style="stop-color:rgb(176,217,57);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(234,219,4);stop-opacity:1"/></linearGradient><linearGradient id="_ndl6" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(26.159,-64.7372,64.7372,26.159,107.418,128.145)"><stop offset="0" style="stop-color:rgb(116,175,82);stop-opacity:1"/><stop offset="0.17" style="stop-color:rgb(116,175,82);stop-opacity:1"/><stop offset="0.48" style="stop-color:rgb(153,190,50);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(192,196,10);stop-opacity:1"/></linearGradient></defs></svg>',
-    // Official Khronos glTF wordmark (single-colour green) for the Original glTF source.
-    gltf: '<svg class="conv-logo conv-logo-gltf notranslate" translate="no" viewBox="0 0 1000 500" aria-hidden="true"><g><g><path fill="#86C540" d="M419.671,403.727c14.757-16.554,22.561-40.735,22.561-73.316V148.37h-31.174v28.48h-0.385c-5.905-11.029-14.113-19.303-24.631-24.823c-10.524-5.515-22.069-8.275-34.637-8.275c-17.193,0-31.691,3.271-43.49,9.814c-11.804,6.543-21.299,14.95-28.479,25.209c-7.187,10.264-12.315,21.552-15.395,33.868c-3.079,12.315-4.618,24.378-4.618,36.177c0,13.603,1.858,26.496,5.581,38.679c3.716,12.19,9.296,22.9,16.741,32.137c7.439,9.236,16.675,16.548,27.71,21.936c11.035,5.388,23.994,8.082,38.877,8.082c6.158,0,12.376-0.769,18.665-2.309c6.291-1.539,12.19-3.782,17.71-6.735c5.514-2.946,10.452-6.669,14.817-11.16c4.36-4.487,7.95-9.813,10.776-15.972h0.757v13.084c0,11.293-1.094,21.553-3.272,30.79c-2.182,9.237-5.712,17.127-10.583,23.668c-4.877,6.543-11.035,11.672-18.474,15.395c-7.445,3.717-16.549,5.581-27.325,5.581c-5.389,0-11.035-0.579-16.935-1.732c-2.13-0.416-4.2-0.928-6.211-1.53c-2.188-0.772-4.358-1.557-6.51-2.356c-0.2-0.085-0.399-0.172-0.598-0.259v0.036c-84.527-31.572-140.157-85.246-140.157-146.152c0-97.147,141.523-175.899,316.1-175.899c97.253,0,184.451,22.15,242.436,60.593C676.24,70.283,562.757,25.022,433.005,25C234.282,24.965,73.17,125.674,73.153,249.938c-0.012,84.821,75.042,158.697,185.893,197.058C347.965,450.04,393.094,433.537,419.671,403.727z M406.248,271.526c-2.182,9.236-5.58,17.512-10.199,24.823c-4.617,7.314-10.715,13.219-18.28,17.703c-7.571,4.493-16.742,6.735-27.517,6.735c-10.777,0-19.761-2.242-26.941-6.735c-7.186-4.484-12.959-10.39-17.319-17.703c-4.366-7.311-7.444-15.454-9.237-24.439c-1.797-8.978-2.694-17.956-2.694-26.94c0-9.489,1.088-18.6,3.271-27.326c2.178-8.719,5.641-16.417,10.392-23.092c4.745-6.669,10.837-11.991,18.281-15.972c7.439-3.975,16.417-5.965,26.941-5.965c10.259,0,18.984,2.057,26.17,6.158c7.18,4.107,13.019,9.561,17.511,16.356c4.486,6.801,7.758,14.432,9.814,22.899c2.051,8.467,3.079,17.066,3.079,25.786C409.52,253.052,408.425,262.289,406.248,271.526z"/><path fill="#86C540" d="M434.849,422.485c-18.854,17.113-52.532,36.647-98.397,44.316c30.707,5.339,63.065,8.194,96.49,8.198c129.236,0.025,242.425-45.091,305.881-109.055c-57.984,38.206-144.83,59.951-241.728,59.951C474.077,425.897,456.469,425.086,434.849,422.485z"/></g><g><g><path fill="#86C540" d="M633.84,347.908h-46.965V189.705h-58.922v-40.234h164.81v40.234H633.84V347.908L633.84,347.908z"/></g><g><path fill="#86C540" d="M764.173,347.908h-46.967V149.471h144.988v40.234h-98.021v37.128h85.803v40.233h-85.803V347.908L764.173,347.908z"/></g></g><path fill="#86C540" d="M469.554,100.031h32.714v247.313h-32.714V100.031z"/></g><g><polygon fill="#86C540" points="902.783,155.289 895.435,155.289 895.435,174.4 889.017,174.4 889.017,155.289 881.67,155.289 881.67,149.769 902.782,149.769 902.782,155.289 "/><polygon fill="#86C540" points="905.647,149.769 915.1,149.769 919.342,166.19 919.411,166.19 923.654,149.769 933.107,149.769 933.107,174.4 927.069,174.4 927.069,155.703 927.001,155.703 921.826,174.4 916.929,174.4 911.752,155.703 911.683,155.703 911.683,174.4 905.647,174.4 905.647,149.769 "/></g></svg>',
   };
   function normalizeConverterId(value) {
     return String(value || '').trim();
@@ -2053,8 +2168,8 @@ async function init() {
     if (value.includes('three')) return 'three';
     if (value.includes('blender')) return 'blender';
     if (value.includes('omniverse') || /\bov\b/.test(value)) return 'omniverse';
+    if (value.includes('adobe')) return 'adobe';
     if (value.includes('needle')) return 'needle';
-    if (value.includes('adobe')) return 'adobe';       // must precede 'gltf'
     if (value.includes('gltf') || value.includes('glb')) return 'gltf';
     return '';
   }
@@ -2295,6 +2410,7 @@ async function init() {
   }
 
   function assetExplorerModelToCard(model) {
+    if (isExcludedAssetExplorerModel(model)) return null;
     const { conversions, order, metadata } = collectAssetExplorerConversions(model);
     const url = pickConversionUrl(conversions, selectedConverter, order);
     if (!url) return null;
@@ -2312,6 +2428,12 @@ async function init() {
 
   function normalizeModelKey(value) {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function isExcludedAssetExplorerModel(model) {
+    return [model?.slug, model?.name, model?.label]
+      .map(normalizeModelKey)
+      .some(key => EXCLUDED_ASSET_EXPLORER_MODEL_KEYS.has(key));
   }
 
   async function loadGltfTagIndex() {
@@ -2575,6 +2697,17 @@ async function init() {
     return path.includes('/') ? path.split('/')[0] : 'root';
   }
 
+  function fixtureThumbnailPath(asset) {
+    if (asset?.thumbnail) return asset.thumbnail;
+    const root = String(asset?.root || '').trim();
+    if (!root) return '';
+    const slug = root
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
+    return slug ? `thumbnails/${slug}.png` : '';
+  }
+
   function needleFixtureFolders() {
     const folders = new Map();
     for (const asset of testAssetLibrary) {
@@ -2590,10 +2723,12 @@ async function init() {
   }
 
   function needleFixtureCard(asset, folder = needleFixtureFolder(asset)) {
+    const thumbnail = fixtureThumbnailPath(asset);
     return {
       name: asset.label || asset.root || 'Fixture',
       meta: [prettyNeedleFolderLabel(folder), asset.group].filter(Boolean).join(' · '),
       url: testFixtureUrl(asset.root),
+      thumbnail: thumbnail ? testFixtureUrl(thumbnail) : undefined,
     };
   }
 
@@ -2724,6 +2859,347 @@ async function init() {
       const url = pickConversionUrl(conversions, selectedConverter, converterOrder);
       if (url) card.href = sampleHref(url);
     }
+  }
+
+  function normalizedTestUrl(value) {
+    try {
+      const url = new URL(value, window.location.href);
+      url.hash = '';
+      return url.href;
+    } catch {
+      return String(value || '');
+    }
+  }
+
+  function addDebugLoadTarget(targets, seen, target) {
+    const url = target?.url;
+    if (!url) return;
+    const key = [
+      target.source || '',
+      target.root || '',
+      target.converter || '',
+      normalizedTestUrl(url),
+    ].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({
+      source: target.source || 'unknown',
+      name: target.name || target.label || url.split('/').pop() || 'asset',
+      url,
+      root: target.root || '',
+      converter: target.converter || '',
+      files: Array.isArray(target.files) ? [...target.files] : [],
+    });
+  }
+
+  function addCardDebugLoadTargets(targets, seen, source, card) {
+    const conversions = card?.conversions || {};
+    const converter = pickConverterId(conversions, selectedConverter, card?.converterOrder || []);
+    if (converter) {
+      addDebugLoadTarget(targets, seen, {
+        source,
+        name: card.name,
+        url: conversions[converter],
+        converter,
+      });
+    } else {
+      addDebugLoadTarget(targets, seen, {
+        source,
+        name: card?.name,
+        url: card?.url,
+      });
+    }
+  }
+
+  async function collectDebugLoadTargets() {
+    const targets = [];
+    const seen = new Set();
+    const [assetExplorerCards, usdWgManifestValue] = await Promise.all([
+      loadAssetExplorerCards(),
+      loadUsdWgManifest().catch(err => {
+        console.warn("Debug test could not load USD-WG manifest", err);
+        return null;
+      }),
+    ]);
+
+    for (const card of assetExplorerCards || []) {
+      addCardDebugLoadTargets(targets, seen, 'gltf-conversions', card);
+    }
+
+    if (usdWgManifestValue?.root) {
+      for (const card of collectUsdWgCards(usdWgManifestValue.root)) {
+        addCardDebugLoadTargets(targets, seen, 'usd-wg', card);
+      }
+    }
+
+    for (const card of needleCloudCards) {
+      addCardDebugLoadTargets(targets, seen, 'needle-cloud', card);
+    }
+
+    for (const asset of testAssetLibrary) {
+      addDebugLoadTarget(targets, seen, {
+        source: 'needle-fixture',
+        name: asset.label || asset.root,
+        url: testFixtureUrl(asset.root),
+        root: asset.root,
+        files: asset.files || [],
+      });
+    }
+
+    return targets;
+  }
+
+  async function fetchContentLength(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      if (!response.ok) return null;
+      const length = Number(response.headers.get('content-length'));
+      return Number.isFinite(length) ? length : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function preflightDebugTarget(target) {
+    if (target.files?.length) return null;
+    try {
+      const response = await fetch(target.url, { method: 'HEAD', cache: 'no-store' });
+      if (response.ok) return null;
+      return {
+        status: response.status,
+        reason: `Skipped unavailable asset: HTTP ${response.status}`,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function totalDebugTargetSize(target) {
+    const urls = target.files?.length
+      ? Array.from(new Set([...(target.files || []), target.root].filter(Boolean))).map(path => testFixtureUrl(path))
+      : [target.url];
+    let total = 0;
+    let known = true;
+    const files = [];
+    for (const url of urls) {
+      const size = await fetchContentLength(url);
+      files.push({ url, size });
+      if (typeof size === 'number') total += size;
+      else known = false;
+    }
+    return {
+      totalFileSize: known ? total : null,
+      totalFileSizeKnown: known,
+      files,
+    };
+  }
+
+  function countUsdFileSystemFiles(path = '/') {
+    if (!USD?.FS_readdir || !USD?.FS_analyzePath) return 0;
+    let count = 0;
+    const ignoredDirectories = new Set(['/dev/', '/proc/', '/home/', '/tmp/', '/usd/']);
+    const walk = (directory) => {
+      let entries = [];
+      try {
+        entries = USD.FS_readdir(directory);
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry === '.' || entry === '..') continue;
+        const directoryPath = `${directory}${entry}/`;
+        let data = null;
+        try {
+          data = USD.FS_analyzePath(directoryPath);
+        } catch {
+          data = null;
+        }
+        if (data?.object?.node_ops?.readdir) {
+          if (!ignoredDirectories.has(directoryPath)) walk(directoryPath);
+          continue;
+        }
+        count++;
+      }
+    };
+    walk(path);
+    return count;
+  }
+
+  function createDebugTestConsoleCapture() {
+    const warnings = [];
+    const errors = [];
+    const onWarning = (...args) => warnings.push(args.map(String).join(' '));
+    const onError = (...args) => errors.push(args.map(String).join(' '));
+    const warnListener = event => onWarning(...(event.detail || []));
+    const errorListener = event => onError(...(event.detail || []));
+    return {
+      warnings,
+      errors,
+      mark() {
+        return { warnings: warnings.length, errors: errors.length };
+      },
+      since(mark) {
+        return {
+          warnings: warnings.slice(mark.warnings),
+          errors: errors.slice(mark.errors),
+        };
+      },
+      attach() {
+        window.addEventListener('usd-viewer-console-warn', warnListener);
+        window.addEventListener('usd-viewer-console-error', errorListener);
+      },
+      detach() {
+        window.removeEventListener('usd-viewer-console-warn', warnListener);
+        window.removeEventListener('usd-viewer-console-error', errorListener);
+      },
+    };
+  }
+
+  async function loadDebugTarget(target) {
+    const link = {
+      href: sampleHref(target.url),
+      dataset: { name: target.name || '' },
+      textContent: target.name || target.url,
+    };
+    const previousWaitForMaterials = waitForMaterials;
+    waitForMaterials = true;
+    try {
+      await loadFromFileLink(link);
+      await currentHydraHandle?.materialsReady?.();
+      if (!ready) {
+        throw new Error(`Viewer did not reach ready state for ${target.url}`);
+      }
+    } finally {
+      waitForMaterials = previousWaitForMaterials;
+    }
+  }
+
+  async function runDebugAssetTest(options = {}) {
+    const button = document.getElementById('debug-test-button');
+    const originalButtonText = button?.textContent || 'Test';
+    let progressTimer = 0;
+    let currentProgress = { current: 0, completed: 0, total: 0, started: 0 };
+    const formatEta = (remainingMs) => {
+      const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      return `-${minutes}:${String(rest).padStart(2, '0')}`;
+    };
+    const updateProgressButton = () => {
+      if (!button || !currentProgress.total) return;
+      const elapsed = performance.now() - currentProgress.started;
+      const done = Math.max(0, currentProgress.completed);
+      const average = done > 0 ? elapsed / done : 0;
+      const remaining = done > 0 ? average * (currentProgress.total - done) : 0;
+      button.textContent = `${currentProgress.current}/${currentProgress.total}, ${formatEta(remaining)}`;
+    };
+    if (button) {
+      button.disabled = true;
+      button.textContent = '0/0, -0:00';
+    }
+    const capture = createDebugTestConsoleCapture();
+    capture.attach();
+    try {
+      await usdModuleReadyPromise;
+      await waitForAssetCacheReady();
+      const startedAt = new Date().toISOString();
+      const targets = Array.isArray(options.targets) ? options.targets : await collectDebugLoadTargets();
+      const results = [];
+      currentProgress = { current: 0, completed: 0, total: targets.length, started: performance.now() };
+      updateProgressButton();
+      progressTimer = window.setInterval(updateProgressButton, 1000);
+      console.log(`[usd-viewer debug test] loading ${targets.length} assets`);
+
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        currentProgress.current = i + 1;
+        updateProgressButton();
+        const mark = capture.mark();
+        const entry = {
+          index: i,
+          source: target.source,
+          name: target.name,
+          url: target.url,
+          root: target.root || undefined,
+          converter: target.converter || undefined,
+          totalFileSize: null,
+          totalFileSizeKnown: false,
+          fileSizes: [],
+          loadTimeMs: null,
+          fileSystemFileCount: 0,
+          warnings: [],
+          errors: [],
+          ok: false,
+          skipped: false,
+        };
+        try {
+          const size = await totalDebugTargetSize(target);
+          entry.totalFileSize = size.totalFileSize;
+          entry.totalFileSizeKnown = size.totalFileSizeKnown;
+          entry.fileSizes = size.files;
+          const unavailable = await preflightDebugTarget(target);
+          if (unavailable) {
+            entry.skipped = true;
+            entry.ok = true;
+            entry.skipReason = unavailable.reason;
+            entry.status = unavailable.status;
+            results.push(entry);
+            currentProgress.completed = i + 1;
+            updateProgressButton();
+            console.log(`[usd-viewer debug test] ${i + 1}/${targets.length}`, entry);
+            continue;
+          }
+          const started = performance.now();
+          await loadDebugTarget(target);
+          entry.loadTimeMs = Math.round(performance.now() - started);
+          entry.fileSystemFileCount = countUsdFileSystemFiles();
+          entry.ok = true;
+        } catch (error) {
+          entry.errors.push(error?.stack || error?.message || String(error));
+        }
+        const captured = capture.since(mark);
+        entry.warnings.push(...captured.warnings);
+        entry.errors.push(...captured.errors);
+        results.push(entry);
+        currentProgress.completed = i + 1;
+        updateProgressButton();
+        console.log(`[usd-viewer debug test] ${i + 1}/${targets.length}`, entry);
+      }
+
+      const report = {
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        viewerMode,
+        count: results.length,
+        passed: results.filter(result => !result.skipped && result.ok && result.errors.length === 0).length,
+        skipped: results.filter(result => result.skipped).length,
+        failed: results.filter(result => !result.skipped && (!result.ok || result.errors.length > 0)).length,
+        results,
+      };
+      console.log("usd-viewer asset test report", report);
+      console.log(JSON.stringify(report, null, 2));
+      return report;
+    } finally {
+      capture.detach();
+      if (progressTimer) window.clearInterval(progressTimer);
+      if (button) {
+        button.disabled = false;
+        button.textContent = currentProgress.total ? button.textContent : originalButtonText;
+      }
+    }
+  }
+
+  function setupDebugTestButton() {
+    const button = document.getElementById('debug-test-button');
+    if (!button || !hasDebugUrlParam()) return;
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      runDebugAssetTest().catch(error => {
+        console.error("USD Viewer debug asset test failed", error);
+        button.disabled = false;
+      });
+    });
+    window.runUsdViewerAssetTest = runDebugAssetTest;
   }
 
   function buildGalleryCards(cards) {
@@ -3088,7 +3564,7 @@ async function init() {
   async function loadFromFileLink(link) {
     let params = new Map();
     try {
-      params = (new URL(link.href)).searchParams;
+      params = (new URL(link.href, window.location.href)).searchParams;
     }
     catch {}
     const requestedFilename = params.get("file");
@@ -3104,10 +3580,14 @@ async function init() {
       // Samples are our own curated links (not user content), so the full
       // name/URL is safe and useful here — unlike user drops.
       const label = (link.dataset.name || link.textContent || '').trim();
-      track('load_sample', { file: filename, label });
+      if (!diagnosticsMode()) {
+        track('load_sample', { file: filename, label });
+      }
       await refreshLoadedConverterState(filename);
     } else {
-      track('clear_model');
+      if (!diagnosticsMode()) {
+        track('clear_model');
+      }
       setLoadedConversionCard(null, '');
     }
 
@@ -3164,6 +3644,8 @@ async function init() {
     event.preventDefault();
     activateFileLink(link);
   });
+
+  setupDebugTestButton();
   
   render();
   

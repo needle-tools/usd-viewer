@@ -1,0 +1,41 @@
+#usda 1.0
+(
+    defaultPrim = "ReferencedPanel"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "ReferencedPanel"
+{
+    def Mesh "Shape" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </ReferencedPanel/Looks/ReferenceBlue>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.45, 0, -0.45), (0.45, 0, -0.45), (0.45, 0, 0.45), (-0.45, 0, 0.45)]
+        normal3f[] primvars:normals = [(0, -1, 0)] (
+            interpolation = "constant"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+    }
+
+    def Scope "Looks"
+    {
+        def Material "ReferenceBlue"
+        {
+            token outputs:surface.connect = </ReferencedPanel/Looks/ReferenceBlue/Preview.outputs:surface>
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.05, 0.28, 1)
+                float inputs:roughness = 0.45
+                token outputs:surface
+            }
+        }
+    }
+}

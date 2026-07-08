@@ -1,0 +1,64 @@
+#usda 1.0
+(
+    defaultPrim = "GeompropSource"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "GeompropSource"
+{
+    def Mesh "Shape" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </GeompropSource/Looks/SharedPrimvarMaterial>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.9, 0, -0.9), (0.9, 0, -0.9), (0.9, 0, 0.9), (-0.9, 0, 0.9)]
+        normal3f[] primvars:normals = [(0, -1, 0)] (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.95, 0.78, 0.05)] (
+            interpolation = "constant"
+        )
+        float[] primvars:panelRoughness = [0.72] (
+            interpolation = "constant"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+    }
+
+    def Scope "Looks"
+    {
+        def Material "SharedPrimvarMaterial"
+        {
+            token outputs:surface.connect = </GeompropSource/Looks/SharedPrimvarMaterial/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </GeompropSource/Looks/SharedPrimvarMaterial/ReadDisplayColor.outputs:result>
+                float inputs:roughness.connect = </GeompropSource/Looks/SharedPrimvarMaterial/ReadRoughness.outputs:result>
+                token outputs:surface
+            }
+
+            def Shader "ReadDisplayColor"
+            {
+                uniform token info:id = "UsdPrimvarReader_float3"
+                string inputs:varname = "displayColor"
+                float3 inputs:fallback = (0.8, 0.8, 0.8)
+                float3 outputs:result
+            }
+
+            def Shader "ReadRoughness"
+            {
+                uniform token info:id = "UsdPrimvarReader_float"
+                string inputs:varname = "panelRoughness"
+                float inputs:fallback = 0.5
+                float outputs:result
+            }
+        }
+    }
+}

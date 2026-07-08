@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<materialx version="1.39">
+  <nodedef name="ND_needle_voronoi_cells" node="needle_voronoi_cells" nodegroup="procedural2d">
+    <input name="palette_a" type="color3" value="0.03, 0.24, 0.30" />
+    <input name="palette_b" type="color3" value="0.96, 0.62, 0.10" />
+    <input name="palette_c" type="color3" value="0.10, 0.74, 0.70" />
+    <input name="scale" type="float" value="8.0" />
+    <input name="jitter" type="float" value="0.86" />
+    <input name="grain" type="float" value="0.22" />
+    <output name="out" type="color3" />
+  </nodedef>
+
+  <nodegraph name="NG_needle_voronoi_cells" nodedef="ND_needle_voronoi_cells">
+    <texcoord name="UV0" type="vector2" />
+    <convert name="ScaleVector" type="vector2">
+      <input name="in" type="float" interfacename="scale" />
+    </convert>
+    <multiply name="CellUV" type="vector2">
+      <input name="in1" type="vector2" nodename="UV0" />
+      <input name="in2" type="vector2" nodename="ScaleVector" />
+    </multiply>
+    <worleynoise2d name="CellDistance" type="float">
+      <input name="texcoord" type="vector2" nodename="CellUV" />
+      <input name="jitter" type="float" interfacename="jitter" />
+      <input name="style" type="integer" value="0" />
+    </worleynoise2d>
+    <worleynoise2d name="CellSolid" type="float">
+      <input name="texcoord" type="vector2" nodename="CellUV" />
+      <input name="jitter" type="float" interfacename="jitter" />
+      <input name="style" type="integer" value="1" />
+    </worleynoise2d>
+    <noise2d name="FineGrain" type="float">
+      <input name="texcoord" type="vector2" nodename="CellUV" />
+      <input name="amplitude" type="float" interfacename="grain" />
+    </noise2d>
+    <mix name="TealToGold" type="color3">
+      <input name="bg" type="color3" interfacename="palette_a" />
+      <input name="fg" type="color3" interfacename="palette_b" />
+      <input name="mix" type="float" nodename="CellDistance" />
+    </mix>
+    <mix name="CellColor" type="color3">
+      <input name="bg" type="color3" nodename="TealToGold" />
+      <input name="fg" type="color3" interfacename="palette_c" />
+      <input name="mix" type="float" nodename="CellSolid" />
+    </mix>
+    <add name="GrainScale" type="float">
+      <input name="in1" type="float" value="0.82" />
+      <input name="in2" type="float" nodename="FineGrain" />
+    </add>
+    <multiply name="GrainedColor" type="color3">
+      <input name="in1" type="color3" nodename="CellColor" />
+      <input name="in2" type="float" nodename="GrainScale" />
+    </multiply>
+    <clamp name="ClampedColor" type="color3">
+      <input name="in" type="color3" nodename="GrainedColor" />
+    </clamp>
+    <output name="out" type="color3" nodename="ClampedColor" />
+  </nodegraph>
+
+  <needle_voronoi_cells name="CustomVoronoiCells" type="color3">
+    <input name="palette_a" type="color3" value="0.02, 0.20, 0.24" />
+    <input name="palette_b" type="color3" value="1.0, 0.70, 0.18" />
+    <input name="palette_c" type="color3" value="0.08, 0.82, 0.75" />
+    <input name="scale" type="float" value="9.0" />
+    <input name="jitter" type="float" value="0.92" />
+    <input name="grain" type="float" value="0.18" />
+  </needle_voronoi_cells>
+
+  <texcoord name="SurfaceUV0" type="vector2" />
+  <convert name="SurfaceScaleVector" type="vector2">
+    <input name="in" type="float" value="9.0" />
+  </convert>
+  <multiply name="SurfaceCellUV" type="vector2">
+    <input name="in1" type="vector2" nodename="SurfaceUV0" />
+    <input name="in2" type="vector2" nodename="SurfaceScaleVector" />
+  </multiply>
+  <worleynoise2d name="RoughnessCells" type="float">
+    <input name="texcoord" type="vector2" nodename="SurfaceCellUV" />
+    <input name="jitter" type="float" value="0.92" />
+    <input name="style" type="integer" value="0" />
+  </worleynoise2d>
+  <cellnoise2d name="MetalCells" type="float">
+    <input name="texcoord" type="vector2" nodename="SurfaceCellUV" />
+  </cellnoise2d>
+  <mix name="PatternRoughness" type="float">
+    <input name="bg" type="float" value="0.16" />
+    <input name="fg" type="float" value="0.76" />
+    <input name="mix" type="float" nodename="RoughnessCells" />
+  </mix>
+  <multiply name="PatternMetalness" type="float">
+    <input name="in1" type="float" nodename="MetalCells" />
+    <input name="in2" type="float" value="0.58" />
+  </multiply>
+
+  <standard_surface name="SR_custom_nodedef" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodename="CustomVoronoiCells" />
+    <input name="metalness" type="float" nodename="PatternMetalness" />
+    <input name="specular_roughness" type="float" nodename="PatternRoughness" />
+  </standard_surface>
+
+  <surfacematerial name="Custom_NodeDef_Surface" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_custom_nodedef" />
+  </surfacematerial>
+</materialx>

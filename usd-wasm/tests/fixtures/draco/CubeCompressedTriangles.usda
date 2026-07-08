@@ -1,6 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "Cube"
+    metersPerUnit = 1
     upAxis = "Z"
 )
 
@@ -57,4 +58,3 @@ def Xform "Cube" (
         }
     }
 }
-

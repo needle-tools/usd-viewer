@@ -46,6 +46,33 @@
   }
   </script>
 
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      window.__usdViewerDiagnosticsMode = params.has("debug") || navigator.webdriver === true;
+      window.__usdViewerAssetCacheMode = params.get("assetCache") !== "0";
+      window.__usdViewerAssetCacheReady = Promise.resolve(null);
+      if (window.__usdViewerAssetCacheMode && "serviceWorker" in navigator) {
+        window.__usdViewerAssetCacheReady = navigator.serviceWorker
+          .register("/usd-asset-cache-sw.js", { scope: "/" })
+          .then(async registration => {
+            registration.update?.();
+            await navigator.serviceWorker.ready;
+            if (!navigator.serviceWorker.controller) {
+              await new Promise(resolve => {
+                navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true });
+              });
+            }
+            return registration;
+          })
+          .catch(error => {
+            console.warn("USD asset cache service worker unavailable", error);
+            return null;
+          });
+      }
+    })();
+  </script>
+
   <!-- Privacy-friendly analytics (Rybbit). Outbound-link clicks are tracked
        automatically; in-app clicks and caught USD errors are reported
        explicitly via analytics.js.
@@ -59,6 +86,10 @@
        (/track, /identify, /site/tracking-config/...) stay same-origin too. -->
   <script>
     (() => {
+      const params = new URLSearchParams(location.search);
+      const analyticsDisabled = window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true;
+      if (analyticsDisabled) return;
+
       const originalGetContext = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function(type, ...args) {
         // Rybbit fingerprints via WebGL for each payload. This viewer needs the
@@ -69,13 +100,14 @@
         }
         return originalGetContext.call(this, type, ...args);
       };
+
+      const script = document.createElement("script");
+      script.src = "/api/script.js";
+      script.dataset.siteId = "6bc313ba3488";
+      script.defer = true;
+      document.head.appendChild(script);
     })();
   </script>
-  <script
-    src="/api/script.js"
-    data-site-id="6bc313ba3488"
-    defer
-  ></script>
 
   <!-- Needle brand typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,7 +157,16 @@
        with Cross-Origin-Resource-Policy: cross-origin, so it loads under this
        page's COEP: require-corp. Loaded before whats-new.js so the global is
        ready early (whats-new.js also queues calls until it appears). -->
-  <script defer src="https://marketer.needle.tools/whatsnew.js"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      if (window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true) return;
+      const script = document.createElement("script");
+      script.defer = true;
+      script.src = "https://marketer.needle.tools/whatsnew.js";
+      document.currentScript.after(script);
+    })();
+  </script>
 
   <!-- Subtle rotating "What's New" banner (bottom-right), fed by the Needle marketer feed -->
   <script type="module" src="whats-new.js"></script>
@@ -202,6 +243,7 @@
     </div>
 
     <a href="#" id="feedback-link" class="feedback-button" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg><span class="feedback-text">Feedback</span></a>
+    <button type="button" id="debug-test-button" class="debug-test-button" hidden>Test</button>
 
     <div class="header-overflow" id="header-overflow">
       <button class="header-overflow-button" type="button" aria-label="More actions" aria-expanded="false" aria-controls="header-overflow-menu">
@@ -265,6 +307,7 @@
       <span class="spinner spinner-md notranslate" translate="no" aria-hidden="true"></span>
       <span class="loading-overlay-word">Loading</span>
       <span id="loading-overlay-filename" class="loading-overlay-filename"></span>
+      <span id="loading-overlay-progress" class="loading-overlay-progress" hidden></span>
       <span class="loading-overlay-sep" aria-hidden="true">&ndash;</span>
       <button id="loading-cancel-btn" class="loading-cancel-button" type="button" title="Cancel" aria-label="Cancel loading">
         <svg class="notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

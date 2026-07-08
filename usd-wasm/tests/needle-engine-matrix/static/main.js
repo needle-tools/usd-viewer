@@ -62,7 +62,7 @@ try {
     await handle?.materialsReady?.();
     handle?.update?.(0);
 
-    const sceneStats = collectSceneStats(usdRoot);
+    const sceneStats = await waitForGeometryStats(usdRoot, time => handle?.update?.(time));
     const buildInfo = usd.getOpenUsdBuildInfo(USD);
     handle?.dispose?.();
 
@@ -88,7 +88,7 @@ try {
         pluginContext.update(i / 60, null);
     }
     const pluginRoot = pluginModel?.scene ?? pluginModel?.root ?? pluginModel ?? pluginContext.scene;
-    const pluginStats = collectSceneStats(pluginRoot);
+    const pluginStats = await waitForGeometryStats(pluginRoot, time => pluginContext.update(time, null));
     removeUsdPlugin();
     renderer.dispose();
     canvas.remove();
@@ -174,5 +174,16 @@ function collectSceneStats(root) {
             }
         }
     });
+    return stats;
+}
+
+async function waitForGeometryStats(root, update) {
+    const start = performance.now();
+    let stats = collectSceneStats(root);
+    while (stats.meshes > 0 && stats.geometriesWithPosition === 0 && performance.now() - start < 30_000) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        update?.((performance.now() - start) / 1000);
+        stats = collectSceneStats(root);
+    }
     return stats;
 }

@@ -8,6 +8,10 @@ const { injectClientIpIntoTrackBody, maskIp } = require('./rybbit-ip')
 function setHeaders(res, path, stat) {
 
   const normalizedPath = path.replaceAll("\\", '/');
+  if (normalizedPath.endsWith('/usd-asset-cache-sw.js')) {
+    res.setHeader("Service-Worker-Allowed", "/");
+    res.setHeader("Cache-Control", "no-cache");
+  }
   const needsHeaders = normalizedPath.includes('/emHd') ||
     normalizedPath.includes('/materialx/') ||
     normalizedPath.includes('/needle-engine/') ||

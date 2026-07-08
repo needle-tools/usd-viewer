@@ -89,6 +89,72 @@ const usdWgSamples = [
     },
 ];
 
+const needleCloudSamples = {
+    kitchenSet: {
+        label: 'Kitchen Set',
+        filename: 'file.usdz',
+        url: 'https://cloud-staging.needle.tools/-/assets/Z23hmXBZCdB4p-ZCdB4p/file.usdz',
+    },
+};
+
+const reportRegressionSamples = [
+    {
+        label: 'Kitchen Set scalar primvars',
+        filename: needleCloudSamples.kitchenSet.filename,
+        url: needleCloudSamples.kitchenSet.url,
+    },
+    {
+        label: 'MaterialX basic textures',
+        filename: 'basic.usda',
+        url: `${usdWgBaseUrl}test_assets/MaterialXTest/basic.usda`,
+    },
+    {
+        label: 'Vehicle missing material binding',
+        filename: 'tractorGeo.usd',
+        url: `${usdWgBaseUrl}full_assets/Vehicles/USD_Mini_Car_Kit/assets/vehicles/tractor/geo/tractorGeo.usd`,
+    },
+    {
+        label: 'Sublayered internal references',
+        filename: 'SublayeredInternalReferenceTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/SublayeredInternalReferenceTest.usda`,
+    },
+    {
+        label: 'Referenced assemblies internal references',
+        filename: 'ReferencedAssembliesWithInternalReferencesTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest.usda`,
+    },
+    {
+        label: 'Internal reference',
+        filename: 'InternalReferenceTest.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/InternalReferenceTest.usda`,
+    },
+    {
+        label: 'External bad target washer',
+        filename: 'washer.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ExternalReferenceBadTargetTest/washer.usda`,
+    },
+    {
+        label: 'External bad target bolt',
+        filename: 'bolt.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ExternalReferenceBadTargetTest/bolt.usda`,
+    },
+    {
+        label: 'Internal unencapsulated prototypes',
+        filename: 'InternalReferenceUnencapsulatedPrototypes.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest/InternalReferenceUnencapsulatedPrototypes.usda`,
+    },
+    {
+        label: 'Internal encapsulated prototypes',
+        filename: 'InternalReferenceEncapsulatedPrototypes.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/ReferencedAssembliesWithInternalReferencesTest/InternalReferenceEncapsulatedPrototypes.usda`,
+    },
+    {
+        label: 'Sublayered modeling',
+        filename: 'hardware.modeling.usda',
+        url: `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/SublayeredInternalReferenceTest/hardware.modeling.usda`,
+    },
+];
+
 const fatalConsolePatterns = [
     /out of memory/i,
     /Cannot enlarge memory/i,
@@ -110,6 +176,23 @@ const usdWgRegressionPatterns = [
     /EXR textures are not fully supported yet/i,
     /Failed to open USD stage/i,
     /Failed to load USD file/i,
+];
+
+const primvarRegressionPatterns = [
+    /Could not prepare face-varying primvar __faceindex/i,
+    /Unsupported interpolation type 'uniform' for primvar (?:__faceindex|sharp_face)/i,
+    /Unsupported primvar:\s+(?:__faceindex|sharp_face|PreMenvPosingRefPose)/i,
+];
+
+const rendererErrorPatterns = [
+    /\[MaterialX\] Failed to load texture/i,
+    /Material not found/i,
+    /Failed to open USD stage/i,
+    /Failed to load USD file/i,
+    /Could not prepare face-varying primvar/i,
+    /Unsupported interpolation type/i,
+    /Unsupported primvar/i,
+    /worker sent an error/i,
 ];
 
 test.describe('public usd-viewer lifecycle', () => {
@@ -174,6 +257,7 @@ test.describe('public usd-viewer lifecycle', () => {
     });
 
     test('loads representative USD-WG assets through the Needle Engine loader element', async ({ page }) => {
+        test.setTimeout(420000);
         const diagnostics = collectFatalDiagnostics(page);
         const usdWgDiagnostics = collectConsoleMatches(page, usdWgRegressionPatterns);
 
@@ -181,18 +265,454 @@ test.describe('public usd-viewer lifecycle', () => {
             await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
             const state = await waitForNeedleLoaderMode(page, sample.filename);
 
-            expect(state.filename).toBe(sample.filename);
-            expect(state.activeButton).toBe('needle-loader');
-            expect(state.hasHydraHandle).toBe(true);
-            expect(state.driverAlive).toBe(true);
-            expect(state.hasNeedleContext).toBe(true);
-            expect(state.needleChildren).toBeGreaterThan(0);
-            expect(state.elementSrc).toContain(sample.url);
-            expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
+            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.activeButton, sample.label).toBe('needle-loader');
+            expect(state.hasHydraHandle, sample.label).toBe(true);
+            expect(state.driverAlive, sample.label).toBe(true);
+            expect(state.hasNeedleContext, sample.label).toBe(true);
+            expect(state.needleChildren, sample.label).toBeGreaterThan(0);
+            expect(state.elementSrc, sample.label).toContain(sample.url);
+            expect(new URL(state.href).searchParams.get('viewer'), sample.label).toBe('needle');
         }
 
         expect(usdWgDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
+    });
+
+    test('loads report regression assets through the Needle Engine loader element without renderer errors', async ({ page }) => {
+        test.setTimeout(180000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        for (const sample of reportRegressionSamples) {
+            await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle&waitForMaterials=1`, {
+                waitUntil: 'domcontentloaded',
+            });
+            const state = await waitForNeedleLoaderMode(page, sample.filename);
+
+            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.activeButton, sample.label).toBe('needle-loader');
+            expect(state.hasHydraHandle, sample.label).toBe(true);
+            expect(state.driverAlive, sample.label).toBe(true);
+            expect(state.hasNeedleContext, sample.label).toBe(true);
+            expect(state.needleChildren, sample.label).toBeGreaterThan(0);
+        }
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('does not load analytics or marketer trackers in debug and browser automation', async ({ page }) => {
+        const blockedRequests: string[] = [];
+        page.on('request', request => {
+            const url = request.url();
+            if (
+                url.includes('/api/script.js')
+                || url.includes('analytics-2.needle.tools')
+                || url.includes('rybbit')
+                || url.includes('marketer.needle.tools')
+                || url.includes('needle.tools/api/v1/rum/t')
+                || url.includes('needle.tools/api/v1/needle-engine/ping')
+            ) {
+                blockedRequests.push(url);
+            }
+        });
+
+        await page.goto('/?debug&viewer=three', { waitUntil: 'networkidle' });
+
+        expect(blockedRequests).toEqual([]);
+        await expect(page.locator('#debug-test-button')).toBeVisible();
+        await expect(page.locator('.whats-new')).toHaveCount(0);
+
+        await page.goto('/?debug&viewer=needle&file=/test-fixtures/usd-concepts/camera_light.usda', { waitUntil: 'domcontentloaded' });
+        await waitForNeedleLoaderMode(page, 'camera_light.usda');
+        await page.evaluate(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+            window.dispatchEvent(new PageTransitionEvent('pagehide'));
+        });
+        await page.waitForTimeout(250);
+
+        expect(blockedRequests).toEqual([]);
+    });
+
+    test('caches viewer asset fetches through the service worker', async ({ page }) => {
+        await page.goto('/?viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(async () => {
+            await (window as any).__usdViewerAssetCacheReady;
+            return !!navigator.serviceWorker.controller;
+        });
+
+        const probeUrl = `/test-fixtures/usd-concepts/camera_light.usda?cache-probe=${Date.now()}`;
+        const state = await page.evaluate(async url => {
+            const messages: any[] = [];
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data?.source === 'usd-viewer-asset-cache') messages.push(event.data);
+            });
+
+            const first = await fetch(url).then(response => response.text());
+            const cache = await caches.open('usd-viewer-asset-cache-v2');
+            let cached = await cache.match(url);
+            const deadline = performance.now() + 2000;
+            while (!cached && performance.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+                cached = await cache.match(url);
+            }
+            const second = await fetch(url).then(response => response.text());
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            return {
+                cached: !!cached,
+                firstLength: first.length,
+                secondLength: second.length,
+                hitCount: messages.filter(message => message.type === 'hit' && message.url.endsWith(url)).length,
+                storeCount: messages.filter(message => message.type === 'store' && message.url.endsWith(url)).length,
+            };
+        }, probeUrl);
+
+        expect(state.cached).toBe(true);
+        expect(state.firstLength).toBeGreaterThan(100);
+        expect(state.secondLength).toBe(state.firstLength);
+        expect(state.storeCount).toBeGreaterThanOrEqual(1);
+        expect(state.hitCount).toBeGreaterThanOrEqual(1);
+    });
+
+    test('shows byte progress in the centered loading overlay', async ({ page }) => {
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).showLoadingOverlay === 'function' &&
+            typeof (window as any).updateLoadingOverlayProgress === 'function');
+        await page.evaluate(() => {
+            (window as any).showLoadingOverlay('ABeautifulGame.glb.three.usdz');
+            (window as any).updateLoadingOverlayProgress({ loaded: 50, total: 100 });
+        });
+
+        await expect(page.locator('#loading-overlay')).toHaveClass(/visible/);
+        await expect(page.locator('#loading-overlay-filename')).toHaveText('ABeautifulGame.glb.three.usdz');
+        await expect(page.locator('#loading-overlay-progress')).toHaveText('50%');
+    });
+
+    test('loads authored Needle fixture coverage assets through the Needle Engine loader element', async ({ page }) => {
+        test.setTimeout(120000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const fixtures = [
+            { filename: 'custom_geomprops_usdshade.usda', url: '/test-fixtures/usd-concepts/custom_geomprops_usdshade.usda' },
+            { filename: 'referenced_geomprop_overrides.usda', url: '/test-fixtures/usd-concepts/referenced_geomprop_overrides.usda' },
+            { filename: 'liverps_all.usda', url: '/test-fixtures/composition/liverps_all.usda' },
+            { filename: 'custom_nodedef_materialx.usda', url: '/test-fixtures/materialx/custom_nodedef_materialx.usda' },
+            { filename: 'draco_mixed_overrides.usda', url: '/test-fixtures/draco/draco_mixed_overrides.usda' },
+            { filename: 'CubeCompressedTriangles.usda', url: '/test-fixtures/draco/CubeCompressedTriangles.usda' },
+        ];
+
+        for (const fixture of fixtures) {
+            await page.goto(`/?file=${fixture.url}&viewer=needle&waitForMaterials=1`, {
+                waitUntil: 'domcontentloaded',
+            });
+            const state = await waitForNeedleLoaderMode(page, fixture.filename);
+            expect(state.filename, fixture.filename).toBe(fixture.filename);
+            expect(state.hasHydraHandle, fixture.filename).toBe(true);
+            expect(state.driverAlive, fixture.filename).toBe(true);
+            expect(state.hasNeedleContext, fixture.filename).toBe(true);
+            expect(state.needleChildren, fixture.filename).toBeGreaterThan(0);
+
+            if (fixture.filename === 'referenced_geomprop_overrides.usda') {
+                const meshes = await getNeedleMeshSummaries(page);
+                const left = meshes.find(mesh => mesh.path === '/World/LeftReference/Shape');
+                const right = meshes.find(mesh => mesh.path === '/World/RightReference/Shape');
+                expect(left?.normalCount, 'left referenced geomprop normals').toBe(left?.positionCount);
+                expect(right?.normalCount, 'right referenced geomprop normals').toBe(right?.positionCount);
+                expect(left?.materialColor, 'left referenced geomprop color').toBe('f9e53f');
+                expect(right?.materialColor, 'right referenced geomprop override color').toBe('5099ff');
+            }
+
+            if (fixture.filename === 'liverps_all.usda') {
+                const meshes = await getNeedleMeshSummaries(page);
+                const expectedMaterials = new Map([
+                    ['/World/Local/Shape', 'LocalRed'],
+                    ['/World/Inherits/Shape', 'InheritsYellow'],
+                    ['/World/Variants/Shape', 'VariantOrange'],
+                    ['/World/References/Shape', 'ReferenceBlue'],
+                    ['/World/Payloads/Shape', 'PayloadCyan'],
+                    ['/World/Specializes/Shape', 'SpecializesGreen'],
+                ]);
+                for (const [path, materialName] of expectedMaterials) {
+                    const mesh = meshes.find(entry => entry.path === path);
+                    expect(mesh, path).toBeTruthy();
+                    expect(mesh?.normalCount, `${path} authored normals`).toBe(mesh?.positionCount);
+                    expect(mesh?.materialName, `${path} material`).toBe(materialName);
+                }
+            }
+        }
+
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('loads MaterialX basic textures without texture errors or tangent retry spam', async ({ page }) => {
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const tangentPreconditionWarnings = collectConsoleMatches(page, [
+            /\[MaterialX\] Cannot generate tangents: geometry requires position and uv attributes/i,
+        ]);
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}test_assets/MaterialXTest/basic.usda`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        const state = await waitForPublicViewerLoad(page, 'basic.usda');
+
+        expect(state.hasHydraHandle).toBe(true);
+        expect(rendererErrors).toEqual([]);
+        expect(tangentPreconditionWarnings).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('loads TGA roughness textures without WebGL upload or ORM packing errors', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /TGA textures are not fully supported yet/i,
+            /texSubImage2D: no pixels/i,
+            /Something went wrong with the texture promise/i,
+            /Something went wrong while packing occlusion\/metallic\/roughness textures/i,
+        ]);
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}test_assets/RoughnessTest/RoughnessTest.usdz`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'RoughnessTest.usdz');
+        await page.evaluate(async () => {
+            await (window as any).usdHydra?.materialsReady?.();
+        });
+
+        const packedTextureState = await page.evaluate(() => {
+            const materials: any[] = [];
+            (window as any).usdRoot?.traverse?.((object: any) => {
+                const list = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+                materials.push(...list.filter((material: any) => material.roughnessMap));
+            });
+            return materials.map(material => ({
+                isCanvasTexture: material.roughnessMap?.isCanvasTexture === true,
+                isDataTexture: material.roughnessMap?.isDataTexture === true,
+                sameMetalness: material.roughnessMap === material.metalnessMap,
+                width: material.roughnessMap?.image?.width,
+                height: material.roughnessMap?.image?.height,
+            }));
+        });
+
+        expect(packedTextureState.length).toBeGreaterThan(0);
+        expect(packedTextureState.every(texture => texture.isCanvasTexture && !texture.isDataTexture)).toBe(true);
+        expect(packedTextureState.every(texture => texture.sameMetalness && texture.width === 256 && texture.height === 256)).toBe(true);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('merges authored custom MaterialX NodeDefs from staged sidecars', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /Could not find a nodedef/i,
+            /Tangents are required for this material/i,
+            /Failed to create MaterialX material/i,
+        ]);
+
+        await page.goto('/?debug&file=/test-fixtures/materialx/custom_nodedef_materialx.usda&viewer=three&waitForMaterials=1', {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'custom_nodedef_materialx.usda');
+        await page.evaluate(async () => {
+            await (window as any).usdHydra?.materialsReady?.();
+        });
+
+        const materialTypes = await page.evaluate(() => {
+            const types: string[] = [];
+            (window as any).usdRoot?.traverse?.((object: any) => {
+                const list = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+                for (const material of list) types.push(material.constructor?.name || '');
+            });
+            return types;
+        });
+
+        expect(materialTypes).toContain('MaterialXMaterial');
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('attributes delayed MaterialX texture failures to the debug target that caused them', async ({ page }) => {
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).runUsdViewerAssetTest === 'function');
+
+        const report = await page.evaluate(async baseUrl => {
+            return await (window as any).runUsdViewerAssetTest({
+                targets: [
+                    {
+                        source: 'usd-wg',
+                        name: 'basicTextured',
+                        url: `${baseUrl}test_assets/MaterialXTest/basicTextured.usda`,
+                    },
+                    {
+                        source: 'usd-wg',
+                        name: 'basic',
+                        url: `${baseUrl}test_assets/MaterialXTest/basic.usda`,
+                    },
+                ],
+            });
+        }, usdWgBaseUrl);
+
+        const textured = report.results[0];
+        const basic = report.results[1];
+        expect(textured.name).toBe('basicTextured');
+        expect(textured.errors.join('\n')).toMatch(/\[MaterialX\] Failed to load texture/i);
+        expect(basic.name).toBe('basic');
+        expect(basic.errors.join('\n')).not.toMatch(/\[MaterialX\] Failed to load texture/i);
+    });
+
+    test('loads package-internal USDZ textures through the staged filesystem', async ({ page }) => {
+        test.setTimeout(120000);
+        const diagnostics = collectConsoleMatches(page, [
+            /Something went wrong with the texture promise/i,
+            /Error when loading texture/i,
+            /Material not found/i,
+        ]);
+        const packageTextureRequests: string[] = [];
+        page.on('request', request => {
+            const url = request.url();
+            if (url.includes('UsdCookie.usdz[') || url.includes('UsdCookie.usdz%5B')) {
+                packageTextureRequests.push(url);
+            }
+        });
+
+        await page.goto(`/?debug&file=${encodeURIComponent(`${usdWgBaseUrl}full_assets/UsdCookie/UsdCookie.usdz`)}&viewer=three&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'UsdCookie.usdz');
+
+        expect(packageTextureRequests).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('reports missing upstream debug targets as skipped instead of Hydra failures', async ({ page }) => {
+        const diagnostics = collectConsoleMatches(page, [
+            /Failed to open USD stage/i,
+            /Failed to load USD file/i,
+            /Runtime Error/i,
+        ]);
+
+        await page.goto('/?debug&viewer=three', { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => typeof (window as any).runUsdViewerAssetTest === 'function');
+
+        const report = await page.evaluate(async url => {
+            return await (window as any).runUsdViewerAssetTest({
+                targets: [
+                    {
+                        source: 'usd-wg',
+                        name: 'TestLight',
+                        url,
+                    },
+                ],
+            });
+        }, `${usdWgBaseUrl}full_assets/Teapot/TestLight.usda`);
+
+        expect(report.count).toBe(1);
+        expect(report.passed).toBe(0);
+        expect(report.skipped).toBe(1);
+        expect(report.failed).toBe(0);
+        expect(report.results[0]).toMatchObject({
+            name: 'TestLight',
+            ok: true,
+            skipped: true,
+            status: 404,
+            warnings: [],
+            errors: [],
+        });
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('materializes scalar face-varying and uniform primvars as Needle geometry attributes', async ({ page }) => {
+        test.setTimeout(120000);
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        await page.goto(`/?file=${encodeURIComponent(needleCloudSamples.kitchenSet.url)}&viewer=needle&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, needleCloudSamples.kitchenSet.filename);
+        const faceIndex = await findNeedlePrimvarAttribute(page, 'primvars:__faceindex');
+
+        expect(faceIndex.count).toBeGreaterThan(0);
+        expect(faceIndex.count).toBe(faceIndex.positionCount);
+        expect(faceIndex.itemSize).toBe(1);
+        expect(faceIndex.arrayType).toMatch(/Int|Float/);
+        expect(faceIndex.allFinite).toBe(true);
+
+        const internalReferenceUrl = `${usdWgBaseUrl}test_assets/RelationshipEncapsulationTests/InternalReferenceTest.usda`;
+        await page.goto(`/?file=${encodeURIComponent(internalReferenceUrl)}&viewer=needle&waitForMaterials=1`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'InternalReferenceTest.usda');
+        const sharpFace = await findNeedlePrimvarAttribute(page, 'primvars:sharp_face');
+
+        expect(sharpFace.count).toBeGreaterThan(0);
+        expect(sharpFace.count).toBe(sharpFace.positionCount);
+        expect(sharpFace.itemSize).toBe(1);
+        expect(sharpFace.arrayType).toMatch(/Int|Float/);
+        expect(sharpFace.allFinite).toBe(true);
+        expect(sharpFace.valuesAreBoolean).toBe(true);
+        expect(sharpFace.hasOne).toBe(true);
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('materializes authored custom vertex geomprops as Needle geometry attributes', async ({ page }) => {
+        const fatalDiagnostics = collectFatalDiagnostics(page);
+        const rendererErrors = collectConsoleErrorsMatching(page, rendererErrorPatterns);
+        const primvarDiagnostics = collectConsoleMatches(page, primvarRegressionPatterns);
+        await stubAnalytics(page);
+
+        await page.goto('/?file=%2Ftest-fixtures%2Fusd-concepts%2Fcustom_vertex_geomprops.usda&viewer=needle&waitForMaterials=1', {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'custom_vertex_geomprops.usda');
+
+        const meshState = await getNeedleMeshAttributeState(page, '/World/CustomVertexGeomprops');
+        expect(meshState.positionCount).toBeGreaterThan(0);
+        expect(meshState.normalCount).toBe(meshState.positionCount);
+        expect(meshState.colorCount).toBe(meshState.positionCount);
+        expect(meshState.vertexColors).toBe(true);
+
+        const temperature = await findNeedlePrimvarAttribute(page, 'primvars:temperature');
+        expect(temperature.path).toBe('/World/CustomVertexGeomprops');
+        expect(temperature.count).toBe(temperature.positionCount);
+        expect(temperature.itemSize).toBe(1);
+        expect(temperature.allFinite).toBe(true);
+        expect(Math.min(...temperature.sample)).toBeCloseTo(0.05, 5);
+        expect(Math.max(...temperature.sample)).toBeCloseTo(1.0, 5);
+
+        const flow = await findNeedlePrimvarAttribute(page, 'primvars:flow');
+        expect(flow.path).toBe('/World/CustomVertexGeomprops');
+        expect(flow.count).toBe(flow.positionCount);
+        expect(flow.itemSize).toBe(3);
+        expect(flow.allFinite).toBe(true);
+
+        const cornerId = await findNeedlePrimvarAttribute(page, 'primvars:cornerId');
+        expect(cornerId.path).toBe('/World/CustomVertexGeomprops');
+        expect(cornerId.count).toBe(cornerId.positionCount);
+        expect(cornerId.itemSize).toBe(1);
+        expect(cornerId.allFinite).toBe(true);
+        expect(cornerId.sample).toContain(0);
+        expect(cornerId.sample).toContain(7);
+
+        expect(primvarDiagnostics).toEqual([]);
+        expect(rendererErrors).toEqual([]);
+        expect(fatalDiagnostics).toEqual([]);
+    });
+
+    test('keeps shipped USD-WG manifest entries visible even when an upstream asset is broken', async ({ page }) => {
+        const manifest = await page.request.get('/data/usd-wg-assets.json');
+        expect(manifest.ok()).toBe(true);
+        const data = await manifest.json();
+        const entries = flattenUsdWgManifest(data.root);
+
+        expect(entries).toContain('full_assets/Teapot/TestLight.usda');
     });
 
     test('renders USD-WG bilinear cubes with usdview-style hull geometry and geometric normals', async ({ page }) => {
@@ -355,6 +875,51 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('renders OpenChessSet MaterialX pawn instances at their authored positions', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await stubAnalytics(page);
+
+        const chessSetUrl = `${usdWgBaseUrl}full_assets/OpenChessSet/chess_set.usda`;
+        await page.goto(`/?file=${encodeURIComponent(chessSetUrl)}&viewer=needle&waitForMaterials=1`);
+        await waitForNeedleLoaderMode(page, 'chess_set.usda');
+
+        const expectedBlack = [
+            [-0.03125, 0, 0.09375],
+            [-0.21875, 0, 0.15625],
+            [-0.15625, 0, 0.15625],
+            [-0.09375, 0, 0.15625],
+            [0.03125, 0, 0.15625],
+            [0.09375, 0, 0.15625],
+            [0.15625, 0, 0.15625],
+            [0.21875, 0, 0.15625],
+        ];
+        const expectedWhite = [
+            [-0.21875, 0, -0.15625],
+            [-0.15625, 0, -0.15625],
+            [-0.09375, 0, -0.15625],
+            [-0.03125, 0, -0.15625],
+            [0.15625, 0, -0.15625],
+            [0.21875, 0, -0.15625],
+            [0.09375, 0, -0.09375],
+            [0.03125, 0, -0.03125],
+        ];
+
+        const state = await readOpenChessSetPawnInstances(page);
+        expect(state.prototypes).toHaveLength(4);
+        expect(state.prototypes.every(entry => entry.visible === false)).toBe(true);
+        expect(state.instanced).toHaveLength(4);
+        for (const entry of state.instanced) {
+            expect(entry.visible).toBe(true);
+            expect(entry.count).toBe(8);
+            expect(entry.matrices).toEqual(entry.path.includes('/Black/') ? expectedBlack : expectedWhite);
+        }
+
+        const render = await countNeedlePawnRenderComponents(page);
+        expect(render.components).toBeGreaterThanOrEqual(12);
+        expect(render.maskedPixels).toBeGreaterThan(1000);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps high-complexity Catmull-Clark winding outward', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
 
@@ -378,6 +943,42 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('changes Hydra complexity without repopulating the stage', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+
+        await page.goto('/?file=/test-fixtures/subdivision/catmull_clark_cube.usda&viewer=needle&complexity=low');
+        await waitForNeedleLoaderMode(page, 'catmull_clark_cube.usda');
+
+        const low = await getNeedleMeshAttributeState(page, '/World/SubdivCube');
+        const result = await page.evaluate(async () => {
+            const driver = window.usdHydra.driver;
+            const originalRepopulate = driver.Repopulate.bind(driver);
+            let repopulateCalls = 0;
+            driver.Repopulate = (...args: any[]) => {
+                repopulateCalls++;
+                return originalRepopulate(...args);
+            };
+            try {
+                await window.usdHydra.setComplexity('high');
+            } finally {
+                driver.Repopulate = originalRepopulate;
+            }
+            return {
+                repopulateCalls,
+                complexity: driver.GetComplexity(),
+                refineLevel: driver.GetRefineLevelFallback(),
+            };
+        });
+        const high = await getNeedleMeshAttributeState(page, '/World/SubdivCube');
+
+        expect(low.positionCount).toBe(36);
+        expect(high.positionCount).toBeGreaterThan(low.positionCount);
+        expect(result.repopulateCalls).toBe(0);
+        expect(result.complexity).toBeCloseTo(1.2);
+        expect(result.refineLevel).toBe(2);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps high-complexity left-handed Catmull-Clark winding outward', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
 
@@ -392,6 +993,22 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(winding.sampled).toBeGreaterThan(0);
         expect(winding.aligned).toBeGreaterThan(winding.opposed * 100);
         expect(winding.windingOut).toBeGreaterThan(winding.windingIn * 100);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps Loop non-triangle meshes unrefined while refining triangle meshes', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+
+        await page.goto('/?file=/test-fixtures/subdivision/loop_non_triangle_fallback.usda&viewer=needle&complexity=high');
+        await waitForNeedleLoaderMode(page, 'loop_non_triangle_fallback.usda');
+
+        const quadFallback = await getNeedleMeshAttributeState(page, '/World/LoopQuadFallback');
+        const triangleRefined = await getNeedleMeshAttributeState(page, '/World/LoopTrianglesRefined');
+
+        expect(quadFallback.positionCount).toBe(18);
+        expect(quadFallback.normalCount).toBe(quadFallback.positionCount);
+        expect(triangleRefined.positionCount).toBeGreaterThan(quadFallback.positionCount * 4);
+        expect(triangleRefined.normalCount).toBe(triangleRefined.positionCount);
         expect(diagnostics).toEqual([]);
     });
 
@@ -574,7 +1191,7 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
 
         await page.locator('#export-gltf').hover();
-        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to convert');
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to share');
         expect(diagnostics).toEqual([]);
     });
 
@@ -1138,6 +1755,709 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('keeps Teapot subdivision normals smooth across model variant switches', async ({ page }) => {
+        test.setTimeout(120000);
+        const diagnostics = collectFatalDiagnostics(page);
+        await stubAnalytics(page);
+
+        const teapotUrl = `${usdWgBaseUrl}full_assets/Teapot/Teapot_Materials.usd`;
+        await page.goto(`/?file=${encodeURIComponent(teapotUrl)}&viewer=needle&waitForMaterials=1&complexity=high`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'Teapot_Materials.usd');
+
+        const selections = await page.evaluate(async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            const driver = window.usdHydra.driver;
+            const originalRepopulate = driver.Repopulate.bind(driver);
+            let repopulateCalls = 0;
+            driver.Repopulate = (...args: any[]) => {
+                repopulateCalls++;
+                return originalRepopulate(...args);
+            };
+            const result: string[] = [];
+            try {
+                for (const selection of ['Fancy', 'Utah', 'Fancy', 'Utah']) {
+                    await window.usdHydra.editStage(async (stage: any) => {
+                        const teapot = stage.GetPrimAtPath('/Teapot');
+                        await teapot.SetVariantSelection('modelVariant', selection);
+                        result.push(teapot.GetVariantSelection('modelVariant'));
+                    });
+                    await window.usdHydra.materialsReady?.();
+                    await sleep(100);
+                }
+            } finally {
+                driver.Repopulate = originalRepopulate;
+            }
+            return { result, repopulateCalls };
+        });
+        expect(selections.result).toEqual(['Fancy', 'Utah', 'Fancy', 'Utah']);
+        expect(selections.repopulateCalls).toBe(0);
+
+        const teapot = await getNeedleUsdMeshNormalState(page, '/Teapot/Geometry');
+        expect(teapot.positionCount).toBeGreaterThan(100000);
+        expect(teapot.normalCount).toBe(teapot.positionCount);
+        expect(teapot.sharedPositionDifferentNormalGroups).toBe(0);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps StandardShaderBall surface geometry variants smooth and distinct', async ({ page }) => {
+        test.setTimeout(180000);
+        const diagnostics = collectFatalDiagnostics(page);
+        const webglDiagnostics = collectConsoleMatches(page, [
+            /GL_INVALID_OPERATION/i,
+            /INVALID_OPERATION/i,
+            /Vertex buffer is not big enough/i,
+        ]);
+        await stubAnalytics(page);
+
+        const shaderBallUrl = `${usdWgBaseUrl}full_assets/StandardShaderBall/standard_shader_ball_scene.usda`;
+        await page.goto(`/?file=${encodeURIComponent(shaderBallUrl)}&viewer=needle&waitForMaterials=1&complexity=high`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'standard_shader_ball_scene.usda');
+
+        const states = await page.evaluate(async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            const meshPath = '/standard_shader_ball_scene/shader_ball/material_surface';
+
+            const measure = () => {
+                let target: any = null;
+                window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                    if (!target && object.isMesh && object.userData?.usdPath === meshPath) {
+                        target = object;
+                    }
+                });
+                if (!target) throw new Error(`Missing Needle USD mesh at ${meshPath}`);
+
+                const position = target.geometry?.attributes?.position;
+                const normal = target.geometry?.attributes?.normal;
+                const sampledFaces = Math.min(Math.floor((normal?.count || 0) / 3), 200);
+                let faceConstantNormals = 0;
+                for (let face = 0; face < sampledFaces; face++) {
+                    const index = face * 3;
+                    const same01 =
+                        Math.abs(normal.getX(index) - normal.getX(index + 1)) < 1e-5 &&
+                        Math.abs(normal.getY(index) - normal.getY(index + 1)) < 1e-5 &&
+                        Math.abs(normal.getZ(index) - normal.getZ(index + 1)) < 1e-5;
+                    const same02 =
+                        Math.abs(normal.getX(index) - normal.getX(index + 2)) < 1e-5 &&
+                        Math.abs(normal.getY(index) - normal.getY(index + 2)) < 1e-5 &&
+                        Math.abs(normal.getZ(index) - normal.getZ(index + 2)) < 1e-5;
+                    if (same01 && same02) faceConstantNormals++;
+                }
+                return {
+                    positionCount: position?.count || 0,
+                    normalCount: normal?.count || 0,
+                    sampledFaces,
+                    faceConstantNormals,
+                };
+            };
+
+            const getSelection = async () => window.usdHydra.editStage(async (stage: any) => (
+                stage.GetPrimAtPath('/standard_shader_ball_scene').GetVariantSelection('surface_geometry')
+            ));
+            const setSelection = async (selection: string) => {
+                await window.usdHydra.editStage(async (stage: any) => {
+                    const root = stage.GetPrimAtPath('/standard_shader_ball_scene');
+                    await root.SetVariantSelection('surface_geometry', selection);
+                });
+                await window.usdHydra.materialsReady?.();
+                await sleep(250);
+            };
+
+            const initial = measure();
+            const initialSelection = await getSelection();
+            await setSelection('triangulated');
+            const triangulated = measure();
+            const triangulatedSelection = await getSelection();
+            await setSelection('subdiv');
+            const subdivAgain = measure();
+            const subdivAgainSelection = await getSelection();
+
+            return {
+                initialSelection,
+                initial,
+                triangulatedSelection,
+                triangulated,
+                subdivAgainSelection,
+                subdivAgain,
+            };
+        });
+
+        expect(states.initialSelection).toBe('subdiv');
+        expect(states.initial.positionCount).toBeGreaterThan(500000);
+        expect(states.initial.normalCount).toBe(states.initial.positionCount);
+        expect(states.initial.faceConstantNormals).toBe(0);
+
+        expect(states.triangulatedSelection).toBe('triangulated');
+        expect(states.triangulated.positionCount).toBeGreaterThan(100000);
+        expect(states.triangulated.positionCount).toBeLessThan(states.initial.positionCount);
+        expect(states.triangulated.normalCount).toBe(states.triangulated.positionCount);
+        expect(states.triangulated.faceConstantNormals).toBe(0);
+
+        expect(states.subdivAgainSelection).toBe('subdiv');
+        expect(states.subdivAgain.positionCount).toBe(states.initial.positionCount);
+        expect(states.subdivAgain.normalCount).toBe(states.subdivAgain.positionCount);
+        expect(states.subdivAgain.faceConstantNormals).toBe(0);
+        expect(webglDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps direct three StandardShaderBall meshes draw-valid across complexity changes', async ({ page }) => {
+        test.setTimeout(180000);
+        const diagnostics = collectFatalDiagnostics(page);
+        const webglDiagnostics = collectConsoleMatches(page, [
+            /GL_INVALID_OPERATION/i,
+            /INVALID_OPERATION/i,
+            /Vertex buffer is not big enough/i,
+        ]);
+        await stubAnalytics(page);
+
+        const shaderBallUrl = `${usdWgBaseUrl}full_assets/StandardShaderBall/standard_shader_ball_scene.usda`;
+        await page.goto(`/?debug&file=${encodeURIComponent(shaderBallUrl)}&viewer=three&waitForMaterials=1&complexity=low`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'standard_shader_ball_scene.usda');
+
+        const states = await page.evaluate(async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            const driver = window.usdHydra.driver;
+            const originalRepopulate = driver.Repopulate.bind(driver);
+            let repopulateCalls = 0;
+            driver.Repopulate = (...args: any[]) => {
+                repopulateCalls++;
+                return originalRepopulate(...args);
+            };
+
+            const collect = (label: string) => {
+                const meshes: any[] = [];
+                window.usdRoot?.traverse?.((object: any) => {
+                    if (!object.isMesh || !object.userData?.usdPath) return;
+                    const attributes = object.geometry?.attributes || {};
+                    const positionCount = attributes.position?.count || 0;
+                    const attributeCounts = Object.fromEntries(
+                        Object.entries(attributes).map(([name, attribute]: [string, any]) => [name, attribute?.count || 0])
+                    );
+                    const shortAttributes = Object.entries(attributeCounts)
+                        .filter(([name, count]) => name !== 'position' && Number(count) > 0 && Number(count) < positionCount)
+                        .map(([name, count]) => ({ name, count }));
+                    meshes.push({
+                        path: object.userData.usdPath,
+                        visible: object.visible,
+                        positionCount,
+                        normalCount: attributes.normal?.count || 0,
+                        uvCount: attributes.uv?.count || 0,
+                        tangentCount: attributes.tangent?.count || 0,
+                        shortAttributes,
+                    });
+                });
+                meshes.sort((a, b) => a.path.localeCompare(b.path));
+                return {
+                    label,
+                    complexity: driver.GetComplexity(),
+                    refineLevel: driver.GetRefineLevelFallback(),
+                    meshes,
+                };
+            };
+
+            const settle = async () => {
+                await window.usdHydra.materialsReady?.();
+                for (let i = 0; i < 20; i++) {
+                    window.usdHydra.update?.(i / 60);
+                    await sleep(50);
+                }
+            };
+
+            try {
+                const initial = collect('initial-low');
+                await window.usdHydra.setComplexity('medium');
+                await settle();
+                const medium = collect('medium');
+                await window.usdHydra.setComplexity('low');
+                await settle();
+                const lowAgain = collect('low-again');
+                return { repopulateCalls, initial, medium, lowAgain };
+            } finally {
+                driver.Repopulate = originalRepopulate;
+            }
+        });
+
+        const assertAllMeshesVisibleAndValid = (state: typeof states.initial) => {
+            expect(state.meshes).toHaveLength(12);
+            expect(state.meshes.filter(mesh => !mesh.visible)).toEqual([]);
+            expect(state.meshes.flatMap(mesh => mesh.shortAttributes.map((attribute: any) => ({
+                path: mesh.path,
+                ...attribute,
+                positionCount: mesh.positionCount,
+            })))).toEqual([]);
+        };
+        const meshByPath = (state: typeof states.initial, path: string) => {
+            const mesh = state.meshes.find(entry => entry.path === path);
+            expect(mesh, `${state.label} ${path}`).toBeTruthy();
+            return mesh!;
+        };
+
+        assertAllMeshesVisibleAndValid(states.initial);
+        assertAllMeshesVisibleAndValid(states.medium);
+        assertAllMeshesVisibleAndValid(states.lowAgain);
+
+        expect(states.repopulateCalls).toBe(0);
+        expect(states.initial.refineLevel).toBe(0);
+        expect(states.medium.refineLevel).toBe(1);
+        expect(states.lowAgain.refineLevel).toBe(0);
+
+        expect(meshByPath(states.initial, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(35028);
+        expect(meshByPath(states.medium, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(140112);
+        expect(meshByPath(states.lowAgain, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(35028);
+
+        for (const path of [
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/base',
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/core',
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/sss_bars',
+        ]) {
+            for (const state of [states.initial, states.medium, states.lowAgain]) {
+                const mesh = meshByPath(state, path);
+                expect(mesh.tangentCount).toBe(mesh.positionCount);
+            }
+        }
+        expect(webglDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps Needle loader StandardShaderBall meshes draw-valid across complexity changes', async ({ page }) => {
+        test.setTimeout(180000);
+        const diagnostics = collectFatalDiagnostics(page);
+        const webglDiagnostics = collectConsoleMatches(page, [
+            /GL_INVALID_OPERATION/i,
+            /INVALID_OPERATION/i,
+            /Vertex buffer is not big enough/i,
+        ]);
+        await stubAnalytics(page);
+
+        const shaderBallUrl = `${usdWgBaseUrl}full_assets/StandardShaderBall/standard_shader_ball_scene.usda`;
+        await page.goto(`/?file=${encodeURIComponent(shaderBallUrl)}&viewer=needle&waitForMaterials=1&complexity=low`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'standard_shader_ball_scene.usda');
+
+        const states = await page.evaluate(async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            const driver = window.usdHydra.driver;
+            const originalRepopulate = driver.Repopulate.bind(driver);
+            let repopulateCalls = 0;
+            driver.Repopulate = (...args: any[]) => {
+                repopulateCalls++;
+                return originalRepopulate(...args);
+            };
+
+            const collect = (label: string) => {
+                const meshes: any[] = [];
+                window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                    if (!object.isMesh || !object.userData?.usdPath) return;
+                    const attributes = object.geometry?.attributes || {};
+                    const positionCount = attributes.position?.count || 0;
+                    const attributeCounts = Object.fromEntries(
+                        Object.entries(attributes).map(([name, attribute]: [string, any]) => [name, attribute?.count || 0])
+                    );
+                    const shortAttributes = Object.entries(attributeCounts)
+                        .filter(([name, count]) => name !== 'position' && Number(count) > 0 && Number(count) < positionCount)
+                        .map(([name, count]) => ({ name, count }));
+                    meshes.push({
+                        path: object.userData.usdPath,
+                        visible: object.visible,
+                        positionCount,
+                        normalCount: attributes.normal?.count || 0,
+                        uvCount: attributes.uv?.count || 0,
+                        tangentCount: attributes.tangent?.count || 0,
+                        shortAttributes,
+                    });
+                });
+                meshes.sort((a, b) => a.path.localeCompare(b.path));
+                return {
+                    label,
+                    complexity: driver.GetComplexity(),
+                    refineLevel: driver.GetRefineLevelFallback(),
+                    meshes,
+                };
+            };
+
+            const settle = async () => {
+                await window.usdHydra.materialsReady?.();
+                for (let i = 0; i < 20; i++) {
+                    window.usdHydra.update?.(i / 60);
+                    await sleep(50);
+                }
+            };
+
+            try {
+                const initial = collect('initial-low');
+                await window.usdHydra.setComplexity('medium');
+                await settle();
+                const medium = collect('medium');
+                await window.usdHydra.setComplexity('low');
+                await settle();
+                const lowAgain = collect('low-again');
+                return { repopulateCalls, initial, medium, lowAgain };
+            } finally {
+                driver.Repopulate = originalRepopulate;
+            }
+        });
+
+        const assertAllMeshesVisibleAndValid = (state: typeof states.initial) => {
+            expect(state.meshes).toHaveLength(12);
+            expect(state.meshes.filter(mesh => !mesh.visible)).toEqual([]);
+            expect(state.meshes.flatMap(mesh => mesh.shortAttributes.map((attribute: any) => ({
+                path: mesh.path,
+                ...attribute,
+                positionCount: mesh.positionCount,
+            })))).toEqual([]);
+        };
+        const meshByPath = (state: typeof states.initial, path: string) => {
+            const mesh = state.meshes.find(entry => entry.path === path);
+            expect(mesh, `${state.label} ${path}`).toBeTruthy();
+            return mesh!;
+        };
+
+        assertAllMeshesVisibleAndValid(states.initial);
+        assertAllMeshesVisibleAndValid(states.medium);
+        assertAllMeshesVisibleAndValid(states.lowAgain);
+
+        expect(states.repopulateCalls).toBe(0);
+        expect(states.initial.refineLevel).toBe(0);
+        expect(states.medium.refineLevel).toBe(1);
+        expect(states.lowAgain.refineLevel).toBe(0);
+
+        expect(meshByPath(states.initial, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(35028);
+        expect(meshByPath(states.medium, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(140112);
+        expect(meshByPath(states.lowAgain, '/standard_shader_ball_scene/shader_ball/material_surface').positionCount).toBe(35028);
+
+        for (const path of [
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/base',
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/core',
+            '/standard_shader_ball_scene/shader_ball/neutral_objects/sss_bars',
+        ]) {
+            for (const state of [states.initial, states.medium, states.lowAgain]) {
+                const mesh = meshByPath(state, path);
+                expect(mesh.tangentCount).toBe(mesh.positionCount);
+            }
+        }
+        expect(webglDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
+    test('keeps low-complexity StandardShaderBall geometry stable across material variants', async ({ page }) => {
+        test.setTimeout(180000);
+        const diagnostics = collectFatalDiagnostics(page);
+        const webglDiagnostics = collectConsoleMatches(page, [
+            /GL_INVALID_OPERATION/i,
+            /INVALID_OPERATION/i,
+            /Vertex buffer is not big enough/i,
+        ]);
+        await stubAnalytics(page);
+
+        const shaderBallUrl = `${usdWgBaseUrl}full_assets/StandardShaderBall/standard_shader_ball_scene.usda`;
+        await page.goto(`/?file=${encodeURIComponent(shaderBallUrl)}&viewer=needle&complexity=low`, {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForNeedleLoaderMode(page, 'standard_shader_ball_scene.usda');
+
+        const states = await page.evaluate(async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            const rootPath = '/standard_shader_ball_scene';
+            const meshPath = `${rootPath}/shader_ball/material_surface`;
+            const driver = window.usdHydra.driver;
+            const originalRepopulate = driver.Repopulate.bind(driver);
+            let repopulateCalls = 0;
+            driver.Repopulate = (...args: any[]) => {
+                repopulateCalls++;
+                return originalRepopulate(...args);
+            };
+
+            const computeVertexNormalCalls: Array<{
+                uuid: string;
+                usdPath: string;
+                positionCount: number;
+                normalCount: number;
+                hadNormals: boolean;
+                stack: string;
+            }> = [];
+            let originalComputeVertexNormals: any = null;
+            let geometryPrototype: any = null;
+            window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                if (!geometryPrototype && object.isMesh && object.geometry?.constructor?.prototype) {
+                    geometryPrototype = object.geometry.constructor.prototype;
+                }
+            });
+            if (!geometryPrototype?.computeVertexNormals) {
+                throw new Error('Could not patch BufferGeometry.computeVertexNormals');
+            }
+            originalComputeVertexNormals = geometryPrototype.computeVertexNormals;
+            geometryPrototype.computeVertexNormals = function (...args: any[]) {
+                computeVertexNormalCalls.push({
+                    uuid: this.uuid || '',
+                    usdPath: this.userData?.usdPath || '',
+                    positionCount: this.attributes?.position?.count || 0,
+                    normalCount: this.attributes?.normal?.count || 0,
+                    hadNormals: Boolean(this.attributes?.normal),
+                    stack: new Error().stack || '',
+                });
+                return originalComputeVertexNormals.apply(this, args);
+            };
+
+            const hashAttribute = (attribute: any) => {
+                if (!attribute?.array?.length) return '';
+                const values = attribute.array;
+                const step = Math.max(1, Math.floor(values.length / 256));
+                let hash = 2166136261;
+                for (let i = 0; i < values.length; i += step) {
+                    const value = Math.round(values[i] * 100000);
+                    hash ^= value;
+                    hash = Math.imul(hash, 16777619);
+                }
+                hash ^= values.length;
+                return (hash >>> 0).toString(16);
+            };
+
+            const measureSharedNormalContinuity = (position: any, normal: any) => {
+                const positionNormalGroups = new Map<string, number[][]>();
+                const count = Math.min(position?.count || 0, normal?.count || 0);
+                for (let i = 0; i < count; i++) {
+                    const positionKey = [
+                        position.getX(i).toFixed(4),
+                        position.getY(i).toFixed(4),
+                        position.getZ(i).toFixed(4),
+                    ].join(',');
+                    let normals = positionNormalGroups.get(positionKey);
+                    if (!normals) {
+                        normals = [];
+                        positionNormalGroups.set(positionKey, normals);
+                    }
+                    normals.push([
+                        normal.getX(i),
+                        normal.getY(i),
+                        normal.getZ(i),
+                    ]);
+                }
+
+                let sharedPositionGroups = 0;
+                let discontinuousGroups = 0;
+                let minSharedNormalDot = 1;
+                for (const normals of positionNormalGroups.values()) {
+                    if (normals.length < 2) continue;
+                    sharedPositionGroups++;
+                    let worstDot = 1;
+                    for (let i = 0; i < normals.length; i++) {
+                        for (let j = i + 1; j < normals.length; j++) {
+                            const a = normals[i];
+                            const b = normals[j];
+                            worstDot = Math.min(
+                                worstDot,
+                                a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+                            );
+                        }
+                    }
+                    if (worstDot < 0.98) discontinuousGroups++;
+                    minSharedNormalDot = Math.min(minSharedNormalDot, worstDot);
+                }
+
+                return {
+                    sharedPositionGroups,
+                    discontinuousGroups,
+                    minSharedNormalDot,
+                };
+            };
+
+            const sampleNormals = (normal: any) => {
+                const samples = [];
+                for (const index of [0, 1000, 10000, (normal?.count || 1) - 1]) {
+                    if (!normal || index < 0 || index >= normal.count) continue;
+                    samples.push({
+                        index,
+                        x: normal.getX(index),
+                        y: normal.getY(index),
+                        z: normal.getZ(index),
+                    });
+                }
+                return samples;
+            };
+
+            const measure = async (label: string) => {
+                let target: any = null;
+                window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                    if (!target && object.isMesh && object.userData?.usdPath === meshPath) {
+                        target = object;
+                    }
+                });
+                if (!target) throw new Error(`Missing Needle USD mesh at ${meshPath}`);
+
+                const position = target.geometry?.attributes?.position;
+                const normal = target.geometry?.attributes?.normal;
+                const stage = await driver.GetStage();
+                return {
+                    label,
+                    complexity: driver.GetComplexity(),
+                    refineLevel: driver.GetRefineLevelFallback(),
+                    selection: stage.GetPrimAtPath(rootPath).GetVariantSelection('example_material'),
+                    surfaceSelection: stage.GetPrimAtPath(rootPath).GetVariantSelection('surface_geometry'),
+                    positionCount: position?.count || 0,
+                    normalCount: normal?.count || 0,
+                    materialName: target.material?.name || '',
+                    materialType: target.material?.type || '',
+                    flatShading: target.material?.flatShading ?? null,
+                    positionHash: hashAttribute(position),
+                    normalHash: hashAttribute(normal),
+                    normalSamples: sampleNormals(normal),
+                    normalContinuity: measureSharedNormalContinuity(position, normal),
+                };
+            };
+
+            const collectStableTimeline = async (label: string, count = 16) => {
+                const states = [];
+                for (let i = 0; i < count; i++) {
+                    window.usdHydra.update?.(i / 60);
+                    states.push(await measure(`${label}-${i}`));
+                    await sleep(125);
+                }
+                return states;
+            };
+
+            const setVariant = async (variantSet: string, selection: string) => {
+                await window.usdHydra.editStage(async (stage: any) => {
+                    const root = stage.GetPrimAtPath(rootPath);
+                    await root.SetVariantSelection(variantSet, selection);
+                });
+                await window.usdHydra.materialsReady?.();
+                for (let i = 0; i < 10; i++) {
+                    window.usdHydra.update?.(i / 60);
+                    await sleep(50);
+                }
+            };
+
+            try {
+                const initial = await measure('initial-none');
+                const initialTimeline = await collectStableTimeline('initial');
+                await setVariant('example_material', 'uvgrid');
+                const uvgrid = await measure('uvgrid');
+                const uvgridTimeline = await collectStableTimeline('uvgrid');
+                await setVariant('example_material', 'none');
+                const noneAgain = await measure('none-again');
+                const noneAgainTimeline = await collectStableTimeline('none-again');
+                await setVariant('surface_geometry', 'triangulated');
+                const triangulated = await measure('triangulated');
+                await setVariant('surface_geometry', 'subdiv');
+                const subdivAgain = await measure('subdiv-again');
+                const subdivAgainTimeline = await collectStableTimeline('subdiv-again', 24);
+                return {
+                    repopulateCalls,
+                    computeVertexNormalCalls,
+                    initial,
+                    uvgrid,
+                    noneAgain,
+                    triangulated,
+                    subdivAgain,
+                    timelines: [
+                        ...initialTimeline,
+                        ...uvgridTimeline,
+                        ...noneAgainTimeline,
+                        ...subdivAgainTimeline,
+                    ],
+                };
+            } finally {
+                driver.Repopulate = originalRepopulate;
+                if (geometryPrototype && originalComputeVertexNormals) {
+                    geometryPrototype.computeVertexNormals = originalComputeVertexNormals;
+                }
+            }
+        });
+
+        expect(states.repopulateCalls).toBe(0);
+        expect(states.computeVertexNormalCalls).toEqual([]);
+        expect(states.initial.selection).toBe('none');
+        expect(states.uvgrid.selection).toBe('uvgrid');
+        expect(states.noneAgain.selection).toBe('none');
+        expect(states.initial.surfaceSelection).toBe('subdiv');
+        expect(states.triangulated.surfaceSelection).toBe('triangulated');
+        expect(states.subdivAgain.surfaceSelection).toBe('subdiv');
+        expect(states.initial.refineLevel).toBe(0);
+        expect(states.uvgrid.refineLevel).toBe(0);
+        expect(states.noneAgain.refineLevel).toBe(0);
+        expect(states.subdivAgain.refineLevel).toBe(0);
+        expect(states.initial.positionCount).toBe(35028);
+        expect(states.uvgrid.positionCount).toBe(states.initial.positionCount);
+        expect(states.noneAgain.positionCount).toBe(states.initial.positionCount);
+        expect(states.triangulated.positionCount).toBeGreaterThan(100000);
+        expect(states.triangulated.positionCount).toBeLessThan(500000);
+        expect(states.subdivAgain.positionCount).toBe(states.initial.positionCount);
+        expect(states.initial.normalCount).toBe(states.initial.positionCount);
+        expect(states.uvgrid.normalCount).toBe(states.initial.normalCount);
+        expect(states.noneAgain.normalCount).toBe(states.initial.normalCount);
+        expect(states.subdivAgain.normalCount).toBe(states.initial.normalCount);
+        expect(states.initial.materialType).toBe('MeshPhysicalMaterial');
+        expect(states.uvgrid.materialName).toBe('uvgrid');
+        expect(states.noneAgain.materialType).toBe('MeshPhysicalMaterial');
+        expect(states.noneAgain.materialName).not.toBe('uvgrid');
+        expect(states.initial.flatShading).toBe(false);
+        expect(states.noneAgain.flatShading).toBe(false);
+        for (const state of [
+            states.initial,
+            states.uvgrid,
+            states.noneAgain,
+            states.subdivAgain,
+            ...states.timelines,
+        ]) {
+            expect(state.positionCount, state.label).toBe(states.initial.positionCount);
+            expect(state.normalCount, state.label).toBe(states.initial.normalCount);
+            expect(state.normalHash, state.label).toBe(states.initial.normalHash);
+            expect(state.normalContinuity.sharedPositionGroups).toBeGreaterThan(1000);
+            expect(state.normalContinuity.discontinuousGroups).toBe(0);
+            expect(state.normalContinuity.minSharedNormalDot).toBeGreaterThan(0.999);
+        }
+        const expectNormalSample = (
+            sample: { index: number; x: number; y: number; z: number },
+            expected: { index: number; x: number; y: number; z: number },
+        ) => {
+            expect(sample.index).toBe(expected.index);
+            expect(sample.x).toBeCloseTo(expected.x, 5);
+            expect(sample.y).toBeCloseTo(expected.y, 5);
+            expect(sample.z).toBeCloseTo(expected.z, 5);
+        };
+        expectNormalSample(states.initial.normalSamples[0], {
+            index: 0,
+            x: 0.5775912,
+            y: -0.5768680,
+            z: -0.5775912,
+        });
+        expectNormalSample(states.initial.normalSamples[1], {
+            index: 1000,
+            x: -0.9085442,
+            y: -0.1063413,
+            z: -0.4040281,
+        });
+        expectNormalSample(states.initial.normalSamples[2], {
+            index: 10000,
+            x: 0.6413714,
+            y: 0.0663425,
+            z: -0.7643568,
+        });
+        expectNormalSample(states.initial.normalSamples[3], {
+            index: 35027,
+            x: 0.5773503,
+            y: -0.5773503,
+            z: -0.5773503,
+        });
+        expect(states.uvgrid.positionHash).toBe(states.initial.positionHash);
+        expect(states.noneAgain.positionHash).toBe(states.initial.positionHash);
+        expect(states.uvgrid.normalHash).toBe(states.initial.normalHash);
+        expect(states.noneAgain.normalHash).toBe(states.initial.normalHash);
+        expect(states.subdivAgain.normalHash).toBe(states.initial.normalHash);
+        expect(states.uvgrid.normalSamples).toEqual(states.initial.normalSamples);
+        expect(states.noneAgain.normalSamples).toEqual(states.initial.normalSamples);
+        expect(states.subdivAgain.normalSamples).toEqual(states.initial.normalSamples);
+        expect(webglDiagnostics).toEqual([]);
+        expect(diagnostics).toEqual([]);
+    });
+
     test('keeps UVs for subdivided meshes with normal textures', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.route('/api/script.js', route => route.fulfill({
@@ -1401,10 +2721,9 @@ test.describe('public usd-viewer lifecycle', () => {
         await expect(page.locator('#needle-group-tree')).toBeVisible();
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
         await page.waitForFunction(() => {
-            const labels = Array.from(document.querySelectorAll('#needle-group-tree [data-sample-group] span'))
-                .map((node) => node.textContent?.trim());
+            const labels = Array.from(document.querySelectorAll('#needle-group-tree [data-sample-group]'))
+                .map((node) => node.querySelector('span')?.textContent?.trim());
             return labels[0] === 'Needle Cloud'
-                && labels.includes('Asset Explorer')
                 && labels.includes('MaterialX')
                 && labels.includes('Subdivision');
         });
@@ -1412,14 +2731,12 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.click('[data-sample-group="needle:subdivision"]');
         await expect(page.locator('#gallery-title')).toHaveText('Subdivision');
         await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/catmull_clark_cube.usda');
-        await page.click('.gallery-card[data-name="Catmull-Clark Cube"]');
-        const fixtureState = await waitForPublicViewerLoad(page, 'catmull_clark_cube.usda');
-        expect(fixtureState.hasHydraHandle).toBe(true);
+        await expect(page.locator('.gallery-card[data-name="Loop Non-Triangle Fallback"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/loop_non_triangle_fallback.usda');
 
         expect(diagnostics).toEqual([]);
     });
 
-    test('shows thumbnails for Needle Cloud samples', async ({ page }) => {
+    test('shows thumbnails for Needle Cloud and local Needle fixture samples', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three');
         await page.click('.dropdown-button');
@@ -1430,6 +2747,14 @@ test.describe('public usd-viewer lifecycle', () => {
         await expect(kitchenThumbnail).toHaveAttribute('src', /screenshot\.needle\.webp$/);
         await page.waitForFunction(() => {
             const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
+            return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+        });
+
+        await page.click('[data-sample-group="needle:usd-concepts"]');
+        const fixtureThumbnail = page.locator('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
+        await expect(fixtureThumbnail).toHaveAttribute('src', /\/test-fixtures\/thumbnails\/usd-concepts-custom-geomprops-usdshade-usda\.png$/);
+        await page.waitForFunction(() => {
+            const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
             return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
         });
 
@@ -1454,6 +2779,20 @@ function collectFatalDiagnostics(page: Page) {
     return collectConsoleMatches(page, fatalConsolePatterns);
 }
 
+function collectConsoleErrorsMatching(page: Page, patterns: RegExp[]) {
+    const diagnostics: Array<{ type: string, text: string }> = [];
+    page.on('console', message => {
+        const text = message.text();
+        if (message.type() === 'error' && patterns.some(pattern => pattern.test(text))) {
+            diagnostics.push({ type: message.type(), text });
+        }
+    });
+    page.on('pageerror', error => {
+        diagnostics.push({ type: 'pageerror', text: error.stack || error.message });
+    });
+    return diagnostics;
+}
+
 function collectConsoleMatches(page: Page, patterns: RegExp[]) {
     const diagnostics: Array<{ type: string, text: string }> = [];
     page.on('console', message => {
@@ -1466,6 +2805,27 @@ function collectConsoleMatches(page: Page, patterns: RegExp[]) {
         diagnostics.push({ type: 'pageerror', text: error.stack || error.message });
     });
     return diagnostics;
+}
+
+async function stubAnalytics(page: Page) {
+    await page.route('/api/script.js', route => route.fulfill({
+        contentType: 'application/javascript',
+        body: 'window.rybbit = { event() {}, pageview() {} };',
+    }));
+}
+
+function flattenUsdWgManifest(entry: any) {
+    const assetPaths: string[] = [];
+    const visit = (node: any) => {
+        for (const item of node?.items || []) {
+            if (item.assetPath) assetPaths.push(item.assetPath);
+        }
+        for (const child of node?.children || []) {
+            visit(child);
+        }
+    };
+    visit(entry);
+    return assetPaths;
 }
 
 async function loadPublicSample(page: Page, label: string) {
@@ -1669,15 +3029,15 @@ async function waitForNeedleLoaderMode(page: Page, filename: string) {
     }));
 }
 
-async function getNeedleUsdMeshNormalState(page: Page) {
-    return await page.evaluate(() => {
+async function getNeedleUsdMeshNormalState(page: Page, usdPath = '/mesh') {
+    return await page.evaluate(path => {
         let target: any = null;
         window.needleEngineContext?.scene?.traverse?.((object: any) => {
-            if (!target && object.isMesh && object.userData?.usdPath === '/mesh') {
+            if (!target && object.isMesh && object.userData?.usdPath === path) {
                 target = object;
             }
         });
-        if (!target) throw new Error('Missing Needle USD mesh at /mesh');
+        if (!target) throw new Error(`Missing Needle USD mesh at ${path}`);
 
         const position = target.geometry?.attributes?.position;
         const normal = target.geometry?.attributes?.normal;
@@ -1735,7 +3095,7 @@ async function getNeedleUsdMeshNormalState(page: Page) {
             sampledFaces,
             sharedPositionDifferentNormalGroups,
         };
-    });
+    }, usdPath);
 }
 
 async function getNeedleSceneNormalState(page: Page) {
@@ -1881,6 +3241,77 @@ async function getNeedleMeshAttributeState(page: Page, usdPath: string) {
     }, usdPath);
 }
 
+async function getNeedleMeshSummaries(page: Page) {
+    return await page.evaluate(() => {
+        const meshes: Array<{
+            path: string;
+            name: string;
+            positionCount: number;
+            normalCount: number;
+            materialName: string;
+            materialColor: string;
+        }> = [];
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!object.isMesh || !object.userData?.usdPath) return;
+            const material = Array.isArray(object.material)
+                ? object.material[0]
+                : object.material;
+            meshes.push({
+                path: String(object.userData.usdPath),
+                name: String(object.name || ''),
+                positionCount: object.geometry?.attributes?.position?.count || 0,
+                normalCount: object.geometry?.attributes?.normal?.count || 0,
+                materialName: String(material?.name || ''),
+                materialColor: String(material?.color?.getHexString?.() || ''),
+            });
+        });
+        return meshes;
+    });
+}
+
+async function findNeedlePrimvarAttribute(page: Page, attributeName: string) {
+    return await page.evaluate(name => {
+        const matches: Array<{
+            path: string;
+            count: number;
+            itemSize: number;
+            arrayType: string;
+            positionCount: number;
+            allFinite: boolean;
+            valuesAreBoolean: boolean;
+            hasOne: boolean;
+            sample: number[];
+        }> = [];
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            if (!object.isMesh) return;
+            const attributes = object.geometry?.attributes || {};
+            const attribute = attributes[name] || object.geometry?.getAttribute?.(name);
+            const position = attributes.position;
+            if (!attribute || !position) return;
+
+            const values = Array.from(attribute.array || [], Number);
+            matches.push({
+                path: object.userData?.usdPath || object.name || '',
+                count: attribute.count || 0,
+                itemSize: attribute.itemSize || 0,
+                arrayType: attribute.array?.constructor?.name || '',
+                positionCount: position.count || 0,
+                allFinite: values.every(Number.isFinite),
+                valuesAreBoolean: values.every(value => value === 0 || value === 1),
+                hasOne: values.includes(1),
+                sample: values.slice(0, 16),
+            });
+        });
+
+        if (!matches.length) {
+            throw new Error(`Missing Needle primvar attribute ${name}`);
+        }
+
+        return matches.sort((a, b) => b.count - a.count)[0];
+    }, attributeName);
+}
+
 async function getNeedleMeshWindingState(page: Page, usdPath: string) {
     return await page.evaluate(path => {
         let target: any = null;
@@ -2011,6 +3442,150 @@ async function waitForNeedleMeshAttributeState(
         throw new Error(`Timed out waiting for ${usdPath}; last state ${JSON.stringify(lastState)}`);
     }
     throw lastError || new Error(`Timed out waiting for ${usdPath}`);
+}
+
+async function readOpenChessSetPawnInstances(page: Page) {
+    return await page.evaluate(() => {
+        const round = (value: number) => Number(value.toFixed(6));
+        const entries: Array<{
+            path: string;
+            visible: boolean;
+            isInstancedMesh: boolean;
+            count: number | null;
+            positionCount: number;
+            matrices: number[][];
+        }> = [];
+
+        window.needleEngineContext?.scene?.traverse?.((object: any) => {
+            const path = String(object.userData?.usdPath || object.name || '');
+            if (!/\/ChessSet\/(Black|White)\/Pawns\//.test(path)) return;
+            if (!object.isMesh && !object.isInstancedMesh) return;
+
+            const entry = {
+                path,
+                visible: Boolean(object.visible),
+                isInstancedMesh: Boolean(object.isInstancedMesh),
+                count: object.isInstancedMesh ? Number(object.count) : null,
+                positionCount: object.geometry?.attributes?.position?.count ?? 0,
+                matrices: [] as number[][],
+            };
+
+            if (object.isInstancedMesh) {
+                const matrix = new object.matrixWorld.constructor();
+                object.updateMatrixWorld(true);
+                for (let i = 0; i < object.count; i++) {
+                    object.getMatrixAt(i, matrix);
+                    matrix.premultiply(object.matrixWorld);
+                    entry.matrices.push([
+                        round(matrix.elements[12]),
+                        round(matrix.elements[13]),
+                        round(matrix.elements[14]),
+                    ]);
+                }
+            }
+            entries.push(entry);
+        });
+
+        const byPath = (a: { path: string; isInstancedMesh: boolean }, b: { path: string; isInstancedMesh: boolean }) =>
+            a.path.localeCompare(b.path) || Number(a.isInstancedMesh) - Number(b.isInstancedMesh);
+        return {
+            prototypes: entries.filter(entry => !entry.isInstancedMesh).sort(byPath),
+            instanced: entries.filter(entry => entry.isInstancedMesh).sort(byPath),
+        };
+    });
+}
+
+async function countNeedlePawnRenderComponents(page: Page) {
+    return await page.evaluate(async () => {
+        const context = window.needleEngineContext;
+        const renderer = context?.renderer;
+        const scene = context?.scene;
+        const camera = context?.mainCamera;
+        if (!renderer || !scene || !camera) {
+            throw new Error('Needle renderer, scene, or camera is missing');
+        }
+
+        scene.traverse((object: any) => {
+            const path = String(object.userData?.usdPath || object.name || '');
+            if (object.isMesh || object.isInstancedMesh) {
+                object.visible = path.includes('/Pawns/');
+            }
+        });
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        camera.updateProjectionMatrix?.();
+        await new Promise(requestAnimationFrame);
+
+        renderer.render(scene, camera);
+        const gl = renderer.getContext();
+        const width = gl.drawingBufferWidth;
+        const height = gl.drawingBufferHeight;
+        const pixels = new Uint8Array(width * height * 4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        const background = [pixels[0], pixels[1], pixels[2]];
+        const step = 4;
+        const sampleWidth = Math.floor(width / step);
+        const sampleHeight = Math.floor(height / step);
+        const mask = new Uint8Array(sampleWidth * sampleHeight);
+        let maskedPixels = 0;
+        for (let y = 0; y < sampleHeight; y++) {
+            for (let x = 0; x < sampleWidth; x++) {
+                const px = Math.min(width - 1, x * step + Math.floor(step / 2));
+                const py = Math.min(height - 1, y * step + Math.floor(step / 2));
+                const pixelOffset = (py * width + px) * 4;
+                const difference =
+                    Math.abs(pixels[pixelOffset] - background[0]) +
+                    Math.abs(pixels[pixelOffset + 1] - background[1]) +
+                    Math.abs(pixels[pixelOffset + 2] - background[2]);
+                if (difference > 45) {
+                    mask[y * sampleWidth + x] = 1;
+                    maskedPixels++;
+                }
+            }
+        }
+
+        const visited = new Uint8Array(mask.length);
+        const queueX: number[] = [];
+        const queueY: number[] = [];
+        let components = 0;
+        let largestComponent = 0;
+        for (let y = 0; y < sampleHeight; y++) {
+            for (let x = 0; x < sampleWidth; x++) {
+                const index = y * sampleWidth + x;
+                if (!mask[index] || visited[index]) continue;
+                visited[index] = 1;
+                queueX.length = 0;
+                queueY.length = 0;
+                queueX.push(x);
+                queueY.push(y);
+                let head = 0;
+                let count = 0;
+                while (head < queueX.length) {
+                    const cx = queueX[head];
+                    const cy = queueY[head++];
+                    count++;
+                    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                    for (const [dx, dy] of neighbors) {
+                        const nx = cx + dx;
+                        const ny = cy + dy;
+                        if (nx < 0 || nx >= sampleWidth || ny < 0 || ny >= sampleHeight) continue;
+                        const neighborIndex = ny * sampleWidth + nx;
+                        if (!mask[neighborIndex] || visited[neighborIndex]) continue;
+                        visited[neighborIndex] = 1;
+                        queueX.push(nx);
+                        queueY.push(ny);
+                    }
+                }
+                if (count > 8) {
+                    components++;
+                    largestComponent = Math.max(largestComponent, count);
+                }
+            }
+        }
+
+        return { components, maskedPixels, largestComponent };
+    });
 }
 
 async function countTexturedUsdMaterials(page: Page, mode: 'three' | 'needle') {

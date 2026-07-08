@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readFile } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 type MatrixPage = {
@@ -10,6 +10,7 @@ type MatrixPage = {
     fixtureUrl: string;
     fixtureFiles: Array<{ path: string; url: string }> | null;
     fixtureSource: string;
+    fixtureComplexity?: string;
     fixtureExpectedRenderable: boolean;
     fixtureExpectedRenderableReason: string | null;
     fixtureExpectedMaterialXMaterials: number;
@@ -50,6 +51,7 @@ type MatrixResult = {
                 textureNames: string[];
             };
             handleMethods: Record<string, string>;
+            playbackState: Record<string, any>;
             fixtureChecks: Record<string, any>;
             hydraDiagnostics: Record<string, unknown> | null;
         };
@@ -58,17 +60,33 @@ type MatrixResult = {
 };
 
 const caseTimeoutMs = Number(process.env.NEEDLE_USD_MATRIX_CASE_TIMEOUT_MS ?? 60_000);
+const chunkSize = Math.max(1, Number(process.env.NEEDLE_USD_MATRIX_CHUNK_SIZE ?? 30));
+const matrixBaseURL = process.env.USD_THREE_MATRIX_BASE_URL ?? 'http://127.0.0.1:5192';
+const manifest = JSON.parse(readFileSync(resolve('.cache/usd-three-matrix-pages/manifest.json'), 'utf8')) as { scope?: string; pages: MatrixPage[] };
 
-test('USD WASM Three adapter loads a fixture across cached Three versions and renderer modes', async ({ page }) => {
-    const manifest = JSON.parse(await readFile(resolve('.cache/usd-three-matrix-pages/manifest.json'), 'utf8')) as { pages: MatrixPage[] };
+test.describe.configure({ mode: 'serial' });
+
+for (let chunkStart = 0; chunkStart < manifest.pages.length; chunkStart += chunkSize) {
+    const chunk = manifest.pages.slice(chunkStart, chunkStart + chunkSize);
+    const chunkIndex = Math.floor(chunkStart / chunkSize) + 1;
+    const chunkCount = Math.ceil(manifest.pages.length / chunkSize);
+
+    test(`USD WASM Three adapter matrix chunk ${chunkIndex}/${chunkCount}`, async ({ browser }) => {
+        await runMatrixChunk(browser, chunk, chunkStart, manifest.pages.length);
+    });
+}
+
+async function runMatrixChunk(browser, pages: MatrixPage[], chunkStart: number, totalCases: number) {
     expect(manifest.pages.length).toBeGreaterThan(0);
 
     const results: MatrixResult[] = [];
     const failures: string[] = [];
 
-    for (const matrixPage of manifest.pages) {
+    for (const matrixPage of pages) {
+        const matrixCaseContext = await browser.newContext();
+        const matrixCasePage = await matrixCaseContext.newPage();
         try {
-            const result = await runMatrixPage(page, matrixPage);
+            const result = await runMatrixPage(matrixCasePage, matrixPage);
             results.push(result);
             console.log(`[usd-three-matrix] ${result.version}/${result.rendererMode}/${result.fixtureName}: ${result.status} ${result.backendType}`);
         }
@@ -76,11 +94,17 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
             const message = error instanceof Error ? error.stack || error.message : String(error);
             failures.push(`${matrixPage.id}: ${message}`);
         }
+        finally {
+            await matrixCaseContext.close().catch(() => {});
+        }
     }
 
     const artifact = {
         generatedAt: new Date().toISOString(),
-        totalCases: manifest.pages.length,
+        scope: manifest.scope ?? 'custom',
+        totalCases,
+        chunkStart,
+        chunkSize: pages.length,
         results,
         failures,
         summary: {
@@ -94,8 +118,8 @@ test('USD WASM Three adapter loads a fixture across cached Three versions and re
     if (failures.length) {
         throw new Error(`USD Three matrix failures:\n${failures.join('\n\n')}`);
     }
-    expect(results).toHaveLength(manifest.pages.length);
-});
+    expect(results).toHaveLength(pages.length);
+}
 
 async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult> {
     const started = Date.now();
@@ -117,7 +141,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
         }
     });
 
-    await page.goto(`/__rawfs${matrixPage.pagePath}`);
+    await page.goto(new URL(`/__rawfs${matrixPage.pagePath}`, matrixBaseURL).href);
     const matrixStateHandle = await page.waitForFunction(() => (window as any).__USD_THREE_MATRIX__ || (window as any).__USD_THREE_MATRIX_ERROR__, null, { timeout: 120_000 });
     const state = await matrixStateHandle.jsonValue() as any;
     const error = await page.evaluate(() => (window as any).__USD_THREE_MATRIX_ERROR__ || null);
@@ -195,6 +219,9 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     expect(suite.usd.handleMethods.repopulate).toBe('function');
     expect(suite.usd.handleMethods.setIncludedPurposes).toBe('function');
     expect(suite.usd.handleMethods.materialsReady).toBe('function');
+    expect(suite.usd.playbackState.defaultPlaying).toBe(false);
+    expect(suite.usd.playbackState.afterStaticUpdate).toBe(suite.usd.playbackState.before);
+    expect(suite.usd.playbackState.finalPlaying).toBe(false);
     assertFixtureChecks(matrixPage.fixtureName, suite.usd.fixtureChecks);
     if (
         matrixPage.fixtureName === 'local-materialx-texture-noise-usda' ||
@@ -227,6 +254,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
 function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
     if (fixtureName === 'local-binding-override-variants-usda') {
         expect(checks.beforeMaterialVariant.meshCount).toBe(1);
+        expect(checks.materialVariantTransition.minVisibleMeshCount).toBeGreaterThan(0);
         expect(checks.afterMaterialVariant.meshCount).toBe(1);
         expect(checks.afterMaterialVariant.materialNames).toContain('Metal');
         expect(checks.afterMaterialVariant.meshes[0].materials[0].metalness).toBe(1);
