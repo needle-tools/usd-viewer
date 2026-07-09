@@ -1843,6 +1843,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         scene: window.usdRoot,
         url: filesForHydra?.length ? undefined : path,
         files: filesForHydra,
+        autoPlay: true,
         waitForMaterials,
         complexity,
       });

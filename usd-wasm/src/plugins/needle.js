@@ -129,6 +129,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 scene: this.comp.root,
                 url: url,
                 files: files,
+                autoPlay: true,
                 waitForMaterials: opts.waitForMaterials,
                 complexity: opts.complexity,
             });

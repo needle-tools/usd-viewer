@@ -126,12 +126,16 @@ test.describe('usd-viewer order-dependent visual regressions', () => {
         expectForbiddenDiagnostics(diagnostics);
     });
 
-    test('Usdview timeline pauses and seeks animated stages', async ({ page }) => {
+    test('Usdview timeline autoplays, pauses, and seeks animated stages', async ({ page }) => {
         const diagnostics = collectConsoleDiagnostics(page);
         await openViewer(page);
         await loadAssetsInOrder(page, ['Time Samples']);
 
-        await expect(page.getByTestId('usdview-panel')).toContainText('Timeline');
+        await expect(page.getByTestId('usdview-panel')).toContainText('Animation');
+        await expect.poll(async () => {
+            const state = await getViewerState(page);
+            return state?.usdview?.isPlaying === true && (state?.usdview?.currentTime ?? 0) > 1;
+        }).toBe(true);
         await page.getByTestId('usdview-timeline-play').click();
         await page.getByTestId('usdview-timeline-slider').evaluate((element) => {
             const input = element as HTMLInputElement;
