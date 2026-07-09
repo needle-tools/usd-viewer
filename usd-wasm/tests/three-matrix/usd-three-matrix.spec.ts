@@ -255,6 +255,7 @@ function assertFixtureChecks(fixtureName: string, checks: Record<string, any>) {
     if (fixtureName === 'local-binding-override-variants-usda') {
         expect(checks.beforeMaterialVariant.meshCount).toBe(1);
         expect(checks.materialVariantTransition.minVisibleMeshCount).toBeGreaterThan(0);
+        expect(checks.materialVariantTransition.maxVisibleDefaultMaterialCount).toBe(0);
         expect(checks.afterMaterialVariant.meshCount).toBe(1);
         expect(checks.afterMaterialVariant.materialNames).toContain('Metal');
         expect(checks.afterMaterialVariant.meshes[0].materials[0].metalness).toBe(1);

@@ -136,6 +136,11 @@ function onAddNeedlePlugin(NEEDLE, opts) {
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);
 
+            await handle.ready();
+            if (opts.waitForMaterials) {
+                await handle.materialsReady();
+            }
+
             if (debug) console.debug("Loaded", this.comp);
 
             onProgress?.(new ProgressEvent("load", { lengthComputable: true, loaded: 1, total: 1 }));

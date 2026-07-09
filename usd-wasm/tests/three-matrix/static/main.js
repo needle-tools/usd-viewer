@@ -513,20 +513,27 @@ function collectSceneStats(root) {
 async function observeVisibleMeshCountsDuring(operation, root) {
     let done = false;
     const counts = [];
+    const visibleDefaultMaterialCounts = [];
     const wrapped = Promise.resolve(operation).finally(() => {
         done = true;
     });
 
     while (!done) {
-        counts.push(collectMeshMaterialState(root).visibleMeshCount);
+        const state = collectMeshMaterialState(root);
+        counts.push(state.visibleMeshCount);
+        visibleDefaultMaterialCounts.push(state.visibleDefaultMaterialCount);
         await new Promise(resolve => requestAnimationFrame(resolve));
     }
 
     await wrapped;
-    counts.push(collectMeshMaterialState(root).visibleMeshCount);
+    const state = collectMeshMaterialState(root);
+    counts.push(state.visibleMeshCount);
+    visibleDefaultMaterialCounts.push(state.visibleDefaultMaterialCount);
     return {
         counts,
+        visibleDefaultMaterialCounts,
         minVisibleMeshCount: Math.min(...counts),
+        maxVisibleDefaultMaterialCount: Math.max(...visibleDefaultMaterialCounts),
     };
 }
 
@@ -567,6 +574,10 @@ function collectMeshMaterialState(root) {
         meshes,
         materialNames: meshes.flatMap(mesh => mesh.materials.map(material => material.name)),
         visibleMaterialNames: meshes.filter(mesh => mesh.visible).flatMap(mesh => mesh.materials.map(material => material.name)),
+        visibleDefaultMaterialCount: meshes
+            .filter(mesh => mesh.visible)
+            .flatMap(mesh => mesh.materials)
+            .filter(material => material.name === "DefaultMaterial").length,
         texturedMaterialCount: meshes.flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
         visibleTexturedMaterialCount: meshes.filter(mesh => mesh.visible).flatMap(mesh => mesh.materials).filter(material => material.hasMap).length,
         textureCount: meshes.flatMap(mesh => mesh.materials).reduce((count, material) => count + material.textureCount, 0),

@@ -739,6 +739,7 @@ class HydraMesh {
     this._instancedMesh = null;
     this._wireObject = null;
     this._instanceMatrix = new Matrix4();
+    this._pendingMaterialIds = new Set();
 
     let material = new MeshPhysicalMaterial({
       side: DoubleSide,
@@ -1035,6 +1036,17 @@ class HydraMesh {
     mesh.userData.usdPath = this._id;
     mesh.userData.usdHydraMaterialSide = this._side;
     mesh.userData.usdHydraApplyMaterialSide = (material, hydraMaterial) => this._applyMaterialSide(material, hydraMaterial);
+    mesh.userData.usdHydraSetMaterialPending = (materialId, pending) => this._setMaterialPending(materialId, pending);
+  }
+
+  _setMaterialPending(materialId, pending) {
+    if (!materialId) return;
+    if (pending) {
+      this._pendingMaterialIds.add(materialId);
+    } else {
+      this._pendingMaterialIds.delete(materialId);
+    }
+    this._applyVisibilityState();
   }
 
   _disposeMaterialSideClones() {
@@ -1065,7 +1077,7 @@ class HydraMesh {
   }
 
   _applyVisibilityState() {
-    const visible = this._visible && this._renderTag !== 'hidden' && this._hasRenderableGeometry();
+    const visible = this._visible && this._renderTag !== 'hidden' && this._pendingMaterialIds.size === 0 && this._hasRenderableGeometry();
     if (this._mesh) {
       this._mesh.visible = !this._instancedMesh && visible;
       this._mesh.userData.usdRenderTag = this._renderTag;
@@ -1526,6 +1538,8 @@ class HydraMaterial {
     /** @type {MeshPhysicalMaterial} */
     this._material = defaultMaterial;
     this._assignments = [];
+    this._ready = id === "";
+    this._hasResolvedMaterial = id === "";
     this._interface.diagnostics.materialSPrims++;
 
     if (debugMaterials) console.log("Hydra Material", this)
@@ -1537,6 +1551,10 @@ class HydraMaterial {
     if (!existing) {
       this._assignments.push({ mesh, materialIndex });
     }
+    if (!this._ready && !this._hasResolvedMaterial) {
+      this._setMeshMaterialPending(mesh, true);
+      return;
+    }
     this._applyMaterialToAssignedMeshes();
   }
 
@@ -1544,14 +1562,22 @@ class HydraMaterial {
     const previousLength = this._assignments.length;
     this._assignments = this._assignments.filter(assignment => assignment.mesh !== mesh);
     if (this._assignments.length !== previousLength) {
+      this._setMeshMaterialPending(mesh, false);
       this._applyMaterialToAssignedMeshes();
     }
   }
 
   dispose() {
+    for (const assignment of this._assignments) {
+      this._setMeshMaterialPending(assignment.mesh, false);
+    }
     this._assignments = [];
     disposeMaterialResources(this._material);
     this._material = null;
+  }
+
+  _setMeshMaterialPending(mesh, pending) {
+    mesh?.userData?.usdHydraSetMaterialPending?.(this._id, pending);
   }
 
   _applyMaterialToMesh(mesh, materialIndex) {
@@ -1562,18 +1588,27 @@ class HydraMaterial {
 
     if (materialIndex === null || materialIndex === undefined) {
       mesh.material = material;
+      this._setMeshMaterialPending(mesh, false);
       return;
     }
 
     if (Array.isArray(mesh.material)) {
       mesh.material[materialIndex] = material;
+      this._setMeshMaterialPending(mesh, false);
       return;
     }
 
     mesh.material = material;
+    this._setMeshMaterialPending(mesh, false);
   }
 
   _applyMaterialToAssignedMeshes() {
+    if (!this._ready && !this._hasResolvedMaterial) {
+      for (const assignment of this._assignments) {
+        this._setMeshMaterialPending(assignment.mesh, true);
+      }
+      return;
+    }
     for (const assignment of this._assignments) {
       this._applyMaterialToMesh(assignment.mesh, assignment.materialIndex);
     }
@@ -1602,9 +1637,13 @@ class HydraMaterial {
   }
 
   beginMaterialSync() {
+    this._ready = false;
     this._nodes = {};
     this._resolvedAssetPaths.clear();
     this._materialXDocuments = [];
+    if (!this._hasResolvedMaterial) {
+      this._applyMaterialToAssignedMeshes();
+    }
   }
 
   static canonicalAssetPath(path) {
@@ -2153,10 +2192,14 @@ class HydraMaterial {
       const materialXMaterial = await this.createMaterialXMaterial(materialXDocument);
       if (!materialXMaterial) {
         this._material = defaultMaterial;
+        this._ready = true;
+        this._hasResolvedMaterial = true;
         this._applyMaterialToAssignedMeshes();
         return;
       }
       this._material = materialXMaterial;
+      this._ready = true;
+      this._hasResolvedMaterial = true;
       this._applyMaterialToAssignedMeshes();
       return;
     }
@@ -2172,6 +2215,8 @@ class HydraMaterial {
 
     if (!mainMaterialNode || disableMaterials) {
       this._material = defaultMaterial;
+      this._ready = true;
+      this._hasResolvedMaterial = true;
       this._applyMaterialToAssignedMeshes();
       return;
     }
@@ -2218,6 +2263,8 @@ class HydraMaterial {
     }
 
     if (debugMaterials) console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
+    this._ready = true;
+    this._hasResolvedMaterial = true;
     this._applyMaterialToAssignedMeshes();
   }
 
@@ -2485,6 +2532,7 @@ export class ThreeRenderDelegateInterface {
 
   rememberPendingMaterialAssignment(materialId, mesh) {
     if (!materialId || !mesh) return;
+    mesh.userData?.usdHydraSetMaterialPending?.(materialId, true);
     let meshes = this.pendingMaterialAssignments.get(materialId);
     if (!meshes) {
       meshes = new Set();
@@ -2507,8 +2555,10 @@ export class ThreeRenderDelegateInterface {
     for (const material of Object.values(this.materials)) {
       material.unassignMesh(mesh);
     }
-    for (const meshes of this.pendingMaterialAssignments.values()) {
-      meshes.delete(mesh);
+    for (const [materialId, meshes] of this.pendingMaterialAssignments) {
+      if (meshes.delete(mesh)) {
+        mesh.userData?.usdHydraSetMaterialPending?.(materialId, false);
+      }
     }
   }
 

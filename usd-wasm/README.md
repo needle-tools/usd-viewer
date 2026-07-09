@@ -191,8 +191,9 @@ the required COOP/COEP headers.
       import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
 
       await addPluginForNeedleEngine({
-        // Defaults to non-blocking materials. Set waitForMaterials: true if the
-        // Needle loader should not report ready until materials/textures settle.
+        // The Needle loader's loadfinished event waits for the initial Hydra draw.
+        // Set waitForMaterials: true if loadfinished should also wait for
+        // material generation and texture assignment.
         getFiles: () => []
       });
 
@@ -235,8 +236,9 @@ the required COOP/COEP headers.
       import { addPluginForNeedleEngine } from "@needle-tools/usd/plugins";
 
       await addPluginForNeedleEngine({
-        // Defaults to non-blocking materials. Set waitForMaterials: true if the
-        // Needle loader should not report ready until materials/textures settle.
+        // The Needle loader's loadfinished event waits for the initial Hydra draw.
+        // Set waitForMaterials: true if loadfinished should also wait for
+        // material generation and texture assignment.
         getFiles: () => []
       });
 
