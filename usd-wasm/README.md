@@ -8,7 +8,7 @@ For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.1.0 three
+npm install @needle-tools/usd@1.1.1 three
 ```
 
 Version 1.0 uses upstream OpenUSD 26.05 and ships a Hydra imaging bridge for
@@ -116,7 +116,7 @@ served package paths.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/usd": "1.0.1",
+    "@needle-tools/usd": "1.1.1",
     "three": "^0.185.0",
     "vite": "^8.1.0"
   }
@@ -192,8 +192,10 @@ the required COOP/COEP headers.
 
       await addPluginForNeedleEngine({
         // Needle Engine loadfinished waits for the initial Hydra draw and
-        // asynchronous USD material generation, so engine autofit and screenshot
+        // asynchronous USD material generation, so engine auto-fit and screenshot
         // tools see a presentable scene.
+        // Pass autoPlay: true when the host app should start USD timeline
+        // playback automatically after loading.
         getFiles: () => []
       });
 
@@ -218,7 +220,7 @@ the required COOP/COEP headers.
   },
   "dependencies": {
     "@needle-tools/engine": "^5.1.2",
-    "@needle-tools/usd": "1.0.1",
+    "@needle-tools/usd": "1.1.1",
     "three": "npm:@needle-tools/three@^0.169.19",
     "vite": "^8.1.0"
   }
@@ -237,8 +239,10 @@ the required COOP/COEP headers.
 
       await addPluginForNeedleEngine({
         // Needle Engine loadfinished waits for the initial Hydra draw and
-        // asynchronous USD material generation, so engine autofit and screenshot
+        // asynchronous USD material generation, so engine auto-fit and screenshot
         // tools see a presentable scene.
+        // Pass autoPlay: true when the host app should start USD timeline
+        // playback automatically after loading.
         getFiles: () => []
       });
 
