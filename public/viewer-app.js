@@ -1512,6 +1512,7 @@ async function ensureNeedleEngineLoader() {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
       waitForMaterials,
       complexity,
+      autoPlay: true,
       getFiles: () => needleLoaderFiles,
     });
   }

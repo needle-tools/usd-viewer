@@ -16,6 +16,11 @@ export type PluginContext = {
      * or a numeric UsdImagingGL complexity value. Defaults to "low" (1.0).
      */
     complexity?: "low" | "medium" | "high" | "veryhigh" | number,
+    /**
+     * Start USD timeline playback after loading. Defaults to false; applications
+     * such as viewers should opt in when they want autoplay behavior.
+     */
+    autoPlay?: boolean,
     getFiles: () => Array<import("../types").HydraFile>
 }
 
