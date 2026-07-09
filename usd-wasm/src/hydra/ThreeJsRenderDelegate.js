@@ -6,6 +6,7 @@ const {
   TextureLoader,
   BufferGeometry,
   MeshPhysicalMaterial,
+  MeshStandardMaterial,
   FrontSide,
   BackSide,
   DoubleSide,
@@ -741,9 +742,11 @@ class HydraMesh {
     this._instanceMatrix = new Matrix4();
     this._pendingMaterialIds = new Set();
 
-    let material = new MeshPhysicalMaterial({
+    let material = new MeshStandardMaterial({
       side: DoubleSide,
-      color: new Color(0xB4B4B4),
+      color: new Color(0xf2f2f2),
+      roughness: 0.65,
+      metalness: 0,
       // envMap: hydraInterface.config.envMap,
     });
     this._ownedMaterial = material;
@@ -1524,9 +1527,11 @@ class HydraMaterial {
     this._materialXDocuments = [];
     this._interface = hydraInterface;
     if (!defaultMaterial) {
-      defaultMaterial = new MeshPhysicalMaterial({
+      defaultMaterial = new MeshStandardMaterial({
         side: DoubleSide,
-        color: new Color(0xff2997), // a bright pink color to indicate a missing material
+        color: new Color(0xf2f2f2),
+        roughness: 0.65,
+        metalness: 0,
         // envMap: window.envMap,
         name: 'DefaultMaterial',
       });
