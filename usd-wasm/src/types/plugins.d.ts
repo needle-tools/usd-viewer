@@ -4,7 +4,9 @@ export type PluginContext = {
     debug?: boolean,
     /**
      * Include asynchronous material generation and texture assignment in the
-     * Hydra handle's ready() promise and in the Needle Engine loader completion.
+     * Hydra handle's ready() promise. Needle Engine loader completion always
+     * waits for materials so engine autofit and loadfinished consumers see a
+     * presentable scene.
      * Defaults to false.
      */
     waitForMaterials?: boolean,

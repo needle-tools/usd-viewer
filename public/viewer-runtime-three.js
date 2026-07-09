@@ -39,7 +39,3 @@ export function getHydraHandleFromNeedleEngineAsset() {
 export function fitCamera() {
   return null;
 }
-
-export function fitNeedleCameraToObjects() {
-  return false;
-}

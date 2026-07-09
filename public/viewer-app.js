@@ -17,7 +17,6 @@ import {
   createThreeHydra,
   getUsdModule,
   addPluginForNeedleEngine,
-  fitNeedleCameraToObjects,
   getHydraHandleFromNeedleEngineAsset,
   EXRLoader,
   RGBELoader,
@@ -1520,7 +1519,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement = document.createElement("needle-engine");
     needleEngineElement.className = "usd-viewer-needle-engine";
     needleEngineElement.setAttribute("camera-controls", "true");
-    needleEngineElement.setAttribute("auto-fit", "false");
+    needleEngineElement.setAttribute("auto-fit", "true");
     needleEngineElement.setAttribute("auto-rotate", "false");
     if (diagnosticsMode()) needleEngineElement.setAttribute("no-telemetry", "true");
     needleEngineElement.setAttribute("autoplay", "");
@@ -1563,21 +1562,6 @@ async function waitForNeedleHydraHandle(context) {
   return handle;
 }
 
-function toNeedleFitObject(value) {
-  if (!value) return null;
-  if (value.isObject3D === true) return value;
-  return toNeedleFitObject(value.scene) || toNeedleFitObject(value.root) || null;
-}
-
-function needleFitObjectsFromLoadDetail(detail) {
-  const objects = [];
-  for (const loaded of detail?.loadedFiles || []) {
-    const object = toNeedleFitObject(loaded?.file);
-    if (object) objects.push(object);
-  }
-  return objects;
-}
-
 function cameraFitOffset() {
   const offset = new Vector3(
     numberUrlParam("cameraX", 0),
@@ -1593,42 +1577,6 @@ function cameraFitOffset() {
 function numberUrlParam(name, fallback) {
   const value = Number(params.get(name));
   return Number.isFinite(value) ? value : fallback;
-}
-
-function fitNeedleEngineCamera(context, targets = undefined) {
-  if (!context?.scene || typeof fitNeedleCameraToObjects !== "function") return;
-  const objects = (Array.isArray(targets) && targets.length > 0) ? targets : [context.scene];
-  context.scene.updateMatrixWorld?.(true);
-  const box = new Box3();
-  box.makeEmpty();
-  for (const object of objects) {
-    object.updateMatrixWorld?.(true);
-    box.expandByObject(object);
-  }
-  const size = new Vector3();
-  box.getSize(size);
-  if (!Number.isFinite(size.x) || !Number.isFinite(size.y) || !Number.isFinite(size.z) || size.lengthSq() <= 0) {
-    return false;
-  }
-  try {
-    return fitNeedleCameraToObjects(context, objects, {
-      fitOffset: DEFAULT_CAMERA_FIT_OFFSET,
-      centerCamera: "y",
-    });
-  } catch (err) {
-    console.warn("Needle camera fit failed", err);
-    return false;
-  }
-}
-
-function scheduleNeedleEngineCameraFit(context, targets = undefined, timeoutMs = 15000) {
-  const started = performance.now();
-  const tick = () => {
-    if (fitNeedleEngineCamera(context, targets)) return;
-    if (performance.now() - started > timeoutMs) return;
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
 }
 
 async function waitForNeedleHydraReady(handle, timeoutMs = 15000) {
@@ -1684,10 +1632,6 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
 
   await waitForNeedleHydraReady(handle);
-  const fitTargets = needleFitObjectsFromLoadDetail(loadDetail);
-  if (!fitNeedleEngineCamera(context, fitTargets)) {
-    scheduleNeedleEngineCameraFit(context, fitTargets);
-  }
   if (waitForMaterials) {
     await handle.materialsReady?.();
   } else {
@@ -1728,10 +1672,6 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
   applyAgXToneMapping(context?.renderer);
-  const fitTargets = needleFitObjectsFromLoadDetail(loadDetail);
-  if (!fitNeedleEngineCamera(context, fitTargets)) {
-    scheduleNeedleEngineCameraFit(context, fitTargets);
-  }
   return context;
 }
 
