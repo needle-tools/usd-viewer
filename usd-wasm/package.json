@@ -79,9 +79,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.7.2"
+    "@needle-tools/materialx": "1.7.3"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.2"
+    "@needle-tools/materialx": "1.7.3"
   }
 }
