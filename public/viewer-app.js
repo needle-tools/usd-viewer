@@ -743,6 +743,65 @@ function inferMaterialXMaterialName(content) {
   return "";
 }
 
+function makeMaterialXPreviewSphereUsda() {
+  const widthSegments = 32;
+  const heightSegments = 16;
+  const rowSize = widthSegments + 1;
+  const points = [];
+  const normals = [];
+  const tangents = [];
+  const uvs = [];
+  const indices = [];
+
+  const number = value => Math.abs(value) < 1e-8 ? "0" : Number(value.toFixed(7)).toString();
+  const tuple = values => `(${values.map(number).join(", ")})`;
+
+  for (let y = 0; y <= heightSegments; y++) {
+    const v = y / heightSegments;
+    const phi = v * Math.PI;
+    const sinPhi = Math.sin(phi);
+    const cosPhi = Math.cos(phi);
+
+    for (let x = 0; x <= widthSegments; x++) {
+      const u = x / widthSegments;
+      const theta = u * Math.PI * 2;
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+      const normal = [sinPhi * cosTheta, sinPhi * sinTheta, cosPhi];
+      points.push(tuple(normal));
+      normals.push(tuple(normal));
+      tangents.push(tuple([-sinTheta, cosTheta, 0]));
+      uvs.push(tuple([u, 1 - v]));
+    }
+  }
+
+  for (let y = 0; y < heightSegments; y++) {
+    for (let x = 0; x < widthSegments; x++) {
+      const a = y * rowSize + x + 1;
+      const b = y * rowSize + x;
+      const c = (y + 1) * rowSize + x;
+      const d = (y + 1) * rowSize + x + 1;
+      if (y !== 0) indices.push(a, b, d);
+      if (y !== heightSegments - 1) indices.push(b, c, d);
+    }
+  }
+
+  const faceVertexCounts = new Array(indices.length / 3).fill(3).join(", ");
+  return `        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [${faceVertexCounts}]
+        int[] faceVertexIndices = [${indices.join(", ")}]
+        point3f[] points = [${points.join(", ")}]
+        normal3f[] normals = [${normals.join(", ")}] (
+            interpolation = "vertex"
+        )
+        vector3f[] primvars:tangents = [${tangents.join(", ")}] (
+            interpolation = "vertex"
+        )
+        texCoord2f[] primvars:st = [${uvs.join(", ")}] (
+            interpolation = "vertex"
+        )`;
+}
+
 function makeMaterialXReferenceUsda(referencePath, materialName) {
   const normalized = String(referencePath || "").replaceAll("\\", "/");
   const fileName = normalized.split("/").pop() || "material.mtlx";
@@ -758,13 +817,13 @@ function makeMaterialXReferenceUsda(referencePath, materialName) {
 
 def Xform "World"
 {
-    def Sphere "PreviewSphere" (
+    def Mesh "PreviewSphere" (
         prepend apiSchemas = ["MaterialBindingAPI"]
     )
     {
         rel material:binding = </Materials/MaterialX/Materials/${materialName}>
         color3f[] primvars:displayColor = [(0.8, 0.8, 0.8)]
-        double radius = 1
+${makeMaterialXPreviewSphereUsda()}
     }
 }
 

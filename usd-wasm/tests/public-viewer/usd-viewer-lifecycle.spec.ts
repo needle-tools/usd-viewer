@@ -1519,28 +1519,63 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('loads dropped MaterialX files through generated preview USD wrappers', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
+        const materialDiagnostics = collectConsoleMatches(page, [
+            /Tangents are required for this material/i,
+            /Failed to load texture/i,
+        ]);
         await page.goto('/?viewer=needle');
         await waitForDropReady(page);
 
-        const drop = await dropFixtureFile(page, {
-            path: 'materialx/mtlxFiles/standard_surface_default.mtlx',
-            name: 'standard_surface_default.mtlx',
-            target: 'window',
-            type: 'application/xml',
+        const drop = await dropFixtureDirectory(page, {
+            rootName: 'raw-materialx-preview',
+            files: [
+                {
+                    path: 'materialx/raw_textured_preview.mtlx',
+                    relativePath: 'raw_textured_preview.mtlx',
+                    type: 'application/xml',
+                },
+                {
+                    path: 'materialx/textures/checker.png',
+                    relativePath: 'textures/checker.png',
+                    type: 'image/png',
+                },
+            ],
         });
         expect(drop.defaultPrevented).toBe(true);
 
-        const state = await waitForNeedleLoaderMode(page, 'standard_surface_default.usda');
-        expect(state.elementSrc).toBe('standard_surface_default.usda');
+        const state = await waitForNeedleLoaderMode(page, 'raw_textured_preview.usda');
+        expect(state.elementSrc).toBe('raw-materialx-preview/raw_textured_preview.usda');
         expect(state.hasHydraHandle).toBe(true);
-        const meshNames = await page.evaluate(() => {
-            const names: string[] = [];
+        await page.evaluate(() => window.usdHydra?.materialsReady?.());
+        const preview = await page.evaluate(() => {
+            let result: any = null;
             window.needleEngineContext?.scene?.traverse?.((object: any) => {
-                if (object.isMesh) names.push(object.name || '');
+                if (result || object.userData?.usdPath !== '/World/PreviewSphere') return;
+                const textureUniforms = Object.entries(object.material?.uniforms || {})
+                    .filter(([, uniform]: any) => uniform?.value?.isTexture)
+                    .map(([name, uniform]: any) => ({
+                        name,
+                        textureName: uniform.value.name || '',
+                    }));
+                result = {
+                    name: object.name || '',
+                    positionCount: object.geometry?.attributes?.position?.count || 0,
+                    uvCount: object.geometry?.attributes?.uv?.count || 0,
+                    tangentCount: object.geometry?.attributes?.tangent?.count || 0,
+                    textureUniforms,
+                };
             });
-            return names;
+            return result;
         });
-        expect(meshNames).toContain('PreviewSphere');
+        expect(preview.name).toBe('PreviewSphere');
+        expect(preview.positionCount).toBeGreaterThan(0);
+        expect(preview.uvCount).toBe(preview.positionCount);
+        expect(preview.tangentCount).toBe(preview.positionCount);
+        expect(preview.textureUniforms).toContainEqual(expect.objectContaining({
+            name: 'Albedo_file',
+            textureName: expect.stringContaining('raw-materialx-preview/textures/checker.png'),
+        }));
+        expect(materialDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
     });
 
@@ -2995,6 +3030,82 @@ async function dropFixtureFile(page: Page, options: {
             itemCount: dataTransfer.items.length,
             fileCount: dataTransfer.files.length,
         };
+    }, options);
+}
+
+async function dropFixtureDirectory(page: Page, options: {
+    rootName: string;
+    files: Array<{
+        path: string;
+        relativePath: string;
+        type?: string;
+    }>;
+}) {
+    return await page.evaluate(async ({ rootName, files }) => {
+        const root = { name: rootName, children: new Map<string, any>() };
+        for (const descriptor of files) {
+            const response = await fetch(`/test-fixtures/${descriptor.path}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch dropped fixture ${descriptor.path}: ${response.status} ${response.statusText}`);
+            }
+            const parts = descriptor.relativePath.split('/').filter(Boolean);
+            const fileName = parts.pop();
+            if (!fileName) throw new Error(`Invalid dropped fixture path: ${descriptor.relativePath}`);
+            let directory = root;
+            for (const part of parts) {
+                let child = directory.children.get(part);
+                if (!child) {
+                    child = { name: part, children: new Map<string, any>() };
+                    directory.children.set(part, child);
+                }
+                directory = child;
+            }
+            directory.children.set(fileName, {
+                name: fileName,
+                file: new File([await response.blob()], fileName, {
+                    type: descriptor.type || 'application/octet-stream',
+                }),
+            });
+        }
+
+        const toEntry = (node: any, parentPath: string): any => {
+            const fullPath = `${parentPath}/${node.name}`;
+            if (node.file) {
+                return {
+                    isFile: true,
+                    isDirectory: false,
+                    name: node.name,
+                    fullPath,
+                    file: (resolve: (file: File) => void) => resolve(node.file),
+                };
+            }
+            const entries = Array.from(node.children.values()).map(child => toEntry(child, fullPath));
+            return {
+                isFile: false,
+                isDirectory: true,
+                name: node.name,
+                fullPath,
+                createReader: () => {
+                    let read = false;
+                    return {
+                        readEntries: (resolve: (entries: any[]) => void) => {
+                            resolve(read ? [] : (read = true, entries));
+                        },
+                    };
+                },
+            };
+        };
+
+        const rootEntry = toEntry(root, '');
+        const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'dataTransfer', {
+            value: {
+                files: [],
+                items: [{ kind: 'file', webkitGetAsEntry: () => rootEntry }],
+            },
+        });
+        window.dispatchEvent(event);
+        return { defaultPrevented: event.defaultPrevented };
     }, options);
 }
 
