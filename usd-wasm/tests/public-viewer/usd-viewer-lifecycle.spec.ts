@@ -1547,33 +1547,46 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.elementSrc).toBe('raw-materialx-preview/raw_textured_preview.usda');
         expect(state.hasHydraHandle).toBe(true);
         await page.evaluate(() => window.usdHydra?.materialsReady?.());
-        const preview = await page.evaluate(() => {
-            let result: any = null;
+        const meshes = await page.evaluate(() => {
+            let preview: any = null;
+            let calibration: any = null;
             window.needleEngineContext?.scene?.traverse?.((object: any) => {
-                if (result || object.userData?.usdPath !== '/World/PreviewSphere') return;
-                const textureUniforms = Object.entries(object.material?.uniforms || {})
-                    .filter(([, uniform]: any) => uniform?.value?.isTexture)
-                    .map(([name, uniform]: any) => ({
-                        name,
-                        textureName: uniform.value.name || '',
-                    }));
-                result = {
-                    name: object.name || '',
-                    positionCount: object.geometry?.attributes?.position?.count || 0,
-                    uvCount: object.geometry?.attributes?.uv?.count || 0,
-                    tangentCount: object.geometry?.attributes?.tangent?.count || 0,
-                    textureUniforms,
-                };
+                if (object.userData?.usdPath === '/World/PreviewMesh/PreviewMesh') {
+                    const textureUniforms = Object.entries(object.material?.uniforms || {})
+                        .filter(([, uniform]: any) => uniform?.value?.isTexture)
+                        .map(([name, uniform]: any) => ({
+                            name,
+                            textureName: uniform.value.name || '',
+                        }));
+                    preview = {
+                        name: object.name || '',
+                        positionCount: object.geometry?.attributes?.position?.count || 0,
+                        uvCount: object.geometry?.attributes?.uv?.count || 0,
+                        tangentCount: object.geometry?.attributes?.tangent?.count || 0,
+                        textureUniforms,
+                    };
+                }
+                if (object.userData?.usdPath === '/World/CalibrationMesh/CalibrationMesh') {
+                    calibration = {
+                        name: object.name || '',
+                        materialName: object.material?.name || '',
+                        materialType: object.material?.type || '',
+                    };
+                }
             });
-            return result;
+            return { preview, calibration };
         });
-        expect(preview.name).toBe('PreviewSphere');
-        expect(preview.positionCount).toBeGreaterThan(0);
-        expect(preview.uvCount).toBe(preview.positionCount);
-        expect(preview.tangentCount).toBe(preview.positionCount);
-        expect(preview.textureUniforms).toContainEqual(expect.objectContaining({
+        expect(meshes.preview.name).toBe('PreviewMesh');
+        expect(meshes.preview.positionCount).toBeGreaterThan(0);
+        expect(meshes.preview.uvCount).toBe(meshes.preview.positionCount);
+        expect(meshes.preview.tangentCount).toBe(meshes.preview.positionCount);
+        expect(meshes.preview.textureUniforms).toContainEqual(expect.objectContaining({
             name: 'Albedo_file',
             textureName: expect.stringContaining('raw-materialx-preview/textures/checker.png'),
+        }));
+        expect(meshes.calibration).toEqual(expect.objectContaining({
+            name: 'CalibrationMesh',
+            materialName: expect.stringContaining('CalibrationMaterial'),
         }));
         expect(materialDiagnostics).toEqual([]);
         expect(diagnostics).toEqual([]);
