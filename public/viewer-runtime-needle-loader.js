@@ -19,7 +19,8 @@ export {
 
 export { createThreeHydra, getUsdModule } from './usd/index.js';
 export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
-export { EXRLoader, GLTFExporter, GLTFLoader, RGBELoader } from 'three-examples';
+export { EXRLoader, GLTFExporter, GLTFLoader } from 'three-examples';
+export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';

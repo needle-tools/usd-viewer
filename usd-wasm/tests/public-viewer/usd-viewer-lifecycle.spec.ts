@@ -240,7 +240,7 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
         const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
 
-        expect(state.filename).toBe(publicSamples.helmet.filename);
+        expect(state.filename).toBe(viewerDisplayFilename(publicSamples.helmet.filename));
         expect(state.activeButton).toBe('needle-loader');
         expect(state.hasHydraHandle).toBe(true);
         expect(state.driverAlive).toBe(true);
@@ -2809,7 +2809,141 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(diagnostics).toEqual([]);
     });
+
+    for (const viewer of ['three', 'needle'] as const) {
+        test(`renders OpenUSD Gaussian particle fields through Spark in ${viewer}`, async ({ page }) => {
+            test.setTimeout(60_000);
+            const diagnostics = collectFatalDiagnostics(page);
+            await stubAnalytics(page);
+            await page.goto(`/?viewer=${viewer}&file=/test-data/gaussian-splats/chamaeleon.usdc`, {
+                waitUntil: 'domcontentloaded',
+            });
+            if (viewer === 'needle') {
+                await waitForNeedleLoaderMode(page, 'chamaeleon.usdc');
+            } else {
+                await waitForPublicViewerLoad(page, 'chamaeleon.usdc');
+            }
+
+            const state = await page.evaluate(viewerMode => {
+                const scene = viewerMode === 'needle'
+                    ? window.needleEngineContext?.scene
+                    : window.usdRoot;
+                const renderScene = viewerMode === 'needle'
+                    ? window.needleEngineContext?.scene
+                    : window.scene;
+                const splats: any[] = [];
+                let sparkRenderers = 0;
+                renderScene?.traverse?.((object: any) => {
+                    if (object.type === 'SparkRenderer' || object.userData?.usdParticleFieldRenderer) {
+                        sparkRenderers++;
+                    }
+                });
+                scene?.traverse?.((object: any) => {
+                    if (object.userData?.usdTypeName === 'ParticleField3DGaussianSplat' && typeof object.getBoundingBox === 'function') {
+                        splats.push(object);
+                    }
+                });
+                const bounds = splats[0]?.getBoundingBox();
+                const size = bounds?.getSize(splats[0].position.clone());
+                return {
+                    particleFields: window.usdHydra?.diagnostics?.().particleFields,
+                    sparkRenderers,
+                    splatMeshes: splats.length,
+                    numSplats: splats[0]?.extSplats?.numSplats,
+                    bounds: size ? [size.x, size.y, size.z] : [],
+                };
+            }, viewer);
+
+            expect(state.particleFields).toBe(1);
+            expect(state.sparkRenderers).toBe(1);
+            expect(state.splatMeshes).toBe(1);
+            expect(state.numSplats).toBe(10_000);
+            expect(state.bounds).toHaveLength(3);
+            expect(Math.max(...state.bounds)).toBeGreaterThan(0);
+
+            const canvas = viewer === 'needle'
+                ? page.locator('needle-engine canvas')
+                : page.locator('canvas.usd-viewer-three-canvas');
+            await expect(canvas).toHaveScreenshot(`gaussian-particle-field-${viewer}.png`, {
+                animations: 'disabled',
+                maxDiffPixelRatio: 0.02,
+            });
+
+            await page.locator('.clear-button').click();
+            await page.waitForFunction(() => !window.usdHydra && !window.needleEngineContext);
+            const retainedParticleObjects = await page.evaluate(() => {
+                let count = 0;
+                const scenes = [window.usdRoot, window.scene, document.querySelector('needle-engine')?.context?.scene];
+                const visited = new Set<any>();
+                for (const scene of scenes) scene?.traverse?.((object: any) => {
+                    if (visited.has(object)) return;
+                    visited.add(object);
+                    if (object.userData?.usdTypeName === 'ParticleField3DGaussianSplat'
+                        || object.userData?.usdParticleFieldRenderer) count++;
+                });
+                return count;
+            });
+            expect(retainedParticleObjects).toBe(0);
+            expect(diagnostics).toEqual([]);
+        });
+    }
+
+    test('applies OpenUSD particle-field array truncation and defaults', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await stubAnalytics(page);
+        await page.goto('/?viewer=three&file=/test-data/gaussian-splats/array_fallbacks.usda', {
+            waitUntil: 'domcontentloaded',
+        });
+        await waitForPublicViewerLoad(page, 'array_fallbacks.usda');
+
+        const fields = await page.evaluate(() => {
+            const result: Record<string, any> = {};
+            window.usdRoot?.traverse?.((object: any) => {
+                if (typeof object.getBoundingBox !== 'function'
+                    || object.userData?.usdTypeName !== 'ParticleField3DGaussianSplat') return;
+                const splats = object.extSplats;
+                result[object.userData.usdPath] = {
+                    degree: splats.getNumSh(),
+                    splats: Array.from({ length: splats.numSplats }, (_, index) => {
+                        const splat = splats.getSplat(index);
+                        return {
+                            scale: splat.scales.toArray(),
+                            quaternion: splat.quaternion.toArray(),
+                            opacity: splat.opacity,
+                            color: splat.color.toArray(),
+                        };
+                    }),
+                };
+            });
+            return result;
+        });
+
+        const truncated = fields['/ParticleFields/Truncated'];
+        expect(truncated.degree).toBe(0);
+        expect(truncated.splats).toHaveLength(2);
+        expectArraysClose(truncated.splats[0].scale, [0.1, 0.2, 0.3]);
+        expectArraysClose(truncated.splats[1].scale, [0.4, 0.5, 0.6]);
+        expectArraysClose(truncated.splats.map((splat: any) => splat.opacity), [0.25, 0.75]);
+
+        const defaults = fields['/ParticleFields/Defaults'];
+        expect(defaults.degree).toBe(0);
+        expect(defaults.splats).toHaveLength(2);
+        for (const splat of defaults.splats) {
+            expectArraysClose(splat.scale, [1, 1, 1]);
+            expectArraysClose(splat.quaternion, [0, 0, 0, 1]);
+            expect(splat.opacity).toBeCloseTo(1, 5);
+            expectArraysClose(splat.color, [0.5, 0.5, 0.5]);
+        }
+        expect(diagnostics).toEqual([]);
+    });
 });
+
+function expectArraysClose(actual: number[], expected: number[]) {
+    expect(actual).toHaveLength(expected.length);
+    for (let index = 0; index < expected.length; index++) {
+        expect(actual[index]).toBeCloseTo(expected[index], 3);
+    }
+}
 
 async function addLocalLifecycleSamples(page: Page) {
     await page.evaluate(samples => {

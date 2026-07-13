@@ -1790,6 +1790,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       handle = await createThreeHydra({
         USD,
         scene: window.usdRoot,
+        renderScene: window.scene,
+        renderer: window.renderer,
         url: filesForHydra?.length ? undefined : path,
         files: filesForHydra,
         autoPlay: true,
@@ -1963,7 +1965,30 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
   
   box.makeEmpty();
   for(const object of selection) {
-    box.expandByObject(object);
+    object.updateWorldMatrix?.(true, true);
+    object.traverse?.(entry => {
+      if (entry.userData?.usdExcludeFromBounds) return;
+      if (typeof entry.getBoundingBox === "function") {
+        const entryBounds = entry.getBoundingBox();
+        if (entryBounds && !entryBounds.isEmpty()) {
+          box.union(entryBounds.clone().applyMatrix4(entry.matrixWorld));
+        }
+        return;
+      }
+      if (entry.isInstancedMesh) {
+        entry.computeBoundingBox?.();
+        if (entry.boundingBox && !entry.boundingBox.isEmpty()) {
+          box.union(entry.boundingBox.clone().applyMatrix4(entry.matrixWorld));
+        }
+        return;
+      }
+      const geometry = entry.geometry;
+      if (!geometry) return;
+      geometry.computeBoundingBox?.();
+      if (geometry.boundingBox && !geometry.boundingBox.isEmpty()) {
+        box.union(geometry.boundingBox.clone().applyMatrix4(entry.matrixWorld));
+      }
+    });
   }
 
   box.getSize(size);

@@ -63,6 +63,7 @@ served package paths.
         "imports": {
           "three": "/vendor/three/build/three.module.js",
           "three/addons/": "/vendor/three/examples/jsm/",
+          "@sparkjsdev/spark": "/vendor/@sparkjsdev/spark/dist/spark.module.js",
           "@needle-tools/materialx": "/vendor/@needle-tools/materialx/index.js",
           "@needle-tools/usd": "/vendor/@needle-tools/usd/src/index.js",
           "@needle-tools/usd/three": "/vendor/@needle-tools/usd/src/create.three.js"
@@ -86,6 +87,7 @@ served package paths.
       const handle = await createThreeHydra({
         USD: usd,
         scene,
+        renderer,
         url: "./model.usdz"
       });
       await handle.ready();
@@ -146,6 +148,7 @@ served package paths.
       const handle = await createThreeHydra({
         USD: usd,
         scene,
+        renderer,
         url: "./model.usdz"
       });
       await handle.ready();
@@ -164,6 +167,20 @@ served package paths.
 
 For Vite projects, add the `needleUSD()` plugin shown above so dev serving uses
 the required COOP/COEP headers.
+
+### Gaussian Splats
+
+OpenUSD `UsdVolParticleField3DGaussianSplat` prims are rendered through Spark.
+Install Spark alongside Three.js 0.180 or newer and pass the host renderer to
+`createThreeHydra` as shown above:
+
+```sh
+npm install @sparkjsdev/spark@^2.1.0 three@^0.185.0
+```
+
+Spark is an optional peer dependency; scenes without `particleField` prims do
+not load it. Needle Engine 6 already includes Spark, and the USD plugin passes
+Needle's renderer into the same shared Hydra integration.
 
 ### Needle Engine With Import Map
 

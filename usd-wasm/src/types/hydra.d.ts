@@ -1,4 +1,4 @@
-import { Object3D, Texture } from 'three';
+import { Object3D, Texture, WebGLRenderer } from 'three';
 import { HdWebSyncDriver, USD } from './bindings';
 
 export class hydraDelegate { }
@@ -19,7 +19,10 @@ export type threeJsRenderDelegateConfig = {
     driver: () => HdWebSyncDriver,
     USD?: USD,
     usdRoot: Object3D,
+    renderScene?: Object3D,
     scenePrimitiveRoot?: Object3D,
+    renderer?: WebGLRenderer,
+    requestRender?: () => void,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,
     showLightHelpers?: boolean,

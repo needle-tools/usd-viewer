@@ -127,6 +127,8 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 debug,
                 USD: usd,
                 scene: this.comp.root,
+                renderScene: this.comp.context.scene,
+                renderer: this.comp.context.renderer,
                 url: url,
                 files: files,
                 autoPlay: opts.autoPlay === true,

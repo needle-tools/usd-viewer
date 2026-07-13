@@ -36,6 +36,7 @@ const {
   PointLight,
   PointLightHelper,
   MathUtils,
+  Group,
 } = THREE;
 
 const debugTextures = false;
@@ -46,6 +47,10 @@ const disableTextures = false;
 const disableMaterials = false;
 
 let materialXModulePromise = null;
+let sparkModulePromise = null;
+let mikkTSpaceTangentsPromise = null;
+const generatedTangentStates = new WeakMap();
+const sparkRendererRecords = new WeakMap();
 
 function hydraTimingEnabled() {
   if (typeof location === "undefined") return false;
@@ -70,6 +75,11 @@ async function getMaterialXModule() {
     MaterialXMaterial: module.MaterialXMaterial,
   }));
   return materialXModulePromise;
+}
+
+async function getSparkModule() {
+  sparkModulePromise ??= import('@sparkjsdev/spark');
+  return sparkModulePromise;
 }
 
 function disposeTexture(texture, disposed = new Set()) {
@@ -107,38 +117,72 @@ function disposeObjectResources(object) {
   object.parent?.remove(object);
 }
 
-function prepareMaterialXMaterialForGeometry(material) {
-  if (!material || typeof material.onBeforeRender !== 'function') return material;
-  if (material.userData?.usdHydraMaterialXGeometryGuard) return material;
-  if (!material.isMaterialXMaterial && material.constructor?.name !== 'MaterialXMaterial') return material;
+async function getMikkTSpaceTangents() {
+  mikkTSpaceTangentsPromise ??= Promise.all([
+    import('three/addons/utils/BufferGeometryUtils.js'),
+    import('three/addons/libs/mikktspace.module.js'),
+  ]).then(async ([utils, MikkTSpace]) => {
+    await MikkTSpace.ready;
+    return { computeMikkTSpaceTangents: utils.computeMikkTSpaceTangents, MikkTSpace };
+  });
+  return mikkTSpaceTangentsPromise;
+}
 
-  material.userData ??= {};
-  material.userData.usdHydraMaterialXGeometryGuard = true;
-  const originalOnBeforeRender = material.onBeforeRender.bind(material);
-  material.onBeforeRender = (renderer, scene, camera, geometry, object, group) => {
-    const needsTangents = material._needsTangents && !geometry?.attributes?.tangent;
-    const canGenerateTangents = geometry?.attributes?.position && geometry?.attributes?.uv;
-    const hasHydraNormals = geometry?.attributes?.normal;
-    if (needsTangents && !hasHydraNormals) {
-      material.needsUpdate = true;
-      return;
-    }
-    if (needsTangents && !canGenerateTangents) {
-      if (debugMaterials && !material._missingTangentsWarned) {
-        material._missingTangentsWarned = true;
-        console.warn(`[MaterialX] Tangents are required for this material (${material.name}) but could not be generated for the geometry.`);
+function ensureMaterialXGeometryTangents(geometry) {
+  let state = generatedTangentStates.get(geometry);
+  if (!state) {
+    state = { requested: false, promise: null };
+    generatedTangentStates.set(geometry, state);
+  }
+  state.requested = true;
+  if (state.promise) return state.promise;
+
+  state.promise = (async () => {
+    const { computeMikkTSpaceTangents, MikkTSpace } = await getMikkTSpaceTangents();
+    let generated = false;
+    do {
+      state.requested = false;
+      const position = geometry.getAttribute('position');
+      const normal = geometry.getAttribute('normal');
+      const uv = geometry.getAttribute('uv');
+      const tangent = geometry.getAttribute('tangent');
+      if (!position || !normal || !uv || normal.count !== position.count || uv.count !== position.count) {
+        continue;
       }
-      const previousGenerateTangents = material.generateTangents;
-      material.generateTangents = false;
-      try {
-        return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
-      } finally {
-        material.generateTangents = previousGenerateTangents;
+      if (tangent?.count === position.count) {
+        generated = true;
+        continue;
       }
-    }
-    return originalOnBeforeRender(renderer, scene, camera, geometry, object, group);
-  };
-  return material;
+
+      computeMikkTSpaceTangents(geometry, MikkTSpace);
+      const generatedTangents = geometry.getAttribute('tangent');
+      if (generatedTangents?.count === position.count) {
+        generatedTangents.needsUpdate = true;
+        geometry.userData.usdHydraGeneratedTangents = true;
+        generated = true;
+      }
+    } while (state.requested);
+    return generated;
+  })().catch(error => {
+    console.warn('[MaterialX] Failed to generate MikkTSpace tangents for Hydra geometry.', error);
+    return false;
+  }).finally(() => {
+    state.promise = null;
+  });
+  return state.promise;
+}
+
+function prepareMaterialXMaterialForGeometry(material, geometry) {
+  if (!material || !geometry) return null;
+  if (!material.isMaterialXMaterial && material.constructor?.name !== 'MaterialXMaterial') return null;
+
+  // Hydra readiness includes tangent generation, so do not also start the
+  // MaterialX material's lazy first-render path for the same geometry.
+  material.generateTangents = false;
+  if (!material._needsTangents) return null;
+  return ensureMaterialXGeometryTangents(geometry).then(generated => {
+    if (generated) material.needsUpdate = true;
+  });
 }
 
 function isFiniteArray(values, dimension = 3) {
@@ -711,6 +755,263 @@ class HydraScenePrimitive {
   }
 }
 
+const SH_C0 = 0.28209479177387814;
+
+function copyFiniteFloatArray(values, label) {
+  const result = Float32Array.from(values || []);
+  for (let i = 0; i < result.length; i++) {
+    if (!Number.isFinite(result[i])) {
+      throw new Error(`${label} contains a non-finite value at index ${i}`);
+    }
+  }
+  return result;
+}
+
+function normalizeOptionalParticleArray(values, expected) {
+  if (values.length < expected) return new Float32Array();
+  return values.length === expected ? values : values.slice(0, expected);
+}
+
+function createSparkExtSplats(data, spark) {
+  const count = data.positions.length / 3;
+  const coefficientsPerSplat = (data.degree + 1) ** 2;
+  const paddedCount = Math.ceil(count / spark.defines.SPLAT_TEX_WIDTH) * spark.defines.SPLAT_TEX_WIDTH;
+  const extArrays = [
+    new Uint32Array(paddedCount * 4),
+    new Uint32Array(paddedCount * 4),
+  ];
+  const extra = {};
+  if (data.degree >= 1) extra.sh1 = new Uint32Array(paddedCount * 4);
+  if (data.degree >= 2) extra.sh2 = new Uint32Array(paddedCount * 4);
+  if (data.degree >= 3) {
+    extra.sh3a = new Uint32Array(paddedCount * 4);
+    extra.sh3b = new Uint32Array(paddedCount * 4);
+  }
+
+  const sh1 = new Float32Array(9);
+  const sh2 = new Float32Array(15);
+  const sh3 = new Float32Array(21);
+  for (let i = 0; i < count; i++) {
+    const p = i * 3;
+    const q = i * 4;
+    const coefficientBase = i * coefficientsPerSplat * 3;
+    spark.utils.encodeExtSplat(
+      extArrays,
+      i,
+      data.positions[p], data.positions[p + 1], data.positions[p + 2],
+      data.scales.length ? data.scales[p] : 1,
+      data.scales.length ? data.scales[p + 1] : 1,
+      data.scales.length ? data.scales[p + 2] : 1,
+      data.orientations.length ? data.orientations[q] : 0,
+      data.orientations.length ? data.orientations[q + 1] : 0,
+      data.orientations.length ? data.orientations[q + 2] : 0,
+      data.orientations.length ? data.orientations[q + 3] : 1,
+      data.opacities.length ? data.opacities[i] : 1,
+      0.5 + SH_C0 * data.coefficients[coefficientBase],
+      0.5 + SH_C0 * data.coefficients[coefficientBase + 1],
+      0.5 + SH_C0 * data.coefficients[coefficientBase + 2],
+    );
+
+    if (data.degree >= 1) {
+      sh1.set(data.coefficients.subarray(coefficientBase + 3, coefficientBase + 12));
+      if (data.degree === 1) {
+        spark.utils.encodeExtSh1Rgb(extra.sh1, i, sh1);
+      }
+    }
+    if (data.degree >= 2) {
+      sh2.set(data.coefficients.subarray(coefficientBase + 12, coefficientBase + 27));
+      spark.utils.encodeExtSh12Rgb(extra.sh1, extra.sh2, i, sh1, sh2);
+    }
+    if (data.degree >= 3) {
+      sh3.set(data.coefficients.subarray(coefficientBase + 27, coefficientBase + 48));
+      spark.utils.encodeExt3Rgb(extra.sh3a, extra.sh3b, i, sh3);
+    }
+  }
+
+  return new spark.ExtSplats({ extArrays, numSplats: count, extra });
+}
+
+class HydraParticleField {
+  constructor(id, hydraInterface) {
+    this._id = id;
+    this._interface = hydraInterface;
+    this._root = new Group();
+    this._root.name = primNameFromPath(id, 'ParticleField');
+    this._root.userData.usdPath = id;
+    this._root.userData.usdTypeName = 'ParticleField3DGaussianSplat';
+    this._root.visible = false;
+    this._interface.config.usdRoot.add(this._root);
+    this._data = null;
+    this._transform = new Matrix4();
+    this._instanceTransforms = [];
+    this._meshes = [];
+    this._visible = false;
+    this._renderTag = 'geometry';
+    this._revision = 0;
+    this._appliedRevision = -1;
+    this._scheduledUpdate = null;
+    this._disposed = false;
+  }
+
+  setParticleFieldData(positions, orientations, scales, opacities, degree,
+    coefficients, projectionModeHint, sortingModeHint) {
+    const positionValues = copyFiniteFloatArray(positions, 'particleField.positions');
+    if (positionValues.length % 3 !== 0) {
+      throw new Error(`particleField.positions has ${positionValues.length} values; expected vec3 elements`);
+    }
+    const count = positionValues.length / 3;
+    const normalizedDegree = Number(degree);
+    if (!Number.isInteger(normalizedDegree) || normalizedDegree < 0 || normalizedDegree > 3) {
+      throw new Error(`Spark supports particleField spherical harmonics degrees 0 through 3; received ${degree}`);
+    }
+
+    const orientationValues = normalizeOptionalParticleArray(
+      copyFiniteFloatArray(orientations, 'particleField.orientations'), count * 4);
+    const scaleValues = normalizeOptionalParticleArray(
+      copyFiniteFloatArray(scales, 'particleField.scales'), count * 3);
+    const opacityValues = normalizeOptionalParticleArray(
+      copyFiniteFloatArray(opacities, 'particleField.opacities'), count);
+    let coefficientValues = copyFiniteFloatArray(
+      coefficients, 'particleField.radiance:sphericalHarmonicsCoefficients');
+    const expectedCoefficients = count * ((normalizedDegree + 1) ** 2) * 3;
+    const effectiveDegree = coefficientValues.length >= expectedCoefficients ? normalizedDegree : 0;
+    coefficientValues = effectiveDegree === normalizedDegree
+      ? coefficientValues.slice(0, expectedCoefficients)
+      : new Float32Array(count * 3);
+
+    this._data = {
+      positions: positionValues,
+      orientations: orientationValues,
+      scales: scaleValues,
+      opacities: opacityValues,
+      degree: effectiveDegree,
+      coefficients: coefficientValues,
+      projectionModeHint: String(projectionModeHint || 'perspective'),
+      sortingModeHint: String(sortingModeHint || 'zDepth'),
+    };
+    this._revision++;
+    this._scheduleUpdate();
+  }
+
+  setTransform(matrix) {
+    this._transform.set(...Array.from(matrix).slice(0, 16));
+    this._transform.transpose();
+    this._revision++;
+    this._scheduleUpdate();
+  }
+
+  setInstanceTransforms(matrices, count = 0) {
+    const instanceCount = Number(count) || 0;
+    this._instanceTransforms = [];
+    for (let i = 0; i < instanceCount; i++) {
+      const matrix = new Matrix4();
+      matrix.set(...Array.from(matrices.slice(i * 16, i * 16 + 16)));
+      matrix.transpose();
+      this._instanceTransforms.push(matrix);
+    }
+    this._revision++;
+    this._scheduleUpdate();
+  }
+
+  setVisibilityState(visible, renderTag = 'geometry') {
+    this._visible = Boolean(visible);
+    this._renderTag = String(renderTag || 'geometry');
+    this._root.visible = this._visible && this._renderTag !== 'hidden';
+  }
+
+  _scheduleUpdate() {
+    if (this._scheduledUpdate || this._disposed) return;
+    const update = Promise.resolve().then(() => this._rebuild());
+    this._scheduledUpdate = update;
+    this._interface.trackRprimUpdate(update);
+    const finish = (failed) => {
+      if (this._scheduledUpdate !== update) return;
+      this._scheduledUpdate = null;
+      if (failed) this._appliedRevision = this._revision;
+      if (!this._disposed && this._revision !== this._appliedRevision) {
+        this._scheduleUpdate();
+      }
+    };
+    update.then(() => finish(false), () => finish(true));
+  }
+
+  async _rebuild() {
+    const revision = this._revision;
+    const data = this._data;
+    if (!data || this._disposed) {
+      this._appliedRevision = revision;
+      return;
+    }
+
+    if (data.positions.length === 0) {
+      for (const mesh of this._meshes) {
+        mesh.parent?.remove(mesh);
+        mesh.dispose();
+      }
+      this._meshes.length = 0;
+      this._appliedRevision = revision;
+      return;
+    }
+
+    const spark = await getSparkModule();
+    const renderer = this._interface.ensureSparkRenderer(spark, data.sortingModeHint);
+    if (data.projectionModeHint !== 'perspective') {
+      this._interface.warnUnsupportedParticleProjection(data.projectionModeHint, this._id);
+    }
+    renderer.sortRadial = data.sortingModeHint !== 'zDepth';
+
+    const transforms = this._instanceTransforms.length
+      ? this._instanceTransforms
+      : [this._transform];
+    const candidates = transforms.map((transform, index) => {
+      const mesh = new spark.SplatMesh({ extSplats: createSparkExtSplats(data, spark) });
+      mesh.name = `${this._root.name}${transforms.length > 1 ? `_instance_${index}` : ''}`;
+      mesh.userData.usdPath = this._id;
+      mesh.userData.usdTypeName = 'ParticleField3DGaussianSplat';
+      mesh.matrix.copy(transform);
+      mesh.matrixAutoUpdate = false;
+      mesh.visible = false;
+      return mesh;
+    });
+    await Promise.all(candidates.map(mesh => mesh.initialized));
+
+    if (this._disposed || revision !== this._revision) {
+      for (const mesh of candidates) mesh.dispose();
+      return;
+    }
+
+    for (const mesh of this._meshes) {
+      mesh.parent?.remove(mesh);
+      mesh.dispose();
+    }
+    this._meshes = candidates;
+    for (const mesh of candidates) {
+      mesh.visible = true;
+      this._root.add(mesh);
+    }
+    this._appliedRevision = revision;
+    this._root.visible = this._visible && this._renderTag !== 'hidden';
+  }
+
+  _hasRenderableGeometry() {
+    return this._meshes.length > 0;
+  }
+
+  commit() {
+  }
+
+  dispose() {
+    this._disposed = true;
+    this._revision++;
+    for (const mesh of this._meshes) {
+      mesh.parent?.remove(mesh);
+      mesh.dispose();
+    }
+    this._meshes.length = 0;
+    this._root.parent?.remove(this._root);
+  }
+}
+
 class HydraMesh {
   /**
    * @param {string} id
@@ -944,6 +1245,7 @@ class HydraMesh {
   updateIndices(indices) {
     return timeHydraUpdate(`Hydra updateIndices ${this.usdPath}`, () => {
       if (debugMeshes) console.log("updateIndices", indices);
+      this._invalidateGeneratedTangents();
       this._indices = copyIndexArray(indices);
       if (!this._indices) {
         this._geometry.deleteAttribute('position');
@@ -1160,6 +1462,13 @@ class HydraMesh {
     };
     mark(this._mesh?.material);
     mark(this._instancedMesh?.material);
+    this._interface.prepareMeshMaterialGeometry(this._mesh);
+  }
+
+  _invalidateGeneratedTangents() {
+    if (!this._geometry.userData.usdHydraGeneratedTangents) return;
+    this._geometry.deleteAttribute('tangent');
+    delete this._geometry.userData.usdHydraGeneratedTangents;
   }
 
   setCullStyle(doubleSided, cullStyle) {
@@ -1179,6 +1488,7 @@ class HydraMesh {
    */
   updateNormals(normals) {
     return timeHydraUpdate(`Hydra updateNormals ${this.usdPath}`, () => {
+      this._invalidateGeneratedTangents();
       this._hasAuthoredNormals = false;
       this._orderedNormals = undefined;
       this._constantNormal = undefined;
@@ -1189,6 +1499,7 @@ class HydraMesh {
 
   updateOrderedNormals(normals) {
     return timeHydraUpdate(`Hydra updateOrderedNormals ${this.usdPath}`, () => {
+      this._invalidateGeneratedTangents();
       this._hasAuthoredNormals = false;
       this._indexedNormals = undefined;
       this._constantNormal = undefined;
@@ -1237,6 +1548,7 @@ class HydraMesh {
   }
 
   setNormals(data, interpolation) {
+    this._invalidateGeneratedTangents();
     this._hasAuthoredNormals = true;
     this._constantNormal = undefined;
 
@@ -1263,6 +1575,7 @@ class HydraMesh {
   }
 
   setTangents(data, dimension, interpolation) {
+    delete this._geometry.userData.usdHydraGeneratedTangents;
     this._tangentDimension = Math.max(1, Number(dimension) || 4);
     this._tangentInterpolation = interpolation;
     if (interpolation === 'facevarying') {
@@ -1367,6 +1680,7 @@ class HydraMesh {
 
   setUV(data, dimension, interpolation) {
     // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
+    this._invalidateGeneratedTangents();
     this._uvs = null;
 
     if (interpolation === 'facevarying') {
@@ -1380,6 +1694,7 @@ class HydraMesh {
 
     if (this._geometry.hasAttribute('uv'))
       this._geometry.attributes.uv2 = this._geometry.attributes.uv;
+    this._interface.prepareMeshMaterialGeometry(this._mesh);
   }
 
   setGenericPrimvar(name, data, dimension, interpolation) {
@@ -1445,6 +1760,7 @@ class HydraMesh {
 
   updatePoints(points) {
     return timeHydraUpdate(`Hydra updatePoints ${this.usdPath}`, () => {
+      this._invalidateGeneratedTangents();
       this._points = Float32Array.from(points);
       this.updateOrder(this._points, 'position');
       this._applyNormalStateForGeometry();
@@ -1587,24 +1903,27 @@ class HydraMaterial {
 
   _applyMaterialToMesh(mesh, materialIndex) {
     const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
-    const material = prepareMaterialXMaterialForGeometry(typeof applyMaterialSide === 'function'
+    const material = typeof applyMaterialSide === 'function'
       ? applyMaterialSide(this._material, this)
-      : this._material);
+      : this._material;
 
     if (materialIndex === null || materialIndex === undefined) {
       mesh.material = material;
       this._setMeshMaterialPending(mesh, false);
+      this._interface.prepareMeshMaterialGeometry(mesh);
       return;
     }
 
     if (Array.isArray(mesh.material)) {
       mesh.material[materialIndex] = material;
       this._setMeshMaterialPending(mesh, false);
+      this._interface.prepareMeshMaterialGeometry(mesh);
       return;
     }
 
     mesh.material = material;
     this._setMeshMaterialPending(mesh, false);
+    this._interface.prepareMeshMaterialGeometry(mesh);
   }
 
   _applyMaterialToAssignedMeshes() {
@@ -2352,7 +2671,12 @@ export class ThreeRenderDelegateInterface {
     this.hydraDrawDepth = 0;
     this.scenePrimitives = {};
     this.pendingMaterialUpdates = new Set();
+    this.pendingRprimUpdates = new Set();
     this.pendingMaterialAssignments = new Map();
+    this.sparkRenderer = null;
+    this.sparkRendererRecord = null;
+    this.particleSortingMode = null;
+    this.unsupportedParticleProjectionWarnings = new Set();
     this.diagnostics = {
       materialSPrims: 0,
       sceneSPrims: 0,
@@ -2366,6 +2690,7 @@ export class ThreeRenderDelegateInterface {
       materialXCreateFailures: 0,
       materialIds: [],
       scenePrimitiveIds: [],
+      particleFields: 0,
     };
   }
 
@@ -2374,10 +2699,76 @@ export class ThreeRenderDelegateInterface {
     promise.finally(() => this.pendingMaterialUpdates.delete(promise));
   }
 
+  prepareMeshMaterialGeometry(mesh) {
+    if (!mesh?.geometry) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const material of materials) {
+      const promise = prepareMaterialXMaterialForGeometry(material, mesh.geometry);
+      if (promise) this.trackMaterialUpdate(promise);
+    }
+  }
+
   async waitForMaterialsReady() {
     while (this.pendingMaterialUpdates.size > 0) {
       await Promise.allSettled([...this.pendingMaterialUpdates]);
     }
+  }
+
+  trackRprimUpdate(promise) {
+    this.pendingRprimUpdates.add(promise);
+    const remove = () => this.pendingRprimUpdates.delete(promise);
+    promise.then(remove, remove);
+  }
+
+  async waitForRprimsReady() {
+    while (this.pendingRprimUpdates.size > 0) {
+      await Promise.all([...this.pendingRprimUpdates]);
+    }
+  }
+
+  ensureSparkRenderer(spark, sortingModeHint) {
+    if (!this.config.renderer?.isWebGLRenderer) {
+      throw new Error('Rendering a USD particleField requires createThreeHydra({ renderer }) with the host THREE.WebGLRenderer');
+    }
+    if (!this.sparkRenderer) {
+      const renderScene = this.config.renderScene || this.config.usdRoot;
+      let record = sparkRendererRecords.get(renderScene);
+      if (!record) {
+        let renderer = null;
+        renderScene.traverse?.(object => {
+          if (!renderer && object instanceof spark.SparkRenderer) renderer = object;
+        });
+        const owned = !renderer;
+        renderer ??= new spark.SparkRenderer({
+          renderer: this.config.renderer,
+          onDirty: this.config.requestRender,
+        });
+        if (owned) {
+          renderer.name = '__usd_spark_renderer';
+          renderer.userData.usdParticleFieldRenderer = true;
+          renderer.userData.usdExcludeFromBounds = true;
+          renderScene.add(renderer);
+        }
+        record = { renderer, owned, references: 0 };
+        sparkRendererRecords.set(renderScene, record);
+      }
+      record.references++;
+      this.sparkRendererRecord = record;
+      this.sparkRenderer = record.renderer;
+    }
+    const sortingMode = String(sortingModeHint || 'zDepth');
+    if (this.particleSortingMode && this.particleSortingMode !== sortingMode) {
+      console.warn(`USD particleFields use different sortingModeHint values (${this.particleSortingMode}, ${sortingMode}); Spark applies one sorting mode per renderer`);
+    }
+    this.particleSortingMode = sortingMode;
+    return this.sparkRenderer;
+  }
+
+  warnUnsupportedParticleProjection(projectionModeHint, id) {
+    const key = `${projectionModeHint}:${id}`;
+    if (this.unsupportedParticleProjectionWarnings.has(key)) return;
+    this.unsupportedParticleProjectionWarnings.add(key);
+    console.warn(`USD particleField ${id} requests projectionModeHint=${projectionModeHint}; Spark currently renders perspective projection`);
   }
 
   getDiagnostics() {
@@ -2399,8 +2790,11 @@ export class ThreeRenderDelegateInterface {
       delete this.meshes[id];
     }
     this._cancelRetiredRPrimRelease(id);
-    let mesh = new HydraMesh(id, this);
+    const mesh = typeId === 'particleField'
+      ? new HydraParticleField(id, this)
+      : new HydraMesh(id, this);
     this.meshes[id] = mesh;
+    if (typeId === 'particleField') this.diagnostics.particleFields++;
     return mesh;
   }
 
@@ -2530,8 +2924,25 @@ export class ThreeRenderDelegateInterface {
     for (const id of Object.keys(this.scenePrimitives)) {
       this.destroySPrim(id);
     }
+    if (this.sparkRenderer) {
+      const renderScene = this.config.renderScene || this.config.usdRoot;
+      const record = this.sparkRendererRecord;
+      if (record) {
+        record.references--;
+        if (record.references === 0) {
+          if (record.owned) {
+            record.renderer.parent?.remove(record.renderer);
+            record.renderer.dispose();
+          }
+          sparkRendererRecords.delete(renderScene);
+        }
+      }
+      this.sparkRenderer = null;
+      this.sparkRendererRecord = null;
+    }
     this.registry.dispose();
     this.pendingMaterialUpdates.clear();
+    this.pendingRprimUpdates.clear();
     this.pendingMaterialAssignments.clear();
   }
 

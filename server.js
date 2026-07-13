@@ -284,8 +284,15 @@ fastify.register(require('@fastify/static'), {
 });
 
 fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@needle-tools/engine/node_modules/three'),
+  root: path.join(__dirname, 'node_modules/three'),
   prefix: '/needle-three',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/@sparkjsdev/spark'),
+  prefix: '/spark',
   setHeaders,
   decorateReply: false,
 });
@@ -300,6 +307,13 @@ fastify.register(require('@fastify/static'), {
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'usd-wasm/tests/fixtures'),
   prefix: '/test-fixtures',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'usd-wasm/tests/data'),
+  prefix: '/test-data',
   setHeaders,
   decorateReply: false,
 });

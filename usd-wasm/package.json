@@ -50,10 +50,14 @@
   },
   "peerDependencies": {
     "@needle-tools/engine": ">=5.0.0",
+    "@sparkjsdev/spark": ">=2.1.0",
     "three": ">=0.160.0"
   },
   "peerDependenciesMeta": {
     "@needle-tools/engine": {
+      "optional": true
+    },
+    "@sparkjsdev/spark": {
       "optional": true
     }
   },
@@ -68,10 +72,12 @@
     "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
   },
   "devDependencies": {
-    "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
+    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@sparkjsdev/spark": "2.1.0",
     "@needle-tools/three-test-matrix": "^0.2.0",
     "@playwright/test": "^1.60.0",
     "@types/three": "^0.164.1",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.1",
     "vite": "^8.1.0"
   },
   "publishConfig": {
@@ -79,9 +85,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.7.3"
+    "@needle-tools/materialx": "1.7.4"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.3"
+    "@needle-tools/materialx": "1.7.4",
+    "three": "$three"
   }
 }

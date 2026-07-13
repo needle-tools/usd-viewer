@@ -18,6 +18,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
 - Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the modern OpenUSD 26.05 wasm bundle.
+- Render OpenUSD 26.05 Gaussian particle fields through the optional Spark integration.
 - Inspect stages with usdview-style stage, prim, property, layer-stack, composition, notices, and timeline UI in the development viewer.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 

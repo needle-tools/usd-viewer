@@ -286,7 +286,10 @@ export async function createThreeHydra(config) {
      */
     const delegateConfig = {
         usdRoot: config.scene,
+        renderScene: config.renderScene,
         scenePrimitiveRoot,
+        renderer: config.renderer,
+        requestRender: config.requestRender,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
         showCameraHelpers: config.showCameraHelpers,
@@ -453,9 +456,11 @@ export async function createThreeHydra(config) {
 
     /** Draw once, after stage metadata has been applied to the root scene. */
     draw();
-    const readyPromise = config.waitForMaterials
-        ? waitForDrawCompletion().then(() => renderInterface.waitForMaterialsReady())
-        : waitForDrawCompletion();
+    const readyPromise = waitForDrawCompletion()
+        .then(() => renderInterface.waitForRprimsReady())
+        .then(() => config.waitForMaterials
+            ? renderInterface.waitForMaterialsReady()
+            : undefined);
 
     let time = 0;
     let currentTimeCode = stageStartTimeCode;

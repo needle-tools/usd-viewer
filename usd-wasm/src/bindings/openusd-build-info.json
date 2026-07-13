@@ -3,8 +3,8 @@
   "openusd": {
     "version": "0.26.5",
     "pxrVersion": 2605,
-    "gitSha": "65a23f01ef09a79d375a7fad4c31ad8742eab9eb",
-    "gitDirty": true
+    "gitSha": "06eb281b7bbac15317a0e87394807d64cacecdb6",
+    "gitDirty": false
   },
   "toolchain": {
     "emscripten": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23 (7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed)",

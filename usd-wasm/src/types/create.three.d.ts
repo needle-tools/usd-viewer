@@ -1,4 +1,4 @@
-import { Object3D } from "three"
+import { Object3D, WebGLRenderer } from "three"
 import { HdWebSyncDriver, USD, USDStage } from ".."
 
 export declare type HydraFile = File & { path: string };
@@ -36,6 +36,18 @@ export declare type createThreeHydraConfig = {
      * The scene to be loaded as the root of the USD stage.
      */
     scene: Object3D,
+
+    /** Host scene rendered by the WebGLRenderer. Defaults to scene. */
+    renderScene?: Object3D,
+
+    /**
+     * Host renderer used by integrations that need access outside the normal
+     * Object3D render path, including Gaussian splats.
+     */
+    renderer?: WebGLRenderer,
+
+    /** Called when an asynchronous render integration needs another frame. */
+    requestRender?: () => void,
 
     /**
      * Files to be loaded into the virtual file system.

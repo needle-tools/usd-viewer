@@ -4,6 +4,18 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Added optional Spark rendering for OpenUSD `ParticleField3DGaussianSplat` prims in both the plain three.js and Needle Engine integrations.
+
+### Changed
+- Updated the development viewer to Needle Engine 6 and MaterialX 1.7.4.
+- Included asynchronous particle-field creation and MaterialX tangent generation in the existing loader readiness barriers.
+
+### Fixed
+- Applied OpenUSD particle-field array truncation and default-value rules before creating Spark splat buffers.
+- Reused a single scene-level Spark renderer across USD handles and existing Needle Engine splat integrations.
+
 ## [1.1.1] - 2026-07-09
 ### Changed
 - Updated the MaterialX runtime dependency to `@needle-tools/materialx@1.7.3`.
