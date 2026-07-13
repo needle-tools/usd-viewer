@@ -22,3 +22,14 @@ OpenUSD 26.05 validates and opens this stage. Storm currently displays only its
 extent because Storm does not implement the Hydra `particleField` Rprim; that is
 not evidence of an invalid fixture. A particle-field-capable render delegate is
 required to render the splats.
+
+Verify the native hdPrman path with the x86_64 OpenUSD reference build:
+
+```sh
+./scripts/verify-native-prman-splats.sh
+```
+
+The command validates the stage, renders it through `HdPrmanLoaderRendererPlugin`,
+rejects renderer diagnostics, and checks the resulting foreground and color data.
+hdPrman uses OpenUSD's particle-field-to-points conversion, including the authored
+positions, scale-derived Gaussian support widths, and spherical-harmonics color.
