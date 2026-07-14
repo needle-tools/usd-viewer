@@ -535,6 +535,14 @@ body.drag-active .dropzone-title {
     background: var(--color-surface);
 }
 
+/* The dots icon is the button's only content, so strip the inline-icon spacing
+   meant for icons that sit before text — otherwise the margin-right pushes the
+   dots left of the circle's centre. */
+.header-overflow-button .inline-icon {
+    margin: 0;
+    vertical-align: 0;
+}
+
 .header-overflow-menu {
     position: absolute;
     top: calc(100% + 8px);
@@ -545,14 +553,32 @@ body.drag-active .dropzone-title {
     border-radius: 16px;
     background: var(--color-surface);
     box-shadow: 0 12px 30px rgba(26, 26, 26, 0.16);
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 2px;
     z-index: 1001;
+    /* Fade + lift in/out, matching the dialogs (see .dialog-overlay). The menu
+       stays in the DOM; visibility (delayed until the fade-out finishes) removes
+       it from the a11y/hit-test tree once hidden, and pointer-events guards it
+       while transparent. */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top right;
+    transition: opacity 0.18s ease,
+                transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear 0.18s;
+    pointer-events: none;
 }
 
 .header-overflow.menu-open .header-overflow-menu {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.18s ease,
+                transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s;
+    pointer-events: auto;
 }
 
 #container .header-overflow-menu a {
@@ -562,6 +588,12 @@ body.drag-active .dropzone-title {
     display: flex;
     align-items: center;
     gap: 8px;
+    /* rem, not the pill's shrinking em, so menu labels stay readable on phones —
+       sized to match the dialog body text (16px) rather than the compact pill. */
+    font-size: 1rem;
+    & span {
+        font-size: inherit;
+    }
 }
 
 #container .header-overflow-menu a:hover {
@@ -1227,7 +1259,8 @@ body.show-debug-menu .dropdown-menu a.debug-only {
 /* Respect users who prefer reduced motion: show/hide instantly. */
 @media (prefers-reduced-motion: reduce) {
     .dialog-overlay,
-    .dialog-overlay .dialog {
+    .dialog-overlay .dialog,
+    .header-overflow-menu {
         transition: none;
     }
 }
@@ -1651,6 +1684,21 @@ button.cta-primary {
         max-height: calc(100dvh - 72px);
         overflow-y: auto;
         z-index: 1000;
+    }
+    /* Center the overflow popover under the pill on phones instead of anchoring
+       it to the button's right edge (mirrors .dropdown-content above). The extra
+       translateX(-50%) composes with the shared fade/lift transform, so the
+       origin flips to top-center to match. */
+    .header-overflow-menu {
+        position: fixed;
+        top: 54px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%) translateY(-6px) scale(0.97);
+        transform-origin: top center;
+    }
+    .header-overflow.menu-open .header-overflow-menu {
+        transform: translateX(-50%) translateY(0) scale(1);
     }
     .gallery-flyout {
         width: auto;
