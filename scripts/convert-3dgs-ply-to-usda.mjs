@@ -14,8 +14,33 @@ const TYPE_READERS = {
   double: [8, "getFloat64"],
 };
 
+// A 180-degree Z rotation is diagonal in OpenUSD's real SH basis.
+const SH_Z_180_SIGNS = [
+  1,
+  -1, 1, -1,
+  1, -1, 1, -1, 1,
+  -1, 1, -1, 1, -1, 1, -1,
+];
+
+function rotatePositionZ180([x, y, z]) {
+  return [-x, -y, z];
+}
+
+function rotateQuaternionZ180([w, x, y, z]) {
+  // Pre-multiply by the world-space quaternion (0, 0, 0, 1).
+  return [-z, -y, x, w];
+}
+
+function rotateShCoefficientZ180(index, coefficient) {
+  const sign = SH_Z_180_SIGNS[index];
+  if (sign === undefined) {
+    throw new Error(`Unsupported spherical harmonics coefficient index: ${index}`);
+  }
+  return coefficient.map(value => sign * value);
+}
+
 function usage() {
-  console.error("Usage: convert-3dgs-ply-to-usda.mjs input.ply output.usda");
+  console.error("Usage: convert-3dgs-ply-to-usda.mjs [--rotate-z-180] input.ply output.usda");
   process.exit(1);
 }
 
@@ -91,8 +116,13 @@ function ellipsoidRadius(scales, quaternion) {
 }
 
 async function main() {
-  const [inputPath, outputPath] = process.argv.slice(2);
-  if (!inputPath || !outputPath) usage();
+  const args = process.argv.slice(2);
+  const rotateZ180 = args.includes("--rotate-z-180");
+  const positionalArgs = args.filter(arg => arg !== "--rotate-z-180");
+  if (positionalArgs.length !== 2 || args.some(arg => arg.startsWith("--") && arg !== "--rotate-z-180")) {
+    usage();
+  }
+  const [inputPath, outputPath] = positionalArgs;
 
   const input = await readFile(inputPath);
   const bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
@@ -130,9 +160,11 @@ async function main() {
       offset += size;
     }
 
-    const position = [item.x, item.y, item.z];
+    const sourcePosition = [item.x, item.y, item.z];
+    const position = rotateZ180 ? rotatePositionZ180(sourcePosition) : sourcePosition;
     const scale = [Math.exp(item.scale_0), Math.exp(item.scale_1), Math.exp(item.scale_2)];
-    const quaternion = [item.rot_0, item.rot_1, item.rot_2, item.rot_3];
+    const sourceQuaternion = [item.rot_0, item.rot_1, item.rot_2, item.rot_3];
+    const quaternion = rotateZ180 ? rotateQuaternionZ180(sourceQuaternion) : sourceQuaternion;
     const opacity = 1 / (1 + Math.exp(-item.opacity));
     const radius = ellipsoidRadius(scale, quaternion);
     for (let axis = 0; axis < 3; axis++) {
@@ -144,22 +176,31 @@ async function main() {
     orientations.push(formatTuple(quaternion));
     scales.push(formatTuple(scale));
     opacities.push(formatNumber(opacity));
-    coefficients.push(formatTuple([item.f_dc_0, item.f_dc_1, item.f_dc_2]));
+    const dcCoefficient = [item.f_dc_0, item.f_dc_1, item.f_dc_2];
+    coefficients.push(formatTuple(rotateZ180
+      ? rotateShCoefficientZ180(0, dcCoefficient)
+      : dcCoefficient));
     const coefficientsPerChannel = restNames.length / 3;
     for (let coefficient = 0; coefficient < coefficientsPerChannel; coefficient++) {
-      coefficients.push(formatTuple([
+      const shCoefficient = [
         item[`f_rest_${coefficient}`],
         item[`f_rest_${coefficient + coefficientsPerChannel}`],
         item[`f_rest_${coefficient + 2 * coefficientsPerChannel}`],
-      ]));
+      ];
+      coefficients.push(formatTuple(rotateZ180
+        ? rotateShCoefficientZ180(coefficient + 1, shCoefficient)
+        : shCoefficient));
     }
   }
 
   const sourceName = basename(inputPath);
+  const coordinateCorrectionMetadata = rotateZ180
+    ? '\n        string sourceCoordinateCorrection = "rotateZ(180deg), baked into particle data"'
+    : "";
   const usda = `#usda 1.0
 (
     customLayerData = {
-        string sourceAsset = "${sourceName.replaceAll('"', '\\"')}"
+        string sourceAsset = "${sourceName.replaceAll('"', '\\"')}"${coordinateCorrectionMetadata}
     }
     defaultPrim = "Chamaeleon"
     metersPerUnit = 1

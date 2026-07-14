@@ -6,7 +6,7 @@
 Regenerate the text layer before converting it to USDC:
 
 ```sh
-node scripts/convert-3dgs-ply-to-usda.mjs input.ply chamaeleon.usda
+node scripts/convert-3dgs-ply-to-usda.mjs --rotate-z-180 input.ply chamaeleon.usda
 usdcat chamaeleon.usda -o chamaeleon.usdc
 usdchecker chamaeleon.usdc
 ```
@@ -17,6 +17,8 @@ The converter maps the common 3DGS PLY representation to the OpenUSD schema:
 - opacity logits become linear `opacities`
 - PLY quaternions become USD `(real, imaginary)` `quatf` values
 - channel-major `f_rest_*` values become per-particle RGB SH coefficients
+- the capture's 180-degree Z correction is baked into positions, orientations,
+  extent, and all directional spherical-harmonics bands
 
 OpenUSD 26.05 validates and opens this stage. Storm currently displays only its
 extent because Storm does not implement the Hydra `particleField` Rprim; that is
