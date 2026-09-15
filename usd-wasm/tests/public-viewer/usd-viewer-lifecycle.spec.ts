@@ -1486,6 +1486,38 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
+    test('loads dropped binary USD particle fields through the Needle Engine loader', async ({ page }) => {
+        const diagnostics = collectFatalDiagnostics(page);
+        await page.goto('/?viewer=needle');
+        await waitForDropReady(page);
+
+        const drop = await dropFixtureFile(page, {
+            path: '/test-data/gaussian-splats/chamaeleon.usdc',
+            name: 'chamaeleon.usdc',
+            target: 'window',
+            type: 'application/octet-stream',
+        });
+        expect(drop.defaultPrevented).toBe(true);
+
+        const state = await waitForNeedleLoaderMode(page, 'chamaeleon.usdc');
+        expect(state.elementSrc).toBe('chamaeleon.usdc');
+        expect(state.hasHydraHandle).toBe(true);
+
+        const particleField = await page.evaluate(() => {
+            let fields = 0;
+            let splats = 0;
+            window.needleEngineContext?.scene?.traverse?.((object: any) => {
+                if (object.userData?.usdTypeName !== 'ParticleField3DGaussianSplat'
+                    || !object.extSplats) return;
+                fields++;
+                splats += object.extSplats.numSplats;
+            });
+            return { fields, splats };
+        });
+        expect(particleField).toEqual({ fields: 1, splats: 10_000 });
+        expect(diagnostics).toEqual([]);
+    });
+
     test('loads dropped GLB and glTF files through generated USD wrappers', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
 
@@ -3156,9 +3188,10 @@ async function dropFixtureFile(page: Page, options: {
     type?: string;
 }) {
     return await page.evaluate(async ({ path, name, target, type }) => {
-        const response = await fetch(`/test-fixtures/${path}`);
+        const fixtureUrl = path.startsWith('/') ? path : `/test-fixtures/${path}`;
+        const response = await fetch(fixtureUrl);
         if (!response.ok) {
-            throw new Error(`Failed to fetch dropped fixture ${path}: ${response.status} ${response.statusText}`);
+            throw new Error(`Failed to fetch dropped fixture ${fixtureUrl}: ${response.status} ${response.statusText}`);
         }
         const blob = await response.blob();
         const file = new File([blob], name, { type: type || blob.type || 'application/octet-stream' });
