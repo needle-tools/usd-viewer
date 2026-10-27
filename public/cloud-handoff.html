@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Uploading to Needle Cloud…</title>
+  <!-- Privacy-friendly analytics (Rybbit), proxied same-origin via server.js — same as index.html. -->
+  <script src="/api/script.js" data-site-id="6bc313ba3488" defer></script>
+  <!-- NOTE: served WITHOUT cross-origin isolation (server.js only sets COOP/COEP for
+       index.html + the emHd WASM). It must stay non-isolated AND top-level so it can
+       open + postMessage the cloud popup and read the viewer's (un-partitioned) stash. -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800&display=swap" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .nc-wrap {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 24px; box-sizing: border-box;
+    }
+    .nc-card {
+      background: var(--color-surface); border: 1px solid var(--border-subtle);
+      border-radius: 12px; box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+      max-width: 460px; width: 100%; padding: 34px 28px; text-align: center;
+    }
+    .nc-spinner {
+      width: 34px; height: 34px; margin: 0 auto 18px; border-radius: 50%;
+      border: 3px solid var(--border-subtle); border-top-color: var(--color-green-dark);
+      animation: nc-spin 1s linear infinite;
+    }
+    @keyframes nc-spin { to { transform: rotate(360deg); } }
+
+    /* Animated status marks (shown by JS in place of the spinner). */
+    .nc-status-svg {
+      display: none; width: 56px; height: 56px; margin: 0 auto 16px;
+      transform-origin: center;
+      animation: nc-breathe 2.6s ease-in-out 0.9s infinite; /* gentle loop once drawn */
+    }
+    .nc-check-svg .nc-anim-circle, .nc-check-svg .nc-anim-mark { stroke: var(--color-green-dark); }
+    .nc-cross-svg .nc-anim-circle, .nc-cross-svg .nc-anim-mark { stroke: #c0392b; }
+    .nc-anim-circle { stroke-width: 3; stroke-dasharray: 145; stroke-dashoffset: 145; animation: nc-draw 0.5s ease forwards; }
+    .nc-anim-mark { stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: nc-draw 0.35s 0.42s ease forwards; }
+    @keyframes nc-draw { to { stroke-dashoffset: 0; } }
+    @keyframes nc-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    /* Logo inline before the title, vertically centered with the text. */
+    .nc-title {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin: 0 0 10px; font-size: 1.4em; font-weight: 800; color: var(--color-text);
+      text-wrap: balance;
+    }
+    .nc-logo { height: 1.15em; width: auto; display: block; }
+    #status { margin: 0 0 6px; color: var(--color-text-secondary); line-height: 1.55; text-wrap: balance; }
+    /* Alert variant — used for actionable warnings (e.g. blocked pop-ups):
+       bold text on a soft red, rounded banner. Toggled via the .status-alert
+       class in cloud-handoff.js. */
+    #status.status-alert {
+      font-weight: 700;
+      color: #b3261e;
+      background: rgba(179, 38, 30, 0.08);
+      border: 1px solid rgba(179, 38, 30, 0.18);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin: 4px 0 6px;
+    }
+    #detail { margin: 0; font-weight: 600; color: var(--color-text-muted); min-height: 1.2em; } /* muted grey filename */
+    #view-link { display: none; margin-top: 18px; color: var(--color-link); text-decoration: none; font-weight: 600; }
+    #view-link:hover { text-decoration: underline; }
+    /* "Try again" — a real button: USD blue pill, white label, press feedback.
+       JS toggles display to inline-block when shown. */
+    #retry-link {
+      display: none;
+      margin-top: 18px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: var(--color-usd-blue);
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 1px 2px rgba(31, 123, 181, 0.25);
+      transition: background-color 0.15s ease,
+                  transform 0.12s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.15s ease;
+    }
+    /* Gate hover behind real hover devices so tap doesn't leave a stuck state. */
+    @media (hover: hover) and (pointer: fine) {
+      #retry-link:hover {
+        background: var(--color-usd-blue-dark);
+        box-shadow: 0 2px 8px rgba(31, 123, 181, 0.3);
+      }
+    }
+    #retry-link:active { transform: scale(0.97); } /* press feedback */
+    #retry-link:focus-visible { outline: 2px solid var(--color-usd-blue); outline-offset: 2px; }
+    .nc-retry-icon { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 6px; }
+    /* Page footer: back link, muted grey, small. */
+    .nc-footer { margin-top: 28px; }
+    .nc-footer a { color: var(--color-text-muted); text-decoration: none; font-size: 0.8rem; }
+    .nc-footer a:hover { text-decoration: underline; color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+  <div class="nc-wrap">
+    <div class="nc-card">
+      <div class="nc-spinner" id="spinner" aria-hidden="true"></div>
+      <svg id="check-svg" class="nc-status-svg nc-check-svg" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="nc-anim-circle" cx="26" cy="26" r="23" fill="none" />
+        <path class="nc-anim-mark" fill="none" d="M15 27 l7 7 l15 -16" />
+      </svg>
+      <svg id="cross-svg" class="nc-status-svg nc-cross-svg" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="nc-anim-circle" cx="26" cy="26" r="23" fill="none" />
+        <path class="nc-anim-mark" fill="none" d="M18 18 L34 34 M34 18 L18 34" />
+      </svg>
+      <h1 class="nc-title">
+        <img class="nc-logo" src="/usd-logo.png" alt="" />
+        <span id="title">Uploading to Needle Cloud</span>
+      </h1>
+      <p id="status">Preparing your model…</p>
+      <p id="detail"></p>
+      <a id="view-link" href="#" target="_blank" rel="noopener">View on Needle Cloud →</a>
+      <a id="retry-link" href="#"><svg class="nc-retry-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>Try again</a>
+    </div>
+    <div class="nc-footer"><a id="back-link" href="/">← Back to the viewer</a></div>
+  </div>
+  <script type="module" src="/cloud-handoff.js"></script>
+</body>
+</html>

@@ -1,20 +1,32 @@
 {
   "name": "@needle-tools/usd",
-  "version": "0.0.2",
+  "version": "1.1.1",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "require": "./src/index.cjs"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./three": {
+      "types": "./src/types/create.three.d.ts",
+      "import": "./src/create.three.js"
     },
     "./plugins": {
-      "import": "./src/plugins/index.js",
-      "require": "./src/plugins/index.cjs",
-      "types": "./src/types/plugins.d.ts"
+      "types": "./src/types/plugins.d.ts",
+      "import": "./src/plugins/index.js"
+    },
+    "./vite": {
+      "types": "./src/types/vite.d.ts",
+      "import": "./src/vite/index.js"
     }
   },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "needle",
     "usd",
@@ -23,6 +35,7 @@
     "webgl"
   ],
   "homepage": "https://needle.tools",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "author": {
     "name": "Needle",
     "email": "hi@needle.tools",
@@ -36,14 +49,46 @@
     "url": "https://github.com/needle-tools/usd-viewer/issues"
   },
   "peerDependencies": {
+    "@needle-tools/engine": ">=5.0.0",
+    "@sparkjsdev/spark": ">=2.1.0",
     "three": ">=0.160.0"
   },
+  "peerDependenciesMeta": {
+    "@needle-tools/engine": {
+      "optional": true
+    },
+    "@sparkjsdev/spark": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
+    "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
+    "test:bindings": "node --test tests/bindings/*.test.mjs",
+    "test:needle-engine-matrix": "npm run needle-engine-matrix:cache && playwright test -c tests/needle-engine-matrix/playwright.config.ts",
+    "test:public-viewer-lifecycle": "playwright test -c tests/public-viewer/playwright.config.ts",
+    "test:three-matrix": "node scripts/run-three-matrix.mjs",
+    "test:three-matrix:full": "node scripts/run-three-matrix.mjs --full",
+    "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
+  },
   "devDependencies": {
-    "vite": "^5.2.13",
-    "@types/three": "^0.164.1"
+    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@sparkjsdev/spark": "2.1.0",
+    "@needle-tools/three-test-matrix": "^0.2.0",
+    "@playwright/test": "^1.60.0",
+    "@types/three": "^0.164.1",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.1",
+    "vite": "^8.1.0"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@needle-tools/materialx": "1.7.4"
+  },
+  "overrides": {
+    "@needle-tools/materialx": "1.7.4",
+    "three": "$three"
   }
 }

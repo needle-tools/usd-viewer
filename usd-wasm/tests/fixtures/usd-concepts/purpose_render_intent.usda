@@ -1,0 +1,97 @@
+#usda 1.0
+(
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Cube "DefaultPurpose" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 0.45
+        double3 xformOp:translate = (-0.8, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        rel material:binding = </Looks/DefaultMat>
+    }
+
+    def Sphere "RenderPurpose" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double radius = 0.3
+        uniform token purpose = "render"
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        rel material:binding = </Looks/RenderMat>
+    }
+
+    def Cube "ProxyPurpose" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 0.45
+        uniform token purpose = "proxy"
+        double3 xformOp:translate = (0.8, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        rel material:binding = </Looks/ProxyMat>
+    }
+
+    def Cube "GuidePurpose" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 0.45
+        uniform token purpose = "guide"
+        double3 xformOp:translate = (1.6, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        rel material:binding = </Looks/GuideMat>
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "DefaultMat"
+    {
+        token outputs:surface.connect = </Looks/DefaultMat/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.1, 0.55, 0.95)
+            token outputs:surface
+        }
+    }
+
+    def Material "RenderMat"
+    {
+        token outputs:surface.connect = </Looks/RenderMat/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.95, 0.45, 0.15)
+            token outputs:surface
+        }
+    }
+
+    def Material "ProxyMat"
+    {
+        token outputs:surface.connect = </Looks/ProxyMat/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.2, 0.85, 0.2)
+            token outputs:surface
+        }
+    }
+
+    def Material "GuideMat"
+    {
+        token outputs:surface.connect = </Looks/GuideMat/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.95, 0.1, 0.9)
+            token outputs:surface
+        }
+    }
+}

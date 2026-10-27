@@ -2,7 +2,7 @@
 
 /**
  * @param {ArrayBuffer} buffer
- * @returns {"usdz" | "usd" | "usda" | "unknown"}
+ * @returns {"usdz" | "usd" | "usda" | "usdc" | "unknown"}
  */
 export function tryDetermineFileFormat(buffer) {
 
@@ -14,7 +14,7 @@ export function tryDetermineFileFormat(buffer) {
     }
     // USD
     if (bytes[0] == 80 && bytes[1] == 88 && bytes[2] == 82 && bytes[3] == 45 && bytes[4] == 85 && bytes[5] == 83 && bytes[6] == 68 && bytes[7] == 67) {
-        return "usd";
+        return "usdc";
     }
     if (bytes[0] === 35 && bytes[1] === 117 && bytes[2] === 115 && bytes[3] === 100) {
         return "usda";

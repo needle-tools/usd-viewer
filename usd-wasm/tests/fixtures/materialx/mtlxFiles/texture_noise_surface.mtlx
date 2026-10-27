@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<materialx version="1.38">
+  <texcoord name="UV0" type="vector2" />
+  <multiply name="UVScale" type="vector2">
+    <input name="in1" type="vector2" nodename="UV0" />
+    <input name="in2" type="vector2" value="4, 2" />
+  </multiply>
+  <image name="CheckerImage" type="color3">
+    <input name="file" type="filename" value="./textures/checker.png" colorspace="srgb_texture" uniform="true" />
+    <input name="texcoord" type="vector2" nodename="UVScale" />
+  </image>
+  <noise2d name="RoughnessNoise" type="float">
+    <input name="texcoord" type="vector2" nodename="UVScale" />
+    <input name="amplitude" type="float" value="0.45" />
+  </noise2d>
+  <standard_surface name="SR_TextureNoise" type="surfaceshader">
+    <input name="base_color" type="color3" nodename="CheckerImage" />
+    <input name="specular_roughness" type="float" nodename="RoughnessNoise" />
+  </standard_surface>
+  <surfacematerial name="Texture_Noise" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_TextureNoise" />
+  </surfacematerial>
+</materialx>

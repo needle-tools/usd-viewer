@@ -1,0 +1,33 @@
+#usda 1.0
+(
+    defaultPrim = "ParticleFields"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "ParticleFields"
+{
+    def ParticleField3DGaussianSplat "Truncated"
+    {
+        point3f[] positions = [(-1, 0, 0), (1, 0, 0)]
+        quatf[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0)]
+        float3[] scales = [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6), (9, 9, 9)]
+        float[] opacities = [0.25, 0.75, 0]
+        uniform int radiance:sphericalHarmonicsDegree = 0
+        float3[] radiance:sphericalHarmonicsCoefficients = [
+            (0, 0, 0),
+            (0, 0, 0),
+            (10, 10, 10)
+        ]
+    }
+
+    def ParticleField3DGaussianSplat "Defaults"
+    {
+        point3f[] positions = [(0, -1, 0), (0, 1, 0)]
+        quatf[] orientations = [(0, 1, 0, 0)]
+        float3[] scales = [(9, 9, 9)]
+        float[] opacities = [0]
+        uniform int radiance:sphericalHarmonicsDegree = 3
+        float3[] radiance:sphericalHarmonicsCoefficients = [(10, 10, 10)]
+    }
+}

@@ -1,0 +1,188 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+class Mesh "QuadTemplate" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
+{
+    uniform token subdivisionScheme = "none"
+    int[] faceVertexCounts = [4]
+    int[] faceVertexIndices = [0, 1, 2, 3]
+    point3f[] points = [(-0.45, 0, -0.45), (0.45, 0, -0.45), (0.45, 0, 0.45), (-0.45, 0, 0.45)]
+    normal3f[] primvars:normals = [(0, -1, 0)] (
+        interpolation = "constant"
+    )
+    texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+        interpolation = "vertex"
+    )
+}
+
+class "ClassLooks"
+{
+    class Mesh "InheritsYellow" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/InheritsYellow>
+    }
+
+    class Mesh "SpecializesGreen" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/SpecializesGreen>
+    }
+}
+
+def Xform "World"
+{
+    def Xform "Local"
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def Mesh "Shape" (
+            prepend inherits = </QuadTemplate>
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </Looks/LocalRed>
+        }
+    }
+
+    def Xform "Inherits"
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-1.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def Mesh "Shape" (
+            prepend inherits = [</QuadTemplate>, </ClassLooks/InheritsYellow>]
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+        }
+    }
+
+    def Xform "Variants"
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def Mesh "Shape" (
+            prepend inherits = </QuadTemplate>
+            prepend apiSchemas = ["MaterialBindingAPI"]
+            variants = {
+                string look = "orange"
+            }
+            prepend variantSets = "look"
+        )
+        {
+            variantSet "look" = {
+                "orange" {
+                    rel material:binding = </Looks/VariantOrange>
+                }
+            }
+        }
+    }
+
+    def Xform "References" (
+        prepend references = @./liverps_reference.usda@</ReferencedPanel>
+    )
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Xform "Payloads" (
+        payload = @./liverps_payload.usda@</PayloadPanel>
+    )
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def Xform "Specializes"
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2.5, 0, 0.8, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def Mesh "Shape" (
+            prepend inherits = </QuadTemplate>
+            prepend specializes = </ClassLooks/SpecializesGreen>
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+        }
+    }
+
+    def DistantLight "Key"
+    {
+        float inputs:intensity = 420
+        float inputs:angle = 0.4
+        float3 xformOp:rotateXYZ = (-45, 0, 30)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 32
+        float horizontalAperture = 21
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.32, 0.95, 0), (0, -0.95, 0.32, 0), (0, -6.4, 3.0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "LocalRed"
+    {
+        token outputs:surface.connect = </Looks/LocalRed/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (1, 0.05, 0.03)
+            float inputs:roughness = 0.45
+            token outputs:surface
+        }
+    }
+
+    def Material "InheritsYellow"
+    {
+        token outputs:surface.connect = </Looks/InheritsYellow/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (1, 0.82, 0.02)
+            float inputs:roughness = 0.45
+            token outputs:surface
+        }
+    }
+
+    def Material "VariantOrange"
+    {
+        token outputs:surface.connect = </Looks/VariantOrange/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (1, 0.36, 0.03)
+            float inputs:roughness = 0.45
+            token outputs:surface
+        }
+    }
+
+    def Material "SpecializesGreen"
+    {
+        token outputs:surface.connect = </Looks/SpecializesGreen/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.05, 0.78, 0.22)
+            float inputs:roughness = 0.45
+            token outputs:surface
+        }
+    }
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709" fileprefix="textures/">
+  <surfacematerial name="Raw_Textured_Preview" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="Surface" />
+  </surfacematerial>
+  <UsdPreviewSurface name="Surface" type="surfaceshader">
+    <input name="diffuseColor" type="color3" nodename="Albedo" />
+    <input name="roughness" type="float" value="0.42" />
+    <input name="metallic" type="float" value="0" />
+  </UsdPreviewSurface>
+  <texcoord name="UV" type="vector2">
+    <input name="index" type="integer" value="0" />
+  </texcoord>
+  <image name="Albedo" type="color3">
+    <input name="file" type="filename" value="checker.png" colorspace="srgb_texture" />
+    <input name="texcoord" type="vector2" nodename="UV" />
+  </image>
+</materialx>

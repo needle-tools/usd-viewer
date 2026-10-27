@@ -1,0 +1,91 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Mesh "CustomVertexGeomprops" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/VertexDataPreview>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6]
+        point3f[] points = [
+            (-2.4, 0, -0.65), (-0.8, 0, -0.85), (0.8, 0, -0.45), (2.4, 0, -0.75),
+            (-2.4, 0, 0.65), (-0.8, 0, 0.85), (0.8, 0, 0.45), (2.4, 0, 0.75)
+        ]
+        normal3f[] primvars:normals = [(0, -1, 0)] (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [
+            (0.05, 0.2, 0.85), (0.0, 0.65, 1.0), (0.95, 0.7, 0.1), (1.0, 0.18, 0.08),
+            (0.05, 0.75, 0.38), (0.1, 0.95, 0.65), (0.9, 0.2, 1.0), (1.0, 0.45, 0.15)
+        ] (
+            interpolation = "vertex"
+        )
+        float[] primvars:temperature = [0.05, 0.35, 0.72, 1.0, 0.18, 0.5, 0.88, 0.62] (
+            interpolation = "vertex"
+        )
+        vector3f[] primvars:flow = [
+            (1, 0, 0), (0.65, 0, 0.45), (0.15, 0, 0.95), (-0.85, 0, 0.25),
+            (0.85, 0, -0.3), (0.35, 0, -0.8), (-0.25, 0, -0.95), (-1, 0, 0)
+        ] (
+            interpolation = "vertex"
+        )
+        int[] primvars:cornerId = [0, 1, 2, 3, 4, 5, 6, 7] (
+            interpolation = "vertex"
+        )
+        texCoord2f[] primvars:st = [
+            (0, 0), (0.33, 0), (0.66, 0), (1, 0),
+            (0, 1), (0.33, 1), (0.66, 1), (1, 1)
+        ] (
+            interpolation = "vertex"
+        )
+    }
+
+    def DistantLight "Key"
+    {
+        float inputs:intensity = 450
+        float inputs:angle = 0.35
+        float3 xformOp:rotateXYZ = (-35, 0, 35)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 35
+        float horizontalAperture = 21
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.35, 0.94, 0), (0, -0.94, 0.35, 0), (0, -4.8, 2.0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "VertexDataPreview"
+    {
+        token outputs:surface.connect = </Looks/VertexDataPreview/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor.connect = </Looks/VertexDataPreview/ReadDisplayColor.outputs:result>
+            float inputs:roughness = 0.42
+            float inputs:metallic = 0.0
+            token outputs:surface
+        }
+
+        def Shader "ReadDisplayColor"
+        {
+            uniform token info:id = "UsdPrimvarReader_float3"
+            string inputs:varname = "displayColor"
+            float3 inputs:fallback = (0.8, 0.8, 0.8)
+            float3 outputs:result
+        }
+    }
+}

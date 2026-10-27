@@ -1,81 +1,2217 @@
+/* Screen-reader-only: present in the DOM (and for crawlers) but visually
+   hidden without removing it from the accessibility tree. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 :root {
-  --color-bg-0: rgb(255, 255, 255);
-  --color-bg-1: hsl(209, 36%, 86%);
-  --color-bg-2: hsl(224, 44%, 95%);
-  --color-theme-1: #000000;
-  --color-theme-2: #4075a6;
-  --color-text: rgba(23, 22, 22, 0.7);
+    /* Needle brand surfaces */
+    --color-page: #F0F4EF;          /* light green page stage */
+    --color-surface: #FFFFFF;       /* white working surfaces */
+    --color-info: #DBEBE1;          /* callout success */
+
+    /* Needle brand greens */
+    --color-green: #99CC33;
+    --color-green-dark: #74AF52;
+    --color-green-light: #D7DB0A;
+    --needle-brand-gradient: linear-gradient(135deg, #D7DB0A 0%, #99CC33 46%, #62D399 100%);
+    --needle-brand-gradient-shadow: 0 6px 16px rgba(116, 175, 82, 0.26);
+
+    /* USD brand blue (matches usd-logo.png) */
+    --color-usd-blue: #2C8FD0;
+    --color-usd-blue-dark: #1F7BB5;
+
+    /* Text */
+    --color-text: #1A1A1A;
+    --color-text-secondary: #4A4E4A;
+    --color-text-muted: #767A76;
+    --color-link: #826AED;
+
+    /* Borders */
+    --border-subtle: #D9E2D7;
+    --border-strong: #C6D0C4;
+    --border-focus: #826AED;
+
+    /* Backwards-compatible aliases used across the stylesheet */
+    --color-bg-0: var(--color-surface);
+    --color-bg-1: var(--color-page);
+    --color-bg-2: var(--color-info);
+    --color-theme-1: var(--color-text);
+    --color-theme-2: var(--color-green-dark);
+
+    --font-body: "Nunito Sans", system-ui, -apple-system, sans-serif;
+    --font-code: "Monaspace Neon", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 body {
-  margin:0;
-  padding:0;
-  font-family:sans-serif;
-  min-height: 100vh;
-  background-attachment: fixed;
-  background-color: var(--color-bg-1);
-  background-image: linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-body);
+    color: var(--color-text);
+    min-height: 100vh;
+    background-attachment: fixed;
+    /* Solid light-green stage — brand: no decorative gradients */
+    background-color: var(--color-page);
 }
 
 .footer {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  margin-bottom:15px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* Dark terminal bar — solid, no blur / glass */
+    background-color: #222125;
+    border-top: 1px solid #40393B;
+    padding: 8px 15px;
+    z-index: 100;
+}
+
+.footer-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 #message-log {
-  opacity:0.5;
-  font-size:0.75em;
-  color: white;
-    margin-left: 14px;
+    opacity: 1;
+    font-size: 0.75em;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    font-family: var(--font-code);
+    max-height: 40vh;
+    overflow-y: auto;
+    line-height: 1.4;
+    flex: 1;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.clear-log-button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-body);
+    font-size: 0.75em;
+    font-weight: 600;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.clear-log-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.clear-log-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Loading spinner (footer terminal bar) */
+.spinner {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--color-green);
+    border-radius: 50%;
+    animation: spinner-rotate 0.7s linear infinite;
+}
+
+.spinner[hidden] {
+    display: none;
+}
+
+/* Inline status icon inside the footer log (e.g. the "loading done" check) */
+.log-icon {
+    width: 13px;
+    height: 13px;
+    vertical-align: -2px;
+    margin-right: 6px;
+    color: var(--color-green);
+}
+
+/* Centered drop hint — visible while no model is loaded */
+#dropzone {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* let drags/clicks fall through to the 3D canvas underneath */
+    pointer-events: none;
+    /* sits above the canvas but below the toolbar + its menu popover */
+    z-index: 10;
+    padding: 24px;
+}
+
+/* Hidden once a model is loaded (#container gains .have-custom-file). #container
+   is now nested in #top-center, so #dropzone is no longer its sibling — match
+   via :has() on the wrapper instead. */
+#top-center:has(.have-custom-file) ~ #dropzone {
+    display: none;
+}
+
+.dropzone-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 36px 52px;
+    border: 2px dashed var(--border-strong);
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-muted);
+    text-align: center;
+    transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.dropzone-icon {
+    width: 52px;
+    height: 52px;
+    color: var(--color-text-muted);
+}
+
+.dropzone-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.dropzone-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* highlight while a file is dragged anywhere over the window */
+body.drag-active .dropzone-inner {
+    border-color: var(--color-green);
+    background-color: var(--color-info);
+    color: var(--color-green-dark);
+}
+
+body.drag-active .dropzone-title {
+    color: var(--color-green-dark);
+}
+
+/* Centered loading overlay — one row: spinner, label, filename, sep, cancel */
+#loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    /* above the drop hint, still below the toolbar + its menu popover */
+    z-index: 20;
+    padding: 24px;
+    /* backdrop is click-through; only the pill captures clicks */
+    pointer-events: none;
+}
+
+#loading-overlay.visible {
+    display: flex;
+}
+
+.loading-overlay-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(90vw, 560px);
+    padding: 12px 12px 12px 18px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background-color: var(--color-surface);
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    pointer-events: auto;
+}
+
+.spinner-md {
+    width: 20px;
+    height: 20px;
     margin-top: 0;
-  font-style:italic;
-    margin-bottom: 0;
-    margin-top: 0;
+    border: 2.5px solid var(--border-subtle);
+    border-top-color: var(--color-green);
+    flex-shrink: 0;
+}
+
+.loading-overlay-word {
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.loading-overlay-filename {
+    color: var(--color-text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+    min-width: 0;
+}
+
+.loading-overlay-progress {
+    color: var(--color-green-dark);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 4ch;
+    text-align: right;
+}
+
+.loading-overlay-progress[hidden] {
+    display: none;
+}
+
+.loading-overlay-sep {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.loading-cancel-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.loading-cancel-button:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.loading-cancel-button svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* Centered load-error card — same centered placement as the loading overlay,
+   shown when a file fails to load (e.g. 404). */
+#load-error {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    /* above the drop hint (10) and loading overlay (20), below the toolbar (200) */
+    z-index: 25;
+    padding: 24px;
+    pointer-events: none; /* backdrop is click-through; only the card captures */
+}
+
+#load-error.visible {
+    display: flex;
+}
+
+.load-error-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(92vw, 540px);
+    padding: 13px 13px 13px 17px;
+    border: 1px solid rgba(179, 38, 30, 0.28);
+    border-radius: 14px;
+    background: var(--color-surface);
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    pointer-events: auto;
+}
+
+.load-error-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: #b3261e;
+}
+
+.load-error-title {
+    margin: 0;
+    min-width: 0;
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.load-error-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, transform 0.12s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.load-error-dismiss:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.load-error-dismiss:active {
+    transform: scale(0.94);
+}
+
+.load-error-dismiss svg {
+    width: 15px;
+    height: 15px;
+}
+
+@keyframes spinner-rotate {
+    to { transform: rotate(360deg); }
 }
 
 #container {
-  background-color: var(--color-bg-0);
-  border-radius: 20px;
+    background-color: var(--color-surface);
     font-size: 0.9em;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-top: 5px;
+
+    border: 1px solid var(--border-subtle);
+    /* Pill: fully rounded left/right ends */
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(26, 26, 26, 0.06);
+    /* stacking context above the drop hint (10) and loading overlay (20) so the
+       menu popover renders on top of both */
+    z-index: 30;
 }
 
 #container .buttons {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    /* The pill stays a single row at every width; items condense on mobile
+       (see the max-width media query) rather than wrapping to a second line. */
+    flex-wrap: nowrap;
     flex-direction: row;
+    white-space: nowrap;
+}
+
+.needle-logo {
+    height: 26px;
+    /* block removes the inline baseline gap so the logo sits centered */
+    display: block;
+    /* brand: logo must not be recolored or faded — keep full opacity */
+    opacity: 1;
+}
+
+.app-wordmark {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    margin: 0 12px 0 2px;
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+/* Dropdown Styles */
+.dropdown {
+    /* Static (not relative) so the menu's containing block is the centered pill
+       (#container), letting it center under the pill instead of opening off the
+       right edge from the off-centre Load Sample button. */
+    position: static;
+    display: inline-block;
+}
+
+.dropdown-button {
+    background-color: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    padding: 8px 10px;
+    margin: 0 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    transition: color 0.15s linear;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Inline icon inside the dropdown button */
+.dropdown-button .btn-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.dropdown-button:hover {
+    color: var(--color-text);
+}
+
+.debug-test-button {
+    margin: 0 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.15s linear, background 0.15s linear;
+}
+
+.debug-test-button:hover {
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.debug-test-button:disabled {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+.viewer-mode-toggle {
+    margin: 0 4px;
+}
+/* NOTE: the engine-switch button sizing lives AFTER ".converter-toggle button"
+   (search "Engine switch") so its larger, readable font wins the cascade. */
+
+.header-overflow {
+    position: relative;
+    display: none;
+    align-items: center;
+}
+
+.header-overflow-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-overflow-button:hover,
+.header-overflow.menu-open .header-overflow-button {
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.header-overflow-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 188px;
+    padding: 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    background: var(--color-surface);
+    box-shadow: 0 12px 30px rgba(26, 26, 26, 0.16);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1001;
+}
+
+.header-overflow.menu-open .header-overflow-menu {
+    display: flex;
+}
+
+#container .header-overflow-menu a {
+    margin: 0;
+    padding: 9px 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#container .header-overflow-menu a:hover {
+    background: var(--color-page);
+    text-decoration: none;
+}
+
+.header-overflow-menu .export-button::before,
+.header-overflow-menu .export-button::after {
+    display: none;
+}
+
+.material-wait-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 4px;
+    padding: 2px 10px 2px 8px;
+    min-height: 30px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
+    font-size: 0.82em;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.material-wait-toggle input {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--color-green);
+}
+
+.material-wait-toggle span {
+    color: var(--color-text-muted);
+}
+
+.usd-viewer-three-canvas,
+.usd-viewer-needle-engine {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.usd-viewer-three-canvas {
+    z-index: 0;
+}
+
+.usd-viewer-needle-engine {
+    z-index: 0;
+    display: none;
+}
+
+body.viewer-mode-needle-loader .usd-viewer-three-canvas {
+    display: none !important;
+}
+
+body.viewer-mode-needle-loader .usd-viewer-needle-engine {
+    display: block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--color-surface);
+    width: max-content;
+    max-width: min(980px, 96vw);
+    /* Clear outline + lift so the popover reads as a distinct floating panel
+       against the light page background. */
+    box-shadow: 0 10px 28px rgba(26, 26, 26, 0.18);
+    /* Above the "What's New" banner (110) and other chrome when open. */
+    z-index: 200;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    /* Gap below the pill. The JS hover model keeps the menu open for a 300ms
+       grace after the cursor leaves, which covers crossing this gap — so no
+       transparent-border bridge is needed and the outline can wrap all sides.
+       Overridden on mobile. */
+    top: calc(100% + 1em);
+    /* Centered under the pill (its containing block) so a wide mega-menu stays
+       within the viewport regardless of where the trigger sits in the pill. */
+    left: 50%;
+    transform: translateX(-50%);
+    /* clip the gallery flyout's square corners to the rounded panel */
+    overflow: hidden;
+}
+
+/* The menu is a two-column mega-menu: link list + Sample Library flyout.
+   Visibility is JS-driven via .menu-open (see viewer-app.js): pointer devices open on
+   mouseenter and close 300ms after mouseleave; touch toggles it by tap. A class
+   (not :hover) is used so the close can be delayed and so a tap doesn't get
+   stuck in :hover on touch. */
+.dropdown.menu-open .dropdown-content {
+    display: flex;
+    align-items: stretch;
+    /* Keep a stable minimum height so folding from a long item to a short one
+       (e.g. Needle Cloud) doesn't shrink the popover out from under the cursor
+       and dismiss it. The gallery grid inside scrolls within this height. */
+    min-height: 50vh;
+}
+
+.dropdown-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    min-width: 300px;
+    max-height: 72vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    flex-shrink: 0;
+}
+
+.sample-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sample-group-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: -1px 0 4px 0;
+    padding-left: 8px;
+    border-left: 1px solid var(--border-subtle);
+    /* Slide open/closed. JS toggles .is-open (and [hidden] for inactive groups).
+       max-height is a generous cap — tag lists never approach it. */
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.24s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.18s ease;
+}
+
+.sample-group-tree.is-open {
+    max-height: 1200px;
+    opacity: 1;
+}
+
+.sample-group-tree[hidden] {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sample-group-tree {
+        transition: none;
+    }
+}
+
+.sample-group-button {
+    width: 100%;
+    min-height: 56px;
+    padding: 9px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sample-root-folder {
+    display: grid;
+    /* Label on the left, chevron on the right. */
+    grid-template-columns: minmax(0, 1fr) 14px;
+    column-gap: 6px;
+    align-items: center;
+}
+
+/* Chevron is an inline SVG in each root-folder button; it rotates 90° when the
+   folder expands — crisper and smoother than swapping ▸/▾ glyphs. */
+.sample-chevron {
+    grid-column: 2;
+    grid-row: 1 / -1;     /* span both label lines so the chevron stays centered */
+    align-self: center;
+    justify-self: center;
+    width: 14px;
+    height: 14px;
+    color: var(--color-text-muted);
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sample-root-folder[aria-expanded="true"] .sample-chevron {
+    transform: rotate(90deg);
+}
+
+/* Inline arrow SVG inside a sample-group label (e.g. "glTF → USD conversions"). */
+.label-arrow {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.14em;
+    margin: 0 0.1em;
+    color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sample-chevron { transition: none; }
+}
+
+.sample-group-button span,
+.sample-group-button small {
+    display: block;
+}
+
+.sample-root-folder span,
+.sample-root-folder small {
+    grid-column: 1;
+}
+
+.sample-group-button span {
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.92em;
+}
+
+.sample-group-button small {
+    margin-top: 2px;
+    color: var(--color-text-secondary); /* higher contrast than muted */
+    font-size: 0.72em;
+}
+
+.sample-group-button:hover {
+    background: var(--color-info);
+}
+
+.sample-group-button.active {
+    border-color: rgba(96, 182, 45, 0.42);
+    background: rgba(96, 182, 45, 0.13);
+}
+
+.sample-folder {
+    margin: 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.sample-folder > summary {
+    list-style: none;
+}
+
+.sample-folder > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sample-folder-button {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) 3ch;
+    align-items: center;
+    column-gap: 8px;
+    width: 100%;
+    min-height: 24px;
+    padding: 2px 6px 2px calc(2px + ((var(--depth, 1) - 1) * 12px));
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 0.88em;
+}
+
+summary.sample-folder-button {
+    display: grid;
+}
+
+.sample-folder-button::before {
+    content: "";
+    width: 16px;
+    color: var(--color-text-muted);
+    font-size: 1.5em;
+    line-height: 1;
+    text-align: center;
+}
+
+.sample-folder > summary.sample-folder-button::before {
+    content: "▸";
+}
+
+.sample-folder[open] > summary.sample-folder-button::before {
+    content: "▾";
+}
+
+.sample-folder-button span {
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sample-folder-button small {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.58em;
+    line-height: 1;
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.sample-folder-button:hover {
+    background: rgba(96, 182, 45, 0.08);
+}
+
+.sample-folder-button.active {
+    border-color: transparent;
+    background: rgba(96, 182, 45, 0.1);
+}
+
+.sample-folder-button.active span {
+    color: var(--color-text);
+}
+
+.sample-folder-children {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: 100%;
+    min-width: 0;
+}
+
+.dropdown-section {
+    padding: 4px 0;
+}
+
+/* Items hidden unless the "?debug_menu_items" URL flag is set (e.g. dead links).
+   Selectors must out-specify ".dropdown-menu a { display: block }" (0,1,1),
+   so they are scoped to ".dropdown-menu a.debug-only" (0,2,1). */
+.debug-only {
+    display: none;
+}
+
+.dropdown-menu a.debug-only {
+    display: none;
+}
+
+body.show-debug-menu .dropdown-menu a.debug-only {
+    display: block;
+}
+
+.dropdown-section h4 {
+    margin: 8px 0 4px 0;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 4px;
+    white-space: nowrap;
+}
+
+.dropdown-menu a {
+    color: var(--color-text-secondary);
+    padding: 6px 0;
+    text-decoration: none;
+    display: block;
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.dropdown-menu a:hover {
+    color: var(--color-text);
+}
+
+/* Dialog Styles */
+.dialog-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(26, 26, 26, 0.4);
+}
+
+.dialog {
+    background-color: var(--color-surface);
+    margin: 80px auto;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.dialog-header h2 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 1.4em;
+    font-weight: 800;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.dialog-close:hover {
+    background-color: var(--color-info);
+    color: var(--color-text);
+}
+
+.dialog-content {
+    padding: 20px 24px 24px 24px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+.dialog-content p {
+    margin: 0 0 16px 0;
+    text-wrap: balance;
+}
+
+.dialog-content p:last-child {
+    margin-bottom: 0;
+}
+
+.dialog-list {
+    margin: 0 0 4px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dialog-list li {
+    position: relative;
+    padding-left: 26px;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.dialog-list li:last-child {
+    margin-bottom: 0;
+}
+
+.dialog-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color-green-dark);
+    font-weight: 800;
+}
+
+/* OpenUSD runtime build info, presented as a labelled box. The native
+   <fieldset>/<legend> gives the "interrupted outline" (the border breaks around
+   the label) for free, and the title attribute carries a hover tooltip. */
+.runtime-info-box {
+    margin: 0 0 16px;
+    padding: 8px 12px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    /* No fill — a clean outline lets the legend cleanly interrupt the border. */
+    background: transparent;
+    min-width: 0; /* reset the fieldset's min-content intrinsic width */
+    cursor: help; /* signals the tooltip is there */
+}
+
+.runtime-info-legend {
+    padding: 0 6px;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    /* Nudge down so the label sits optically centered on the border line. */
+    transform: translateY(2px);
+}
+
+.runtime-info {
+    margin: 0;
+    color: var(--color-text);
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.dialog-content a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+/* Needle Cloud mentions use the brand green rather than the generic link purple. */
+.dialog-content a.cloud-link {
+    color: var(--color-green-dark);
+    font-weight: 700;
+    white-space: nowrap; /* keep the logo glued to "Needle Cloud" */
+}
+
+.needle-logo-inline {
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.22em; /* center the mark against the text */
+    margin-right: 5px;
+}
+
+.dialog-content a:hover {
+    text-decoration: underline;
+}
+
+.dialog-actions {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    /* One link per row. align-items:flex-start keeps each link's hit/underline
+       area to its own width rather than stretching across the dialog. */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.dialog-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--color-link);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Leading icon on each About link — inherits the link colour via currentColor. */
+.dialog-actions a svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.dialog-actions a:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* The export dialog carries a wider CTA row (Download GLB + the long Upload button),
+   so give it more room than the default 500px clamp to keep them on one line. */
+#export-dialog .dialog {
+    max-width: 560px;
+}
+
+/* Export dialog call-to-action: Needle Cloud primary, browser download secondary. */
+.dialog-cta {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Secondary action on the left of the CTA row: a soft neutral-grey pill button —
+   clearly clickable, but visually subordinate to the blue Upload primary. */
+#export-download-direct {
+    padding: 9px 18px;
+    border: 1px solid rgba(26, 26, 26, 0.09);
+    border-radius: 999px;
+    background-color: rgba(26, 26, 26, 0.06);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+#export-download-direct:hover {
+    background-color: rgba(26, 26, 26, 0.12);
+    border-color: rgba(26, 26, 26, 0.16);
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+/* Scoped under .dialog-cta to out-specify ".dialog-content a" (0,1,1), which
+   would otherwise paint the label link-purple on the green button. */
+.dialog-cta .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto; /* push the primary action to the right; secondary stays left */
+    background-color: var(--color-usd-blue);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 9px 18px;
+    border-radius: 999px;
+    transition: background-color 0.15s;
+}
+
+.dialog-cta .cta-primary svg {
+    flex: none;
+}
+
+.dialog-cta .cta-primary:hover {
+    background-color: var(--color-usd-blue-dark);
+    color: #fff;
+    text-decoration: none;
+}
+
+.cta-secondary {
+    background: none;
+    border: none;
+    padding: 9px 4px;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 1em;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.cta-secondary:hover {
+    color: var(--color-text);
+}
+
+/* Crisp open/close animation for all dialogs: the backdrop fades while the panel
+   lifts + scales in. JS (openDialogAnimated/closeDialogAnimated) sets display,
+   then toggles .is-open, and hides after the fade-out. Because the resting state
+   is opacity:0, every dialog MUST be opened via openDialogAnimated — a plain
+   display toggle would leave it invisible. */
+.dialog-overlay {
+    opacity: 0;
+    transition: opacity 0.14s ease;
+}
+
+.dialog-overlay.is-open {
+    opacity: 1;
+}
+
+.dialog-overlay .dialog {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top center;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+}
+
+.dialog-overlay.is-open .dialog {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Respect users who prefer reduced motion: show/hide instantly. */
+@media (prefers-reduced-motion: reduce) {
+    .dialog-overlay,
+    .dialog-overlay .dialog {
+        transition: none;
+    }
+}
+
+/* Feedback form (inside #feedback-dialog) */
+.feedback-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.feedback-label {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.feedback-label:not(:first-child) {
+    margin-top: 14px;
+}
+
+.feedback-optional {
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.feedback-textarea,
+.feedback-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 0.95em;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.feedback-textarea {
+    resize: vertical;
+    min-height: 96px;
+    line-height: 1.4;
+}
+
+.feedback-textarea:focus,
+.feedback-input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(130, 106, 237, 0.18);
+}
+
+/* Honeypot: visually removed but still present in the DOM so bots fill it.
+   Kept off-screen rather than display:none (which some bots skip). */
+.feedback-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.feedback-status {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    /* Fills the left of the CTA row, pushing the Send button to the right edge.
+       Works even when empty (auto margin absorbs the free space). */
+    margin-right: auto;
+}
+
+.feedback-status.is-error {
+    color: #b3261e;
+}
+
+.feedback-status.is-success {
+    color: var(--color-green-dark);
+}
+
+/* The feedback submit reuses .cta-primary but is a <button>, so reset the UA
+   border/typography the export dialog's <a> never had. */
+button.cta-primary {
+    border: none;
+    font-family: inherit;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.cta-primary[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Sample Library flyout — a second column of the dropdown mega-menu, revealed
+   on the same hover as the link menu (no click, no separate popover). */
+.gallery-flyout {
+    display: flex;
+    flex-direction: column;
+    width: 640px;
+    max-width: 72vw;
+    border-left: 1px solid var(--border-subtle);
+    background-color: var(--color-page);
+    padding: 0 12px 12px 12px;
+    /* No max-height here — the grid inside is the scroll container and caps its
+       own height. Capping the flyout too would clip the grid's last rows. */
+}
+
+.gallery-panel-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 -12px 10px -12px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(244, 249, 243, 0.96);
+    backdrop-filter: blur(8px);
+}
+
+.gallery-panel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.gallery-panel-head h4 {
+    margin: 0;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.gallery-panel-subtitle {
+    font-size: 0.72em;
+    color: var(--color-text-secondary); /* higher contrast than muted */
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Brand logo left of each converter label. */
+.conv-logo {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+/* The Needle crystal mark sits inside a padded square viewBox and reads small,
+   so give it a bit more size, aspect-preserved. It keeps its brand colours when
+   unselected; on the selected pill it's whitened to match the white label. */
+.conv-logo.conv-logo-needle {
+    width: auto;
+    height: 18px;
+}
+
+/* The glTF logo is a wide (2:1) wordmark — let it keep its aspect. */
+.conv-logo.conv-logo-gltf {
+    width: auto;
+    height: 12px;
+}
+
+/* Brand-coloured converter logos are whitened on the selected (dark-blue) pill
+   to match the white label. (three / omniverse use currentColor and turn white
+   on their own.) */
+.converter-toggle button.active .conv-logo-needle,
+.converter-toggle button.active .conv-logo-blender,
+.converter-toggle button.active .conv-logo-adobe,
+.converter-toggle button.active .conv-logo-gltf {
+    filter: brightness(0) invert(1);
+}
+
+/* Shared segmented toggle. */
+.converter-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(240, 244, 239, 0.86);
+}
+
+.converter-toggle[hidden] {
+    display: none;
+}
+
+.converter-toggle button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: rgba(240, 244, 239, 0.72);
+    border: none;
+    border-left: 1px solid var(--border-subtle);
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: 0.72em;
+    min-width: 68px;
+    min-height: 29px;
+    padding: 4px 9px;
+    cursor: pointer;
+    transition: background-color 0.15s, box-shadow 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.converter-toggle button:first-child {
+    border-left: none;
+}
+
+.converter-toggle button > * {
+    pointer-events: none;
+}
+
+.converter-toggle button:hover {
+    background-color: rgba(255, 255, 255, 0.78);
+    color: var(--color-text);
+}
+
+.converter-toggle button.active {
+    /* Selected: dark USD blue fill with white text (flipped from the old light
+       fill + blue text). Applies to both the engine and converter toggles. */
+    background: var(--color-usd-blue-dark);
+    color: #fff;
+    box-shadow: none;
+    font-weight: 700;
+}
+
+.converter-label {
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+}
+
+.converter-name {
+    font-weight: 700;
+}
+
+.converter-toggle-inline {
+    background: rgba(255, 255, 255, 0.78);
+    /* Stronger outline so the segmented control reads clearly on the page. */
+    border-color: var(--border-strong);
+    border-radius: 11px;
+}
+
+.converter-toggle-inline button {
+    font-size: 0.72em;
+    min-width: 62px;
+    min-height: 26px;
+    padding: 3px 9px;
+    /* Match the outer outline contrast on the inter-segment dividers. */
+    border-left-color: var(--border-strong);
+}
+
+/* Engine switch (Needle | three.js) — the renderer chooser in the pill.
+   Placed AFTER ".converter-toggle button" so its larger size wins the
+   equal-specificity cascade (the shared 0.72em ≈ 10px is far too small for this
+   primary control). Adds press feedback per design-eng (buttons must feel they
+   were heard). */
+.viewer-mode-toggle button {
+    min-width: 78px;
+    min-height: 30px;
+    padding: 5px 13px;
+    font-size: 0.85rem; /* ~13.6px — was an effective ~10px */
+    letter-spacing: 0.01em;
+    transition: background-color 0.15s ease,
+                color 0.15s ease,
+                box-shadow 0.15s ease,
+                transform 0.12s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.viewer-mode-toggle button:active {
+    transform: scale(0.97); /* subtle press feedback */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .viewer-mode-toggle button:active {
+        transform: none;
+    }
+}
+
+.gallery-status {
+    font-size: 0.82em;
+    color: var(--color-text-muted);
+    margin: 0 0 8px 0;
+}
+
+.gallery-status.error {
+    color: #b3261e;
+}
+
+.gallery-status[hidden] {
+    display: none;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 2px;
+    /* Self-contained scroll container. A definite max-height here (viewport
+       units, not %) makes the grid scroll on its own — it does NOT depend on a
+       definite height propagating down the flex chain, which never resolves
+       because the dropdown is an absolutely-positioned hover popover. */
+    max-height: 60vh;
+    overflow-y: auto;
+    /* Size rows to content and pack from the top. Without these, the cards
+       (which use overflow:hidden, giving them an auto-minimum of 0) let the grid
+       stretch its rows to fill the fixed height — collapsing each thumbnail to a
+       ~3px strip instead of overflowing into the scroll area. */
+    grid-auto-rows: max-content;
+    align-content: start;
+}
+
+/* Each card is an "a.file" so it reuses the existing URL-load handler. The
+   "#container" prefix is needed to out-specify "#container a" (1,0,1), which
+   would otherwise force its own padding/margin onto these <a> cards. */
+#container .gallery-card {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+#container .gallery-card:hover {
+    border-color: var(--color-green-dark);
+    box-shadow: 0 4px 14px rgba(26, 26, 26, 0.12);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+#container .gallery-card.active {
+    border-color: var(--color-green-dark);
+    box-shadow: 0 0 0 2px var(--color-green-dark);
+}
+
+.gallery-thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
+    background: var(--color-surface);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-thumb {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.gallery-card-body {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 7px 9px 9px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.94);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* "#container" prefix beats "#container a span" (1,0,2) for the card labels. */
+#container .gallery-name {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#container .gallery-meta {
+    font-size: 0.7em;
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Narrow screens: stack the gallery under the links instead of beside them. */
+@media (max-width: 720px) {
+    /* Anchor the menu to the viewport instead of the (centered) button, so it
+       can't run off-screen. It drops down as a near-full-width panel below the
+       header and scrolls as one. */
+    .dropdown {
+        position: static;
+    }
+    .dropdown-content {
+        position: fixed;
+        /* Just below the one-row pill (~51px). #top-center's transform makes it
+           the containing block, so this is measured from its top (viewport 5px),
+           i.e. the menu opens ~viewport 59px — snug under the pill. */
+        top: 54px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        flex-direction: column;
+        width: 94vw;
+        max-width: 94vw;
+        max-height: calc(100dvh - 72px);
+        overflow-y: auto;
+        z-index: 1000;
+    }
+    .gallery-flyout {
+        width: auto;
+        max-width: none;
+        border-left: none;
+        border-top: 1px solid var(--border-subtle);
+    }
+    /* Stack the title above the converter toggle so the (logo-widened) toggle
+       gets the full panel width instead of overflowing the right edge. */
+    .gallery-panel-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    /* Let the whole panel scroll as one on mobile rather than a nested grid. */
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        max-height: none;
+    }
+}
+
+/* Narrow desktop/tablet: keep the primary workflow in the pill, and move
+   secondary actions into the overflow menu before they collide with the canvas
+   controls below. */
+@media (max-width: 1080px) {
+    .app-wordmark {
+        display: none;
+    }
+    #about-link,
+    .feedback-button,
+    #export-gltf {
+        display: none;
+    }
+    .header-overflow {
+        display: inline-flex;
+    }
+    .filename-bar {
+        width: min(96vw, 760px);
+        justify-content: center;
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+    .filename-bar .filename {
+        max-width: min(72vw, 560px);
+    }
+    .loaded-converter-control {
+        order: 3;
+        flex-basis: 100%;
+        justify-content: center;
+    }
+    .loaded-converter-control::before {
+        display: none;
+    }
+    .converter-toggle-inline {
+        max-width: 96vw;
+        overflow-x: auto;
+    }
+}
+
+/* Phone widths: condense the pill so it stays one row. The secondary header
+   actions are already in the overflow menu, and spacing tightens. */
+@media (max-width: 560px) {
+    #container {
+        padding-left: 12px;
+        padding-right: 12px;
+        font-size: 0.85em;
+    }
+    .needle-logo {
+        height: 22px;
+    }
+    .dropdown-button {
+        margin: 0 2px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .viewer-mode-toggle button {
+        min-width: 64px;
+    }
+    .filename-bar {
+        max-width: 96vw;
+    }
+    .loaded-converter-control {
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+    .loaded-converter-control > span {
+        flex-basis: 100%;
+        text-align: center;
+    }
+    .converter-toggle-inline {
+        min-width: 0;
+        max-width: 100%;
+    }
+}
+
+/* Tiniest phones: the Needle logo collapses to its mark, while Load Sample keeps
+   its label as the primary action. */
+@media (max-width: 430px) {
+    #container {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .needle-logo-link {
+        width: 28px;
+        overflow: hidden;
+        padding-left: 6px;
+        padding-right: 0;
+        margin-right: 0;
+    }
+    .needle-logo {
+        width: 73px;
+        max-width: none;
+    }
+    .dropdown-button {
+        padding-left: 6px;
+        padding-right: 6px;
+        gap: 4px;
+    }
+    .viewer-mode-toggle {
+        margin: 0 2px;
+    }
+    .viewer-mode-toggle button {
+        min-width: 55px;
+        font-size: 0.8em;
+    }
+    .header-overflow-button {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+/* Very small phones (~320px): drop the About entry and tighten padding so the
+   one-row pill still fits. */
+@media (max-width: 380px) {
+    #about-link {
+        display: none;
+    }
+    #container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
 }
 
 #container a {
-  color: var(--color-text);
-  text-decoration: none;
-  padding: 10px;
-  margin: 0 4px;
-  transition: color 0.2s linear;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    padding: 8px 10px;
+    margin: 0 4px;
+    transition: color 0.15s linear;
 }
 
-#container a:hover {
-  color: var(--color-theme-1);
+#container a:hover, .dropdown-button:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 #container a span {
-  font-size: 0.8em;
-  opacity: 0.8;
+    font-size: 0.8em;
+    color: var(--color-text-muted);
+}
+
+/* The header menu labels (About, Feedback) match the "Load Sample" button
+   (.dropdown-button): same pill font-size and secondary colour, and they follow
+   the anchor's colour on hover. The "#container .x" prefix (1,1,0) out-specifies
+   "#container a span" (1,0,2). */
+#container .about-text,
+#container .feedback-text {
+    font-size: inherit; /* = #container's 0.9em, same as .dropdown-button */
+    color: inherit;     /* secondary by default, darkens on hover via #container a */
+}
+
+/* Inline SVG icons that sit left of a text label (filename, Export glTF) */
+.inline-icon {
+    width: 15px;
+    height: 15px;
+    vertical-align: -2px;
+    margin-right: 5px;
+    pointer-events: none;
+}
+
+/* Loaded filename is a label, not a link — no pointer, no hover underline */
+.filename {
+    color: var(--color-text-secondary);
+    padding: 8px 10px;
+    margin: 0 4px;
+    cursor: default;
+}
+
+/* The Needle logo link should not show the text-link underline on hover */
+#container a.needle-logo-link,
+#container a.needle-logo-link:hover {
+    padding: 8px 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* About link: USD logo sits left of the label, vertically centered */
+.usd-logo {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+}
+
+/* Visible focus ring on every interactive element — brand accessibility */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .have-custom-file a.file.hide {
-  display: none;
+    display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-      --color-bg-0: rgb(23, 22, 22);
-      --color-bg-1: hsl(209, 36%, 16%);
-      --color-bg-2: hsl(224, 44%, 5%);
-      --color-theme-1: #ffffff;
-      --color-theme-2: #4075a6;
-      --color-text: rgba(255, 255, 255, 0.7);
-  }
+/* Hide Clear button when no file is loaded */
+#container:not(.have-custom-file) .clear-button {
+    display: none;
+}
+
+/* Shared tooltip portal. The element is created by viewer-app.js at document
+   root so it escapes segmented-control overflow and modal/dropdown clipping. */
+.ui-tooltip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    max-width: min(300px, calc(100vw - 24px));
+    padding: 8px 11px;
+    border-radius: 8px;
+    background: var(--color-text);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(26, 26, 26, 0.22);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    white-space: normal;
+    z-index: 100000;
+    transition: opacity 0.15s ease;
+}
+
+.ui-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ui-tooltip::before {
+    content: "";
+    position: absolute;
+    left: var(--tooltip-arrow-left, 50%);
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+}
+
+.ui-tooltip[data-placement="bottom"]::before {
+    top: -10px;
+    border-bottom-color: var(--color-text);
+}
+
+.ui-tooltip[data-placement="top"]::before {
+    bottom: -10px;
+    border-top-color: var(--color-text);
+}
+
+/* When no file is loaded the Export button stays visible but inert and uses
+   the disabled tooltip copy. */
+#container:not(.have-custom-file) .export-button {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Don't give the dimmed button the interactive hover darken/underline. */
+#container:not(.have-custom-file) .export-button:hover {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+
+/* Hide filename display when no file is loaded */
+/* Centered top stack: the header pill on top, the loaded-file row below it.
+   Absolutely positioned and horizontally centered; the pill and file row are
+   stacked so the file row always sits just under the pill, whatever its
+   height. */
+#top-center {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    /* Above the "What's New" banner (110): the transform makes #top-center a
+       stacking context, so the open menu inside it can only rise above the
+       banner if #top-center itself does. */
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 96vw;
+}
+
+/* The file row is a sibling of #container inside #top-center, so the "no file
+   loaded" hide rule uses the sibling combinator. */
+#container:not(.have-custom-file) ~ .filename-bar {
+    display: none;
+}
+
+/* Loaded-file row: filename, optional converter, and Clear. No background; it
+   floats as plain text over the canvas. Only actions receive pointer events. */
+.filename-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 96vw;
+    pointer-events: none;
+}
+
+.filename-bar .filename {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    flex: 0 1 auto;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename-bar .filename-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename-sep {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    line-height: 1;
+    user-select: none;
+}
+
+/* When the "converted with" control is visible it already separates the row, so
+   the dash before Clear is redundant — drop it (kept for plain files, where it's
+   the only separator between the filename and Clear). */
+.loaded-converter-control:not([hidden]) ~ .filename-sep {
+    display: none;
+}
+
+.filename-bar .clear-button {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.9em;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.filename-bar .clear-button .inline-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 0;
+    vertical-align: 0;
+}
+
+.filename-bar .clear-button:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+}
+
+.loaded-converter-control {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.loaded-converter-control[hidden] {
+    display: none;
+}
+
+.loaded-converter-control::before {
+    content: "–";
+    color: var(--color-text-muted);
+    user-select: none;
+}
+
+.loaded-converter-control > span {
+    color: inherit;
+    white-space: nowrap;
+}
+
+/* "What's New" banner — small, subtle, bottom-right announcement card that
+   rotates through items from the Needle marketer feed. Sits above the footer
+   terminal bar (z-index 100) but is small enough not to crowd the canvas. */
+.whats-new {
+    position: fixed;
+    right: 14px;
+    /* clear the footer terminal bar (single-line height + breathing room) */
+    bottom: 58px;
+    z-index: 110;
+    width: 300px;
+    max-width: calc(100vw - 28px);
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
+    overflow: hidden;
+    /* hidden state: nudged down + faded; .is-visible animates it in */
+    opacity: 0;
+    transform: translateY(12px);
+    /* transition every animatable property change (fade/slide in + out) */
+    transition: all 0.25s ease;
+    pointer-events: none;
+}
+
+.whats-new.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.whats-new-link {
+    display: block;
+    /* banner.css from the feed sets the background + readable text colour;
+       these are the layout defaults it themes on top of */
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 14px 38px 14px 16px;
+    font-family: var(--font-body);
+    line-height: 1.35;
+    /* ease the themed background/text change between rotated items
+       (solid backgrounds + text colour tween; CSS can't tween gradients,
+       which the card's opacity fade covers instead) */
+    transition: all 0.25s ease;
+}
+
+.whats-new-kicker {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 3px;
+}
+
+.whats-new-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.whats-new-subtitle {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.whats-new-cta {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Dismiss (×) — small, lives in the top-right corner of the card */
+.whats-new-dismiss {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    /* inherit the banner's text colour, kept subtle until hover */
+    color: currentColor;
+    background: transparent;
+    opacity: 0.55;
+    cursor: pointer;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+
+.whats-new-dismiss:hover {
+    opacity: 1;
+    background: rgba(127, 127, 127, 0.18);
+}
+
+.whats-new-dismiss svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Rotation indicator dots */
+.whats-new-dots {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+    pointer-events: none;
+}
+
+.whats-new-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.whats-new-dot.is-active {
+    opacity: 0.85;
+}
+
+@media (max-width: 520px) {
+    .whats-new {
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+    /* No spin — show a calm, evenly-coloured ring instead of a frozen arc */
+    .spinner {
+        border-color: var(--color-green);
+        opacity: 0.7;
+    }
+}
+
+@media (prefers-contrast: more) {
+    #container,
+    .dropdown-content,
+    .dialog {
+        border-color: var(--border-strong);
+        box-shadow: none;
+    }
 }

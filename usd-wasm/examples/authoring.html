@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenUSD Wasm Authoring Smoke</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #101214;
+      color: #f3f4f6;
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      font-weight: 650;
+    }
+
+    button, a.download {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #4b5563;
+      background: #1f2937;
+      color: #f9fafb;
+      border-radius: 6px;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover, a.download:hover {
+      background: #374151;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .status {
+      margin: 16px 0;
+      color: #a7f3d0;
+      min-height: 24px;
+    }
+
+    pre {
+      min-height: 420px;
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      background: #050608;
+      color: #d1d5db;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>OpenUSD Wasm Authoring Smoke</h1>
+    <div class="controls">
+      <button id="run" type="button">Run Authoring Smoke</button>
+      <a id="download" class="download" hidden download="generated-authoring.usdz">Download USDZ</a>
+    </div>
+    <div id="status" class="status">Ready</div>
+    <pre id="output"></pre>
+  </main>
+
+  <script type="module">
+    import { getUsdModule } from "../src/bindings/index.js";
+
+    const runButton = document.getElementById("run");
+    const downloadLink = document.getElementById("download");
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+
+    let objectUrl = null;
+
+    function log(message) {
+      outputEl.textContent += `${message}\n`;
+    }
+
+    function vectorToArray(vector) {
+      const result = [];
+      try {
+        for (let i = 0; i < vector.size(); i++) result.push(vector.get(i));
+      } finally {
+        vector.delete();
+      }
+      return result;
+    }
+
+    async function runSmoke() {
+      runButton.disabled = true;
+      downloadLink.hidden = true;
+      outputEl.textContent = "";
+      statusEl.textContent = "Loading OpenUSD wasm...";
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+
+      try {
+        const USD = await getUsdModule();
+        try {
+          USD.FS_createPath("/", "tmp", true, true);
+        } catch {
+          // The path can exist after a previous run.
+        }
+
+        const usdPath = "/tmp/generated-authoring.usda";
+        const usdzPath = "/tmp/generated-authoring.usdz";
+        const stage = USD.CreateStage(usdPath);
+
+        stage.SetUpAxis("Z");
+        stage.SetStartTimeCode(1);
+        stage.SetEndTimeCode(24);
+        stage.SetTimeCodesPerSecond(24);
+
+        const root = stage.DefinePrim("/World", "Xform");
+        const color = root.CreateAttribute("primvars:displayColor", "color3f", true);
+        color.SetColor3f(1, 0.25, 0.5, Number.NaN);
+
+        const spin = root.CreateAttribute("userProperties:spin", "float", true);
+        spin.SetFloat(0, 1);
+        spin.SetFloat(90, 24);
+
+        root.AddVariant("lod", "low");
+        root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope");
+        root.SetVariantSelection("lod", "high");
+
+        log(`Root prim: ${root.GetPath()} (${root.GetTypeName()})`);
+        log(`Display color: ${color.GetValueString()}`);
+        log(`Spin at frame 24: ${spin.GetValueStringAtTime(24)}`);
+        log(`Variant selection: ${root.GetVariantSelection("lod")}`);
+        log(`Variant names: ${vectorToArray(root.GetVariantNames("lod")).join(", ")}`);
+
+        const composed = stage.ExportToString();
+        const authored = stage.GetRootLayer().ExportToString();
+        log("\n--- Composed Stage ---");
+        log(composed);
+        log("--- Root Layer ---");
+        log(authored);
+
+        if (!stage.Export(usdPath)) throw new Error("Stage.Export failed");
+        if (!USD.CreateUsdzPackage(usdPath, usdzPath)) throw new Error("CreateUsdzPackage failed");
+
+        const reopened = USD.OpenStage(usdPath);
+        log("--- Reopened Verification ---");
+        log(`Selected variant: ${reopened.GetPrimAtPath("/World").GetVariantSelection("lod")}`);
+        log(`Variant child exists: ${reopened.GetPrimAtPath("/World/HighGeom").IsValid()}`);
+        log(`Animated value at frame 24: ${reopened.GetPrimAtPath("/World").GetAttribute("userProperties:spin").GetValueStringAtTime(24)}`);
+
+        const usdzBytes = USD.ReadFile(usdzPath);
+        if (usdzBytes[0] !== 0x50 || usdzBytes[1] !== 0x4b) throw new Error("USDZ does not look like a zip payload");
+
+        objectUrl = URL.createObjectURL(new Blob([usdzBytes], { type: "model/vnd.usdz+zip" }));
+        downloadLink.href = objectUrl;
+        downloadLink.hidden = false;
+
+        USD.ReleaseStage(reopened);
+        USD.ReleaseStage(stage);
+        statusEl.textContent = `OK. USDZ generated (${usdzBytes.byteLength} bytes).`;
+      } catch (error) {
+        console.error(error);
+        statusEl.textContent = "Failed";
+        log(error?.stack || String(error));
+      } finally {
+        runButton.disabled = false;
+      }
+    }
+
+    runButton.addEventListener("click", runSmoke);
+  </script>
+</body>
+</html>

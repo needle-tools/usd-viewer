@@ -1,0 +1,53 @@
+#usda 1.0
+(
+    upAxis = "Z"
+    startTimeCode = 1
+    endTimeCode = 48
+    timeCodesPerSecond = 24
+)
+
+def Xform "World" (
+    variants = {
+        string materialVariant = "smooth"
+    }
+    prepend variantSets = "materialVariant"
+)
+{
+    def Sphere "VariantBall" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double radius = 1
+        color3f[] primvars:displayColor.timeSamples = {
+            1: [(0.1, 0.2, 1)],
+            24: [(0, 0.9, 0.1)],
+            48: [(0.1, 0.2, 1)],
+        }
+    }
+
+    variantSet "materialVariant" = {
+        "green" {
+            over "VariantBall"
+            {
+                rel material:binding = </Looks/MaterialX/Materials/Default_Green>
+            }
+        }
+        "smooth" {
+            over "VariantBall"
+            {
+                rel material:binding = </Looks/MaterialX/Materials/Default_Smooth>
+            }
+        }
+    }
+}
+
+def Scope "Looks"
+{
+    def "MaterialX" (
+        references = [
+            @./mtlxFiles/standard_surface_default.mtlx@</MaterialX>
+        ]
+    )
+    {
+    }
+}

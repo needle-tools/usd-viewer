@@ -10,15 +10,21 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vite-plugin-static-copy": "^1.0.5"
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.56.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0"
   },
   "dependencies": {
+    "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
+    "@needle-tools/materialx": "1.7.0",
     "@needle-tools/usd": "file:..",
     "@types/three": "^0.165.0",
-    "three": "^0.164.1",
-    "vite-plugin-top-level-await": "^1.4.1",
+    "three": "npm:@needle-tools/three@^0.169.19",
+    "vite-plugin-top-level-await": "1.2.2",
     "vite-plugin-wasm": "^3.3.0"
+  },
+  "overrides": {
+    "@needle-tools/materialx": "1.7.0"
   }
 }

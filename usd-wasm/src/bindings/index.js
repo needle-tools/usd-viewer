@@ -1,9 +1,57 @@
-import "./emHdBindings.js";
-
 /**
  * @type {Promise<import("..").USD> | null}
  */
 let usd_module_promise = null;
+
+/**
+ * @type {Promise<import("..").getUsdModule> | null}
+ */
+let node_get_usd_module_promise = null;
+
+function isNodeRuntime() {
+    return !!globalThis.process?.versions?.node && globalThis.process?.type !== "renderer";
+}
+
+async function getNodeUsdModuleFn() {
+    if (node_get_usd_module_promise) {
+        return node_get_usd_module_promise;
+    }
+
+    node_get_usd_module_promise = (async () => {
+        const [
+            { createRequire },
+            { readFile, writeFile, mkdtemp },
+            { dirname, join },
+            { tmpdir },
+            { fileURLToPath },
+        ] = await Promise.all([
+            import(/* @vite-ignore */ "node:module"),
+            import(/* @vite-ignore */ "node:fs/promises"),
+            import(/* @vite-ignore */ "node:path"),
+            import(/* @vite-ignore */ "node:os"),
+            import(/* @vite-ignore */ "node:url"),
+        ]);
+
+        const sourcePath = fileURLToPath(new URL("./emHdBindings.js", import.meta.url));
+        const tempDir = await mkdtemp(join(tmpdir(), "needle-usd-bindings-"));
+        const cjsPath = join(tempDir, "emHdBindings.cjs");
+        await writeFile(cjsPath, await readFile(sourcePath));
+
+        const require = createRequire(import.meta.url);
+        const getUsdModuleFn = require(cjsPath);
+        getUsdModuleFn.__needleUsdBindingsDir = dirname(sourcePath);
+        return getUsdModuleFn;
+    })();
+
+    return node_get_usd_module_promise;
+}
+
+async function ensureBrowserBindingsImported() {
+    if (globalThis["NEEDLE:USD:GET"]) {
+        return;
+    }
+    await import("./emHdBindings.js");
+}
 
 
 /**
@@ -16,47 +64,81 @@ export async function getUsdModule(opts) {
     }
 
 
+    if (isNodeRuntime()) {
+        const [
+            { join },
+            getUsdModuleFn,
+        ] = await Promise.all([
+            import(/* @vite-ignore */ "node:path"),
+            getNodeUsdModuleFn(),
+        ]);
+
+        return usd_module_promise = getUsdModuleFn({
+            ...opts,
+            locateFile: (file) => {
+                const userResult = opts?.locateFile?.(file);
+                if (userResult) {
+                    return userResult;
+                }
+                return join(getUsdModuleFn.__needleUsdBindingsDir, file);
+            },
+        });
+    }
+
+    await ensureBrowserBindingsImported();
+
     /**
      * @type {import("..").getUsdModule}
      */
     const getUsdModuleFn = globalThis["NEEDLE:USD:GET"];
-
     if (!getUsdModuleFn) {
         throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
     }
 
-
-    // HACK for worker import: \"Cannot use import statement outside a module\""
-    // https://github.com/vitejs/vite/issues/6979
-
-    // @ts-ignore
-    const isProd = import.meta.env?.PROD ?? true;
-
+    const bindingsUrl = new URL("./emHdBindings.js", import.meta.url).href;
+    const wasmUrl = new URL("./emHdBindings.wasm", import.meta.url).href;
+    const assetFetches = new Map();
 
     /**
-     * We use a async import here because otherwise sveltekit vite complains about unknown file extensions (e.g. .wasm)
+     * @param {{ url?: string, state?: string, loaded?: number, total?: number, error?: string }} detail
      */
-    const bindingsPromise = await Promise.all([
-        /** @ts-ignore */
-        import(`./emHdBindings.js?url`),
-        /** @ts-ignore */
-        import(`./emHdBindings.data?url`),
-        // https://v3.vitejs.dev/guide/features.html#web-workers
-        // https://github.com/vitejs/vite/issues/6979
-        /** @ts-ignore */
-        import(`./emHdBindings.worker.js?worker&url`),
-        /** @ts-ignore */
-        import(`./emHdBindings.worker.js?url`),
-        /** @ts-ignore */
-        import(`./emHdBindings.wasm?url`),
-    ]);
-    const [bindings, data, workerProd, workerDev, wasm] = bindingsPromise;
-    const worker = isProd ? workerProd : workerDev;
-    const preloaded_data = await fetch(data.default).then(r => r.arrayBuffer());
+    function handleAssetFetchProgress(detail) {
+        const url = detail.url ?? "";
+        if (url) {
+            if (detail.state === "done" || detail.state === "error") {
+                assetFetches.delete(url);
+            }
+            else {
+                assetFetches.set(url, detail);
+            }
+        }
+
+        let loaded = 0;
+        let total = 0;
+        for (const entry of assetFetches.values()) {
+            const entryLoaded = entry.loaded ?? 0;
+            loaded += entryLoaded;
+            total += Math.max(entry.total ?? 0, entryLoaded);
+        }
+
+        const payload = {
+            url,
+            state: detail.state ?? "progress",
+            loaded: detail.loaded ?? 0,
+            total: detail.total ?? 0,
+            error: detail.error,
+            active: assetFetches.size,
+            loadedTotal: loaded,
+            totalBytes: total,
+        };
+
+        opts?.onAssetFetchProgress?.(payload);
+    }
 
     return usd_module_promise = getUsdModuleFn({
-        mainScriptUrlOrBlob: bindings.default,// "./emHdBindings.js",
+        mainScriptUrlOrBlob: bindingsUrl,
         ...opts,
+        onAssetFetchProgress: handleAssetFetchProgress,
         setStatus: (status) => {
             // TODO: would be nice to have a progress event
             // for now we parse the log 'Downloading data... (219516/849069)'
@@ -83,16 +165,9 @@ export async function getUsdModule(opts) {
             /** resolved filepath */
             let res = null;
 
-            if (file.includes("emHdBindings.data")) {
-                res = data.default;
+            if (file.includes("emHdBindings.wasm")) {
+                res = wasmUrl;
             }
-            else if (file.includes("emHdBindings.wasm")) {
-                res = wasm.default;
-            }
-            else if (file.includes("emHdBindings.worker.js")) {
-                res = worker.default;
-            }
-
             // if (url?.startsWith("data:text/javascript;base64")) {
             //     // we're client side and Buffer and atob are not available
             //     // so we need to convert the base64 to a blob
@@ -110,15 +185,23 @@ export async function getUsdModule(opts) {
         getPreloadedPackage(name, size) {
             const userResult = opts?.getPreloadedPackage?.(name, size);
             if (userResult) return userResult;
-
-            // For debugging if the data file isnt loaded or the size might be wrong
-            // Make sure to clear the vite cache. See https://linear.app/needle/issue/NE-4851#comment-2a9538e3
-            if (name.includes("emHdBindings.data")) {
-                if (preloaded_data.byteLength !== size) {
-                    throw new Error(`emHdBindings.data size mismatch: expected ${size} but got ${preloaded_data.byteLength}\n${data.default}`);
-                }
-            }
             return null;
         },
     });
+}
+
+/**
+ * @param {import("..").USD} USD
+ * @returns {import("..").OpenUsdBuildInfo}
+ */
+export function getOpenUsdBuildInfo(USD) {
+    return JSON.parse(USD.GetBuildInfoJson());
+}
+
+/**
+ * @param {undefined | import("..").GetUsdModuleOptions} opts
+ * @returns {Promise<import("..").OpenUsdBuildInfo>}
+ */
+export async function loadOpenUsdBuildInfo(opts) {
+    return getOpenUsdBuildInfo(await getUsdModule(opts));
 }

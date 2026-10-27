@@ -1,5 +1,8 @@
-import { Plugin } from "vite";
-
+export type NeedleUSDVitePlugin = {
+    name: string;
+    config?: (config: any, env: any) => any | Promise<any>;
+    configureServer?: (server: any) => void;
+};
 
 /**
  * Enable USD WASM support for vite based applications.
@@ -16,4 +19,4 @@ import { Plugin } from "vite";
  * });
  * ```
  */
-export declare function needleUSD(): Array<Plugin>;
+export declare function needleUSD(): Array<NeedleUSDVitePlugin>;

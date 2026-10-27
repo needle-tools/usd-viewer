@@ -1,7 +1,17 @@
-import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, DirectionalLight, Clock, PMREMGenerator, Texture, Vector3, Box3, Object3D } from 'three';
+import { WebGLRenderer, VSMShadowMap, SRGBColorSpace, NeutralToneMapping, PerspectiveCamera, Scene, GridHelper, Clock, PMREMGenerator, Texture, Vector3, Box3, Object3D } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
+export type RenderHostRuntime = "three" | "needle-engine";
+
+export type DemoRenderHost = {
+    runtime: RenderHostRuntime,
+    runtimeLabel: string,
+    runtimeVersion: string | null,
+    needleContext: import("@needle-tools/engine").Context | null,
+    scene: Scene,
+    fitCamera: () => void,
+};
 
 export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Texture | null> {
     return new Promise((resolve, _reject) => {
@@ -12,6 +22,10 @@ export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Textur
             texture.dispose();
             pmremGenerator.dispose();
             resolve(envMap);
+        }, undefined, error => {
+            console.warn("Failed to load environment map", url, error);
+            pmremGenerator.dispose();
+            resolve(null);
         });
     });
 }
@@ -19,16 +33,24 @@ export function loadEnvMap(url: string, renderer: WebGLRenderer): Promise<Textur
 
 export function run(config: {
     renderer: WebGLRenderer,
-    scene: Scene,
+    runtime: RenderHostRuntime,
     onRender: (dt: number) => void
-}) {
+}): Promise<DemoRenderHost> {
+    return createRenderHost(config);
+}
 
-    const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+async function createRenderHost(config: {
+    renderer: WebGLRenderer,
+    runtime: RenderHostRuntime,
+    onRender: (dt: number) => void
+}): Promise<DemoRenderHost> {
+
+    const camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.x = 2;
     camera.position.y = 2;
     camera.position.z = 10;
 
-    const { renderer, onRender, scene } = config;
+    const { renderer, onRender } = config;
 
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -40,6 +62,29 @@ export function run(config: {
     renderer.shadowMap.type = VSMShadowMap;
     renderer.setClearColor(0x000000, 1); // the default
 
+    let scene: Scene;
+    let needleContext: import("@needle-tools/engine").Context | null = null;
+    let runtimeLabel = "three.js";
+    let runtimeVersion: string | null = null;
+
+    if (config.runtime === "needle-engine") {
+        const { Context } = await import("@needle-tools/engine");
+        needleContext = new Context({
+            name: "OpenUSD Demo",
+            alias: "openusd-demo",
+            domElement: renderer.domElement,
+            renderer,
+            runInBackground: true,
+        });
+        await needleContext.create({ files: [] });
+        needleContext.mainCamera = camera;
+        scene = needleContext.scene;
+        runtimeLabel = "Needle Engine";
+        runtimeVersion = needleContext.version && needleContext.version !== "0.0.0" ? needleContext.version : null;
+    }
+    else {
+        scene = new Scene();
+    }
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -57,21 +102,25 @@ export function run(config: {
     const gridhelper = new GridHelper(100, 100);
     scene.add(gridhelper);
 
-    if (!scene.environment)
-        scene.add(new DirectionalLight(0xffffff, 1));
-
     const clock = new Clock();
-    function render() {
+    function render(timestamp = performance.now()) {
         const dt = clock.getDelta();
         requestAnimationFrame(render);
         controls.update(dt);
+        needleContext?.update(timestamp / 1000, null);
         onRender(dt);
-        renderer.render(scene, camera);
+        if (needleContext) needleContext.renderNow(camera);
+        else renderer.render(scene, camera);
     }
 
     window.requestAnimationFrame(render);
 
     return {
+        runtime: config.runtime,
+        runtimeLabel,
+        runtimeVersion,
+        needleContext,
+        scene,
         fitCamera: () => {
             setTimeout(() => {
                 const toRemove = [ gridhelper, ];
@@ -91,10 +140,12 @@ function fitCameraToSelection(camera: PerspectiveCamera, controls: OrbitControls
     const size = new Vector3();
     const center = new Vector3();
     const box = new Box3();
+    const objectBox = new Box3();
     
     box.makeEmpty();
     for(const object of selection) {
-      box.expandByObject(object);
+      object.updateWorldMatrix(true, false);
+      expandFitBox(box, object, objectBox);
     }
   
     box.getSize(size);
@@ -138,3 +189,26 @@ function fitCameraToSelection(camera: PerspectiveCamera, controls: OrbitControls
     camera.position.copy(controls.target).sub(direction);
     controls.update();
   }
+
+function expandFitBox(box: Box3, object: Object3D, objectBox: Box3) {
+    if (object.userData?.usdHelperFor) return;
+
+    const geometry = (object as Object3D & {
+        geometry?: {
+            boundingBox?: Box3 | null,
+            computeBoundingBox?: () => void,
+        }
+    }).geometry;
+
+    if (geometry) {
+        if (!geometry.boundingBox) geometry.computeBoundingBox?.();
+        if (geometry.boundingBox) {
+            objectBox.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld);
+            box.union(objectBox);
+        }
+    }
+
+    for (const child of object.children) {
+        expandFitBox(box, child, objectBox);
+    }
+}

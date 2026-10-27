@@ -1,0 +1,26 @@
+#usda 1.0
+(
+    subLayers = [
+        @../materials/materials.usda@
+    ]
+)
+
+def Xform "World"
+{
+    def Mesh "NestedTexturedPanel" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.8, -0.5, 0), (0.8, -0.5, 0), (0.8, 0.5, 0), (-0.8, 0.5, 0)]
+        normal3f[] primvars:normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+            interpolation = "faceVarying"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (2, 0), (2, 2), (0, 2)] (
+            interpolation = "faceVarying"
+        )
+        uniform token subdivisionScheme = "none"
+        rel material:binding = </World/Looks/NestedTextured>
+    }
+}

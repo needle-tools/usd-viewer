@@ -1,22 +1,35 @@
 {
   "name": "usd-viewer",
   "version": "0.1.0",
+  "private": true,
   "description": "Basic USD viewer",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "prepare:public": "node scripts/prepare-public-runtime.mjs",
+    "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs"
   },
   "dependencies": {
-    "@fastify/static": "^6.10.2",
-    "fastify": "^4.22.0"
+    "@fastify/static": "^9.1.3",
+    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@sparkjsdev/spark": "2.1.0",
+    "@needle-tools/materialx": "1.7.4",
+    "fastify": "^5.8.5",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.1"
+  },
+  "overrides": {
+    "@needle-tools/materialx": "1.7.4",
+    "three": "$three"
   },
   "engines": {
-    "node": ">16.x"
+    "node": "22.x"
   },
   "repository": {
-    "url": "https://glitch.com/edit/#!/usd-viewer"
+    "type": "git",
+    "url": "git+https://github.com/needle-tools/usd-viewer.git"
   },
-  "license": "Apache 2.0 License",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "keywords": [
     "usd",
     "usdz",

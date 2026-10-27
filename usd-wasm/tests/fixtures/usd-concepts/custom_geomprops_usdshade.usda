@@ -1,0 +1,118 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Mesh "WarmPrimvars" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/PrimvarPreview>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-2.6, 0, -0.75), (-0.6, 0, -0.75), (-0.6, 0, 0.75), (-2.6, 0, 0.75)]
+        normal3f[] primvars:normals = [(0, -1, 0)] (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(1.0, 0.28, 0.08)] (
+            interpolation = "constant"
+        )
+        float[] primvars:panelRoughness = [0.18] (
+            interpolation = "constant"
+        )
+        float[] primvars:signal = [0.95] (
+            interpolation = "constant"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+    }
+
+    def Mesh "CoolPrimvars" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Looks/PrimvarPreview>
+        uniform token subdivisionScheme = "none"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(0.6, 0, -0.75), (2.6, 0, -0.75), (2.6, 0, 0.75), (0.6, 0, 0.75)]
+        normal3f[] primvars:normals = [(0, -1, 0)] (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.05, 0.42, 1.0)] (
+            interpolation = "constant"
+        )
+        float[] primvars:panelRoughness = [0.82] (
+            interpolation = "constant"
+        )
+        float[] primvars:signal = [0.35] (
+            interpolation = "constant"
+        )
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+    }
+
+    def DistantLight "Key"
+    {
+        float inputs:intensity = 350
+        float inputs:angle = 0.35
+        float3 xformOp:rotateXYZ = (-40, 0, 35)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 35
+        float horizontalAperture = 21
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.35, 0.94, 0), (0, -0.94, 0.35, 0), (0, -4.5, 2.1, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Looks"
+{
+    def Material "PrimvarPreview"
+    {
+        token outputs:surface.connect = </Looks/PrimvarPreview/Preview.outputs:surface>
+
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor.connect = </Looks/PrimvarPreview/ReadDisplayColor.outputs:result>
+            float inputs:roughness.connect = </Looks/PrimvarPreview/ReadRoughness.outputs:result>
+            float inputs:metallic.connect = </Looks/PrimvarPreview/ReadSignal.outputs:result>
+            token outputs:surface
+        }
+
+        def Shader "ReadDisplayColor"
+        {
+            uniform token info:id = "UsdPrimvarReader_float3"
+            string inputs:varname = "displayColor"
+            float3 inputs:fallback = (0.8, 0.8, 0.8)
+            float3 outputs:result
+        }
+
+        def Shader "ReadRoughness"
+        {
+            uniform token info:id = "UsdPrimvarReader_float"
+            string inputs:varname = "panelRoughness"
+            float inputs:fallback = 0.5
+            float outputs:result
+        }
+
+        def Shader "ReadSignal"
+        {
+            uniform token info:id = "UsdPrimvarReader_float"
+            string inputs:varname = "signal"
+            float inputs:fallback = 0
+            float outputs:result
+        }
+    }
+}
