@@ -177,6 +177,9 @@ async function createFile(opts) {
     return parent + filepath;
 }
 
+const activeLegacyLoads = new WeakSet();
+let nextImportedFileScope = 0;
+
 export class USDLoadingManager {
     static urlModifier = null;
     static setURLModifier(urlModifier) {
@@ -198,11 +201,75 @@ export async function createThreeHydra(config) {
 
     await config.USD.ready.catch(console.error);
 
-    const { buffer, USD } = config;
+    const { USD } = config;
 
-    // Some common directory is needed so that we don't get clashes with root-level files
-    // and directories in the virtual file system
-    const directoryForFiles = "needle/";
+    const scopedHttpCache = typeof USD.HdWebSyncDriver?.prototype?.HasScopedHttpCache === "function";
+    // Older runtimes alias URL basenames in one global cache. Reject a second
+    // live handle before it can write files or open a corrupt native stage.
+    if (!scopedHttpCache && activeLegacyLoads.has(USD)) {
+        throw new Error("This OpenUSD runtime supports one live Hydra handle; dispose it before loading another, or update the runtime for isolated HTTP caches.");
+    }
+    if (!scopedHttpCache) activeLegacyLoads.add(USD);
+    const releaseLegacyLoad = () => { if (!scopedHttpCache) activeLegacyLoads.delete(USD); };
+    const lifetime = {
+        USD, scopedHttpCache, releaseLegacyLoad,
+        directory: `needle/${++nextImportedFileScope}/`,
+        driver: null, renderInterface: null, scenePrimitiveRoot: null,
+        waitForDrawCompletion: null, cleanupPromise: null,
+    };
+    try {
+        return await createScopedThreeHydra(config, lifetime);
+    } catch (error) {
+        await disposeHydraLifetime(lifetime).catch(() => {});
+        throw error;
+    }
+}
+
+function removeVirtualDirectory(USD, path) {
+    const node = USD.FS_analyzePath(path).object;
+    if (!node) return;
+    for (const [name, child] of Object.entries(node.contents || {})) {
+        const childPath = `${path}/${name}`;
+        if (child.isFolder) removeVirtualDirectory(USD, childPath);
+        else { try { USD.FS_unlink(childPath); } catch (_) {} }
+    }
+    try { USD.FS_rmdir(path); } catch (_) {}
+}
+
+async function disposeHydraLifetime(lifetime) {
+    if (lifetime.cleanupPromise) return lifetime.cleanupPromise;
+    lifetime.cleanupPromise = (async () => {
+        try {
+            await lifetime.waitForDrawCompletion?.().catch(() => {});
+            await lifetime.renderInterface?.waitForMaterialsReady().catch(() => {});
+            lifetime.renderInterface?.dispose();
+            if (lifetime.scenePrimitiveRoot) disposeObjectTree(lifetime.scenePrimitiveRoot);
+        } finally {
+            try {
+                // Native driver destruction closes only its own HTTP scope.
+                if (lifetime.driver && !lifetime.driver.isDeleted()) lifetime.driver.delete();
+            } finally {
+                try {
+                    removeVirtualDirectory(lifetime.USD, "/" + lifetime.directory.replace(/\/$/, ""));
+                    if (!lifetime.scopedHttpCache) {
+                        // The exclusive-handle guard makes old global caches safe.
+                        removeVirtualDirectory(lifetime.USD, "/tmp/1");
+                        removeVirtualDirectory(lifetime.USD, "/1");
+                    }
+                } finally {
+                    lifetime.releaseLegacyLoad();
+                }
+            }
+        }
+    })();
+    return lifetime.cleanupPromise;
+}
+
+async function createScopedThreeHydra(config, lifetime) {
+    const debug = config.debug || false;
+    const { buffer, USD } = config;
+    // Uploaded files and downloaded packages also belong to one handle.
+    const directoryForFiles = lifetime.directory;
     const loadedFilePaths = [];
 
     // We're loading all provided files into the virtual file system.
@@ -254,13 +321,13 @@ export async function createThreeHydra(config) {
             const isBlob = resolvedUrl.startsWith("blob");
             const isWebUrl = resolvedUrl.startsWith("http");
             if (isBlob || isUsdPackageUrl(resolvedUrl)) {
-                file = await createFile({ USD, filepath: resolvedUrl });
+                file = await createFile({ USD, filepath: resolvedUrl, parent: directoryForFiles });
             }
             else if ((allowFetchWebUrls && isWebUrl) || allowFetchLocalFiles) {
                 file = resolvedUrl;
             }
             else {
-                file = await createFile({ USD, filepath: resolvedUrl });
+                file = await createFile({ USD, filepath: resolvedUrl, parent: directoryForFiles });
             }
         }
     }
@@ -277,6 +344,7 @@ export async function createThreeHydra(config) {
     let driverOrPromise = null;
 
     const scenePrimitiveRoot = new Object3D();
+    lifetime.scenePrimitiveRoot = scenePrimitiveRoot;
     scenePrimitiveRoot.name = "__usd_scene_primitives";
     scenePrimitiveRoot.userData.usdScenePrimitiveRoot = true;
     config.scene.add(scenePrimitiveRoot);
@@ -289,6 +357,7 @@ export async function createThreeHydra(config) {
         renderScene: config.renderScene,
         scenePrimitiveRoot,
         renderer: config.renderer,
+        materialXVolumeFactory: config.materialXVolumeFactory,
         requestRender: config.requestRender,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
@@ -301,6 +370,7 @@ export async function createThreeHydra(config) {
     };
 
     const renderInterface = new threeJsRenderDelegate(delegateConfig);
+    lifetime.renderInterface = renderInterface;
 
     if (debug) console.log("RENDER INTERFACE", renderInterface);
 
@@ -316,6 +386,7 @@ export async function createThreeHydra(config) {
     }
 
     const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
+    lifetime.driver = driver;
     if (typeof driver.HasStage === "function" && !driver.HasStage()) {
         driver.delete();
         throw new Error(`Failed to open USD stage: ${file}`);
@@ -456,6 +527,7 @@ export async function createThreeHydra(config) {
 
     /** Draw once, after stage metadata has been applied to the root scene. */
     draw();
+    lifetime.waitForDrawCompletion = waitForDrawCompletion;
     const readyPromise = waitForDrawCompletion()
         .then(() => renderInterface.waitForRprimsReady())
         .then(() => config.waitForMaterials
@@ -605,76 +677,8 @@ export async function createThreeHydra(config) {
             disposed = true;
             if (debug) console.warn("Disposing Three Hydra");
 
-            const cleanup = async () => {
-                await renderInterface.waitForMaterialsReady().catch(() => {});
-                renderInterface.dispose();
-                disposeObjectTree(scenePrimitiveRoot);
-
-                // Unlink all generated files and folders in the virtual file system.
-                const unlinkedFiles = new Set();
-                function unlinkFiles(dir, path) {
-                for (const fileName of Object.keys(dir.contents)) {
-                    const file = dir.contents[fileName];
-                    if (file.isFolder) {
-                        unlinkFiles(file, path + fileName + "/");
-                    }
-                    const fullPath = path + fileName;
-                    if (file.isFolder) {
-                        if (debug) console.log("unlinking folder", fullPath);
-                        try {
-                            config.USD.FS_rmdir(path + fileName);
-                        }
-                        catch (e) {
-                            if (debug) console.debug("Error unlinking folder", fullPath, e);
-                        }
-                    }
-                    else {
-                        if (debug) console.log("unlinking", fullPath);
-                        unlinkedFiles.add(fullPath);
-                        try {
-                            config.USD.FS_unlink(fullPath);
-                        }
-                        catch (e) {
-                            if (debug) console.debug("Error unlinking", fullPath, e);
-                        }
-                    }
-                }
-                }
-
-                function rmRootDir(rootDir) {
-                const allFiles = config.USD.FS_analyzePath(rootDir).object;
-                if (allFiles)
-                    unlinkFiles(allFiles, rootDir);
-                }
-
-                rmRootDir("/" + directoryForFiles);
-                rmRootDir("/1/"); // HTTPAssetResolver puts files into a series of folders named "/1/1/1/1" to allow for parent traversal
-
-                if (!unlinkedFiles.has(file)) {
-                if (debug) console.warn("Unlinking main file", file);
-                let fileToUnlink = file;
-                if (fileToUnlink.startsWith("http"))
-                    fileToUnlink = "/" + fileToUnlink.replace("://", ":/");
-                if (config.USD.FS_analyzePath(fileToUnlink)?.exists) {
-                    try {
-                        config.USD.FS_unlink(fileToUnlink);
-                    } catch (e) {
-                        if (debug) console.debug("Error unlinking main file", fileToUnlink, e);
-                    }
-                }
-                }
-
-                if (!driver.isDeleted()) {
-                    driver.delete();
-                }
-                driverOrPromise = null;
-            };
-
-            if (drawInFlight) {
-                console.debug("Waiting for pending Hydra draw before USD cleanup.");
-            }
-            await waitForDrawCompletion().catch(() => {});
-            await cleanup();
+            await disposeHydraLifetime(lifetime);
+            driverOrPromise = null;
 
             if (debug) console.warn("Disposed Three Hydra");
         },

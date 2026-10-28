@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>USD asset validation</title>
+<style>body { margin: 0; } canvas { display: block; }</style>
+<canvas id="viewport"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { getUsdModule } from '../../src/bindings/index.js';
+import { createThreeHydra } from '../../src/create.three.js';
+
+const errors = [];
+window.addEventListener('error', event => errors.push(event.message));
+window.addEventListener('unhandledrejection', event => errors.push(String(event.reason)));
+window.runAssetValidation = async url => {
+    const started = performance.now();
+    const USD = await getUsdModule();
+    const moduleMs = performance.now() - started;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#e5e5e5');
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 3));
+    const light = new THREE.DirectionalLight(0xffffff, 3);
+    light.position.set(3, 4, 5);
+    scene.add(light);
+    const root = new THREE.Group();
+    scene.add(root);
+    const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('canvas'), antialias: false });
+    renderer.setSize(800, 600);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const loadStart = performance.now();
+    const handle = await createThreeHydra({ USD, scene: root, url, renderer, renderScene: scene });
+    await handle.ready();
+    await handle.materialsReady();
+    root.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(root);
+    if (bounds.isEmpty()) throw new Error('Loaded stage has empty bounds');
+    const center = bounds.getCenter(new THREE.Vector3());
+    const radius = Math.max(bounds.getSize(new THREE.Vector3()).length() / 2, 0.01);
+    if (!Number.isFinite(radius)) throw new Error('Loaded stage has non-finite bounds');
+    const camera = new THREE.PerspectiveCamera(45, 4 / 3, radius / 100, radius * 100);
+    camera.position.copy(center).add(new THREE.Vector3(1, 0.6, 1).normalize().multiplyScalar(radius * 3));
+    camera.lookAt(center);
+    renderer.render(scene, camera);
+    const pixels = new Uint8Array(800 * 600 * 4);
+    const gl = renderer.getContext();
+    gl.readPixels(0, 0, 800, 600, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    let foregroundPixels = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+        if (Math.abs(pixels[i] - 229) + Math.abs(pixels[i + 1] - 229) + Math.abs(pixels[i + 2] - 229) > 15) foregroundPixels++;
+    }
+    const materials = new Map();
+    root.traverse(object => {
+        if (!object.isMesh) return;
+        for (const material of [object.material].flat()) {
+            if (!material || materials.has(material.uuid)) continue;
+            materials.set(material.uuid, {
+                name: material.name, type: material.type, color: material.color?.toArray(),
+                metalness: material.metalness, roughness: material.roughness, opacity: material.opacity,
+                maps: ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'aoMap', 'emissiveMap']
+                    .filter(slot => material[slot]).map(slot => ({ slot, colorSpace: material[slot].colorSpace,
+                        width: material[slot].image?.width, height: material[slot].image?.height })),
+            });
+        }
+    });
+    // Retain the scene until the caller captures the diagnostic frame.
+    window.assetValidationHandle = handle;
+    return {
+        moduleMs, loadedMs: performance.now() - loadStart, heap: USD.wasmMemory.buffer.byteLength,
+        drawnTriangles: renderer.info.render.triangles, foregroundPixels, diagnostics: handle.diagnostics(),
+        materials: [...materials.values()], errors, buildInfo: JSON.parse(USD.GetBuildInfoJson()),
+    };
+};
+</script>

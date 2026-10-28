@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+<!-- Expected: a violet cellular lattice with mixed forward/backward scattering and emission. Apply to box-bounded volume geometry; scene settings are in suite.json. -->
+<position name="n1" type="vector3"><input name="space" type="string" value="object"/></position>
+<extract name="n2" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="0"/></extract>
+<extract name="n3" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="1"/></extract>
+<extract name="n4" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="2"/></extract>
+<multiply name="n5" type="float"><input name="in1" type="float" nodename="n2"/><input name="in2" type="float" value="7"/></multiply>
+<sin name="n6" type="float"><input name="in" type="float" nodename="n5"/></sin>
+<multiply name="n7" type="float"><input name="in1" type="float" nodename="n3"/><input name="in2" type="float" value="7"/></multiply>
+<sin name="n8" type="float"><input name="in" type="float" nodename="n7"/></sin>
+<multiply name="n9" type="float"><input name="in1" type="float" nodename="n6"/><input name="in2" type="float" nodename="n8"/></multiply>
+<multiply name="n10" type="float"><input name="in1" type="float" nodename="n4"/><input name="in2" type="float" value="7"/></multiply>
+<sin name="n11" type="float"><input name="in" type="float" nodename="n10"/></sin>
+<multiply name="n12" type="float"><input name="in1" type="float" nodename="n9"/><input name="in2" type="float" nodename="n11"/></multiply>
+<multiply name="n13" type="float"><input name="in1" type="float" nodename="n12"/><input name="in2" type="float" nodename="n12"/></multiply>
+<multiply name="n14" type="float"><input name="in1" type="float" nodename="n2"/><input name="in2" type="float" nodename="n2"/></multiply>
+<multiply name="n15" type="float"><input name="in1" type="float" nodename="n3"/><input name="in2" type="float" nodename="n3"/></multiply>
+<add name="n16" type="float"><input name="in1" type="float" nodename="n14"/><input name="in2" type="float" nodename="n15"/></add>
+<multiply name="n17" type="float"><input name="in1" type="float" nodename="n4"/><input name="in2" type="float" nodename="n4"/></multiply>
+<add name="n18" type="float"><input name="in1" type="float" nodename="n16"/><input name="in2" type="float" nodename="n17"/></add>
+<multiply name="n19" type="float"><input name="in1" type="float" nodename="n18"/><input name="in2" type="float" value="-2"/></multiply>
+<exp name="n20" type="float"><input name="in" type="float" nodename="n19"/></exp>
+<multiply name="n21" type="float"><input name="in1" type="float" nodename="n13"/><input name="in2" type="float" nodename="n20"/></multiply>
+<multiply name="n22" type="float"><input name="in1" type="float" nodename="n21"/><input name="in2" type="float" value="3"/></multiply>
+<absorption_vdf name="n23" type="VDF"><input name="absorption" type="vector3" value="0.08,0.3,0.06"/></absorption_vdf>
+<anisotropic_vdf name="n24" type="VDF"><input name="absorption" type="vector3" value="0.08,0.3,0.06"/><input name="scattering" type="vector3" value="0.6,0.12,0.85"/><input name="anisotropy" type="float" value="-0.3"/></anisotropic_vdf>
+<anisotropic_vdf name="n25" type="VDF"><input name="scattering" type="vector3" value="0.6,0.12,0.85"/><input name="anisotropy" type="float" value="0.45"/></anisotropic_vdf>
+<mix name="n26" type="VDF"><input name="bg" type="VDF" nodename="n24"/><input name="fg" type="VDF" nodename="n25"/><input name="mix" type="float" value="0.35"/></mix>
+<multiply name="n27" type="VDF"><input name="in1" type="VDF" nodename="n26"/><input name="in2" type="float" nodename="n22"/></multiply>
+<uniform_edf name="n28" type="EDF"><input name="color" type="color3" value="0.15,0.015,0.22"/></uniform_edf>
+<multiply name="n29" type="EDF"><input name="in1" type="EDF" nodename="n28"/><input name="in2" type="float" nodename="n22"/></multiply>
+<volume name="n30" type="volumeshader"><input name="vdf" type="VDF" nodename="n27"/><input name="edf" type="EDF" nodename="n29"/></volume>
+<volumematerial name="n31" type="material"><input name="volumeshader" type="volumeshader" nodename="n30"/></volumematerial>
+</materialx>

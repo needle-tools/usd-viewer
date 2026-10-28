@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync, rmSync } from "node:fs";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -79,6 +80,10 @@ describe("OpenUSD wasm binding artifacts", () => {
         const wasm = await readFile(wasmPath);
 
         assert.deepEqual([...wasm.subarray(0, 4)], [0x00, 0x61, 0x73, 0x6d]);
+        const optimization = JSON.parse(await readFile(resolve(bindingsDir, "openusd-optimization-info.json"), "utf8"));
+        assert.equal(wasm.length, optimization.output.bytes);
+        assert.equal(createHash("sha256").update(wasm).digest("hex"), optimization.output.sha256,
+            "the optimized runtime must match its transformation manifest");
     });
 
     it("loads in Node with the runtime APIs used by usd-viewer", async () => {
@@ -140,7 +145,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         const buildInfo = JSON.parse(USD.GetBuildInfoJson());
         const shippedBuildInfo = JSON.parse(await readFile(buildInfoPath, "utf8"));
         assert.deepEqual(buildInfo, shippedBuildInfo);
-        assert.equal(buildInfo.openusd.version, "0.26.5");
+        assert.equal(buildInfo.openusd.version, "0.26.11");
         assert.equal(typeof buildInfo.openusd.gitDirty, "boolean");
         assert.equal(buildInfo.modules.usdImaging, true);
         assert.equal(buildInfo.modules.hydraBridge, true);
@@ -214,7 +219,7 @@ def Xform "Root" {
                 }
             },
         });
-        assert.equal(buildInfo.openusd.version, "0.26.5");
+        assert.equal(buildInfo.openusd.version, "0.26.11");
         assert.equal(buildInfo.modules.hydraBridge, true);
         assert.equal(buildInfo.modules.materialX, true);
         assert.equal(buildInfo.modules.usdDraco, true);

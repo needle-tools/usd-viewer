@@ -1,0 +1,167 @@
+{
+  "sourceRepository": "https://github.com/needle-tools/three.js",
+  "sourceRevision": "6c236842315497d50dce95ff10418b1c92889b4e",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sourcePath": "LICENSE",
+      "sourceSha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+      "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+      "bytes": 1081
+    },
+    {
+      "path": "loaders/MaterialXLoader.js",
+      "sourcePath": "examples/jsm/loaders/MaterialXLoader.js",
+      "sourceSha256": "db96d5d735b84a77a7e2d600fab5e7be40ab8dc7ba6bc59267680078c68798f7",
+      "sha256": "db96d5d735b84a77a7e2d600fab5e7be40ab8dc7ba6bc59267680078c68798f7",
+      "bytes": 8325
+    },
+    {
+      "path": "loaders/materialx/MaterialXArchive.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXArchive.js",
+      "sourceSha256": "0a64017cbcd445d16e9445fcbc397d28bca6bac90d84369fdf9d535379710d23",
+      "sha256": "cf7b247acbde629dc80044746f09dccd07f17e9837dace2117c444c5db4a83b7",
+      "bytes": 2226
+    },
+    {
+      "path": "loaders/materialx/MaterialXDisney.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXDisney.js",
+      "sourceSha256": "e727ce8f69db78e98478a960c14af7d76797d544eb5551fedfa7861365c0ef7f",
+      "sha256": "e727ce8f69db78e98478a960c14af7d76797d544eb5551fedfa7861365c0ef7f",
+      "bytes": 2003
+    },
+    {
+      "path": "loaders/materialx/MaterialXDocument.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXDocument.js",
+      "sourceSha256": "2176f010a14bed4cf2f306388fff00d0420eaee6e7adf964610e736f9d7724a1",
+      "sha256": "7e748b6da9d52851990be6ef660be7876af5daa11e1e6d003e45c8237104bddd",
+      "bytes": 35827
+    },
+    {
+      "path": "loaders/materialx/MaterialXHextile.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXHextile.js",
+      "sourceSha256": "c5b66db6dbef89dd938fd3c9a4d2556d1f9910ac75622e42cad6a6ed439da542",
+      "sha256": "c5b66db6dbef89dd938fd3c9a4d2556d1f9910ac75622e42cad6a6ed439da542",
+      "bytes": 6250
+    },
+    {
+      "path": "loaders/materialx/MaterialXInterfaceValidation.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXInterfaceValidation.js",
+      "sourceSha256": "f0e3ff0a27186c97e0173ee9b242251b4792842c3d00964b89d117d1ad67d5f4",
+      "sha256": "f0e3ff0a27186c97e0173ee9b242251b4792842c3d00964b89d117d1ad67d5f4",
+      "bytes": 6041
+    },
+    {
+      "path": "loaders/materialx/MaterialXLog.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXLog.js",
+      "sourceSha256": "d824a683ea3a3c6b11e5afa7a919ba58ed299ea7095395036fada9506d8f9537",
+      "sha256": "d824a683ea3a3c6b11e5afa7a919ba58ed299ea7095395036fada9506d8f9537",
+      "bytes": 1282
+    },
+    {
+      "path": "loaders/materialx/MaterialXNodeDefs.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXNodeDefs.js",
+      "sourceSha256": "f7c71971f2c5a559aea909906563d26f2e8fac9c0992163cdf5e38c19934d4e1",
+      "sha256": "f7c71971f2c5a559aea909906563d26f2e8fac9c0992163cdf5e38c19934d4e1",
+      "bytes": 2981
+    },
+    {
+      "path": "loaders/materialx/MaterialXNodeInterfaceRegistry.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXNodeInterfaceRegistry.js",
+      "sourceSha256": "6e09243e41fd8875698b9d5a4a1a531333ae005a5599ad5df5839af14f94f0fc",
+      "sha256": "6e09243e41fd8875698b9d5a4a1a531333ae005a5599ad5df5839af14f94f0fc",
+      "bytes": 196105
+    },
+    {
+      "path": "loaders/materialx/MaterialXNodeLibrary.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXNodeLibrary.js",
+      "sourceSha256": "f434671e27a81ea3c18b18303728c72e82e8c1d37ec90e4588d5837971a4c31e",
+      "sha256": "d99eb74febd40e61872d31c5e9d7ef2274c646e4cade4fff7b106208db16521d",
+      "bytes": 31202
+    },
+    {
+      "path": "loaders/materialx/MaterialXSurfaceMappings.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXSurfaceMappings.js",
+      "sourceSha256": "f2b06d878cd7f74259aa1764bfb1aeb0b1d08cd6c01e9ded52cec7185feaa9c1",
+      "sha256": "f2b06d878cd7f74259aa1764bfb1aeb0b1d08cd6c01e9ded52cec7185feaa9c1",
+      "bytes": 18508
+    },
+    {
+      "path": "loaders/materialx/MaterialXUsd.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXUsd.js",
+      "sourceSha256": "b1ef03ae0a8501e8da2853164562792d812fce074d552444389661c12dcd9a34",
+      "sha256": "b1ef03ae0a8501e8da2853164562792d812fce074d552444389661c12dcd9a34",
+      "bytes": 4966
+    },
+    {
+      "path": "loaders/materialx/MaterialXUtils.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXUtils.js",
+      "sourceSha256": "de5a5901c5475899750797541e80b51c4e0dae518a21ff08a13663b092d00b9f",
+      "sha256": "de5a5901c5475899750797541e80b51c4e0dae518a21ff08a13663b092d00b9f",
+      "bytes": 2419
+    },
+    {
+      "path": "loaders/materialx/MaterialXVolume.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXVolume.js",
+      "sourceSha256": "7187070d11d542508c094cf4a944ec4c5a9a5db4d8a474e2877f5e93c218ae8e",
+      "sha256": "7187070d11d542508c094cf4a944ec4c5a9a5db4d8a474e2877f5e93c218ae8e",
+      "bytes": 4279
+    },
+    {
+      "path": "loaders/materialx/compile/MaterialXCompileRegistry.js",
+      "sourcePath": "examples/jsm/loaders/materialx/compile/MaterialXCompileRegistry.js",
+      "sourceSha256": "9e8d296bf16ce55a3178f0d343decb9f1ee1c79b5efcdb0ff920992c47ba4f38",
+      "sha256": "85f9295ba3d1119203c9518fc87b6ac2f2980f585576726771b9ebf794a4dcf7",
+      "bytes": 33091
+    },
+    {
+      "path": "loaders/materialx/parse/MaterialXParser.js",
+      "sourcePath": "examples/jsm/loaders/materialx/parse/MaterialXParser.js",
+      "sourceSha256": "870232db7c2264d4ff23d7c5a46486833e1f3522e873e3cf33faff478b36dab9",
+      "sha256": "870232db7c2264d4ff23d7c5a46486833e1f3522e873e3cf33faff478b36dab9",
+      "bytes": 707
+    },
+    {
+      "path": "materials/BoundedVolumeNodeMaterial.js",
+      "sourcePath": "examples/jsm/materials/BoundedVolumeNodeMaterial.js",
+      "sourceSha256": "8c64f9e7523351a710e8336f795beccfea0d8fc38c49e8530f963c29e7307484",
+      "sha256": "2c631c6cc4868e194cb05260b764963a5159d63cf0b9223ce2c15ac16510c52c",
+      "bytes": 9104
+    },
+    {
+      "path": "nodes/MaterialXCore.js",
+      "sourcePath": "src/nodes/materialx/MaterialXCore.js",
+      "sourceSha256": "1b04787c51663e9145ce159740c0c812909cf94ad534cc66b63be7dea6950051",
+      "sha256": "a390bacf0cf9ed1a65d5eef178cc98bb7e76f4ef8f1c713a84f8f32d9d1b7fbe",
+      "bytes": 1183
+    },
+    {
+      "path": "nodes/MaterialXNodes.js",
+      "sourcePath": "src/nodes/materialx/MaterialXNodes.js",
+      "sourceSha256": "4b50fdbca40326f0b7b77fbcac5bfb23dc8a0783c253869a8ed000c46a81900e",
+      "sha256": "322324054f2d65b86f553c6cbe3835d5d08ad2a2a927ec95e8a29b798c536a0e",
+      "bytes": 33808
+    },
+    {
+      "path": "nodes/MaterialXNoise.js",
+      "sourcePath": "src/nodes/materialx/MaterialXNoise.js",
+      "sourceSha256": "753203ea52d8584cce64ed06ba45d8d6371f9ce8b18124c26f412ad72ea36523",
+      "sha256": "37879c0da66cc784ce82b21f8df5900939703a99e59a53f75e55ff173f47f04f",
+      "bytes": 47140
+    },
+    {
+      "path": "nodes/lib/mx_hsv.js",
+      "sourcePath": "src/nodes/materialx/lib/mx_hsv.js",
+      "sourceSha256": "a5c42b9ebb9413c3d7cea06f4d998201a4816930aa617309174e6d68ba354aaf",
+      "sha256": "1e503b3fa8bbdd89184caf2aa20b367058b2989009c07db3dd91267877248811",
+      "bytes": 2611
+    },
+    {
+      "path": "nodes/lib/mx_transform_color.js",
+      "sourcePath": "src/nodes/materialx/lib/mx_transform_color.js",
+      "sourceSha256": "fe1703c337c2c49a00cb85c0af18c1b0f427aa7ca0c92ab22bde1c11e1daae6b",
+      "sha256": "23a585a5f375770479b3bdbd6ffa0d883f109407f5025bcefdad07e92fe1733d",
+      "bytes": 821
+    }
+  ]
+}

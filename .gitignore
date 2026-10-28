@@ -8,5 +8,25 @@ node_modules
 public/usd
 public/materialx
 public/test-fixtures
+public/rapier
 /repros
 /test-results
+
+public/mutracer
+public/oidn-webgpu
+
+public/three-gpu-pathtracer
+public/three-mesh-bvh
+
+public/dockview
+
+# Local planning, review evidence and release preparation.
+/.cache/
+/TODO.md
+/docs/releases/
+/docs/reviews/
+/patches/openusd/
+/usd-wasm/tests/hydra/asset-corpus-results.json
+/usd-wasm/tests/hydra/runtime-measurements.json
+/usd-wasm/tests/fixtures/coverage/**/*validation.json
+/usd-wasm/tests/fixtures/coverage/lighting-mdl/references/mdl-*.json

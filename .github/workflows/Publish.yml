@@ -10,7 +10,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    timeout-minutes: 5
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: .
@@ -18,21 +18,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'  # Fetch all submodules recursively
-        
+          submodules: 'recursive'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          
-      - name: Install dependencies
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            usd-wasm/package-lock.json
+
+      - name: Install viewer dependencies
         run: npm ci
-                
+
+      - name: Install package dependencies
+        run: npm ci --prefix usd-wasm
+
+      - name: Validate bindings
+        run: npm run --prefix usd-wasm test:bindings
+
+      - name: Validate Hydra integration
+        run: npm run --prefix usd-wasm test:hydra
+
+      - name: Inspect package contents
+        working-directory: usd-wasm
+        run: npm pack --dry-run --json
+
       - name: Publish to npm (stable branch)
         if: startsWith(github.ref_name, 'release/stable')
+        run: npx --yes needle-publish-helper@next publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "stable" --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"
+
+      - name: Publish to npm (latest branch)
+        if: startsWith(github.ref_name, 'release/latest')
         run: npx --yes needle-publish-helper@next publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "latest" --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"
 
       - name: Publish to npm (next and experimental branches)
-        if: ${{ !startsWith(github.ref_name, 'release/stable') }}
-        run: npx --yes needle-publish-helper@next publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "${{ github.ref_name }}" --version+tag --version+hash --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"
+        if: ${{ !startsWith(github.ref_name, 'release/stable') && !startsWith(github.ref_name, 'release/latest') }}
+        run: npx --yes needle-publish-helper@next publish "./usd-wasm" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --oidc --tag "${{ github.ref_name }}" --version+time --version+name --version+tag --version+hash --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"

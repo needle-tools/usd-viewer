@@ -1020,7 +1020,7 @@ if (filename) {
 applyViewerModeUi();
 applyMaterialLoadPolicyUi();
   
-function updateUrl() {
+function updateUrl(replaceHistory = false) {
 
   // Workaround for CORS issues: 
   // rewrite GitHub links in the form https://github.com/usd-wg/assets/blob/main/full_assets/ElephantWithMonochord/SoC-ElephantWithMonochord.usdc
@@ -1050,7 +1050,8 @@ function updateUrl() {
   }
   setViewerModeUrlParam(currentUrl);
   setWaitForMaterialsUrlParam(currentUrl);
-  window.history.pushState({}, filename, currentUrl);
+  if (replaceHistory) window.history.replaceState({}, filename, currentUrl);
+  else window.history.pushState({}, filename, currentUrl);
 }
 
 if (messageLog) messageLog.textContent = "Initializing...";
@@ -1060,7 +1061,8 @@ const initPromise = init();
 console.log("Loading USD Module...");
 if (messageLog) messageLog.textContent = "Loading USD Module – this can take a moment...";
 if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
-updateUrl();
+// Normalizing a restored document must preserve its Forward history entries.
+updateUrl(true);
 try {
   Promise.all([getUsdModule({
     mainScriptUrlOrBlob: "/usd/bindings/emHdBindings.js",
@@ -2193,6 +2195,7 @@ async function init() {
   let usdWgManifestPromise = null;
   let usdWgTreeRendered = false;
   let needleTreeRendered = false;
+  let usdSampleCardsPromise = null;
   let selectedConverter = '';
   let selectedSampleGroup = 'gltf';
   let loadedConversionCard = null;
@@ -2344,6 +2347,11 @@ async function init() {
       title: 'USD Working Group Assets',
       subtitle: 'Production USD samples from usd-wg/assets',
       load: () => loadUsdWgCards(''),
+    }],
+    ['usd-assets', {
+      title: 'USD assets',
+      subtitle: '',
+      load: loadUsdSampleCards,
     }],
     ['needle', {
       title: 'Needle',
@@ -2857,6 +2865,28 @@ async function init() {
     }
     needleTreeRendered = true;
     syncSampleTreeVisibility();
+  }
+
+  async function loadUsdSampleCards() {
+    if (!usdSampleCardsPromise) {
+      usdSampleCardsPromise = fetch('./data/usd-samples.json')
+        .then(response => {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.json();
+        })
+        .then(assets => assets.map(asset => ({
+          ...asset,
+          meta: `${asset.publisher} · ${asset.license}`,
+        })));
+    }
+    try {
+      return await usdSampleCardsPromise;
+    } catch (error) {
+      usdSampleCardsPromise = null;
+      setGalleryStatus('Couldn’t load USD assets.', true);
+      trackError('usd_samples_fetch', error);
+      return [];
+    }
   }
 
   function loadNeedleCards(group) {

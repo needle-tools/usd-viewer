@@ -4,17 +4,40 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-10-28
 ### Added
 - Added optional Spark rendering for OpenUSD `ParticleField3DGaussianSplat` prims in both the plain three.js and Needle Engine integrations.
+- Added authored-input approximations for known OmniPBR and glTF MDL materials, including texture factors, UV transforms, color spaces, opacity and normals.
+- Added bounded MaterialX volume materials through WebGPURenderer, including its WebGL2 backend, using the existing volume implementation with recorded source provenance.
 
 ### Changed
+- Updated the WASM runtime to OpenUSD 26.11.1 and rebuilt USD-dependent glTF/Draco plugins for its ABI.
 - Updated the development viewer to Needle Engine 6 and MaterialX 1.7.4.
+- Included the package license and third-party notices in npm artifacts.
 - Included asynchronous particle-field creation and MaterialX tangent generation in the existing loader readiness barriers.
+- Recorded an optional Binaryen post-link size pass with input/output hashes and exact optimizer flags.
 
 ### Fixed
+- Stopped pthread workers allocating unused private shared memories; only the host allocates memory, and an explicitly supplied host memory is preserved.
+- Shared one module initialization across concurrent first calls to `getUsdModule`, avoiding duplicate memories and worker pools.
+- Preserved browser Forward history when normalizing the viewer URL on document startup.
+- Applied PreviewSurface normal texture scale/bias, including reversed axes and nonstandard Z decoding, while preserving the canonical normal-map path.
+- Preserved authored UV transforms and independent samplers on PreviewSurface roughness, metalness and occlusion textures instead of replacing them with a default-sampled packed texture.
+- Isolated HTTP resolver and imported-file caches per Hydra handle so simultaneous stages with matching filenames load their own geometry and materials; disposal and failed loads release only their own files. Older unscoped runtimes reject overlapping handles before loading.
+- Preserved sidecar texture loading with isolated HTTP cache paths by resolving their original URL before native file reads.
+- Kept geometry visible with diagnostic fallback shading when Hydra cannot create a supported material surface (for example an MDL-only binding).
+- Preserved face-subset material bindings over mesh fallback bindings, including late material assignments and uncovered faces.
+- Added face-varying display colors to fallback shading without tinting authored surfaces.
+- Preserved HalfFloat/16-bit scalar texture channels and independent opacity without mutating shared texture sources.
+- Kept live MDL Material/NodeGraph input edits and animated inputs in sync without repeatedly rebuilding ordinary MaterialX materials.
+- Preserved canonical MaterialX vector input types and zero-light volume absorption/emission.
+- Avoided eagerly clearing unused WASM path-pool reservations, reducing resident memory while preserving the existing pool-handle ABI.
 - Applied OpenUSD particle-field array truncation and default-value rules before creating Spark splat buffers.
 - Reused a single scene-level Spark renderer across USD handles and existing Needle Engine splat integrations.
+
+## [1.1.2] - 2026-07-17
+### Changed
+- Updated package documentation and viewer styles.
 
 ## [1.1.1] - 2026-07-09
 ### Changed

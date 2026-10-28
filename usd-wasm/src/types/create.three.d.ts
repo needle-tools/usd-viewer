@@ -1,4 +1,5 @@
-import { Object3D, WebGLRenderer } from "three"
+import { Object3D } from "three"
+import { HydraRenderer, MaterialXVolumeFactory } from "./hydra"
 import { HdWebSyncDriver, USD, USDStage } from ".."
 
 export declare type HydraFile = File & { path: string };
@@ -37,14 +38,18 @@ export declare type createThreeHydraConfig = {
      */
     scene: Object3D,
 
-    /** Host scene rendered by the WebGLRenderer. Defaults to scene. */
+    /** Host render scene. Defaults to scene. */
     renderScene?: Object3D,
 
     /**
      * Host renderer used by integrations that need access outside the normal
-     * Object3D render path, including Gaussian splats.
+     * Object3D render path. Gaussian splats require WebGLRenderer; bounded
+     * MaterialX volumes require WebGPURenderer with antialias: false.
      */
-    renderer?: WebGLRenderer,
+    renderer?: HydraRenderer,
+
+    /** Optional bounded-volume support from @needle-tools/usd/volumes. Requires a compatible node renderer. */
+    materialXVolumeFactory?: MaterialXVolumeFactory,
 
     /** Called when an asynchronous render integration needs another frame. */
     requestRender?: () => void,

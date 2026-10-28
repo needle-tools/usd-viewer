@@ -215,7 +215,7 @@ test.describe('public usd-viewer lifecycle', () => {
         ]) {
             await loadPublicSample(page, sample.label);
             const state = await waitForPublicViewerLoad(page, sample.filename);
-            expect(state.filename).toBe(sample.filename);
+            expect(state.filename).toBe(viewerDisplayFilename(sample.filename));
             expect(state.driverAlive).toBe(true);
             expect(state.hasHydraHandle).toBe(true);
             expect(state.children).toBeGreaterThan(0);

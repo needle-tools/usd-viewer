@@ -1,0 +1,2 @@
+# Unified-diff context lines and mail signatures contain intentional spaces.
+patches/openusd/*.patch -whitespace

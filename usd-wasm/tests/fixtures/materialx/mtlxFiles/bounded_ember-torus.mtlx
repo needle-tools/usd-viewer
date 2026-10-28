@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+<!-- Expected: an orange glowing ring with colored attenuation. Apply to box-bounded volume geometry; scene settings are in suite.json. -->
+<position name="n1" type="vector3"><input name="space" type="string" value="object"/></position>
+<extract name="n2" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="0"/></extract>
+<extract name="n3" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="1"/></extract>
+<extract name="n4" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="2"/></extract>
+<multiply name="n5" type="float"><input name="in1" type="float" nodename="n2"/><input name="in2" type="float" nodename="n2"/></multiply>
+<multiply name="n6" type="float"><input name="in1" type="float" nodename="n3"/><input name="in2" type="float" nodename="n3"/></multiply>
+<add name="n7" type="float"><input name="in1" type="float" nodename="n5"/><input name="in2" type="float" nodename="n6"/></add>
+<sqrt name="n8" type="float"><input name="in" type="float" nodename="n7"/></sqrt>
+<subtract name="n9" type="float"><input name="in1" type="float" nodename="n8"/><input name="in2" type="float" value="0.55"/></subtract>
+<multiply name="n10" type="float"><input name="in1" type="float" nodename="n9"/><input name="in2" type="float" nodename="n9"/></multiply>
+<multiply name="n11" type="float"><input name="in1" type="float" nodename="n10"/><input name="in2" type="float" value="45"/></multiply>
+<multiply name="n12" type="float"><input name="in1" type="float" nodename="n4"/><input name="in2" type="float" nodename="n4"/></multiply>
+<multiply name="n13" type="float"><input name="in1" type="float" nodename="n12"/><input name="in2" type="float" value="20"/></multiply>
+<add name="n14" type="float"><input name="in1" type="float" nodename="n11"/><input name="in2" type="float" nodename="n13"/></add>
+<multiply name="n15" type="float"><input name="in1" type="float" nodename="n14"/><input name="in2" type="float" value="-1"/></multiply>
+<exp name="n16" type="float"><input name="in" type="float" nodename="n15"/></exp>
+<absorption_vdf name="n17" type="VDF"><input name="absorption" type="vector3" value="0.15,0.7,1.4"/></absorption_vdf>
+<multiply name="n18" type="VDF"><input name="in1" type="VDF" nodename="n17"/><input name="in2" type="float" nodename="n16"/></multiply>
+<uniform_edf name="n19" type="EDF"><input name="color" type="color3" value="1.4,0.28,0.025"/></uniform_edf>
+<multiply name="n20" type="EDF"><input name="in1" type="EDF" nodename="n19"/><input name="in2" type="float" nodename="n16"/></multiply>
+<volume name="n21" type="volumeshader"><input name="vdf" type="VDF" nodename="n18"/><input name="edf" type="EDF" nodename="n20"/></volume>
+<volumematerial name="n22" type="material"><input name="volumeshader" type="volumeshader" nodename="n21"/></volumematerial>
+</materialx>

@@ -58,12 +58,15 @@ async function ensureBrowserBindingsImported() {
  * @param {undefined | import("..").GetUsdModuleOptions} opts
  */
 export async function getUsdModule(opts) {
+    // Memoize before the initializer's first await so concurrent callers share
+    // one native module, shared memory and pthread pool. The first call supplies
+    // options; a failed initialization remains cached, as before.
+    if (!usd_module_promise) usd_module_promise = createUsdModule(opts);
+    return usd_module_promise;
+}
 
-    if (usd_module_promise) {
-        return usd_module_promise;
-    }
-
-
+/** @param {undefined | import("..").GetUsdModuleOptions} opts */
+async function createUsdModule(opts) {
     if (isNodeRuntime()) {
         const [
             { join },
@@ -73,7 +76,7 @@ export async function getUsdModule(opts) {
             getNodeUsdModuleFn(),
         ]);
 
-        return usd_module_promise = getUsdModuleFn({
+        return getUsdModuleFn({
             ...opts,
             locateFile: (file) => {
                 const userResult = opts?.locateFile?.(file);
@@ -135,7 +138,7 @@ export async function getUsdModule(opts) {
         opts?.onAssetFetchProgress?.(payload);
     }
 
-    return usd_module_promise = getUsdModuleFn({
+    return getUsdModuleFn({
         mainScriptUrlOrBlob: bindingsUrl,
         ...opts,
         onAssetFetchProgress: handleAssetFetchProgress,

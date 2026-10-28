@@ -1,0 +1,128 @@
+[
+  {
+    "id": "vrhead",
+    "name": "VR headset",
+    "publisher": "BEHAVIOR",
+    "license": "MIT",
+    "source": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/blob/main/models/behavior_robot/usd/vr_head.usd",
+    "url": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/models/behavior_robot/usd/vr_head.usd",
+    "thumbnail": "./thumbnails/usd-assets/vrhead.png"
+  },
+  {
+    "id": "watch",
+    "name": "Watch",
+    "publisher": "RoboDojo / littleTang",
+    "license": "Apache-2.0",
+    "source": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/blob/main/Objects/RoboDojo/Rigid/watch/00000/object.usdz",
+    "url": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/resolve/main/Objects/RoboDojo/Rigid/watch/00000/object.usdz",
+    "thumbnail": "./thumbnails/usd-assets/watch.png"
+  },
+  {
+    "id": "mp5",
+    "name": "MP5",
+    "publisher": "val6ntin",
+    "license": "MIT",
+    "source": "https://huggingface.co/val6ntin/glbgun/blob/main/MP5_Submachine_Gun.usdz",
+    "url": "https://huggingface.co/val6ntin/glbgun/resolve/main/MP5_Submachine_Gun.usdz",
+    "thumbnail": "./thumbnails/usd-assets/mp5.png"
+  },
+  {
+    "id": "panda",
+    "name": "Panda arm",
+    "publisher": "BEHAVIOR",
+    "license": "MIT",
+    "source": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/blob/main/source/franka/franka_panda.usd",
+    "url": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/source/franka/franka_panda.usd",
+    "thumbnail": "./thumbnails/usd-assets/panda.png"
+  },
+  {
+    "id": "bbq",
+    "name": "Barbecue grill",
+    "publisher": "imagine.io",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/imagine-io/PhysicalAI-Simready-Kitchen-Assets/blob/main/Models/appliances/bbq_grill.usdz",
+    "url": "https://huggingface.co/datasets/imagine-io/PhysicalAI-Simready-Kitchen-Assets/resolve/main/Models/appliances/bbq_grill.usdz",
+    "thumbnail": "./thumbnails/usd-assets/bbq.png"
+  },
+  {
+    "id": "frankarq",
+    "name": "Franka + Robotiq",
+    "publisher": "BEHAVIOR",
+    "license": "MIT",
+    "source": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/blob/main/models/franka/franka_robotiq/usd/franka_robotiq.usda",
+    "url": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/models/franka/franka_robotiq/usd/franka_robotiq.usda",
+    "thumbnail": "./thumbnails/usd-assets/frankarq.png"
+  },
+  {
+    "id": "laptop",
+    "name": "LG laptop",
+    "publisher": "LG Electronics",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/LGElectronics/simready-assets/blob/ff9f5c4fdc7a368dcdfd81ce218b31f83e33735b/laptop_17z90ur/simready_usd/laptop_17z90ur.usd",
+    "url": "https://huggingface.co/datasets/LGElectronics/simready-assets/resolve/ff9f5c4fdc7a368dcdfd81ce218b31f83e33735b/laptop_17z90ur/simready_usd/laptop_17z90ur.usd",
+    "thumbnail": "./thumbnails/usd-assets/laptop.png"
+  },
+  {
+    "id": "piano",
+    "name": "Piano",
+    "publisher": "RoboDojo / littleTang",
+    "license": "Apache-2.0",
+    "source": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/blob/main/Objects/RoboDojo/Clutter/piano/00000/object.usdz",
+    "url": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/resolve/main/Objects/RoboDojo/Clutter/piano/00000/object.usdz",
+    "thumbnail": "./thumbnails/usd-assets/piano.png"
+  },
+  {
+    "id": "robotiq",
+    "name": "Robotiq gripper",
+    "publisher": "Robotiq",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/Robotiq-Official/simready-assets/blob/main/Robotiq_2F_85/simready_usd/Robotiq_2F_85.usda",
+    "url": "https://huggingface.co/datasets/Robotiq-Official/simready-assets/resolve/main/Robotiq_2F_85/simready_usd/Robotiq_2F_85.usda",
+    "thumbnail": "./thumbnails/usd-assets/robotiq.png"
+  },
+  {
+    "id": "thor",
+    "name": "Thor robot",
+    "publisher": "Standard Bots",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/standardbots/simready-thor/blob/main/standardbots_thor/thor/standardbots_thor.usd",
+    "url": "https://huggingface.co/datasets/standardbots/simready-thor/resolve/main/standardbots_thor/thor/standardbots_thor.usd",
+    "thumbnail": "./thumbnails/usd-assets/thor.png"
+  },
+  {
+    "id": "chair",
+    "name": "Office chair",
+    "publisher": "NVIDIA",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/nvidia/simready-assets/blob/main/chair_office_fabric_manager_a01/simready_usd/sm_chair_office_fabric_manager_a01_01.usd",
+    "url": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/main/chair_office_fabric_manager_a01/simready_usd/sm_chair_office_fabric_manager_a01_01.usd",
+    "thumbnail": "./thumbnails/usd-assets/chair.png"
+  },
+  {
+    "id": "railing",
+    "name": "Railing",
+    "publisher": "imagine.io",
+    "license": "CC-BY-NC-4.0",
+    "source": "https://huggingface.co/datasets/imagineio/PhysicalAI-SimReady-Assets/blob/main/assets/railings/railing_1/railling_1.usd",
+    "url": "https://huggingface.co/datasets/imagineio/PhysicalAI-SimReady-Assets/resolve/main/assets/railings/railing_1/railling_1.usd",
+    "thumbnail": "./thumbnails/usd-assets/railing.png"
+  },
+  {
+    "id": "ivpole",
+    "name": "IV pole",
+    "publisher": "NVIDIA",
+    "license": "CC-BY-4.0",
+    "source": "https://huggingface.co/datasets/nvidia/simready-assets/blob/main/IV_pole_a01/simready_usd/sm_IV_pole_a01_01.usd",
+    "url": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/main/IV_pole_a01/simready_usd/sm_IV_pole_a01_01.usd",
+    "thumbnail": "./thumbnails/usd-assets/ivpole.png"
+  },
+  {
+    "id": "normals",
+    "name": "Normal maps",
+    "publisher": "USD Working Group",
+    "license": "Apache-2.0",
+    "source": "https://github.com/usd-wg/assets/tree/3b75c2dad6a494897557dcca0098257bcf42a8c6/test_assets/NormalsTextureBiasAndScale",
+    "url": "https://raw.githubusercontent.com/usd-wg/assets/3b75c2dad6a494897557dcca0098257bcf42a8c6/test_assets/NormalsTextureBiasAndScale/NormalsTextureBiasAndScale.usdz",
+    "thumbnail": "./thumbnails/usd-assets/normals.png"
+  }
+]
