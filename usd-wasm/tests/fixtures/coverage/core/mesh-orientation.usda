@@ -1,0 +1,39 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Mesh "leftHanded"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [3]
+        int[] faceVertexIndices = [0, 1, 2]
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-0.6, 0, 0), (0.6, 0, 0), (0, 1, 0)]
+        color3f[] primvars:displayColor = [(0.3, 0.6, 0.8)]
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (-1, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "rightHanded"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [3]
+        int[] faceVertexIndices = [0, 1, 2]
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.6, 0, 0), (0.6, 0, 0), (0, 1, 0)]
+        color3f[] primvars:displayColor = [(0.3, 0.6, 0.8)]
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (1, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+

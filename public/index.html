@@ -130,10 +130,16 @@
         "three/addons/": "/needle-three/examples/jsm/",
         "three/examples/jsm/": "/needle-three/examples/jsm/",
         "@needle-tools/engine": "/needle-engine/dist/needle-engine.min.js",
+        // Keep the pinned engine bundle and USD simulation on the same Rapier module.
+        // Rapier 0.21 fixes the deprecated WASM initialization used by its bundled 0.19.
+        "/needle-engine/dist/rapier-DJ-luMxr.min.js": "/rapier/rapier.mjs",
         "@sparkjsdev/spark": "/spark/dist/spark.module.js",
         "@needle-tools/materialx": "/materialx/index.js"
       } : {
         "three": "/three/build/three.module.js",
+        "three/": "/three/",
+        "three/webgpu": "/three/build/three.webgpu.js",
+        "three/tsl": "/three/build/three.tsl.js",
         "viewer-runtime": "/viewer-runtime-three.js",
         "three/addons/": "/three/examples/jsm/",
         "three/examples/jsm/": "/three/examples/jsm/",
@@ -217,7 +223,8 @@
             </button>
             <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders" hidden></div>
             <button type="button" class="sample-group-button" data-sample-group="usd-assets" role="option" aria-selected="false">
-              <span>USD assets</span>
+              <span>Hugging Face test set</span>
+              <small>14 assets</small>
             </button>
             <button type="button" class="sample-group-button sample-root-folder" data-sample-group="needle" role="option" aria-selected="false" aria-expanded="false">
               <span>Needle</span>
@@ -288,6 +295,10 @@
       <span>converted with</span>
       <div class="converter-toggle converter-toggle-inline" id="loaded-converter-toggle" role="group" aria-label="Converted with"></div>
     </div>
+    <div id="usd-detail-controls" class="loaded-converter-control" hidden></div>
+    <div id="usd-background-controls" class="loaded-converter-control" hidden></div>
+    <div id="usd-variant-controls" class="loaded-converter-control" hidden></div>
+    <div id="usd-physics-controls" class="loaded-converter-control" hidden></div>
     <span class="filename-sep" aria-hidden="true">&ndash;</span>
     <a class="file clear-button" href="?file=" title="Clear loaded model"><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Clear</a>
   </div>

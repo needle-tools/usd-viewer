@@ -1,0 +1,100 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Floor" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.19, 0.27, 0.33)]
+        double size = 1
+        float3 xformOp:scale = (6, 0.2, 2)
+        double3 xformOp:translate = (0, -0.7, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def PhysicsScene "PhysicsScene"
+    {
+        vector3f physics:gravityDirection = (0, -1, 0)
+        float physics:gravityMagnitude = 9.81
+    }
+
+    def Cube "Stand" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.38, 0.46, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.18, 2.5, 0.18)
+        double3 xformOp:translate = (0, 0.65, -0.45)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "StandArm"
+    {
+        color3f[] primvars:displayColor = [(0.38, 0.46, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.18, 0.18, 0.56)
+        double3 xformOp:translate = (0, 2, -0.22)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Post" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        bool physics:kinematicEnabled = 1
+        color3f[] primvars:displayColor = [(0.85, 0.52, 0.22)]
+        double size = 1
+        float3 xformOp:scale = (0.35, 0.35, 0.4)
+        double3 xformOp:translate = (0, 2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "Pendulum" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI"]
+    )
+    {
+        float xformOp:rotateZ = 32
+        double3 xformOp:translate = (0.55, 1.15, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ"]
+
+        def Cube "Rod" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            color3f[] primvars:displayColor = [(0.28, 0.58, 0.72)]
+            double size = 1
+            float3 xformOp:scale = (0.15, 1.7, 0.16)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Sphere "Bob" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            color3f[] primvars:displayColor = [(0.92, 0.38, 0.16)]
+            double radius = 0.34
+            double3 xformOp:translate = (0, -0.82, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def PhysicsRevoluteJoint "Hinge"
+    {
+        uniform token physics:axis = "Z"
+        rel physics:body0 = </World/Post>
+        rel physics:body1 = </World/Pendulum>
+        point3f physics:localPos0 = (0, 0, 0)
+        point3f physics:localPos1 = (-0.015995078, 1.0122964, 0)
+    }
+}

@@ -1,0 +1,84 @@
+{
+  "densityAndHeat.vdb": {
+    "min": [
+      -8.088831037282944,
+      -8.088831037282944,
+      -2.2830318808555603
+    ],
+    "max": [
+      8.088830560445786,
+      8.088830560445786,
+      27.808082401752472
+    ],
+    "grids": [
+      {
+        "name": "density",
+        "dimensions": [
+          23,
+          23,
+          42
+        ],
+        "positive": 6124,
+        "max": 0.9975093603134155
+      },
+      {
+        "name": "heat",
+        "dimensions": [
+          22,
+          21,
+          32
+        ],
+        "positive": 5224,
+        "max": 0.7595377564430237
+      }
+    ]
+  },
+  "smoke_000001.vdb": {
+    "min": null,
+    "max": null,
+    "grids": [
+      {
+        "name": "density",
+        "dimensions": null,
+        "positive": 0,
+        "max": 0
+      },
+      {
+        "name": "shadow",
+        "dimensions": null,
+        "positive": 0,
+        "max": 0
+      },
+      {
+        "name": "velocity",
+        "dimensions": null,
+        "positive": 0,
+        "max": 0
+      }
+    ]
+  },
+  "smoke_000002.vdb": {
+    "min": [
+      -3.3813249096274376,
+      -3.256135269999504,
+      -1.2574142143130302
+    ],
+    "max": [
+      3.3813249692320824,
+      3.256135568022728,
+      9.278337366878986
+    ],
+    "grids": [
+      {
+        "name": "density",
+        "dimensions": [
+          51,
+          49,
+          80
+        ],
+        "positive": 71983,
+        "max": 0.8721543550491333
+      }
+    ]
+  }
+}

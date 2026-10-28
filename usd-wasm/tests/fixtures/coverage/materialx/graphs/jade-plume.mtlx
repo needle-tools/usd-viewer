@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+
+<position name="n1" type="vector3"><input name="space" type="string" value="object"/></position>
+<extract name="n2" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="0"/></extract>
+<extract name="n3" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="1"/></extract>
+<extract name="n4" type="float"><input name="in" type="vector3" nodename="n1"/><input name="index" type="integer" value="2"/></extract>
+<multiply name="n5" type="float"><input name="in1" type="float" nodename="n3"/><input name="in2" type="float" value="4"/></multiply>
+<sin name="n6" type="float"><input name="in" type="float" nodename="n5"/></sin>
+<multiply name="n7" type="float"><input name="in1" type="float" nodename="n6"/><input name="in2" type="float" value="0.22"/></multiply>
+<add name="n8" type="float"><input name="in1" type="float" nodename="n2"/><input name="in2" type="float" nodename="n7"/></add>
+<multiply name="n9" type="float"><input name="in1" type="float" nodename="n8"/><input name="in2" type="float" nodename="n8"/></multiply>
+<multiply name="n10" type="float"><input name="in1" type="float" nodename="n9"/><input name="in2" type="float" value="12"/></multiply>
+<multiply name="n11" type="float"><input name="in1" type="float" nodename="n4"/><input name="in2" type="float" nodename="n4"/></multiply>
+<multiply name="n12" type="float"><input name="in1" type="float" nodename="n11"/><input name="in2" type="float" value="12"/></multiply>
+<add name="n13" type="float"><input name="in1" type="float" nodename="n10"/><input name="in2" type="float" nodename="n12"/></add>
+<add name="n14" type="float"><input name="in1" type="float" nodename="n3"/><input name="in2" type="float" value="0.2"/></add>
+<multiply name="n15" type="float"><input name="in1" type="float" nodename="n14"/><input name="in2" type="float" nodename="n14"/></multiply>
+<multiply name="n16" type="float"><input name="in1" type="float" nodename="n15"/><input name="in2" type="float" value="2"/></multiply>
+<add name="n17" type="float"><input name="in1" type="float" nodename="n13"/><input name="in2" type="float" nodename="n16"/></add>
+<multiply name="n18" type="float"><input name="in1" type="float" nodename="n17"/><input name="in2" type="float" value="-1"/></multiply>
+<exp name="n19" type="float"><input name="in" type="float" nodename="n18"/></exp>
+<absorption_vdf name="n20" type="VDF"><input name="absorption" type="vector3" value="0.4,0.12,0.04"/></absorption_vdf>
+<anisotropic_vdf name="n21" type="VDF"><input name="absorption" type="vector3" value="0.4,0.12,0.04"/><input name="scattering" type="vector3" value="0.05,1,0.25"/><input name="anisotropy" type="float" value="0.35"/></anisotropic_vdf>
+<multiply name="n22" type="VDF"><input name="in1" type="VDF" nodename="n21"/><input name="in2" type="float" nodename="n19"/></multiply>
+<uniform_edf name="n23" type="EDF"><input name="color" type="color3" value="0.04,0.38,0.09"/></uniform_edf>
+<multiply name="n24" type="EDF"><input name="in1" type="EDF" nodename="n23"/><input name="in2" type="float" nodename="n19"/></multiply>
+<volume name="n25" type="volumeshader"><input name="vdf" type="VDF" nodename="n22"/><input name="edf" type="EDF" nodename="n24"/></volume>
+<volumematerial name="n26" type="material"><input name="volumeshader" type="volumeshader" nodename="n25"/></volumematerial>
+</materialx>

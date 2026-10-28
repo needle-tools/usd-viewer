@@ -1,0 +1,11 @@
+# MaterialX graph and volume gallery
+
+These stages package existing Needle MaterialX examples as ordinary USD materials and mesh bindings. The three media have different spatial transport graphs: emissive toroidal density, a curved scattering plume, and a periodic emitting lattice. The six surface graphs exercise nested custom implementations, named multiple outputs, independent node instances, wrapped surfaces, filename interfaces and explicit node-definition versions.
+
+`manifest.json` lists roots and dependencies. The generator writes an ignored local `native-validation.json` report with composition, binding and terminal checks. Regenerate with `python3 usd-wasm/scripts/generate-materialx-gallery-fixtures.py`; `--validate-only` checks committed assets without needing the source checkout. The generator's source checkout is the Needle engine MaterialX module and can be changed at its `SOURCE` constant.
+
+The media are bounded MaterialX volumes, not UsdVol/OpenVDB fields. They use closed box proxies and object-space coefficients with absorption, emission and single scattering. The renderer requires `WebGPURenderer({ forceWebGL: true, antialias: false })` or its WebGPU backend and the optional `createMaterialXVolumeMaterial` factory. Overlapping media and arbitrary proxy boundaries are not implemented by that renderer.
+
+Run `node usd-wasm/scripts/test-materialx-gallery.mjs` for the actual USD loading and rendering path. It hides display furniture and compares the featured material against an empty render, checking material classes, compilation diagnostics and spatial color variation. Native OpenUSD/Storm remains the reference path for supported surface thumbnails; Storm does not provide the bounded-medium transport implemented by this renderer.
+
+Custom implementation libraries are recovered from each material’s composed shader `info:mtlx:sourceAsset`, including URL-loaded layers that are absent from the upload inventory. The runtime merges only the requested definitions and their transitive implementation dependencies. The browser check verifies source-document isolation, wrapper disposal, explicit version selection, nested definitions, named outputs, material creation diagnostics and featured-object pixels.

@@ -21,10 +21,14 @@ export type PluginContext = {
      * such as viewers should opt in when they want autoplay behavior.
      */
     autoPlay?: boolean,
-    getFiles: () => Array<import("../types").HydraFile>
+    getFiles: () => Array<import("./create.three.js").HydraFile>,
+    scenePrimitiveLightIntensityScale?: number,
+    /** Read the current source's light preview scale for every load. */
+    getScenePrimitiveLightIntensityScale?: (url: string) => number | undefined,
+    getComplexity?: (url: string) => "low" | "medium" | "high" | "veryhigh" | number | undefined,
 }
 
 
 export declare function addPluginForNeedleEngine(options: PluginContext): Promise<(() => void)>;
 
-export declare function getHydraHandleFromNeedleEngineAsset(asset: unknown): import("../types").NeedleThreeHydraHandle | null;
+export declare function getHydraHandleFromNeedleEngineAsset(asset: unknown): import("./create.three.js").NeedleThreeHydraHandle | null;

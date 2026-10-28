@@ -1,0 +1,753 @@
+[
+  {
+    "id": "advanced-skel-rest",
+    "label": "Skeleton rest transforms",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-rest.usda",
+    "files": [
+      "coverage/advanced/skel-rest.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "rest"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Two rest transforms"
+    ]
+  },
+  {
+    "id": "advanced-skel-bind",
+    "label": "Skeleton bind transforms",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-bind.usda",
+    "files": [
+      "coverage/advanced/skel-bind.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "bind"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Two bind transforms"
+    ]
+  },
+  {
+    "id": "advanced-skel-joint-names",
+    "label": "Skeleton joint names",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-joint-names.usda",
+    "files": [
+      "coverage/advanced/skel-joint-names.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "names"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Joint names authored"
+    ]
+  },
+  {
+    "id": "advanced-skel-weighted",
+    "label": "Two joint influences",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-weighted.usda",
+    "files": [
+      "coverage/advanced/skel-weighted.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "multi"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Two influences per vertex"
+    ]
+  },
+  {
+    "id": "advanced-skel-dual-quaternion",
+    "label": "Dual quaternion skinning",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-dual-quaternion.usda",
+    "files": [
+      "coverage/advanced/skel-dual-quaternion.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "dual"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Dual quaternion skinning method"
+    ]
+  },
+  {
+    "id": "advanced-skel-translation",
+    "label": "Animated joint translation",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-translation.usda",
+    "files": [
+      "coverage/advanced/skel-translation.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "translate"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Joint translations sampled"
+    ]
+  },
+  {
+    "id": "advanced-skel-rotation",
+    "label": "Animated joint rotation",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/skel-rotation.usda",
+    "files": [
+      "coverage/advanced/skel-rotation.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "rotation"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Joint rotations sampled"
+    ]
+  },
+  {
+    "id": "advanced-blendshape",
+    "label": "Blend shape",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/blendshape.usda",
+    "files": [
+      "coverage/advanced/blendshape.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "blend"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Blend shape target is bound"
+    ]
+  },
+  {
+    "id": "advanced-blendshape-sparse",
+    "label": "Sparse blend shape",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/blendshape-sparse.usda",
+    "files": [
+      "coverage/advanced/blendshape-sparse.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "sparse"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Blend shape target is bound",
+      "Sparse shape has two point indices"
+    ]
+  },
+  {
+    "id": "advanced-blendshape-inbetween",
+    "label": "Blend shape inbetween",
+    "group": "Skeletal animation",
+    "root": "coverage/advanced/blendshape-inbetween.usda",
+    "files": [
+      "coverage/advanced/blendshape-inbetween.usda"
+    ],
+    "features": [
+      "UsdSkel",
+      "inbetween"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+    },
+    "assertions": [
+      "Two joint hierarchy",
+      "Skin binds to skeleton",
+      "Blend shape target is bound",
+      "Inbetween weight is authored"
+    ]
+  },
+  {
+    "id": "advanced-splat-ring",
+    "label": "Gaussian particle ring",
+    "group": "Gaussian splats",
+    "root": "coverage/advanced/splat-ring.usda",
+    "files": [
+      "coverage/advanced/splat-ring.usda"
+    ],
+    "features": [
+      "ParticleField3DGaussianSplat",
+      "ring"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Requires a particle-field capable renderer such as Spark; OpenUSD 26.05 Storm does not render splats"
+    },
+    "assertions": [
+      "Particle field schema type preserved",
+      "18 particles and matching scales",
+      "Spherical harmonic degree"
+    ]
+  },
+  {
+    "id": "advanced-splat-anisotropic",
+    "label": "Anisotropic Gaussian particles",
+    "group": "Gaussian splats",
+    "root": "coverage/advanced/splat-anisotropic.usda",
+    "files": [
+      "coverage/advanced/splat-anisotropic.usda"
+    ],
+    "features": [
+      "ParticleField3DGaussianSplat",
+      "anisotropic"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Requires a particle-field capable renderer such as Spark; OpenUSD 26.05 Storm does not render splats"
+    },
+    "assertions": [
+      "Particle field schema type preserved",
+      "18 particles and matching scales",
+      "Spherical harmonic degree"
+    ]
+  },
+  {
+    "id": "advanced-splat-opacity",
+    "label": "Gaussian opacity gradient",
+    "group": "Gaussian splats",
+    "root": "coverage/advanced/splat-opacity.usda",
+    "files": [
+      "coverage/advanced/splat-opacity.usda"
+    ],
+    "features": [
+      "ParticleField3DGaussianSplat",
+      "opacity"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Requires a particle-field capable renderer such as Spark; OpenUSD 26.05 Storm does not render splats"
+    },
+    "assertions": [
+      "Particle field schema type preserved",
+      "18 particles and matching scales",
+      "Spherical harmonic degree"
+    ]
+  },
+  {
+    "id": "advanced-splat-harmonics",
+    "label": "Directional spherical harmonics",
+    "group": "Gaussian splats",
+    "root": "coverage/advanced/splat-harmonics.usda",
+    "files": [
+      "coverage/advanced/splat-harmonics.usda"
+    ],
+    "features": [
+      "ParticleField3DGaussianSplat",
+      "harmonics"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Requires a particle-field capable renderer such as Spark; OpenUSD 26.05 Storm does not render splats"
+    },
+    "assertions": [
+      "Particle field schema type preserved",
+      "18 particles and matching scales",
+      "Spherical harmonic degree",
+      "Four RGB coefficients per particle with opposing red-blue Z band"
+    ]
+  },
+  {
+    "id": "advanced-physics-mass",
+    "label": "Rigid bodies and mass",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-mass.usda",
+    "files": [
+      "coverage/advanced/physics-mass.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "mass"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Mass is three units"
+    ]
+  },
+  {
+    "id": "advanced-physics-scene",
+    "label": "Gravity scene",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-scene.usda",
+    "files": [
+      "coverage/advanced/physics-scene.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "scene"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Gravity magnitude authored"
+    ]
+  },
+  {
+    "id": "advanced-physics-fixed-joint",
+    "label": "Fixed joint",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-fixed-joint.usda",
+    "files": [
+      "coverage/advanced/physics-fixed-joint.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "fixed"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Joint connects both bodies",
+      "Joint local anchors agree in world space",
+      "Joint support is kinematic"
+    ]
+  },
+  {
+    "id": "advanced-physics-revolute-joint",
+    "label": "Revolute joint",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-revolute-joint.usda",
+    "files": [
+      "coverage/advanced/physics-revolute-joint.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "revolute"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Joint connects both bodies",
+      "Joint local anchors agree in world space",
+      "Joint support is kinematic"
+    ]
+  },
+  {
+    "id": "advanced-physics-prismatic-joint",
+    "label": "Prismatic joint",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-prismatic-joint.usda",
+    "files": [
+      "coverage/advanced/physics-prismatic-joint.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "prismatic"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Joint connects both bodies",
+      "Joint local anchors agree in world space",
+      "Joint support is kinematic"
+    ]
+  },
+  {
+    "id": "advanced-physics-collision-group",
+    "label": "Collision group",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-collision-group.usda",
+    "files": [
+      "coverage/advanced/physics-collision-group.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "group"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Physics schema is authored; no simulation result or motion is claimed"
+    },
+    "assertions": [
+      "Rigid body and collision APIs authored",
+      "Body B owns a collision child",
+      "Collision group includes body"
+    ]
+  },
+  {
+    "id": "advanced-volume-density",
+    "label": "OpenVDB density field",
+    "group": "Volume",
+    "root": "coverage/advanced/volume-density.usda",
+    "files": [
+      "coverage/advanced/volume-density.usda",
+      "coverage/advanced/densityAndHeat.vdb"
+    ],
+    "features": [
+      "UsdVol",
+      "density"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "OpenVDB field dependencies resolve; volume rendering requires a supported delegate and material"
+    },
+    "assertions": [
+      "Density field relationship resolves",
+      "VDB file resolves on disk"
+    ],
+    "renderer": "bounded-volume"
+  },
+  {
+    "id": "advanced-volume-density-heat",
+    "label": "OpenVDB density and heat",
+    "group": "Volume",
+    "root": "coverage/advanced/volume-density-heat.usda",
+    "files": [
+      "coverage/advanced/volume-density-heat.usda",
+      "coverage/advanced/densityAndHeat.vdb"
+    ],
+    "features": [
+      "UsdVol",
+      "two-fields"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "OpenVDB field dependencies resolve; volume rendering requires a supported delegate and material"
+    },
+    "assertions": [
+      "Density field relationship resolves",
+      "VDB file resolves on disk",
+      "Heat field relationship resolves"
+    ],
+    "renderer": "bounded-volume"
+  },
+  {
+    "id": "advanced-volume-sequence",
+    "label": "Time sampled VDB field",
+    "group": "Volume",
+    "root": "coverage/advanced/volume-sequence.usda",
+    "files": [
+      "coverage/advanced/volume-sequence.usda",
+      "coverage/advanced/smoke_000001.vdb",
+      "coverage/advanced/smoke_000002.vdb"
+    ],
+    "features": [
+      "UsdVol",
+      "sequence"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "OpenVDB field dependencies resolve; volume rendering requires a supported delegate and material"
+    },
+    "assertions": [
+      "Density field relationship resolves",
+      "VDB file resolves on disk",
+      "Nonempty, empty, nonempty field sequence"
+    ],
+    "renderer": "bounded-volume"
+  },
+  {
+    "id": "advanced-volume-transformed",
+    "label": "Transformed VDB volume",
+    "group": "Volume",
+    "root": "coverage/advanced/volume-transformed.usda",
+    "files": [
+      "coverage/advanced/volume-transformed.usda",
+      "coverage/advanced/densityAndHeat.vdb"
+    ],
+    "features": [
+      "UsdVol",
+      "transform"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "OpenVDB field dependencies resolve; volume rendering requires a supported delegate and material"
+    },
+    "assertions": [
+      "Density field relationship resolves",
+      "VDB file resolves on disk",
+      "Volume has two ordered transforms"
+    ],
+    "renderer": "bounded-volume"
+  },
+  {
+    "id": "advanced-nurbs-curve",
+    "label": "NURBS curve",
+    "group": "Curves and points",
+    "root": "coverage/advanced/nurbs-curve.usda",
+    "files": [
+      "coverage/advanced/nurbs-curve.usda"
+    ],
+    "features": [
+      "nurbs"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Curve and point schema data is authored; support varies by viewer"
+    },
+    "assertions": [
+      "NURBS order is four"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "advanced-nurbs-patch",
+    "label": "NURBS patch",
+    "group": "Curves and points",
+    "root": "coverage/advanced/nurbs-patch.usda",
+    "files": [
+      "coverage/advanced/nurbs-patch.usda"
+    ],
+    "features": [
+      "patch"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Curve and point schema data is authored; support varies by viewer"
+    },
+    "assertions": [
+      "NURBS patch has sixteen points"
+    ]
+  },
+  {
+    "id": "advanced-periodic-bspline",
+    "label": "Periodic B-spline",
+    "group": "Curves and points",
+    "root": "coverage/advanced/periodic-bspline.usda",
+    "files": [
+      "coverage/advanced/periodic-bspline.usda"
+    ],
+    "features": [
+      "periodic"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Curve and point schema data is authored; support varies by viewer"
+    },
+    "assertions": [
+      "Periodic B-spline curve"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "advanced-point-velocities",
+    "label": "Points with velocities",
+    "group": "Curves and points",
+    "root": "coverage/advanced/point-velocities.usda",
+    "files": [
+      "coverage/advanced/point-velocities.usda"
+    ],
+    "features": [
+      "points"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Curve and point schema data is authored; support varies by viewer"
+    },
+    "assertions": [
+      "Per point velocities"
+    ]
+  },
+  {
+    "id": "advanced-model-draw-mode",
+    "label": "Model bounds draw mode",
+    "group": "Scene schemas",
+    "root": "coverage/advanced/model-draw-mode.usda",
+    "files": [
+      "coverage/advanced/model-draw-mode.usda"
+    ],
+    "features": [
+      "drawmode"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Schema data is authored; draw modes, offline render settings, optics and audio require viewer-specific support"
+    },
+    "assertions": [
+      "Model draw mode is bounds"
+    ]
+  },
+  {
+    "id": "advanced-render-settings",
+    "label": "Render settings and products",
+    "group": "Scene schemas",
+    "root": "coverage/advanced/render-settings.usda",
+    "files": [
+      "coverage/advanced/render-settings.usda"
+    ],
+    "features": [
+      "render"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Schema data is authored; draw modes, offline render settings, optics and audio require viewer-specific support"
+    },
+    "assertions": [
+      "Render settings point to product and camera"
+    ]
+  },
+  {
+    "id": "advanced-spatial-audio",
+    "label": "Spatial audio",
+    "group": "Scene schemas",
+    "root": "coverage/advanced/spatial-audio.usda",
+    "files": [
+      "coverage/advanced/spatial-audio.usda",
+      "coverage/advanced/spatial-tone.wav"
+    ],
+    "features": [
+      "audio"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Schema data is authored; draw modes, offline render settings, optics and audio require viewer-specific support"
+    },
+    "assertions": [
+      "Audio asset resolves"
+    ]
+  },
+  {
+    "id": "advanced-camera-optics",
+    "label": "Camera optics and shutter",
+    "group": "Scene schemas",
+    "root": "coverage/advanced/camera-optics.usda",
+    "files": [
+      "coverage/advanced/camera-optics.usda"
+    ],
+    "features": [
+      "camera"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Schema data is authored; draw modes, offline render settings, optics and audio require viewer-specific support"
+    },
+    "assertions": [
+      "Camera shutter interval"
+    ]
+  },
+  {
+    "id": "advanced-physics-dominoes",
+    "label": "Domino chain",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-dominoes.usda",
+    "files": [
+      "coverage/advanced/physics-dominoes.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "rigid bodies",
+      "collision",
+      "gravity",
+      "dominoes"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Authored dynamics and initial state; simulation requires a compatible physics backend."
+    },
+    "assertions": [
+      "Nine rigid collision tiles",
+      "First tile has angular velocity"
+    ]
+  },
+  {
+    "id": "advanced-physics-pendulum",
+    "label": "Pendulum",
+    "group": "Physics",
+    "root": "coverage/advanced/physics-pendulum.usda",
+    "files": [
+      "coverage/advanced/physics-pendulum.usda"
+    ],
+    "features": [
+      "UsdPhysics",
+      "rigid bodies",
+      "collision",
+      "gravity",
+      "pendulum"
+    ],
+    "expected": {
+      "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
+      "needle": "Authored dynamics and initial state; simulation requires a compatible physics backend."
+    },
+    "assertions": [
+      "Pendulum has dynamic rigid body and bob collider",
+      "Pendulum hinge is revolute about Z",
+      "Pendulum joint anchors agree in world space"
+    ]
+  }
+]

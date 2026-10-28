@@ -1,0 +1,183 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Camera "Camera"
+    {
+        float focalLength = 42
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.8479983040050878, 1.387778780781445e-17, -0.5299989400031799, 0), (-0.14081738666722207, 0.9640574933371358, -0.22530781866755525, 0), (0.5109494495708048, 0.2656937137768184, 0.8175191193132876, -0), (4.999999999999999, 3.399999999999999, 7.9999999999999964, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "Looks"
+    {
+        def Material "Matte"
+        {
+            token outputs:surface.connect = </World/Looks/Matte/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.16, 0.5, 0.55)
+                float inputs:metallic = 0
+                float inputs:opacity = 1
+                float inputs:roughness = 0.8
+                token outputs:surface
+            }
+        }
+
+        def Material "Metal"
+        {
+            token outputs:surface.connect = </World/Looks/Metal/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.78, 0.43, 0.18)
+                float inputs:metallic = 0.95
+                float inputs:opacity = 1
+                float inputs:roughness = 0.19
+                token outputs:surface
+            }
+        }
+
+        def Material "Glass"
+        {
+            token outputs:surface.connect = </World/Looks/Glass/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.32, 0.65, 0.8)
+                float inputs:metallic = 0
+                float inputs:opacity = 0.38
+                float inputs:roughness = 0.09
+                token outputs:surface
+            }
+        }
+
+        def Material "Base"
+        {
+            token outputs:surface.connect = </World/Looks/Base/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.15, 0.18, 0.22)
+                float inputs:metallic = 0.15
+                float inputs:opacity = 1
+                float inputs:roughness = 0.5
+                token outputs:surface
+            }
+        }
+    }
+
+    def Cube "Stage" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Base>
+        color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
+        double size = 1
+        float3 xformOp:scale = (5, 0.35, 3.3)
+        double3 xformOp:translate = (0, -0.24, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Terrace0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Matte>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 0.36, 1.2)
+        double3 xformOp:translate = (-1.3, 0.18, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Terrace1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Metal>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 0.82, 1.2)
+        double3 xformOp:translate = (-0.65, 0.41000000000000003, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Terrace2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Matte>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 1.28, 1.2)
+        double3 xformOp:translate = (0, 0.64, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Terrace3" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Metal>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 1.74, 1.2)
+        double3 xformOp:translate = (0.65, 0.8700000000000001, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Terrace4" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Matte>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 2.2, 1.2)
+        double3 xformOp:translate = (1.3, 1.1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "Lights"
+    {
+        def DistantLight "Sun" (
+            prepend apiSchemas = ["ShadowAPI"]
+            variants = {
+                string shadows = "enabled"
+            }
+            prepend variantSets = "shadows"
+        )
+        {
+            float inputs:angle = 10
+            color3f inputs:color = (1, 0.78, 0.5)
+            float inputs:intensity = 300
+            matrix4d xformOp:transform = ( (0.7071067811865476, 0, -0.7071067811865476, 0), (-0.46617859079596147, 0.751900952896712, -0.46617859079596147, 0), (0.5316742625738918, 0.659276085591626, 0.5316742625738918, -0), (4.999999999999999, 7, 4.999999999999999, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+            variantSet "shadows" = {
+                "disabled" {
+                    bool inputs:shadow:enable = 0
+
+                }
+                "enabled" {
+                    bool inputs:shadow:enable = 1
+
+                }
+            }
+        }
+    }
+}

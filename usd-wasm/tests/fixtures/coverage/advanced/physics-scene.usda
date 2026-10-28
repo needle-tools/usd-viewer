@@ -1,0 +1,132 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Floor" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.19, 0.27, 0.33)]
+        double size = 1
+        float3 xformOp:scale = (4, 0.2, 2)
+        double3 xformOp:translate = (0, -0.7, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "BodyA" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.85, 0.38, 0.18)]
+        double size = 1
+        float3 xformOp:scale = (0.5, 0.5, 0.5)
+        double3 xformOp:translate = (-1.35, 0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "BodyB" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI"]
+    )
+    {
+        double3 xformOp:translate = (-1.35, 1.55, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cube "Visual" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            color3f[] primvars:displayColor = [(0.2, 0.65, 0.8)]
+            double size = 1
+            float3 xformOp:scale = (0.5, 0.5, 0.5)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+    }
+
+    def Cube "Rung0"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.72, 0.31)]
+        double size = 1
+        float3 xformOp:scale = (1.2, 0.09, 0.2)
+        double3 xformOp:translate = (1.1, -0.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Rung1"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.72, 0.31)]
+        double size = 1
+        float3 xformOp:scale = (1.2, 0.09, 0.2)
+        double3 xformOp:translate = (1.1, 0.35, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Rung2"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.72, 0.31)]
+        double size = 1
+        float3 xformOp:scale = (1.2, 0.09, 0.2)
+        double3 xformOp:translate = (1.1, 0.9, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Rung3"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.72, 0.31)]
+        double size = 1
+        float3 xformOp:scale = (1.2, 0.09, 0.2)
+        double3 xformOp:translate = (1.1, 1.45, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Rung4"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.72, 0.31)]
+        double size = 1
+        float3 xformOp:scale = (1.2, 0.09, 0.2)
+        double3 xformOp:translate = (1.1, 2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Side0"
+    {
+        color3f[] primvars:displayColor = [(0.35, 0.55, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (0.12, 2.4, 0.16)
+        double3 xformOp:translate = (0.55, 0.9, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Side1"
+    {
+        color3f[] primvars:displayColor = [(0.35, 0.55, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (0.12, 2.4, 0.16)
+        double3 xformOp:translate = (1.65, 0.9, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "GravityBall" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.93, 0.38, 0.18)]
+        double radius = 0.38
+        double3 xformOp:translate = (-0.1, 1.8, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def PhysicsScene "PhysicsScene"
+    {
+        vector3f physics:gravityDirection = (0, -1, 0)
+        float physics:gravityMagnitude = 9.81
+    }
+}

@@ -6,6 +6,11 @@ const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)))
 
 const copies = [
   {
+    from: join(root, 'node_modules', '@dimforge', 'rapier3d-compat', 'dist'),
+    to: join(root, 'public', 'rapier'),
+    label: '/rapier',
+  },
+  {
     from: join(root, "usd-wasm", "src"),
     to: join(root, "public", "usd"),
     label: "/usd",
@@ -31,6 +36,9 @@ for (const copy of copies) {
     recursive: true,
     dereference: true,
     filter(source) {
+      if (copy.label === '/rapier') {
+        return source === copy.from || source === join(copy.from, 'rapier.mjs') || source === join(copy.from, 'package.json');
+      }
       const relativeSource = source.startsWith(copy.from) ? source.slice(copy.from.length) : source;
       return !relativeSource.split(/[\\/]/).includes("node_modules")
         && !source.endsWith("/dist")

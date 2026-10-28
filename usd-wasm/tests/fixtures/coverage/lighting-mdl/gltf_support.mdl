@@ -1,0 +1,2 @@
+mdl 1.7;
+export material gltf_material() = material();

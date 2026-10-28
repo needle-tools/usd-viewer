@@ -1,6 +1,9 @@
+import { coverageAssetLibrary } from './coverage/asset-library.js';
+
 export const fixtureBasePath = "/test-fixtures/";
 
 export const testAssetLibrary = [
+  ...coverageAssetLibrary,
   { group: "Composition", label: "Payload Root", root: "payloads/payload_root.usda", files: ["payloads/payload_root.usda", "payloads/payload_payload.usda"] },
   { group: "Composition", label: "Nested Variants", root: "variants/nested_variants.usda", files: ["variants/nested_variants.usda"] },
   { group: "Composition", label: "Binding Override Variants", root: "variants/material_binding_overrides.usda", files: ["variants/material_binding_overrides.usda"] },

@@ -1,0 +1,91 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Mesh "crease_0"
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 2, 3, 4, 5, 6, 7, 6, 3, 2, 7, 4, 1, 0, 5, 5, 0, 3, 6, 1, 4, 7, 2]
+        token interpolateBoundary = "edgeOnly"
+        point3f[] points = [(0.75, -0.75, 0.75), (0.75, -0.75, -0.75), (0.75, 0.75, -0.75), (0.75, 0.75, 0.75), (-0.75, -0.75, -0.75), (-0.75, -0.75, 0.75), (-0.75, 0.75, 0.75), (-0.75, 0.75, -0.75)]
+        color3f[] primvars:displayColor = [(0.72, 0.25, 0.16)]
+        uniform token subdivisionScheme = "catmullClark"
+        double3 xformOp:translate = (-6, -0.25, 5.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "crease_1"
+    {
+        int[] creaseIndices = [0, 1, 0, 3, 0, 5, 1, 2, 1, 4, 2, 3, 2, 7, 3, 6, 4, 5, 4, 7, 5, 6, 6, 7]
+        int[] creaseLengths = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        float[] creaseSharpnesses = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 2, 3, 4, 5, 6, 7, 6, 3, 2, 7, 4, 1, 0, 5, 5, 0, 3, 6, 1, 4, 7, 2]
+        token interpolateBoundary = "edgeOnly"
+        point3f[] points = [(0.75, -0.75, 0.75), (0.75, -0.75, -0.75), (0.75, 0.75, -0.75), (0.75, 0.75, 0.75), (-0.75, -0.75, -0.75), (-0.75, -0.75, 0.75), (-0.75, 0.75, 0.75), (-0.75, 0.75, -0.75)]
+        color3f[] primvars:displayColor = [(0.2, 0.48, 0.52)]
+        uniform token subdivisionScheme = "catmullClark"
+        double3 xformOp:translate = (-3, -0.25, 5.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "crease_2"
+    {
+        int[] creaseIndices = [0, 1, 0, 3, 0, 5, 1, 2, 1, 4, 2, 3, 2, 7, 3, 6, 4, 5, 4, 7, 5, 6, 6, 7]
+        int[] creaseLengths = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        float[] creaseSharpnesses = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 2, 3, 4, 5, 6, 7, 6, 3, 2, 7, 4, 1, 0, 5, 5, 0, 3, 6, 1, 4, 7, 2]
+        token interpolateBoundary = "edgeOnly"
+        point3f[] points = [(0.75, -0.75, 0.75), (0.75, -0.75, -0.75), (0.75, 0.75, -0.75), (0.75, 0.75, 0.75), (-0.75, -0.75, -0.75), (-0.75, -0.75, 0.75), (-0.75, 0.75, 0.75), (-0.75, 0.75, -0.75)]
+        color3f[] primvars:displayColor = [(0.75, 0.52, 0.18)]
+        uniform token subdivisionScheme = "catmullClark"
+        double3 xformOp:translate = (0, -0.25, 5.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "crease_3"
+    {
+        int[] creaseIndices = [0, 1, 0, 3, 0, 5, 1, 2, 1, 4, 2, 3, 2, 7, 3, 6, 4, 5, 4, 7, 5, 6, 6, 7]
+        int[] creaseLengths = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        float[] creaseSharpnesses = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 2, 3, 4, 5, 6, 7, 6, 3, 2, 7, 4, 1, 0, 5, 5, 0, 3, 6, 1, 4, 7, 2]
+        token interpolateBoundary = "edgeOnly"
+        point3f[] points = [(0.75, -0.75, 0.75), (0.75, -0.75, -0.75), (0.75, 0.75, -0.75), (0.75, 0.75, 0.75), (-0.75, -0.75, -0.75), (-0.75, -0.75, 0.75), (-0.75, 0.75, 0.75), (-0.75, 0.75, -0.75)]
+        color3f[] primvars:displayColor = [(0.32, 0.27, 0.62)]
+        uniform token subdivisionScheme = "catmullClark"
+        double3 xformOp:translate = (3, -0.25, 5.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "crease_4"
+    {
+        int[] creaseIndices = [0, 1, 0, 3, 0, 5, 1, 2, 1, 4, 2, 3, 2, 7, 3, 6, 4, 5, 4, 7, 5, 6, 6, 7]
+        int[] creaseLengths = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        float[] creaseSharpnesses = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 2, 3, 4, 5, 6, 7, 6, 3, 2, 7, 4, 1, 0, 5, 5, 0, 3, 6, 1, 4, 7, 2]
+        token interpolateBoundary = "edgeOnly"
+        point3f[] points = [(0.75, -0.75, 0.75), (0.75, -0.75, -0.75), (0.75, 0.75, -0.75), (0.75, 0.75, 0.75), (-0.75, -0.75, -0.75), (-0.75, -0.75, 0.75), (-0.75, 0.75, 0.75), (-0.75, 0.75, -0.75)]
+        color3f[] primvars:displayColor = [(0.37, 0.55, 0.28)]
+        uniform token subdivisionScheme = "catmullClark"
+        double3 xformOp:translate = (6, -0.25, 5.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

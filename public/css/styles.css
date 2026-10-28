@@ -1752,6 +1752,10 @@ button.cta-primary {
     .loaded-converter-control::before {
         display: none;
     }
+    #usd-detail-controls,
+    #usd-background-controls {
+        flex-basis: auto;
+    }
     .converter-toggle-inline {
         max-width: 96vw;
         overflow-x: auto;
@@ -2020,6 +2024,18 @@ button:focus-visible {
     pointer-events: none;
 }
 
+.dark-scene-background .filename-bar,
+.dark-scene-background #dropzone {
+    --color-text: #f0f4ef;
+    --color-text-secondary: #e2e8e1;
+    --color-text-muted: #b9c3b8;
+    color: var(--color-text);
+}
+
+.dark-scene-background .dropzone-inner {
+    background-color: rgba(16, 24, 32, 0.75);
+}
+
 .filename-bar .filename {
     display: inline-flex;
     align-items: center;
@@ -2102,6 +2118,21 @@ button:focus-visible {
 .loaded-converter-control > span {
     color: inherit;
     white-space: nowrap;
+}
+
+#usd-physics-controls button {
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 6px;
+    padding: 4px 9px;
+    background: var(--color-background, white);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+#usd-physics-controls button:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 
 /* "What's New" banner — small, subtle, bottom-right announcement card that

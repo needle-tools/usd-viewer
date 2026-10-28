@@ -1,6 +1,7 @@
+import type { hydraDelegate } from './hydra.js';
 
 declare type FSNode = {
-    contents: ArrayLike,
+    contents: ArrayLike<number>,
     id: number,
     mode: number,
     name: string,
@@ -10,8 +11,6 @@ declare type FSNode = {
     read: boolean,
     write: boolean,
 }
-
-declare type MaybePromise<T> = T | Promise<T>
 
 declare type SdfPathConstructor = {
     new(path?: string): SdfPath,
@@ -90,6 +89,8 @@ export type OpenUsdBuildInfo = {
         pxrVersion: number,
         gitSha: string,
         gitDirty: boolean,
+        /** SHA-256 of the complete source patch when built from a dirty checkout. */
+        sourcePatchSha256?: string,
     },
     toolchain: {
         emscripten: string,
@@ -540,6 +541,8 @@ declare type HdWebSyncDriver = {
     HasStage(): boolean,
     HasScopedHttpCache?(): boolean,
     GetStage(): USDStage,
+    /** Read-only composed UsdPhysics descriptors, serialized as JSON. */
+    GetPhysicsSceneJson(): string,
     GetStageUpAxis(): number,
     GetStageStartTimeCode(): number,
     GetStageEndTimeCode(): number,

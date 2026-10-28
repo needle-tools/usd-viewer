@@ -1,5 +1,11 @@
 Third-party notices preserved from the previous LICENSE.txt.
 
+Rapier3D (@dimforge/rapier3d-compat 0.21.0)
+https://github.com/dimforge/rapier.js
+Copyright 2020 Dimforge EURL
+Apache License 2.0; full license: public/licenses/rapier.txt
+The public viewer loads the unmodified runtime on demand for physics.
+
 
                                Modified Apache 2.0 License
 

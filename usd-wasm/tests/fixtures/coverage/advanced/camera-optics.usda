@@ -1,0 +1,68 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Subject"
+    {
+        color3f[] primvars:displayColor = [(0.2, 0.7, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "DisplayBase"
+    {
+        color3f[] primvars:displayColor = [(0.16, 0.23, 0.29)]
+        double size = 1
+        float3 xformOp:scale = (4.6, 0.2, 2.5)
+        double3 xformOp:translate = (0, -1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "FocusTarget0"
+    {
+        color3f[] primvars:displayColor = [(0.9, 0.38, 0.22)]
+        double radius = 0.38
+        double3 xformOp:translate = (-1.5, 0.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "FocusTarget1"
+    {
+        color3f[] primvars:displayColor = [(0.25, 0.5, 0.9)]
+        double radius = 0.38
+        double3 xformOp:translate = (1.5, 0.2, -0.5)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "Viewfinder"
+    {
+        color3f[] primvars:displayColor = [(0.92, 0.67, 0.24)]
+        double size = 1
+        float3 xformOp:scale = (2.1, 0.1, 0.12)
+        double3 xformOp:translate = (0, 1.05, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 2.8
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        double3 xformOp:translate = (0, 1, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+

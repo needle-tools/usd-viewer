@@ -1,6 +1,6 @@
 import { Object3D } from "three"
-import { HydraRenderer, MaterialXVolumeFactory } from "./hydra"
-import { HdWebSyncDriver, USD, USDStage } from ".."
+import { HydraRenderer, MaterialXVolumeFactory, UsdVolumeFactory } from "./hydra.js"
+import { HdWebSyncDriver, USD, USDStage } from "./bindings.js"
 
 export declare type HydraFile = File & { path: string };
 
@@ -50,6 +50,8 @@ export declare type createThreeHydraConfig = {
 
     /** Optional bounded-volume support from @needle-tools/usd/volumes. Requires a compatible node renderer. */
     materialXVolumeFactory?: MaterialXVolumeFactory,
+    /** Optional OpenVDB field renderer from @needle-tools/usd/volumes. */
+    usdVolumeFactory?: UsdVolumeFactory,
 
     /** Called when an asynchronous render integration needs another frame. */
     requestRender?: () => void,
@@ -115,6 +117,8 @@ export declare type createThreeHydraConfig = {
  * Use the hydra handle to update the usd scene periodically.
  */
 export declare type NeedleThreeHydraHandle = {
+    /** Rendered stage root, including the stage up-axis transform. */
+    readonly scene: Object3D,
     /** The hydra driver
     */
     driver: HdWebSyncDriver,
@@ -142,7 +146,7 @@ export declare type NeedleThreeHydraHandle = {
     setIncludedPurposes: (includedPurposes: Array<"default" | "render" | "proxy" | "guide" | string>) => Promise<void>,
     /** Set the OpenUSD imaging complexity for subdivision refinement and redraw.
      */
-    setComplexity: (complexity: NeedleThreeHydraConfig["complexity"]) => Promise<void>,
+    setComplexity: (complexity: createThreeHydraConfig["complexity"]) => Promise<void>,
     /** Rebuild Hydra population for the current USD stage after composition edits.
      */
     repopulate: () => Promise<void>,

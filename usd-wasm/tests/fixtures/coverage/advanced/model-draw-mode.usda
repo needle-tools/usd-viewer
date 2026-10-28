@@ -1,0 +1,73 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Subject" (
+        prepend apiSchemas = ["GeomModelAPI"]
+        kind = "component"
+    )
+    {
+        float3[] extentsHint = [(-0.75, -0.75, -0.75), (0.75, 0.75, 0.75)]
+        uniform bool model:applyDrawMode = 1
+        uniform token model:drawMode = "bounds"
+        color3f[] primvars:displayColor = [(0.2, 0.7, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "DisplayBase"
+    {
+        color3f[] primvars:displayColor = [(0.16, 0.23, 0.29)]
+        double size = 1
+        float3 xformOp:scale = (4.6, 0.2, 2.5)
+        double3 xformOp:translate = (0, -1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Column0"
+    {
+        color3f[] primvars:displayColor = [(0.93, 0.61, 0.25)]
+        double size = 1
+        float3 xformOp:scale = (0.32, 1.6, 0.35)
+        double3 xformOp:translate = (-1.8, -0.1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "ColumnCap0"
+    {
+        color3f[] primvars:displayColor = [(0.6, 0.36, 0.16)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 0.12, 0.58)
+        double3 xformOp:translate = (-1.8, 0.75, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Column1"
+    {
+        color3f[] primvars:displayColor = [(0.93, 0.61, 0.25)]
+        double size = 1
+        float3 xformOp:scale = (0.32, 1.6, 0.35)
+        double3 xformOp:translate = (1.8, -0.1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "ColumnCap1"
+    {
+        color3f[] primvars:displayColor = [(0.6, 0.36, 0.16)]
+        double size = 1
+        float3 xformOp:scale = (0.58, 0.12, 0.58)
+        double3 xformOp:translate = (1.8, 0.75, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+

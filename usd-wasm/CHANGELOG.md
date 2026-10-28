@@ -6,18 +6,42 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.2.0] - 2026-10-28
 ### Added
+- Added public-viewer Detail controls and smooth/cage variants for the curved MDL vessels, with high-detail defaults and updated native Storm cards for affected fixtures.
+- Added authored `UsdLuxShadowAPI` enable controls for directional, point and spot-light raster shadows, with animated and variant changes.
+- Added world-space points with per-point widths, evaluated Bézier/B-spline/NURBS curves, and optional real OpenVDB density/heat rendering with animated field files.
+- Added HDR dome environments, authored area and shaped spot lights, and gallery controls for USD light-rig and environment variants.
+- Added 174 feature fixtures, including the original subdivision car and playground, rational/multispan NURBS, distinct articulated subjects, MDL approximations, nested MaterialX graphs and bounded media. The Lights section contains 17 HDR/EXR dome, emitter, rig and light-schema examples.
+- Added optional composed-stage UsdPhysics simulation with Rapier, plus simulation, dragging, pause and reset controls in both public viewer modes.
 - Added optional Spark rendering for OpenUSD `ParticleField3DGaussianSplat` prims in both the plain three.js and Needle Engine integrations.
 - Added authored-input approximations for known OmniPBR and glTF MDL materials, including texture factors, UV transforms, color spaces, opacity and normals.
 - Added bounded MaterialX volume materials through WebGPURenderer, including its WebGL2 backend, using the existing volume implementation with recorded source provenance.
 
 ### Changed
+- Use Spark 2.2 with an explicitly managed Three Timer instead of deprecated Clock construction.
+- Defer viewer environment loading until the composed stage has been checked for authored lights. Preserve authored dome environments and restore fallback lighting for unlit stages.
+- Make public-viewer physics configurable or fully disabled; reuse Needle's lazy runtime loader when available.
 - Updated the WASM runtime to OpenUSD 26.11.1 and rebuilt USD-dependent glTF/Draco plugins for its ABI.
-- Updated the development viewer to Needle Engine 6 and MaterialX 1.7.4.
+- Updated the development viewer to Needle Engine 6, MaterialX 1.8.0 and Rapier 0.21.0. Both viewer modes share the corrected Rapier initializer without its deprecated-parameters warning.
+- Added rectangular area-light integration for generated MaterialX surface closures through MaterialX 1.8.0.
 - Included the package license and third-party notices in npm artifacts.
 - Included asynchronous particle-field creation and MaterialX tangent generation in the existing loader readiness barriers.
 - Recorded an optional Binaryen post-link size pass with input/output hashes and exact optimizer flags.
 
 ### Fixed
+- Keep bounded-medium box proxies out of opaque shadow maps so they do not block their own volume lighting; retain surface-caster settings when materials change.
+- Drain asynchronous volume/geometry factories before disposing the driver and scoped files, including when another factory rejects.
+- Supply an orthogonal tangent basis for untextured MaterialX geometry without UVs, preserving authored tangents and UV-based MikkTSpace generation. This fixes black untextured surfaces and their shadow reception.
+- Repair published TypeScript declarations, delegate construction and helper exports; support strict Bundler/NodeNext consumers and check both modes before release.
+- Preserve each mesh's authored display color when Hydra reuses an unbound fallback material across meshes, including all 17 subdivision-playground subjects.
+- Preserve the public sample picker's category, selected card, expanded folders and per-category scroll positions across menu reopening, reloads and renderer switches.
+- Refresh MaterialX's light ordering when authored USD shadow casting, visibility or light topology changes, preserving the correct light-to-shadow-map assignment.
+- Author smooth analytic torus normals and denser geometry in lighting/MDL fixtures; regenerate affected native Storm cards and add shadow variants to Distant sun.
+- Preserved all signed Gaussian spherical-harmonic coefficients without exponent clipping or degree-two RGB stride errors.
+- Evaluated rational NURBS patches with derivative normals and respected knots, ranges, weights, animation and refinement complexity. Trimmed patches report unsupported geometry.
+- Initialized native collision-group filtering defaults to prevent nondeterministic inverted collision filters.
+- Preserved custom MaterialX source assets and recursive implementation definitions through HTTP/package resolution.
+- Preserved constant authored tangents and custom PreviewSurface/MaterialX primvars across topology and material updates.
+- Drew the initial stage start time and awaited asynchronous volume updates on time/variant edits.
 - Stopped pthread workers allocating unused private shared memories; only the host allocates memory, and an explicitly supplied host memory is preserved.
 - Shared one module initialization across concurrent first calls to `getUsdModule`, avoiding duplicate memories and worker pools.
 - Preserved browser Forward history when normalizing the viewer URL on document startup.

@@ -1,0 +1,32 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Volume "Volume"
+    {
+        float3[] extent = [(-8.088831, -8.088831, -2.283032), (8.088831, 8.088831, 27.808083)]
+        custom rel field:density = </World/Density>
+        custom rel field:heat = </World/Heat>
+    }
+
+    def OpenVDBAsset "Density"
+    {
+        token fieldName = "density"
+        asset filePath = @./densityAndHeat.vdb@
+    }
+
+    def OpenVDBAsset "Heat"
+    {
+        token fieldName = "heat"
+        asset filePath = @./densityAndHeat.vdb@
+    }
+}
+

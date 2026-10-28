@@ -1,0 +1,75 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    doc = "Jade plume; MaterialX, volume, anisotropic_vdf, curved density field, single scattering."
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def "MaterialX" (
+        prepend references = @./graphs/jade-plume.mtlx@</MaterialX>
+    )
+    {
+    }
+
+    def Mesh "Medium" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 1, 5, 4, 3, 7, 6, 2, 0, 4, 7, 3, 1, 2, 6, 5]
+        rel material:binding = </World/MaterialX/Materials/n26>
+        point3f[] points = [(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1), (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)]
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Cylinder "Plinth" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token axis = "Y"
+        double height = 0.12
+        rel material:binding = </World/PlinthFinish>
+        double radius = 1.18
+        double3 xformOp:translate = (0, -1.12, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Material "PlinthFinish"
+    {
+        token outputs:surface.connect = </World/PlinthFinish/Surface.outputs:surface>
+
+        def Shader "Surface"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.025, 0.035, 0.055)
+            float inputs:roughness = 0.32
+            token outputs:displacement
+            token outputs:surface
+        }
+    }
+
+    def DistantLight "Key"
+    {
+        float inputs:intensity = 4
+        float3 xformOp:rotateXYZ = (-25, -35, 0)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def DomeLight "Fill"
+    {
+        float inputs:intensity = 0.28
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 50
+        float horizontalAperture = 24
+        float verticalAperture = 24
+        matrix4d xformOp:transform = ( (0.9994059993535875, 0, -0.034462275839778886, 0), (-0.001186943829204085, 0.9994067041898392, -0.03442137104691846, 0), (0.03444182951591454, 0.03444182951591454, 0.9988130559615215, -0), (0.2, 0.14999999999999997, 5.799999999999999, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<materialx version="1.39">
+  
+  <nodedef name="ND_wrapped" node="wrapped">
+    <output name="out" type="surfaceshader" />
+    <input name="tint" type="color3" value="0.5,0.13,0.045" />
+  </nodedef>
+  <nodegraph name="NG_wrapped" nodedef="ND_wrapped">
+    <standard_surface name="s" type="surfaceshader">
+      <input name="base_color" type="color3" nodename="p_13" />
+      <input name="metalness" type="float" value="0.35" />
+      <input name="specular_roughness" type="float" value="0.22" />
+    </standard_surface>
+    <output name="out" type="surfaceshader" nodename="s" />
+    <texcoord name="p_1" type="vector2" />
+    <extract name="p_2" type="float">
+      <input name="in" type="vector2" nodename="p_1" />
+      <input name="index" type="integer" value="0" />
+    </extract>
+    <extract name="p_3" type="float">
+      <input name="in" type="vector2" nodename="p_1" />
+      <input name="index" type="integer" value="1" />
+    </extract>
+    <multiply name="p_4" type="float">
+      <input name="in1" type="float" nodename="p_2" />
+      <input name="in2" type="float" value="25.132741228718345" />
+    </multiply>
+    <multiply name="p_5" type="vector2">
+      <input name="in1" type="vector2" nodename="p_1" />
+      <input name="in2" type="float" value="3" />
+    </multiply>
+    <noise2d name="p_6" type="float">
+      <input name="texcoord" type="vector2" nodename="p_5" />
+      <input name="amplitude" type="float" value="1" />
+      <input name="pivot" type="float" value="0" />
+    </noise2d>
+    <multiply name="p_7" type="float">
+      <input name="in1" type="float" nodename="p_6" />
+      <input name="in2" type="float" value="8" />
+    </multiply>
+    <add name="p_8" type="float">
+      <input name="in1" type="float" nodename="p_4" />
+      <input name="in2" type="float" nodename="p_7" />
+    </add>
+    <sin name="p_9" type="float">
+      <input name="in" type="float" nodename="p_8" />
+    </sin>
+    <multiply name="p_10" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_9" />
+    </multiply>
+    <add name="p_11" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_10" />
+    </add>
+    <smoothstep name="p_12" type="float">
+      <input name="in" type="float" nodename="p_11" />
+      <input name="low" type="float" value="0.25" />
+      <input name="high" type="float" value="0.65" />
+    </smoothstep>
+    <mix name="p_13" type="color3">
+      <input name="bg" type="color3" value="0.025,0.36,0.23" />
+      <input name="mix" type="float" nodename="p_12" />
+      <input name="fg" type="color3" interfacename="tint" />
+    </mix>
+  </nodegraph>
+  <nodegraph name="NG">
+    <wrapped name="n" type="surfaceshader" />
+    <output name="surface" type="surfaceshader" nodename="n" />
+    <texcoord name="p_1" type="vector2" />
+  </nodegraph>
+  <surfacematerial name="M" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodegraph="NG" output="surface" />
+  </surfacematerial>
+</materialx>

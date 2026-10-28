@@ -30,6 +30,12 @@ import {
 import { track, trackError, bucketBytes } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
+import { fixtureNavigation } from './viewer-fixture-routing.js';
+import { setupViewerPhysics } from './viewer-physics.js';
+import { createViewerLighting } from './viewer-lighting.js';
+
+let viewerPhysics = null;
+let viewerLighting = null;
 
 const SHOW_OPENUSD_TEST_ASSETS = false;
 const DEFAULT_ENVIRONMENT = "neutral";
@@ -654,8 +660,17 @@ const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
+const useNodeRenderer = params.get('render') === 'nodes' && viewerMode === VIEWER_MODE_THREE;
+let activeCatalogAsset = catalogAssetForUrlPath(filename.split('?')[0]);
+const initialNavigation = filename && activeCatalogAsset
+  ? fixtureNavigation(location.href, activeCatalogAsset, viewerMode === VIEWER_MODE_THREE ? 'three' : 'needle', useNodeRenderer)
+  : null;
+if (initialNavigation) { location.replace(initialNavigation); return; }
+let hostEnvironmentTexture = null;
+let hostEnvironmentPromise = null;
 let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
 let complexity = params.get("complexity") || undefined;
+let backgroundChoice = params.get('background') === 'dark' ? 'dark' : 'light';
 const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
 var timeout = 40;
@@ -824,6 +839,7 @@ function applyAgXToneMapping(rendererLike) {
   for (const renderer of candidates) {
     if (!renderer || typeof renderer !== "object") continue;
     renderer.toneMapping = AgXToneMapping;
+    if (renderer.shadowMap) renderer.shadowMap.enabled = true;
     if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = 1;
   }
 }
@@ -888,10 +904,10 @@ async function loadThreeEnvironment(scene, renderer, environment) {
     return;
   }
 
-  const pmremGenerator = new PMREMGenerator(renderer);
+  const pmremGenerator = renderer.isWebGPURenderer ? null : new PMREMGenerator(renderer);
   try {
     if (environment.type === "room") {
-      scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+      scene.environment = pmremGenerator ? pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture : null;
       return;
     }
 
@@ -914,13 +930,36 @@ async function loadThreeEnvironment(scene, renderer, environment) {
     const texture = await loader.loadAsync(url);
     texture.mapping = EquirectangularReflectionMapping;
     texture.needsUpdate = true;
-    scene.environment = pmremGenerator.fromEquirectangular(texture).texture;
-    texture.dispose?.();
+    scene.environment = pmremGenerator ? pmremGenerator.fromEquirectangular(texture).texture : texture;
+    if (pmremGenerator) texture.dispose?.();
   } catch (err) {
     console.error(`An error occurred loading the ${environment.id} environment map.`, err);
   } finally {
-    pmremGenerator.dispose();
+    pmremGenerator?.dispose();
   }
+}
+
+function loadHostEnvironment(renderer) {
+  if (!hostEnvironmentPromise) {
+    const stagingScene = new Scene();
+    hostEnvironmentPromise = loadThreeEnvironment(stagingScene, renderer, selectedEnvironment).then(() => {
+      hostEnvironmentTexture = stagingScene.environment;
+      return hostEnvironmentTexture;
+    });
+  }
+  return hostEnvironmentPromise;
+}
+
+async function applyStageLighting(handle, context, stage, generation) {
+  const scene = context?.scene || window.scene;
+  viewerLighting ||= createViewerLighting({ scene,
+    loadEnvironment: () => loadHostEnvironment(context?.renderer || window.renderer),
+    isCurrent: () => generation === loadGeneration && currentHydraHandle === handle,
+  });
+  await viewerLighting.apply({ root: handle.scene, stage,
+    suppressEnvironment: activeCatalogAsset?.environment === 'none' || selectedEnvironment.type === 'none',
+    explicitEnvironment: hasEnvironmentUrlParam,
+  });
 }
 
 function catalogAssetForUrlPath(urlPath) {
@@ -1404,9 +1443,151 @@ if (feedbackForm) {
   });
 }
 
+function arrayFromUsdVector(vector) {
+  if (!vector) return [];
+  try { return Array.from({ length: vector.size() }, (_, index) => vector.get(index)); }
+  finally { vector.delete?.(); }
+}
+
+function applyViewerBackground() {
+  if (!useNodeRenderer) return;
+  window.renderer.setClearColor(new Color(backgroundChoice === 'dark' ? '#101820' : getComputedStyle(document.body).backgroundColor), 1);
+  document.body.classList.toggle('dark-scene-background', backgroundChoice === 'dark');
+}
+
+function showUsdBackground() {
+  const container = document.getElementById('usd-background-controls');
+  if (!container) return;
+  container.replaceChildren(); container.hidden = !useNodeRenderer;
+  if (!useNodeRenderer) return;
+  const label = document.createElement('label'); label.textContent = 'Background ';
+  const select = document.createElement('select'); select.setAttribute('aria-label', 'Background');
+  for (const value of ['light', 'dark']) {
+    const option = document.createElement('option'); option.value = value;
+    option.textContent = value === 'light' ? 'Light' : 'Dark';
+    option.selected = backgroundChoice === value; select.appendChild(option);
+  }
+  select.addEventListener('change', () => {
+    backgroundChoice = select.value; applyViewerBackground();
+    const url = new URL(location.href); url.searchParams.set('background', backgroundChoice);
+    history.replaceState({}, '', url);
+  });
+  label.appendChild(select); container.appendChild(label);
+}
+
+function showUsdDetail(stage, handle) {
+  const container = document.getElementById('usd-detail-controls');
+  if (!container) return;
+  container.replaceChildren(); container.hidden = true;
+  if (!handle?.setComplexity || !handle.driver?.GetComplexity) return;
+  const label = document.createElement('label'); label.textContent = 'Detail ';
+  const select = document.createElement('select'); select.setAttribute('aria-label', 'USD detail');
+  const levels = [['low', 'Low', 1], ['medium', 'Medium', 1.1], ['high', 'High', 1.2], ['very-high', 'Very high', 1.3]];
+  const current = handle.driver.GetComplexity();
+  let selected = levels.find(([, , value]) => Math.abs(current - value) < 1e-5)?.[0];
+  if (!selected) { selected = String(current); levels.push([selected, selected, current]); }
+  for (const [value, title] of levels) {
+    const option = document.createElement('option'); option.value = value; option.textContent = title;
+    option.selected = value === selected; select.appendChild(option);
+  }
+  select.addEventListener('change', async () => {
+    const controls = document.querySelectorAll('#usd-detail-controls select, #usd-variant-controls select');
+    controls.forEach(control => { control.disabled = true; });
+    const generation = loadGeneration;
+    try {
+      viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined;
+      await handle.setComplexity(select.value);
+      await handle.materialsReady?.();
+      if (generation !== loadGeneration || currentHydraHandle !== handle) return;
+      selected = select.value;
+      complexity = selected;
+      const url = new URL(location.href); url.searchParams.set('complexity', selected);
+      history.replaceState({}, '', url);
+      await applyStageLighting(handle, window.needleEngineContext, stage, generation);
+      const physics = await setupViewerPhysics(handle, window.needleEngineContext, window.camera, window._controls, () => generation === loadGeneration && currentHydraHandle === handle, options.physics);
+      if (generation !== loadGeneration || currentHydraHandle !== handle) { physics?.dispose(); return; }
+      viewerPhysics = physics; window.usdPhysics = physics;
+    } catch (error) { select.value = selected; console.error('Failed to change USD detail', error); }
+    finally { controls.forEach(control => { control.disabled = false; }); }
+  });
+  label.appendChild(select); container.appendChild(label); container.hidden = false;
+}
+
+async function showUsdVariants(stage, handle) {
+  const container = document.getElementById('usd-variant-controls');
+  if (!container) return;
+  container.replaceChildren(); container.hidden = true;
+  if (!activeCatalogAsset || !stage?.Traverse || !handle?.editStage) return;
+  const prims = arrayFromUsdVector(stage.Traverse());
+  const variants = [];
+  for (const prim of prims) {
+    try {
+      const path = prim.GetPath();
+      for (const setName of arrayFromUsdVector(prim.GetVariantSetNames())) {
+        const choices = arrayFromUsdVector(prim.GetVariantNames(setName));
+        if (choices.length) variants.push({ path, setName, choices, selected: prim.GetVariantSelection(setName) });
+      }
+    } finally { prim.delete?.(); }
+  }
+  const requested = new URL(location.href).searchParams.get('stageVariant');
+  for (const variant of variants) {
+    const parts = requested?.includes('|') ? requested.split('|') : null;
+    const requestedChoice = parts ? (parts[0] === variant.path && parts[1] === variant.setName ? parts[2] : null) : requested;
+    if (requestedChoice && variant.choices.includes(requestedChoice) && requestedChoice !== variant.selected) {
+      await handle.editStage(async editingStage => {
+        const prim = editingStage.GetPrimAtPath(variant.path);
+        try { await prim.SetVariantSelection(variant.setName, requestedChoice); } finally { prim.delete?.(); }
+      });
+      variant.selected = requestedChoice;
+    }
+    const label = document.createElement('label'); label.textContent = variant.setName + ' ';
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', variant.setName);
+    select.dataset.usdVariantSet = variant.setName;
+    for (const choice of variant.choices) {
+      const option = document.createElement('option'); option.value = choice; option.textContent = choice;
+      option.selected = choice === variant.selected; select.appendChild(option);
+    }
+    select.addEventListener('change', async () => {
+      const controls = document.querySelectorAll('#usd-detail-controls select, #usd-variant-controls select');
+      controls.forEach(control => { control.disabled = true; });
+      const generation = loadGeneration;
+      try {
+        viewerPhysics?.dispose(); viewerPhysics = null;
+        await handle.editStage(async editingStage => {
+          const prim = editingStage.GetPrimAtPath(variant.path);
+          try { await prim.SetVariantSelection(variant.setName, select.value); } finally { prim.delete?.(); }
+        });
+        await handle.materialsReady?.();
+        if (generation !== loadGeneration || currentHydraHandle !== handle) return;
+        await applyStageLighting(handle, window.needleEngineContext, stage, generation);
+        const physics = await setupViewerPhysics(handle, window.needleEngineContext, window.camera, window._controls, () => generation === loadGeneration && currentHydraHandle === handle, options.physics);
+        if (generation !== loadGeneration || currentHydraHandle !== handle) { physics?.dispose(); return; }
+        viewerPhysics = physics;
+        window.usdPhysics = viewerPhysics;
+        const url = new URL(location.href);
+        url.searchParams.set('stageVariant', [variant.path, variant.setName, select.value].join('|'));
+        history.replaceState({}, '', url);
+      } catch (error) { console.error('Failed to change USD variant', error); }
+      finally { controls.forEach(control => { control.disabled = false; }); }
+    });
+    label.appendChild(select); container.appendChild(label);
+  }
+  container.hidden = variants.length === 0;
+}
+
 async function clearStage({ clearNeedleEngine = false } = {}) {
   loadGeneration++;
   ready = false;
+  viewerPhysics?.dispose(); viewerPhysics = null;
+  viewerLighting?.dispose(); viewerLighting = null;
+  window.usdPhysics = undefined;
+  const variantControls = document.getElementById('usd-variant-controls');
+  if (variantControls) { variantControls.replaceChildren(); variantControls.hidden = true; }
+  const detailControls = document.getElementById('usd-detail-controls');
+  if (detailControls) { detailControls.replaceChildren(); detailControls.hidden = true; }
+  const backgroundControls = document.getElementById('usd-background-controls');
+  if (backgroundControls) { backgroundControls.replaceChildren(); backgroundControls.hidden = true; }
 
   const handle = currentHydraHandle;
   currentHydraHandle = null;
@@ -1448,6 +1629,8 @@ async function clearStage({ clearNeedleEngine = false } = {}) {
   loadedSourceUrl = null;
   loadedSourceFilename = null;
 
+  activeCatalogAsset = null;
+  if (window.scene) window.scene.environment = hostEnvironmentTexture;
   window.usdRoot.clear();
   window.usdRoot.rotation.set(0, 0, 0);
   
@@ -1524,6 +1707,8 @@ async function ensureNeedleEngineLoader() {
       complexity,
       autoPlay: true,
       getFiles: () => needleLoaderFiles,
+      getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+      getComplexity: () => complexity ?? activeCatalogAsset?.complexity,
     });
   }
   if (!needleEngineElement) {
@@ -1536,7 +1721,8 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.setAttribute("autoplay", "");
     needleEngineElement.setAttribute("contactshadows", "0.7");
     needleEngineElement.setAttribute("background-color", "rgba(0,0,0,0)");
-    if (hasEnvironmentUrlParam) applyNeedleEngineEnvironment(needleEngineElement, selectedEnvironment);
+    // Select fallback illumination after inspecting the loaded USD stage.
+    applyNeedleEngineEnvironment(needleEngineElement, resolveEnvironment('none'));
     needleEngineElement.addEventListener("loadstart", () => {
       ready = false;
     });
@@ -1614,7 +1800,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   needleLoaderFiles = filesForHydra || [];
   const source = sourceForNeedleEngine(path, filesForHydra);
   if (!source) throw new Error("Needle Engine USD load requires a source path");
-  if (hasEnvironmentUrlParam) applyNeedleEngineEnvironment(element, selectedEnvironment);
+  applyNeedleEngineEnvironment(element, resolveEnvironment('none'));
 
   const loadPromise = new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -1643,6 +1829,11 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
 
   await waitForNeedleHydraReady(handle);
+  if (activeCatalogAsset?.environment === 'none') {
+    let hasDome = false;
+    context.scene?.traverse(object => { if (object.userData?.usdTypeName === 'DomeLight') hasDome = true; });
+    if (!hasDome && context.scene) context.scene.environment = null;
+  }
   if (waitForMaterials) {
     await handle.materialsReady?.();
   } else {
@@ -1659,6 +1850,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
 
 async function loadNativeNeedleEngineGltf(filename, path, generation) {
   const element = await ensureNeedleEngineLoader();
+  applyNeedleEngineEnvironment(element, selectedEnvironment);
   needleLoaderFiles = [];
 
   const loadPromise = new Promise((resolve, reject) => {
@@ -1734,6 +1926,7 @@ async function loadNativeGltfFile(filename, path) {
         nativeGltfMixers[0]?.clipAction(clip).play();
       }
       fitCameraToSelection(window.camera, window._controls, [nativeGltfRoot]);
+      window.scene.environment = await loadHostEnvironment(window.renderer);
       window.needleEngineContext = undefined;
       window.usdHydra = undefined;
       window.driver = undefined;
@@ -1743,6 +1936,7 @@ async function loadNativeGltfFile(filename, path) {
 
     if (generation !== loadGeneration) return;
     ready = true;
+
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     if (messageLog) messageLog.textContent = "";
@@ -1798,7 +1992,10 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         files: filesForHydra,
         autoPlay: true,
         waitForMaterials,
-        complexity,
+        complexity: complexity ?? activeCatalogAsset?.complexity,
+        scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+        materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
+        usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
       });
 
       if (generation !== loadGeneration) {
@@ -1830,6 +2027,9 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     window.usdStage = stage;
     window.needleEngineContext = needleContext || undefined;
     window.renderInterface = undefined;
+    await showUsdVariants(stage, handle);
+    await applyStageLighting(handle, needleContext, stage, generation);
+    if (generation !== loadGeneration || currentHydraHandle !== handle) return;
 
     const metadata = handle.stageMetadata?.();
     if (metadata) {
@@ -1848,6 +2048,13 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     }
     ready = true;
 
+    const physics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
+    if (generation !== loadGeneration) { physics?.dispose(); return; }
+    viewerPhysics = physics;
+    window.usdPhysics = physics;
+
+    showUsdDetail(stage, handle);
+    showUsdBackground();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     messageLog.textContent = "";
@@ -1925,6 +2132,8 @@ async function fetchCatalogFile(path, onProgress) {
 }
 
 async function loadCatalogAssetBundle(asset, displayName) {
+  activeCatalogAsset = asset;
+  if (window.scene) window.scene.environment = asset.environment === 'none' ? null : hostEnvironmentTexture;
   const rootPath = asset.root;
   const allPaths = Array.from(new Set([...(asset.files || []), rootPath]));
   const dependencyPaths = allPaths.filter(path => path !== rootPath);
@@ -2089,15 +2298,19 @@ async function init() {
   scene.add( pointLight );
   */
 
-  const renderer = window.renderer = new WebGLRenderer( { antialias: true, alpha: true } );
+  const Renderer = useNodeRenderer ? (await import('three/webgpu')).WebGPURenderer : WebGLRenderer;
+  const renderer = window.renderer = new Renderer(useNodeRenderer ? { forceWebGL: true, antialias: false, alpha: true } : { antialias: true, alpha: true });
+  if (useNodeRenderer) await renderer.init();
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.outputColorSpace = SRGBColorSpace;
   applyAgXToneMapping(renderer);
-  renderer.shadowMap.enabled = false;
-  renderer.setClearColor( 0x000000, 0 ); // the default
+  renderer.shadowMap.enabled = true;
+  // Volume materials sample the opaque pass, so it needs the same background
+  // color as the page instead of transparent black.
+  renderer.setClearColor(useNodeRenderer ? new Color(getComputedStyle(document.body).backgroundColor) : 0x000000, useNodeRenderer ? 1 : 0);
+  applyViewerBackground();
 
-  const envMapPromise = loadThreeEnvironment(scene, renderer, selectedEnvironment);
 
   document.body.appendChild( renderer.domElement );
   renderer.domElement.classList.add("usd-viewer-three-canvas");
@@ -2185,6 +2398,19 @@ async function init() {
   const loadedConverterToggleWrap = document.getElementById('loaded-converter-toggle-wrap');
   const loadedConverterToggle = document.getElementById('loaded-converter-toggle');
 
+  const samplePickerStorageKey = 'needle-usd-sample-picker-v1';
+  let savedSamplePicker = {};
+  try { savedSamplePicker = JSON.parse(localStorage.getItem(samplePickerStorageKey)) || {}; } catch {}
+  const savedGroup = typeof savedSamplePicker.group === 'string' ? savedSamplePicker.group : '';
+  const validSavedGroup = /^(?:gltf|usd-wg|needle)(?::.*)?$|^usd-assets$/.test(savedGroup);
+  const samplePickerPositions = new Map(Object.entries(savedSamplePicker.positions || {}));
+  const expandedSampleFolders = new Set(Array.isArray(savedSamplePicker.expandedFolders) ? savedSamplePicker.expandedFolders : []);
+  let renderedSampleGroup = '';
+  let galleryLoadVersion = 0;
+  let pickerSaveTimer = 0;
+  let pickerRestoreVersion = 0;
+  let restoringPicker = false;
+
   let galleryFetchStarted = false; // guards against duplicate fetches
   let galleryFetchPromise = null;
   let galleryModels = null;
@@ -2197,13 +2423,63 @@ async function init() {
   let needleTreeRendered = false;
   let usdSampleCardsPromise = null;
   let selectedConverter = '';
-  let selectedSampleGroup = 'gltf';
+  let selectedSampleGroup = validSavedGroup ? savedGroup : 'gltf';
   let loadedConversionCard = null;
   let loadedConverter = '';
   let lastPointerActivatedHref = '';
   let lastPointerActivatedAt = 0;
   const conversionCardByUrl = new Map();
-  const collapsedSampleTrees = new Set(['usd-wg']);
+  const collapsedSampleTrees = new Set(Array.isArray(savedSamplePicker.collapsedTrees)
+    ? savedSamplePicker.collapsedTrees.filter(group => ['gltf', 'usd-wg', 'needle'].includes(group)) : ['usd-wg']);
+
+  function saveSamplePicker(captureScroll = true) {
+    clearTimeout(pickerSaveTimer);
+    if (captureScroll && !restoringPicker && renderedSampleGroup === selectedSampleGroup && dropdownEl?.classList.contains('menu-open')) {
+      samplePickerPositions.set(selectedSampleGroup, {
+        ...samplePickerPositions.get(selectedSampleGroup),
+        grid: galleryGrid?.scrollTop || 0,
+        sidebar: dropdownMenu?.scrollTop || 0,
+      });
+    }
+    safeLocalStorageSet(samplePickerStorageKey, JSON.stringify({
+      group: selectedSampleGroup,
+      positions: Object.fromEntries(samplePickerPositions),
+      collapsedTrees: [...collapsedSampleTrees],
+      expandedFolders: [...expandedSampleFolders],
+    }));
+  }
+
+  function restoreSamplePickerScroll() {
+    if (!dropdownEl?.classList.contains('menu-open') || renderedSampleGroup !== selectedSampleGroup) return;
+    const version = ++pickerRestoreVersion;
+    const position = samplePickerPositions.get(selectedSampleGroup) || {};
+    const offset = value => Number.isFinite(value) && value > 0 ? value : 0;
+    restoringPicker = true;
+    const restore = () => {
+      if (version !== pickerRestoreVersion || !dropdownEl.classList.contains('menu-open')) return;
+      if (galleryGrid) galleryGrid.scrollTop = offset(position.grid);
+      if (dropdownMenu) dropdownMenu.scrollTop = offset(position.sidebar);
+    };
+    restore();
+    requestAnimationFrame(restore);
+    // Folder trees animate their height; restore the sidebar after that settles too.
+    setTimeout(() => { restore(); if (version === pickerRestoreVersion) restoringPicker = false; }, 260);
+  }
+
+  function rememberPickerScroll() {
+    if (restoringPicker || renderedSampleGroup !== selectedSampleGroup || !dropdownEl?.classList.contains('menu-open')) return;
+    samplePickerPositions.set(selectedSampleGroup, {
+      ...samplePickerPositions.get(selectedSampleGroup), grid: galleryGrid?.scrollTop || 0, sidebar: dropdownMenu?.scrollTop || 0,
+    });
+    clearTimeout(pickerSaveTimer);
+    pickerSaveTimer = setTimeout(() => saveSamplePicker(false), 150);
+  }
+  galleryGrid?.addEventListener('scroll', rememberPickerScroll, { passive: true });
+  dropdownMenu?.addEventListener('scroll', rememberPickerScroll, { passive: true });
+  for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+    dropdownEl?.addEventListener(event, () => { ++pickerRestoreVersion; restoringPicker = false; }, { passive: true });
+  }
+  window.addEventListener('pagehide', () => saveSamplePicker());
   const converterMetadataById = new Map();
   const originalGltfConverter = {
     id: 'original-gltf',
@@ -2349,7 +2625,7 @@ async function init() {
       load: () => loadUsdWgCards(''),
     }],
     ['usd-assets', {
-      title: 'USD assets',
+      title: 'Hugging Face test set',
       subtitle: '',
       load: loadUsdSampleCards,
     }],
@@ -2762,6 +3038,12 @@ async function init() {
     if (entry.children?.length) {
       const details = document.createElement('details');
       details.className = 'sample-folder';
+      const folderId = usdWgGroupId(entry.path);
+      details.open = expandedSampleFolders.has(folderId);
+      details.addEventListener('toggle', () => {
+        if (details.open) expandedSampleFolders.add(folderId); else expandedSampleFolders.delete(folderId);
+        saveSamplePicker(false);
+      });
       details.appendChild(createUsdWgTreeControl(entry, depth));
       const children = document.createElement('div');
       children.className = 'sample-folder-children';
@@ -2883,13 +3165,13 @@ async function init() {
       return await usdSampleCardsPromise;
     } catch (error) {
       usdSampleCardsPromise = null;
-      setGalleryStatus('Couldn’t load USD assets.', true);
+      setGalleryStatus('Couldn’t load Hugging Face test set.', true);
       trackError('usd_samples_fetch', error);
       return [];
     }
   }
 
-  function loadNeedleCards(group) {
+  async function loadNeedleCards(group) {
     renderNeedleTree();
     if (group === 'cloud') return needleCloudCards;
     const groups = needleFixtureGroups();
@@ -3348,6 +3630,10 @@ async function init() {
     lastGalleryCardsSignature = signature;
     galleryGrid.textContent = '';
     registerConverterMetadataForCards(cards);
+    const currentFile = new URL(location.href).searchParams.get('file');
+    const matchesCurrentFile = item => [item.url, ...Object.values(item.conversions || {})].some(value =>
+      value && currentFile && new URL(value, location.href).href === new URL(currentFile, location.href).href);
+    const hasCurrentCard = cards.some(matchesCurrentFile);
     for (const item of cards) {
       const conversions = item.conversions || {};
       const converterOrder = item.converterOrder || [];
@@ -3360,6 +3646,9 @@ async function init() {
       card.href = sampleHref(url);
       card.draggable = false;
       card.dataset.name = item.name || 'Model';
+      card.dataset.sampleKey = item.url || Object.values(conversions)[0] || item.name || '';
+      const rememberedKey = samplePickerPositions.get(selectedSampleGroup)?.selected;
+      card.classList.toggle('active', hasCurrentCard ? matchesCurrentFile(item) : card.dataset.sampleKey === rememberedKey);
       card.dataset.conversions = JSON.stringify(conversions);
       card.dataset.converterOrder = JSON.stringify(converterOrder);
 
@@ -3398,6 +3687,9 @@ async function init() {
   }
 
   async function selectSampleGroup(groupId) {
+    if (renderedSampleGroup === groupId && galleryGrid?.children.length) return;
+    // Corrupt or obsolete stored folder IDs should fall back to a usable library.
+    try { decodeURIComponent(groupId); } catch { groupId = 'gltf'; }
     let group = sampleGroups.get(groupId);
     if (!group && String(groupId || '').startsWith('usd-wg:')) {
       const path = usdWgPathFromGroupId(groupId);
@@ -3428,7 +3720,11 @@ async function init() {
     }
     group = group || sampleGroups.get('usd-wg');
     if (!group) return;
+    saveSamplePicker();
     selectedSampleGroup = groupId;
+    renderedSampleGroup = '';
+    const loadVersion = ++galleryLoadVersion;
+    saveSamplePicker(false);
     setLabelWithArrow(galleryTitle, group.title);
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
     if (sampleGroupList) {
@@ -3448,8 +3744,17 @@ async function init() {
     setGalleryStatus(group.load ? 'Loading sample models…' : '');
     if (galleryGrid) galleryGrid.textContent = '';
     const cards = group.load ? await group.load() : group.cards || [];
-    if (selectedSampleGroup !== groupId) return;
+    if (selectedSampleGroup !== groupId || galleryLoadVersion !== loadVersion) return;
     buildGalleryCards(cards);
+    renderedSampleGroup = groupId;
+    // Async library loading may have created its folder buttons after selection.
+    for (const button of sampleGroupList?.querySelectorAll('[data-sample-group]') || []) {
+      const buttonGroup = button.dataset.sampleGroup;
+      const active = sampleGroups.has(buttonGroup) ? buttonGroup === topLevelSampleGroup(groupId) : buttonGroup === groupId;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    }
+    restoreSamplePickerScroll();
     if (cards.length) setGalleryStatus('');
     else if (!galleryStatus?.classList.contains('error')) setGalleryStatus('No samples available yet.', true);
   }
@@ -3495,11 +3800,16 @@ async function init() {
     const wasOpen = dropdownEl.classList.contains('menu-open');
     dropdownEl.classList.add('menu-open');
     if (!wasOpen) menuOpenedAt = performance.now();
-    selectSampleGroup(selectedSampleGroup);
+    if (!wasOpen) {
+      if (renderedSampleGroup === selectedSampleGroup) restoreSamplePickerScroll();
+      else selectSampleGroup(selectedSampleGroup);
+    }
     if (!menuOpen.tracked) { menuOpen.tracked = true; track('open_gallery'); }
   }
   function menuClose() {
     if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
+    saveSamplePicker();
+    ++pickerRestoreVersion; restoringPicker = false;
     if (dropdownEl) dropdownEl.classList.remove('menu-open');
   }
   // Close after a 300ms grace so a brief cursor excursion (or just-loaded a
@@ -3609,6 +3919,7 @@ async function init() {
         if (wasCollapsed) collapsedSampleTrees.delete(groupId);
         else collapsedSampleTrees.add(groupId);
         syncSampleTreeVisibility(groupId);
+        saveSamplePicker();
         action = wasCollapsed ? 'expand' : 'collapse';
       } else {
         if (hasTree) collapsedSampleTrees.delete(groupId);
@@ -3630,8 +3941,16 @@ async function init() {
         for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
         link.classList.add('active');
       }
+      samplePickerPositions.set(selectedSampleGroup, {
+        ...samplePickerPositions.get(selectedSampleGroup), selected: link.dataset.sampleKey,
+      });
+      saveSamplePicker();
       menuScheduleClose();
     }
+    const target = new URL(link.href, location.href);
+    const asset = catalogAssetForUrlPath((target.searchParams.get('file') || '').split('?')[0]);
+    const navigation = fixtureNavigation(target.href, asset, viewerMode === VIEWER_MODE_THREE ? 'three' : 'needle', useNodeRenderer);
+    if (navigation) { location.href = navigation; return; }
     queueFileLinkLoad(link);
   }
 
@@ -3704,7 +4023,13 @@ async function init() {
       return;
     }
 
+    if (requestedFilename !== filename) {
+      const currentUrl = new URL(location.href); currentUrl.searchParams.delete('stageVariant');
+      history.replaceState({}, '', currentUrl);
+    }
     filename = requestedFilename;
+    activeCatalogAsset = catalogAssetForUrlPath((filename || '').split('?')[0]);
+    if (window.scene) window.scene.environment = activeCatalogAsset?.environment === 'none' ? null : hostEnvironmentTexture;
 
     // Distinguish loading a sample from clicking "Clear" (empty file).
     if (filename) {
@@ -3780,7 +4105,7 @@ async function init() {
   
   render();
   
-  return envMapPromise;
+  return Promise.resolve();
 }
 
 // A little helper. Press space to pause/enable rendering. Useful when looking at animated scenes.
@@ -3806,6 +4131,7 @@ async function animate() {
     for (const mixer of nativeGltfMixers) mixer.update(dt);
   }
   if (viewerMode === VIEWER_MODE_THREE && currentHydraHandle && ready) currentHydraHandle.update(dt);
+  viewerPhysics?.update(dt);
   render();
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
 }

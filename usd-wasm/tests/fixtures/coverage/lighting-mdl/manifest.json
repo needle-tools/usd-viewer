@@ -1,0 +1,569 @@
+[
+  {
+    "id": "lighting-mdl-studio-variants",
+    "label": "Studio light rig variants",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/studio-variants.usda",
+    "files": [
+      "coverage/lighting-mdl/studio-variants.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "rigs"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Three complete light rig variants",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-hdr-variants",
+    "label": "HDR dome variants",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/hdr-variants.usda",
+    "files": [
+      "coverage/lighting-mdl/hdr-variants.usda",
+      "coverage/lighting-mdl/studio-day.hdr",
+      "coverage/lighting-mdl/studio-night.hdr"
+    ],
+    "features": [
+      "UsdLux",
+      "domes"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Three HDR dome variants resolve",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-exr-dome",
+    "label": "EXR studio dome",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/exr-dome.usda",
+    "files": [
+      "coverage/lighting-mdl/exr-dome.usda",
+      "coverage/lighting-mdl/studio-panels.exr"
+    ],
+    "features": [
+      "UsdLux",
+      "exr"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "EXR dome asset resolves",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-area-softboxes",
+    "label": "Area softboxes",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/area-softboxes.usda",
+    "files": [
+      "coverage/lighting-mdl/area-softboxes.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "rect"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.4
+  },
+  {
+    "id": "lighting-mdl-disk-light",
+    "label": "Disk light",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/disk-light.usda",
+    "files": [
+      "coverage/lighting-mdl/disk-light.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "disk"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Disk light radius authored",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-cylinder-light",
+    "label": "Cylinder light",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/cylinder-light.usda",
+    "files": [
+      "coverage/lighting-mdl/cylinder-light.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "cylinder"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Cylinder light length authored",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-temperature-lights",
+    "label": "Color temperature and normalize",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/temperature-lights.usda",
+    "files": [
+      "coverage/lighting-mdl/temperature-lights.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "temperature"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Warm and cool normalized emitters authored",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-colored-spheres",
+    "label": "Colored sphere lights",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/colored-spheres.usda",
+    "files": [
+      "coverage/lighting-mdl/colored-spheres.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "sphere"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-shaped-spot",
+    "label": "Shaped spotlight",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/shaped-spot.usda",
+    "files": [
+      "coverage/lighting-mdl/shaped-spot.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "spot"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Spot cone angle authored",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-distant-sun",
+    "label": "Distant sun",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/distant-sun.usda",
+    "files": [
+      "coverage/lighting-mdl/distant-sun.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "distant",
+      "ShadowAPI",
+      "shadow:enable"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Distant light exists",
+      "ShadowAPI enabled and disabled variants compose correctly",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-animated-light",
+    "label": "Animated light intensity",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/animated-light.usda",
+    "files": [
+      "coverage/lighting-mdl/animated-light.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "animated"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
+    },
+    "assertions": [
+      "Light intensity has time samples",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "lighting-mdl-portal-light",
+    "label": "Dome portal",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/portal-light.usda",
+    "files": [
+      "coverage/lighting-mdl/portal-light.usda",
+      "coverage/lighting-mdl/studio-panels.exr"
+    ],
+    "features": [
+      "UsdLux",
+      "portal"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "The EXR dome provides illumination. The authored portal schema requires delegate-specific support; its light transport is not established by this fixture."
+    },
+    "assertions": [
+      "Dome references rectangular portal",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-mesh-light",
+    "label": "Mesh light",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/mesh-light.usda",
+    "files": [
+      "coverage/lighting-mdl/mesh-light.usda",
+      "coverage/lighting-mdl/studio-panels.exr"
+    ],
+    "features": [
+      "UsdLux",
+      "meshlight"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "The EXR dome provides illumination. The authored meshlight schema requires delegate-specific support; its light transport is not established by this fixture."
+    },
+    "assertions": [
+      "Mesh light API applied to orbital mesh",
+      "Scene contains a stage and authored lights"
+    ],
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-geometry-light",
+    "label": "Geometry light",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/geometry-light.usda",
+    "files": [
+      "coverage/lighting-mdl/geometry-light.usda",
+      "coverage/lighting-mdl/studio-panels.exr"
+    ],
+    "features": [
+      "UsdLux",
+      "geometry"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "The EXR dome provides illumination. The authored geometry schema requires delegate-specific support; its light transport is not established by this fixture."
+    },
+    "assertions": [
+      "Geometry light targets halo mesh",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-volume-light",
+    "label": "Volume light",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/volume-light.usda",
+    "files": [
+      "coverage/lighting-mdl/volume-light.usda",
+      "coverage/lighting-mdl/studio-panels.exr",
+      "coverage/advanced/densityAndHeat.vdb"
+    ],
+    "features": [
+      "UsdLux",
+      "volumelight"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "The EXR dome provides illumination. The authored volumelight schema requires delegate-specific support; its light transport is not established by this fixture."
+    },
+    "assertions": [
+      "Volume light has a resolved density field",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01,
+    "renderer": "bounded-volume"
+  },
+  {
+    "id": "lighting-mdl-light-linking",
+    "label": "Light and shadow linking",
+    "group": "Lights",
+    "root": "coverage/lighting-mdl/light-linking.usda",
+    "files": [
+      "coverage/lighting-mdl/light-linking.usda"
+    ],
+    "features": [
+      "UsdLux",
+      "linking"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "Light and shadow linking collections and cached light lists are authored; selective linking requires delegate support."
+    },
+    "assertions": [
+      "Light and shadow collections and light list are authored",
+      "Scene contains a stage and authored lights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "thumbnailCameraLight": false,
+    "environment": "none",
+    "scenePrimitiveLightIntensityScale": 0.01
+  },
+  {
+    "id": "lighting-mdl-mdl-metal",
+    "label": "MDL metallic gold",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-metal.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-metal.usda",
+      "coverage/lighting-mdl/OmniPBR.mdl"
+    ],
+    "features": [
+      "MDL",
+      "OmniPBR",
+      "metal"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves",
+      "Smooth and cage variants preserve creases and seam UVs"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "lighting-mdl-mdl-clearcoat",
+    "label": "MDL clearcoat enamel",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-clearcoat.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-clearcoat.usda",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl"
+    ],
+    "features": [
+      "MDL",
+      "OmniPBR_ClearCoat",
+      "clearcoat"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves",
+      "Smooth and cage variants preserve creases and seam UVs"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "lighting-mdl-mdl-color-texture",
+    "label": "MDL patterned enamel",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-color-texture.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-color-texture.usda",
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/pattern-color.png"
+    ],
+    "features": [
+      "MDL",
+      "OmniPBR",
+      "texture"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves",
+      "Smooth and cage variants preserve creases and seam UVs",
+      "Texture asset resolves"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "lighting-mdl-mdl-normal-texture",
+    "label": "MDL engraved normal",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-normal-texture.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-normal-texture.usda",
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/pattern-normal.png"
+    ],
+    "features": [
+      "MDL",
+      "OmniPBR",
+      "normal"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves",
+      "Texture asset resolves"
+    ]
+  },
+  {
+    "id": "lighting-mdl-mdl-opacity-mask",
+    "label": "MDL cutout lattice",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-opacity-mask.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-opacity-mask.usda",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/pattern-opacity.png"
+    ],
+    "features": [
+      "MDL",
+      "OmniPBR_Opacity",
+      "opacity"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves",
+      "Texture asset resolves"
+    ]
+  },
+  {
+    "id": "lighting-mdl-mdl-gltf",
+    "label": "MDL glTF material",
+    "group": "MDL",
+    "root": "coverage/lighting-mdl/mdl-gltf.usda",
+    "files": [
+      "coverage/lighting-mdl/mdl-gltf.usda",
+      "coverage/lighting-mdl/gltf_support.mdl"
+    ],
+    "features": [
+      "MDL",
+      "gltf_material",
+      "gltf"
+    ],
+    "expected": {
+      "native": "Stage opens and authored schema assertions pass; renderer support varies",
+      "needle": "MDL-only binding exercises supported authored-input approximation; MDL module compilation is not asserted"
+    },
+    "assertions": [
+      "MDL terminal is connected without Preview surface",
+      "Material ring bound to MDL",
+      "MDL source asset resolves"
+    ]
+  }
+]

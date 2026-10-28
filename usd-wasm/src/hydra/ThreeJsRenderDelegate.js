@@ -1,10 +1,19 @@
 import * as THREE from 'three';
+import { packSparkSphericalHarmonics } from './sparkSphericalHarmonics.js';
+import { HydraStroke } from './HydraStroke.js';
+import { HydraNurbsPatch } from './HydraNurbsPatch.js';
 import { mdlToPreview } from './mdlPreview.js';
+import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPrimvars, configureMaterialXPrimvars, prepareMaterialXPrimvars } from './materialPrimvars.js';
 import { remapNormalTextureSamples, remapTextureSamples } from './textureChannels.js';
 import { textureFileType } from './textureFileType.js';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { createDomeTexture, updateDomeEnvironment, removeDomeEnvironment } from './domeEnvironment.js';
+import { VdbVolumeRprim } from './vdbVolumeRprim.js';
 import { hasMaterialXVolume } from './materialxVolumeSupport.js';
+import { materialXDefinitionsFor } from './materialxDefinitions.js';
 
 const {
   TextureLoader,
@@ -33,11 +42,12 @@ const {
   CameraHelper,
   DirectionalLight,
   DirectionalLightHelper,
-  HemisphereLight,
   OrthographicCamera,
   PerspectiveCamera,
   PointLight,
   PointLightHelper,
+  RectAreaLight,
+  SpotLight,
   MathUtils,
   Group,
 } = THREE;
@@ -54,6 +64,24 @@ let sparkModulePromise = null;
 let mikkTSpaceTangentsPromise = null;
 const generatedTangentStates = new WeakMap();
 const sparkRendererRecords = new WeakMap();
+const volumeProxyShadowStates = new WeakMap();
+
+function surfaceShadowCasting(mesh) {
+  return volumeProxyShadowStates.has(mesh) ? volumeProxyShadowStates.get(mesh) : mesh.castShadow;
+}
+
+function prepareVolumeProxyShadows(mesh) {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  if (materials.length && materials.every(material => material?.isBoundedVolumeNodeMaterial)) {
+    if (!volumeProxyShadowStates.has(mesh)) volumeProxyShadowStates.set(mesh, mesh.castShadow);
+    // The box bounds the integration domain; it is not an opaque occluder.
+    // Extinction along light rays is evaluated by the volume material itself.
+    mesh.castShadow = false;
+  } else if (volumeProxyShadowStates.has(mesh)) {
+    mesh.castShadow = volumeProxyShadowStates.get(mesh);
+    volumeProxyShadowStates.delete(mesh);
+  }
+}
 
 function hydraTimingEnabled() {
   if (typeof location === "undefined") return false;
@@ -76,6 +104,7 @@ async function getMaterialXModule() {
   materialXModulePromise ??= import('@needle-tools/materialx').then(module => ({
     MaterialX: module.Experimental_API,
     MaterialXMaterial: module.MaterialXMaterial,
+    MaterialXEnvironment: module.MaterialXEnvironment,
   }));
   return materialXModulePromise;
 }
@@ -149,7 +178,7 @@ function ensureMaterialXGeometryTangents(geometry) {
       const normal = geometry.getAttribute('normal');
       const uv = geometry.getAttribute('uv');
       const tangent = geometry.getAttribute('tangent');
-      if (!position || !normal || !uv || normal.count !== position.count || uv.count !== position.count) {
+      if (!position || !normal || normal.count !== position.count) {
         continue;
       }
       if (tangent?.count === position.count) {
@@ -157,7 +186,28 @@ function ensureMaterialXGeometryTangents(geometry) {
         continue;
       }
 
-      computeMikkTSpaceTangents(geometry, MikkTSpace);
+      if (uv) {
+        if (uv.count !== position.count) continue;
+        computeMikkTSpaceTangents(geometry, MikkTSpace);
+      } else {
+        // MaterialX standard_surface consumes a basis even without textures.
+        // With no UV parameterization, choose a deterministic orthogonal tangent
+        // instead of letting the missing attribute produce a zero/NaN basis.
+        // UV-bearing geometry still uses MikkTSpace; authored tangents win above.
+        const values = new Float32Array(position.count * 4);
+        for (let i = 0; i < position.count; i++) {
+          const x = normal.getX(i), y = normal.getY(i), z = normal.getZ(i);
+          const useY = Math.abs(y) < 0.9 * Math.hypot(x, y, z);
+          const tx = useY ? z : 0, ty = useY ? 0 : -z, tz = useY ? -x : y;
+          const length = Math.hypot(tx, ty, tz);
+          const valid = length > 0 && Number.isFinite(length);
+          values[i * 4] = valid ? tx / length : 1;
+          values[i * 4 + 1] = valid ? ty / length : 0;
+          values[i * 4 + 2] = valid ? tz / length : 0;
+          values[i * 4 + 3] = 1;
+        }
+        geometry.setAttribute('tangent', new Float32BufferAttribute(values, 4));
+      }
       const generatedTangents = geometry.getAttribute('tangent');
       if (generatedTangents?.count === position.count) {
         generatedTangents.needsUpdate = true;
@@ -502,7 +552,8 @@ class TextureRegistry {
     let filetype = textureFileType(extension);
 
     const loadFromUrl = (url, revokeOnLoad = false) => {
-      const loader = filetype === 'image/tga' ? this.tgaLoader : filetype === 'image/x-exr' ? this.exrLoader : this.loader;
+      const loader = filetype === 'image/tga' ? this.tgaLoader : filetype === 'image/x-exr' ? this.exrLoader
+        : filetype === 'image/vnd.radiance' ? (this.hdrLoader ??= new RGBELoader()) : this.loader;
       if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "resourcePath", resourcePath);
       // Load the texture
       loader.load(
@@ -597,6 +648,7 @@ class TextureRegistry {
       URL.revokeObjectURL(url);
     }
     this.objectUrls.clear();
+    this.materialXDefinitionCache.clear();
 
     for (const texture of this.loadedTextures) {
       texture.dispose();
@@ -659,18 +711,25 @@ class HydraScenePrimitive {
   updateLightState(state) {
     if (!this._id) return;
     const typeId = String(state?.typeId || this._typeId);
+    const shaped = Number(state?.coneAngle ?? 180) < 180;
+    const area = typeId === 'rectLight' || typeId === 'diskLight';
     const LightCtor = typeId === "distantLight"
       ? DirectionalLight
       : typeId === "domeLight"
-        ? HemisphereLight
-        : PointLight;
+        ? Group
+        : shaped ? SpotLight : area ? RectAreaLight : PointLight;
 
     if (!this._object || !(this._object instanceof LightCtor)) {
       const color = new Color(1, 1, 1);
-      this._replaceObject(typeId === "domeLight"
-        ? new HemisphereLight(color, new Color(0.2, 0.2, 0.2), 1)
-        : new LightCtor(color, 1));
+      // Dome lighting comes from scene.environment. Its transform carrier
+      // must not also enter the light list: an origin HemisphereLight has an
+      // undefined direction that poisons node-renderer irradiance even at zero intensity.
+      this._replaceObject(typeId === "domeLight" ? new Group() : new LightCtor(color, 1));
       this._object.userData.usdKind = "sprim";
+      if (this._object.target) {
+        this._object.target.position.set(0, 0, -1);
+        this._object.add(this._object.target);
+      }
     }
 
     const colorValue = Array.isArray(state?.color) ? state.color : [1, 1, 1];
@@ -679,16 +738,53 @@ class HydraScenePrimitive {
       Number(colorValue[1]) || 0,
       Number(colorValue[2]) || 0);
     const scale = this._interface.config.scenePrimitiveLightIntensityScale ?? defaultScenePrimitiveLightIntensityScale;
-    this._object.intensity = (Number(state?.intensity) || 0) * scale;
+    if (this._object.isLight) this._object.intensity = (Number(state?.intensity) || 0) * scale;
+    if (area && !shaped) {
+      RectAreaLightUniformsLib.init();
+      this._object.width = typeId === 'diskLight' ? Math.max(Number(state?.radius) || .5, .001) * 2 : Math.max(Number(state?.width) || 1, .001);
+      this._object.height = typeId === 'diskLight' ? this._object.width : Math.max(Number(state?.height) || 1, .001);
+    }
+    if (this._object.isSpotLight) {
+      this._object.angle = MathUtils.degToRad(Math.max(.01, Math.min(90, Number(state.coneAngle))));
+      this._object.penumbra = Math.max(0, Math.min(1, Number(state.coneSoftness) || 0));
+    }
     this._object.visible = state?.visible !== false;
     this._object.name = primNameFromPath(this._id, usdLightTypeNames[typeId] || "UsdLight");
     this._object.userData.usdPath = this._id;
     this._object.userData.usdTypeName = usdLightTypeNames[typeId] || typeId;
     applyHydraTransform(this._object, state?.transform);
+    if (typeId === 'domeLight') this._updateDome(state, colorValue);
     this._syncHelper(state);
   }
 
+  _updateDome(state, color) {
+    this._domeScene = this._interface.config.renderScene || this._interface.config.usdRoot;
+    const path = state.textureResolvedUrl || state.textureResolvedPath || state.textureFile || '';
+    const key = JSON.stringify([path, color]);
+    this._domeState = { ...state };
+    if (key === this._domeKey) {
+      updateDomeEnvironment(this, this._domeScene, this._domeTexture, state, this._object);
+      return;
+    }
+    this._domeKey = key;
+    const token = this._domeToken = {};
+    const update = (async () => {
+      const source = path ? await this._interface.registry.getTexture(path) : null;
+      if (this._domeToken !== token) return;
+      const texture = createDomeTexture(source, color);
+      const previous = this._domeTexture;
+      this._domeTexture = texture;
+      updateDomeEnvironment(this, this._domeScene, texture, this._domeState, this._object);
+      previous?.dispose();
+      this._interface.config.requestRender?.();
+    })().catch(error => console.error(`USD dome light '${this._id}' failed to load its environment`, error));
+    this._interface.trackMaterialUpdate(update);
+  }
+
   dispose() {
+    this._domeToken = null;
+    removeDomeEnvironment(this, this._domeScene);
+    this._domeTexture?.dispose();
     disposeObjectResources(this._helper);
     disposeObjectResources(this._object);
     this._helper = null;
@@ -785,9 +881,6 @@ function createSparkExtSplats(data, spark) {
     extra.sh3b = new Uint32Array(paddedCount * 4);
   }
 
-  const sh1 = new Float32Array(9);
-  const sh2 = new Float32Array(15);
-  const sh3 = new Float32Array(21);
   for (let i = 0; i < count; i++) {
     const p = i * 3;
     const q = i * 4;
@@ -809,20 +902,7 @@ function createSparkExtSplats(data, spark) {
       0.5 + SH_C0 * data.coefficients[coefficientBase + 2],
     );
 
-    if (data.degree >= 1) {
-      sh1.set(data.coefficients.subarray(coefficientBase + 3, coefficientBase + 12));
-      if (data.degree === 1) {
-        spark.utils.encodeExtSh1Rgb(extra.sh1, i, sh1);
-      }
-    }
-    if (data.degree >= 2) {
-      sh2.set(data.coefficients.subarray(coefficientBase + 12, coefficientBase + 27));
-      spark.utils.encodeExtSh12Rgb(extra.sh1, extra.sh2, i, sh1, sh2);
-    }
-    if (data.degree >= 3) {
-      sh3.set(data.coefficients.subarray(coefficientBase + 27, coefficientBase + 48));
-      spark.utils.encodeExt3Rgb(extra.sh3a, extra.sh3b, i, sh3);
-    }
+    packSparkSphericalHarmonics(extra, i, data.coefficients, coefficientBase, data.degree);
   }
 
   return new spark.ExtSplats({ extArrays, numSplats: count, extra });
@@ -1026,7 +1106,9 @@ class HydraMesh {
     this._tangents = undefined;
     this._tangentDimension = 4;
     this._tangentInterpolation = undefined;
+    this._constantTangent = undefined;
     this._colors = undefined;
+    this._primvars = new Map();
     this._uvs = undefined;
     this._indices = undefined;
     this._materials = [];
@@ -1118,7 +1200,7 @@ class HydraMesh {
     nextObject.name = previous.name;
     nextObject.matrix.copy(previous.matrix);
     nextObject.matrixAutoUpdate = previous.matrixAutoUpdate;
-    nextObject.castShadow = previous.castShadow;
+    nextObject.castShadow = surfaceShadowCasting(previous);
     nextObject.receiveShadow = previous.receiveShadow;
     nextObject.visible = previous.visible;
     this._interface.unassignMeshFromMaterials(previous);
@@ -1264,11 +1346,19 @@ class HydraMesh {
         this.updateOrder(this._uvs, 'uv', 2);
         this._geometry.attributes.uv2 = this._geometry.attributes.uv;
       }
-      if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
+      if (this._constantTangent) {
+        this._applyConstantTangent();
+      } else if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
         this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
       } else {
         this._geometry.deleteAttribute('tangent');
       }
+      for (const [name, primvar] of this._primvars) {
+        if (primvar.interpolation === 'vertex' || primvar.interpolation === 'varying') {
+          this.updateTypedOrder(primvar.values, `primvars:${name}`, primvar.itemSize);
+        }
+      }
+      this._interface.prepareMeshMaterialGeometry(this._mesh);
       this._refreshWireObject();
       this._applyVisibilityState();
     });
@@ -1302,7 +1392,7 @@ class HydraMesh {
       this._instancedMesh = new InstancedMesh(this._geometry, this._mesh.material, instanceCount);
       this._installMeshHooks(this._instancedMesh);
       this._instancedMesh.name = `${this._mesh.name}_instances`;
-      this._instancedMesh.castShadow = this._mesh.castShadow;
+      this._instancedMesh.castShadow = surfaceShadowCasting(this._mesh);
       this._instancedMesh.receiveShadow = this._mesh.receiveShadow;
       this._instancedMesh.matrixAutoUpdate = false;
       this._instancedMesh.userData.usdPath = this._id;
@@ -1311,6 +1401,7 @@ class HydraMesh {
     }
 
     this._instancedMesh.material = this._mesh.material;
+    prepareVolumeProxyShadows(this._instancedMesh);
     this._mesh.visible = false;
     this._applyVisibilityState();
 
@@ -1433,6 +1524,7 @@ class HydraMesh {
       clone.copy(material);
       clone.userData.usdHydraSideCloneOf = material.uuid;
     }
+    installPreviewPrimvarShader(clone);
     clone.side = this._side;
     clone.needsUpdate = true;
     return clone;
@@ -1575,11 +1667,27 @@ class HydraMesh {
     }
   }
 
+  _applyConstantTangent() {
+    const count = this._geometry.getAttribute('position')?.count;
+    if (!count || !this._constantTangent) return;
+    const values = new Float32Array(count * this._tangentDimension);
+    for (let i = 0; i < count; i++) values.set(this._constantTangent, i * this._tangentDimension);
+    this._geometry.setAttribute('tangent', new Float32BufferAttribute(values, this._tangentDimension));
+  }
+
   setTangents(data, dimension, interpolation) {
     delete this._geometry.userData.usdHydraGeneratedTangents;
+    this._constantTangent = undefined;
     this._tangentDimension = Math.max(1, Number(dimension) || 4);
     this._tangentInterpolation = interpolation;
-    if (interpolation === 'facevarying') {
+    if (interpolation === 'constant') {
+      this._tangents = undefined;
+      const values = Float32Array.from(data || []);
+      if (values.length >= this._tangentDimension) {
+        this._constantTangent = values.slice(0, this._tangentDimension);
+        this._applyConstantTangent();
+      }
+    } else if (interpolation === 'facevarying') {
       this._tangents = undefined;
       this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, this._tangentDimension));
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
@@ -1691,6 +1799,7 @@ class HydraMesh {
         console.warn(`Unsupported displayColor interpolation type '${interpolation}'.`);
       }
     }
+    this.setGenericPrimvar('displayColor', data, 3, interpolation);
   }
 
   setUV(data, dimension, interpolation) {
@@ -1716,6 +1825,8 @@ class HydraMesh {
     const attributeName = `primvars:${name}`;
     const itemSize = Math.max(1, Number(dimension) || 1);
     const values = ArrayBuffer.isView(data) ? data.slice() : Float32Array.from(data || []);
+    this._primvars.set(name, { values, itemSize, interpolation });
+    if (this._mesh.userData.usdPrimvars) delete this._mesh.userData.usdPrimvars[name];
 
     if (interpolation === 'constant') {
       this._mesh.userData.usdPrimvars ??= {};
@@ -1726,6 +1837,7 @@ class HydraMesh {
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       this.updateTypedOrder(values, attributeName, itemSize);
     }
+    this._interface.prepareMeshMaterialGeometry(this._mesh);
   }
 
   updatePrimvar(name, data, dimension, interpolation) {
@@ -1779,7 +1891,9 @@ class HydraMesh {
       this._points = Float32Array.from(points);
       this.updateOrder(this._points, 'position');
       this._applyNormalStateForGeometry();
-      if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
+      if (this._constantTangent) {
+        this._applyConstantTangent();
+      } else if (this._tangents && (this._tangentInterpolation === 'vertex' || this._tangentInterpolation === 'varying')) {
         this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
       } else {
         const position = this._geometry.getAttribute('position');
@@ -1795,6 +1909,7 @@ class HydraMesh {
   commit() {
     if (this._instancedMesh && this._mesh) {
       this._instancedMesh.material = this._mesh.material;
+      prepareVolumeProxyShadows(this._instancedMesh);
     }
     this._applyVisibilityState();
   }
@@ -1922,7 +2037,10 @@ class HydraMaterial {
 
   _applyMaterialToMesh(mesh, materialIndex) {
     const applyMaterialSide = mesh.userData?.usdHydraApplyMaterialSide;
-    const sourceMaterial = this._useMeshFallback ? mesh.userData.usdHydraFallbackMaterial?.() || defaultMaterial : this._material;
+    // The empty-path sprim is Hydra's shared fallback, not an authored surface.
+    // Reapplying its assignments must retain each mesh's displayColor material.
+    const sourceMaterial = this._id === '' || this._useMeshFallback
+      ? mesh.userData.usdHydraFallbackMaterial?.() || defaultMaterial : this._material;
     const material = typeof applyMaterialSide === 'function'
       ? applyMaterialSide(sourceMaterial, this)
       : sourceMaterial;
@@ -2016,10 +2134,20 @@ class HydraMaterial {
   }
 
   async _withAuthoredMaterialXDefinitions(xml) {
-    const missingNodeDefs = HydraMaterial.missingMaterialXNodeDefs(xml);
-    if (!missingNodeDefs.length) return xml;
+    const missingNodeDefs = new Set(HydraMaterial.missingMaterialXNodeDefs(xml));
+    // HdMtlx omits nodedef on a custom terminal node. Sdr's source-asset
+    // identifier retains its authored subIdentifier, including that terminal.
+    const customShaderPaths = [];
+    for (const [path, node] of Object.entries(this._nodes)) {
+      const custom = /<([^<>]+)><mtlx>$/.exec(String(node.identifier || ""));
+      if (custom) {
+        missingNodeDefs.add(custom[1]);
+        customShaderPaths.push(path);
+      }
+    }
+    if (!missingNodeDefs.size) return xml;
 
-    const definitions = await this._interface.registry.materialXDefinitionsFor(missingNodeDefs);
+    const definitions = await materialXDefinitionsFor(this._interface.registry, [...missingNodeDefs], customShaderPaths);
     if (!definitions) return xml;
 
     return xml.replace(/(<materialx\b[^>]*>)/, `$1\n${definitions}`);
@@ -2339,6 +2467,8 @@ class HydraMaterial {
       this.assignProperty(mainMaterialNode, key);
     }
 
+    if (!usingMdl) configurePreviewPrimvars(this._material, mainMaterialNode);
+
     if (usingMdl) {
       const { normalScale, specularColor, ...settings } = mdlPreview.settings;
       Object.assign(this._material, settings);
@@ -2388,7 +2518,7 @@ class HydraMaterial {
         this._interface.diagnostics.materialXCreateSuccess++;
         return volume;
       }
-      const { MaterialX, MaterialXMaterial } = await getMaterialXModule();
+      const { MaterialX, MaterialXMaterial, MaterialXEnvironment } = await getMaterialXModule();
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
         cacheKey: `${this._id}:${materialXDocument.terminal}`,
         getTexture: async (url) => {
@@ -2411,6 +2541,10 @@ class HydraMaterial {
         return null;
       }
 
+      // Register only after the package was already loaded for an authored material.
+      this._interface.materialXEnvironmentClass = MaterialXEnvironment;
+      this._interface.refreshMaterialXLighting();
+      configureMaterialXPrimvars(material);
       material.name = materialName;
       material.side = DoubleSide;
       material.needsUpdate = true;
@@ -2483,8 +2617,18 @@ export class ThreeRenderDelegateInterface {
 
   prepareMeshMaterialGeometry(mesh) {
     if (!mesh?.geometry) return;
+    prepareVolumeProxyShadows(mesh);
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const primvarAttributes = new Set(materials.flatMap(material =>
+      material?.userData?.usdPreviewPrimvars?.map(binding => binding.attribute) || []));
+    for (const name of Object.keys(mesh.geometry.attributes)) {
+      if ((name.startsWith('usdPrimvar_') && !primvarAttributes.has(name)) || name.startsWith('i_geomprop_')) {
+        mesh.geometry.deleteAttribute(name);
+      }
+    }
     for (const material of materials) {
+      preparePreviewPrimvars(material, mesh);
+      prepareMaterialXPrimvars(material, mesh);
       const promise = prepareMaterialXMaterialForGeometry(material, mesh.geometry);
       if (promise) this.trackMaterialUpdate(promise);
     }
@@ -2503,9 +2647,13 @@ export class ThreeRenderDelegateInterface {
   }
 
   async waitForRprimsReady() {
+    const failures = [];
     while (this.pendingRprimUpdates.size > 0) {
-      await Promise.all([...this.pendingRprimUpdates]);
+      const results = await Promise.allSettled([...this.pendingRprimUpdates]);
+      for (const result of results) if (result.status === 'rejected') failures.push(result.reason);
     }
+    // One rejected factory must not release the driver while another still reads.
+    if (failures.length) throw failures[0];
   }
 
   ensureSparkRenderer(spark, sortingModeHint) {
@@ -2521,9 +2669,12 @@ export class ThreeRenderDelegateInterface {
           if (!renderer && object instanceof spark.SparkRenderer) renderer = object;
         });
         const owned = !renderer;
+        const Timer = Reflect.get(THREE, 'Timer');
+        const timer = owned && Timer ? new Timer() : undefined;
         renderer ??= new spark.SparkRenderer({
           renderer: this.config.renderer,
           onDirty: this.config.requestRender,
+          timer,
         });
         if (owned) {
           renderer.name = '__usd_spark_renderer';
@@ -2531,7 +2682,7 @@ export class ThreeRenderDelegateInterface {
           renderer.userData.usdExcludeFromBounds = true;
           renderScene.add(renderer);
         }
-        record = { renderer, owned, references: 0 };
+        record = { renderer, timer, owned, references: 0 };
         sparkRendererRecords.set(renderScene, record);
       }
       record.references++;
@@ -2565,6 +2716,11 @@ export class ThreeRenderDelegateInterface {
    * @returns 
    */
   createRPrim(typeId, id, instancerId) {
+    if (typeId === 'volume') {
+      const volume = new VdbVolumeRprim(id, this);
+      this.meshes[id] = volume;
+      return volume;
+    }
     if (debugPrims) console.log('Creating RPrim: ', typeId, id, typeof id);
     const existing = this.meshes[id];
     if (existing) {
@@ -2574,10 +2730,19 @@ export class ThreeRenderDelegateInterface {
     this._cancelRetiredRPrimRelease(id);
     const mesh = typeId === 'particleField'
       ? new HydraParticleField(id, this)
-      : new HydraMesh(id, this);
+      : typeId === 'points' || typeId === 'basisCurves'
+        ? new HydraStroke(typeId, id, this)
+        : typeId === 'nurbsPatch' ? new HydraNurbsPatch(id, this) : new HydraMesh(id, this);
     this.meshes[id] = mesh;
     if (typeId === 'particleField') this.diagnostics.particleFields++;
     return mesh;
+  }
+
+  refreshMaterialXLighting() {
+    if (!this.materialXEnvironmentClass || this.registry.disposed) return;
+    let scene = this.config.renderScene || this.config.usdRoot;
+    while (!scene.isScene && scene.parent) scene = scene.parent;
+    if (scene.isScene) this.materialXEnvironmentClass.get(scene)?.refreshLights();
   }
 
   beginHydraDraw() {
@@ -2734,6 +2899,7 @@ export class ThreeRenderDelegateInterface {
           if (record.owned) {
             record.renderer.parent?.remove(record.renderer);
             record.renderer.dispose();
+            record.timer?.dispose();
           }
           sparkRendererRecords.delete(renderScene);
         }

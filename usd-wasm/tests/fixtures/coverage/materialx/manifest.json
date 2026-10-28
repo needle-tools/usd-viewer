@@ -1,0 +1,267 @@
+[
+  {
+    "id": "materialx-ember-torus",
+    "label": "Ember torus",
+    "group": "MaterialX Volumes",
+    "root": "coverage/materialx/ember-torus.usda",
+    "files": [
+      "coverage/materialx/ember-torus.usda",
+      "coverage/materialx/graphs/ember-torus.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "volume",
+      "absorption_vdf",
+      "uniform_edf",
+      "object-space toroidal density"
+    ],
+    "renderer": "bounded-volume",
+    "expected": {
+      "native": "USD composition and volume/surface terminal are valid; Storm does not implement MaterialX bounded-medium transport.",
+      "needle": "Requires the bounded-volume renderer with WebGPURenderer, forceWebGL or WebGPU, single-sample depth, and materialXVolumeFactory."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/n22",
+      "terminal": "/World/MaterialX/Materials/n22.outputs:mtlx:volume",
+      "connectionCount": 58
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-jade-plume",
+    "label": "Jade plume",
+    "group": "MaterialX Volumes",
+    "root": "coverage/materialx/jade-plume.usda",
+    "files": [
+      "coverage/materialx/jade-plume.usda",
+      "coverage/materialx/graphs/jade-plume.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "volume",
+      "anisotropic_vdf",
+      "curved density field",
+      "single scattering"
+    ],
+    "renderer": "bounded-volume",
+    "expected": {
+      "native": "USD composition and volume/surface terminal are valid; Storm does not implement MaterialX bounded-medium transport.",
+      "needle": "Requires the bounded-volume renderer with WebGPURenderer, forceWebGL or WebGPU, single-sample depth, and materialXVolumeFactory."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/n26",
+      "terminal": "/World/MaterialX/Materials/n26.outputs:mtlx:volume",
+      "connectionCount": 64
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-violet-lattice",
+    "label": "Violet lattice",
+    "group": "MaterialX Volumes",
+    "root": "coverage/materialx/violet-lattice.usda",
+    "files": [
+      "coverage/materialx/violet-lattice.usda",
+      "coverage/materialx/graphs/violet-lattice.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "volume",
+      "anisotropic_vdf",
+      "periodic lattice density",
+      "emission"
+    ],
+    "renderer": "bounded-volume",
+    "expected": {
+      "native": "USD composition and volume/surface terminal are valid; Storm does not implement MaterialX bounded-medium transport.",
+      "needle": "Requires the bounded-volume renderer with WebGPURenderer, forceWebGL or WebGPU, single-sample depth, and materialXVolumeFactory."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/n31",
+      "terminal": "/World/MaterialX/Materials/n31.outputs:mtlx:volume",
+      "connectionCount": 80
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-nested",
+    "label": "Electric zebra",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/nested.usda",
+    "files": [
+      "coverage/materialx/nested.usda",
+      "coverage/materialx/graphs/nested.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "nested custom nodedef",
+      "interface forwarding",
+      "noise-warped bands"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 79
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-multi-output-uv",
+    "label": "Cartographic grid",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/multi-output-uv.usda",
+    "files": [
+      "coverage/materialx/multi-output-uv.usda",
+      "coverage/materialx/graphs/multi-output-uv.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "custom multi-output nodedef",
+      "named output routing",
+      "UV grid"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 85
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-two-instances",
+    "label": "Violet woven silk",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/two-instances.usda",
+    "files": [
+      "coverage/materialx/two-instances.usda",
+      "coverage/materialx/graphs/two-instances.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "multiple custom node instances",
+      "independent interface defaults",
+      "woven pattern"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 81
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-wrapped-standard_surface",
+    "label": "Copper patina",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/wrapped-standard_surface.usda",
+    "files": [
+      "coverage/materialx/wrapped-standard_surface.usda",
+      "coverage/materialx/graphs/wrapped-standard_surface.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "custom surfaceshader implementation",
+      "wrapped standard_surface",
+      "interface defaults"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 19
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-filename-interface-colorspace",
+    "label": "Indigo dragon scales",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/filename-interface-colorspace.usda",
+    "files": [
+      "coverage/materialx/filename-interface-colorspace.usda",
+      "coverage/materialx/graphs/filename-interface-colorspace.mtlx",
+      "coverage/materialx/graphs/scales.png"
+    ],
+    "features": [
+      "MaterialX",
+      "filename interface",
+      "sRGB texture color space",
+      "custom image node"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 48
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "materialx-explicit-version",
+    "label": "Mint ribs",
+    "group": "MaterialX Graphs",
+    "root": "coverage/materialx/explicit-version.usda",
+    "files": [
+      "coverage/materialx/explicit-version.usda",
+      "coverage/materialx/graphs/explicit-version.mtlx"
+    ],
+    "features": [
+      "MaterialX",
+      "versioned nodedef",
+      "explicit version selection",
+      "procedural ribs"
+    ],
+    "renderer": "surface",
+    "expected": {
+      "native": "Native USD material reference and graph composition are valid.",
+      "needle": "Must compile the authored custom nodedef graph, preserving interface and named-output semantics."
+    },
+    "assertions": {
+      "opens": true,
+      "compositionErrors": [],
+      "boundMaterial": "/World/MaterialX/Materials/M",
+      "terminal": "/World/MaterialX/Materials/M.outputs:mtlx:surface",
+      "connectionCount": 72
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  }
+]

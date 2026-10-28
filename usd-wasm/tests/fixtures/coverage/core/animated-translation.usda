@@ -1,0 +1,67 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Base"
+    {
+        color3f[] primvars:displayColor = [(0.15, 0.24, 0.29)]
+        double size = 1
+        float3 xformOp:scale = (4.3, 0.2, 2.8)
+        double3 xformOp:translate = (0, -1.05, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "Animated"
+    {
+        double3 xformOp:translate = (-1, 0, 0)
+        double3 xformOp:translate.timeSamples = {
+            1: (-1, 0, 0),
+            48: (1, 0, 0),
+        }
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cube "Body"
+        {
+            color3f[] primvars:displayColor = [(0.95, 0.55, 0.19)]
+            double size = 0.65
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def Cube "Cap"
+        {
+            color3f[] primvars:displayColor = [(0.22, 0.35, 0.4)]
+            double size = 1
+            float3 xformOp:scale = (0.9, 0.12, 0.9)
+            double3 xformOp:translate = (0, 0.45, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cube "Bottom"
+        {
+            color3f[] primvars:displayColor = [(0.22, 0.35, 0.4)]
+            double size = 1
+            float3 xformOp:scale = (0.9, 0.12, 0.9)
+            double3 xformOp:translate = (0, -0.45, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+    }
+
+    def Cube "Marker"
+    {
+        color3f[] primvars:displayColor = [(0.7, 0.62, 0.4)]
+        double size = 1
+        float3 xformOp:scale = (0.13, 0.4, 0.13)
+        double3 xformOp:translate = (0, -0.78, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+

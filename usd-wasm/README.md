@@ -15,15 +15,17 @@ For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
 
 Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5**:
 
-- **Composition** — references, payloads, variants, and nested packages resolve
-  exactly as they would in `usdview`.
+- **Composition** — references, payloads, variants, nested packages, and
+  stage-owned HTTP asset resolution.
 - **Instancing** — native instances and `PointInstancer` prims.
 - **Visibility** — prim visibility and purpose-based filtering (`render`,
   `proxy`, `guide`).
 - **Cameras & lights** — USD cameras and UsdLux lights.
 - **Materials** — UsdPreviewSurface and MaterialX via Hydra material documents,
-  including environment lighting, real-time shadows, and vertex displacement.
-- **Geometry** — OpenSubdiv smooth subdivision surfaces and creases.
+  including environment and authored direct lighting.
+- **Geometry** — OpenSubdiv smooth subdivision surfaces and creases, world-space
+  points with varying widths, and evaluated Bézier/B-spline/NURBS curves.
+- **Volumes** — optional bounded MaterialX media and OpenVDB density/heat visualization.
 - **glTF-in-USD** — Adobe `usdGltf` file format plugin loads glTF/GLB directly
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
@@ -323,61 +325,31 @@ import { needleUSD } from "@needle-tools/usd/vite";
 
 
 
-## Low Level Usage
+## Authored shadows
 
-### Import
-```js
-import { getUsdModule } from '@needle-tools/usd';
-```
+USD punctual lights cast raster shadows when the host renderer has
+`renderer.shadowMap.enabled = true`. Both public viewer modes enable this.
+Directional, point and shaped spot lights respect `UsdLuxShadowAPI`'s
+`inputs:shadow:enable` (default `true`), including time samples and variants.
+PreviewSurface and MaterialX receivers are verified in both public viewers.
+Shadow bounds follow the composed USD scene, and the owning handle releases
+the shadow maps and attribute handles on disposal. Stages without active
+shadow lights skip shadow-bound traversal.
 
-### Load the Module
+**Load Sample → Needle → Lights → Distant sun** has `shadows` variants for
+enabling and disabling its authored shadow.
 
-```js
-getUsdModule({
-  // We need to override where the initial module is loaded from, 
-  // since after bundling we can't rely on paths anymore
-  mainScriptUrlOrBlob: "/emHdBindings.js",
-}).then(async (Usd: USD) => {
-    // use Usd here
-});
-```
+Bounded-medium proxy boxes do not cast opaque surface shadows. Their material
+integrates extinction along light rays and can receive shadows from scene geometry.
+In the public node-rendered viewer, **Background → Light/Dark** changes the backdrop
+without reloading the stage (`?background=dark`). Transparent media can be faint
+against a bright background even when composition is correct.
 
-### Load a file into the virtual file system
-```js
-const blob = await fetch("test.usdz");
-const arrayBuffer = await blob.arrayBuffer();
-// Create a file in the virtual file system
-Usd.FS_createDataFile("", "test.usdz", new Uint8Array(arrayBuffer), true, true, true);
-```
-
-### Load file into USD
-
-```js
-let driver = new Usd.HdWebSyncDriver(delegate, "test.usdz");
-if (driver instanceof Promise) driver = await driver;
-
-// This kicks off asynchronous tasks to look at everything that has changed – _SyncAll –
-// which will then call into the delegate to create and update the scene graph.
-driver.Draw();
-```
-
-## Useful References
-
-Uses `Asyncify` to handle async calls in emscripten.  
-> A synchronous call in C that waits for an asynchronous operation in JS to complete.
-https://emscripten.org/docs/porting/asyncify.html
-
-
-# Contact ✒️
-
-For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
-
-<b>[🌵 Needle](https://needle.tools)</b> • 
-[Github](https://github.com/needle-tools) • 
-[Twitter](https://twitter.com/NeedleTools) • 
-[Discord](https://discord.needle.tools) • 
-[Forum](https://forum.needle.tools) • 
-[Youtube](https://www.youtube.com/@needle-tools)
+Rectangular and dome-light shadow transport, `shadowLink` collections and the
+artistic `shadow:color`, `shadow:distance`, `shadow:falloff` and
+`shadow:falloffGamma` controls require additional renderer support. A shadow-map
+camera's clipping range does not implement USD's occluder-to-receiver shadow
+distance control.
 
 ## Bounded MaterialX volumes
 
@@ -390,7 +362,7 @@ inverse world units.
 Use the three.js node renderer with a single-sample depth buffer:
 
 ```js
-import { WebGPURenderer, Scene } from 'three/webgpu';
+import { WebGPURenderer, Scene, Color } from 'three/webgpu';
 import { getUsdModule } from '@needle-tools/usd';
 import { createThreeHydra } from '@needle-tools/usd/three';
 import { createMaterialXVolumeMaterial } from '@needle-tools/usd/volumes';
@@ -399,6 +371,7 @@ const renderer = new WebGPURenderer({ antialias: false });
 // Add forceWebGL: true to use the node renderer's WebGL2 backend.
 await renderer.init();
 const scene = new Scene();
+scene.background = new Color(0xf0f0f0);
 const stage = await createThreeHydra({
   USD: await getUsdModule(), scene, renderer, url: '/bounded-volume.usda',
   materialXVolumeFactory: createMaterialXVolumeMaterial,
@@ -407,12 +380,16 @@ await stage.ready();
 await stage.materialsReady();
 ```
 
+Set an opaque `scene.background` when embedding over a colored page. The medium
+composites against the renderer’s opaque color/depth pass; a CSS background
+behind a transparent canvas is not available to that pass.
+
 Volume support is an explicit opt-in entry point and requires the recent
 three.js node APIs (validated with `@needle-tools/three@0.185.2-alpha.6`).
 The base entry points retain support for legacy three.js consumers without
 importing those APIs. Missing volume configuration or a legacy `WebGLRenderer`
-reports unsupported volume shading. This feature
-does not load UsdVol/OpenVDB grids, `standard_volume`, overlapping media, or
+reports unsupported volume shading. The MaterialX factory does not load
+`standard_volume`, overlapping media, or
 arbitrary boundaries. Scattering supports directional, point, and spot lights;
 environment and area-light scattering are not implemented. The existing
 surface MaterialX/WASM path continues to handle surface materials.
@@ -421,6 +398,27 @@ surface MaterialX/WASM path continues to handle surface materials.
 and emission against analytic pixel values on WebGPU and WebGL2, with no scene
 lights. Vendored loader provenance and limitations are in
 [`src/vendor/materialx/README.md`](src/vendor/materialx/README.md).
+
+## OpenVDB fields
+
+The same node renderer can display `UsdVolVolume` density and heat fields from
+local/package or HTTP OpenVDB assets. Add the optional factory when loading:
+
+```js
+import { createVdbVolumeMesh } from '@needle-tools/usd/volumes';
+
+const stage = await createThreeHydra({
+  USD: await getUsdModule(), scene, renderer, url: '/smoke.usda',
+  usdVolumeFactory: createVdbVolumeMesh,
+});
+await stage.ready();
+await stage.setTime(24); // Includes any asynchronous field-file update.
+```
+
+The renderer preserves grid and volume transforms, varying field files and
+valid empty frames. Its default transfer uses density for extinction/scattering
+and heat for emission. Arbitrary authored volume shaders, independent field-prim
+transforms, overlapping media and motion blur are not implemented.
 
 ## Low Level Usage
 
@@ -460,6 +458,63 @@ if (driver instanceof Promise) driver = await driver;
 driver.Draw();
 ```
 
+## Interactive physics
+
+The optional `@needle-tools/usd/physics` entry reads UsdPhysics from the composed
+stage and simulates it with an initialized `@dimforge/rapier3d-compat` module
+(tested with 0.19.3 and 0.21.0). Importing the renderer does not load Rapier.
+
+```js
+import RAPIER from '@dimforge/rapier3d-compat';
+import { createUsdPhysics } from '@needle-tools/usd/physics';
+
+await RAPIER.init();
+const physics = await createUsdPhysics({ handle, rapier: RAPIER });
+physics.play();
+// In the render loop, after handle.update(dt):
+physics.update(dt);
+// Before disposing or editing/recomposing the USD stage:
+physics.dispose();
+```
+
+The simulation overlays rendered transforms; it does not author stage edits.
+`pause()` preserves poses; `reset()` restores authored poses and velocities.
+Drag positions passed to `beginDrag`/`moveDrag` are in stage coordinates before
+the root up-axis transform. `scenePath` selects among multiple PhysicsScenes;
+ownerless bodies belong to the first scene, following USD semantics.
+
+Supported colliders are cubes, spheres, capsules, cylinders, cones, planes,
+static triangle meshes and authored convex-hull meshes. Fixed, spherical,
+revolute and prismatic joints, unit-joint limits/drives and maximum-distance
+ropes are supported. Stage units, gravity, mass/density, body center of mass
+and inertia, materials, filtered pairs and collision groups are preserved.
+Independent unit-joint frames, spherical cone limits, D6/articulations,
+joint breaking, drive force limits, collider-local inertia overrides and other
+mesh approximations appear in `physics.unsupported`. Kinematic bodies retain
+their initial poses during simulation; animated kinematic driving is not yet
+implemented. Reset/dispose before changing time or variants, then recreate
+the simulation from the updated stage.
+
+The public viewer loads Rapier when **Simulate** is clicked. Drag a dynamic
+body while playing; **Reset** returns to the authored scene.
+
+To disable public-viewer physics completely, use `?physics=off` or set
+`window.usdViewerOptions = { physics: false }` before the entry script loads.
+No physics runtime is downloaded in that mode. In Needle mode, simulation uses
+the engine's shared lazy module registry. The Three viewer loads the standalone
+runtime only after **Simulate** is clicked.
+The public viewer uses Rapier 0.21.0, including an import-map override of the
+pinned engine bundle's older Rapier chunk. Both loaders resolve the same module;
+the newer wrapper fixes the deprecated WASM initialization call.
+
+Hosts can configure `init({ physics: { loadRapier: async () => module } })`, or
+provide `physics.moduleUrl` for a different module location. For another physics
+engine, `physics.createSimulation({ handle, snapshot, scenePath })` can return an
+adapter implementing the simulation methods used by the controls (`play`,
+`pause`, `isPlaying`, `update`, `reset`, `dispose`, `bodyForObject`, `beginDrag`,
+`moveDrag`, `endDrag`). This bypasses the Rapier loader. The package's composed
+`readUsdPhysics()` snapshot remains available independently of a simulation.
+
 ## Useful References
 
 Uses `Asyncify` to handle async calls in emscripten.  
@@ -468,6 +523,9 @@ https://emscripten.org/docs/porting/asyncify.html
 
 
 # Contact ✒️
+
+For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
+
 <b>[🌵 Needle](https://needle.tools)</b> • 
 [Github](https://github.com/needle-tools) • 
 [Twitter](https://twitter.com/NeedleTools) • 

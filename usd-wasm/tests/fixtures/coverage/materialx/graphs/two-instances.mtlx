@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<materialx version="1.39">
+  
+  <nodedef name="ND_scale" node="scale_color">
+    <input name="in" type="color3" value="1,1,1" />
+    <input name="amount" type="float" value="0.5" />
+    <output name="out" type="color3" />
+  </nodedef>
+  <nodegraph name="NG_scale" nodedef="ND_scale">
+    <multiply name="m" type="color3">
+      <input name="in1" type="color3" interfacename="in" />
+      <input name="in2" type="float" interfacename="amount" />
+    </multiply>
+    <output name="out" type="color3" nodename="m" />
+  </nodegraph>
+  <nodegraph name="NG">
+    <scale_color name="a" type="color3">
+      <input name="in" type="color3" nodename="p_13" />
+    </scale_color>
+    <scale_color name="b" type="color3">
+      <input name="amount" type="float" value="0.08" />
+    </scale_color>
+    <add name="n" type="color3">
+      <input name="in1" type="color3" nodename="a" />
+      <input name="in2" type="color3" nodename="b" />
+    </add>
+    <output name="out" type="color3" nodename="n" />
+    <texcoord name="p_1" type="vector2" />
+    <extract name="p_2" type="float">
+      <input name="in" type="vector2" nodename="p_1" />
+      <input name="index" type="integer" value="0" />
+    </extract>
+    <extract name="p_3" type="float">
+      <input name="in" type="vector2" nodename="p_1" />
+      <input name="index" type="integer" value="1" />
+    </extract>
+    <multiply name="p_4" type="float">
+      <input name="in1" type="float" nodename="p_2" />
+      <input name="in2" type="float" value="37.69911184307752" />
+    </multiply>
+    <sin name="p_5" type="float">
+      <input name="in" type="float" nodename="p_4" />
+    </sin>
+    <multiply name="p_6" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_5" />
+    </multiply>
+    <add name="p_7" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_6" />
+    </add>
+    <multiply name="p_8" type="float">
+      <input name="in1" type="float" nodename="p_3" />
+      <input name="in2" type="float" value="43.982297150257104" />
+    </multiply>
+    <sin name="p_9" type="float">
+      <input name="in" type="float" nodename="p_8" />
+    </sin>
+    <multiply name="p_10" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_9" />
+    </multiply>
+    <add name="p_11" type="float">
+      <input name="in1" type="float" value="0.5" />
+      <input name="in2" type="float" nodename="p_10" />
+    </add>
+    <multiply name="p_12" type="float">
+      <input name="in1" type="float" nodename="p_7" />
+      <input name="in2" type="float" nodename="p_11" />
+    </multiply>
+    <mix name="p_13" type="color3">
+      <input name="bg" type="color3" value="0.006,0.001,0.03" />
+      <input name="fg" type="color3" value="0.9,0.16,1" />
+      <input name="mix" type="float" nodename="p_12" />
+    </mix>
+  </nodegraph>
+  <standard_surface name="preview_surface" type="surfaceshader">
+    <input name="base" type="float" value="0" />
+    <input name="specular" type="float" value="0" />
+    <input name="emission" type="float" value="1" />
+    <input name="emission_color" type="color3" nodegraph="NG" output="out" />
+  </standard_surface>
+  <surfacematerial name="M" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="preview_surface" />
+  </surfacematerial>
+</materialx>

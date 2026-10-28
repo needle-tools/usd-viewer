@@ -1,0 +1,899 @@
+[
+  {
+    "id": "core-external-reference",
+    "label": "External reference",
+    "group": "Composition",
+    "root": "coverage/core/external-reference.usda",
+    "files": [
+      "coverage/core/external-reference.usda",
+      "coverage/core/external-reference-asset.usda"
+    ],
+    "features": [
+      "reference"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored references composition arc"
+    ]
+  },
+  {
+    "id": "core-payload-loaded",
+    "label": "Loaded payload",
+    "group": "Composition",
+    "root": "coverage/core/payload-loaded.usda",
+    "files": [
+      "coverage/core/payload-loaded.usda",
+      "coverage/core/payload-loaded-asset.usda"
+    ],
+    "features": [
+      "payload"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored payload composition arc"
+    ]
+  },
+  {
+    "id": "core-reference-time-offset",
+    "label": "Reference time offset",
+    "group": "Composition",
+    "root": "coverage/core/reference-time-offset.usda",
+    "files": [
+      "coverage/core/reference-time-offset.usda",
+      "coverage/core/reference-time-offset-asset.usda"
+    ],
+    "features": [
+      "offset"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Reference layer offset shifts samples"
+    ]
+  },
+  {
+    "id": "core-sublayer-offset",
+    "label": "Sublayer offset",
+    "group": "Composition",
+    "root": "coverage/core/sublayer-offset.usda",
+    "files": [
+      "coverage/core/sublayer-offset.usda",
+      "coverage/core/sublayer-offset-asset.usda"
+    ],
+    "features": [
+      "sublayer"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Sublayer contributes /Asset/Body",
+      "Sublayer offset is authored"
+    ]
+  },
+  {
+    "id": "core-variant-selection",
+    "label": "Variant selection",
+    "group": "Composition",
+    "root": "coverage/core/variant-selection.usda",
+    "files": [
+      "coverage/core/variant-selection.usda",
+      "coverage/core/variant-selection-asset.usda"
+    ],
+    "features": [
+      "variant"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Cool variant selected"
+    ]
+  },
+  {
+    "id": "core-class-inherits",
+    "label": "Class inheritance",
+    "group": "Composition",
+    "root": "coverage/core/class-inherits.usda",
+    "files": [
+      "coverage/core/class-inherits.usda",
+      "coverage/core/class-inherits-asset.usda"
+    ],
+    "features": [
+      "inherits"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored inheritPaths composition arc"
+    ]
+  },
+  {
+    "id": "core-class-specializes",
+    "label": "Class specialization",
+    "group": "Composition",
+    "root": "coverage/core/class-specializes.usda",
+    "files": [
+      "coverage/core/class-specializes.usda",
+      "coverage/core/class-specializes-asset.usda"
+    ],
+    "features": [
+      "specializes"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored specializes composition arc"
+    ]
+  },
+  {
+    "id": "core-internal-reference",
+    "label": "Internal reference",
+    "group": "Composition",
+    "root": "coverage/core/internal-reference.usda",
+    "files": [
+      "coverage/core/internal-reference.usda",
+      "coverage/core/internal-reference-asset.usda"
+    ],
+    "features": [
+      "internal-reference"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Internal reference resolves to a cube",
+      "Authored references composition arc"
+    ]
+  },
+  {
+    "id": "core-reference-listop",
+    "label": "Reference list operation",
+    "group": "Composition",
+    "root": "coverage/core/reference-listop.usda",
+    "files": [
+      "coverage/core/reference-listop.usda",
+      "coverage/core/reference-listop-asset.usda"
+    ],
+    "features": [
+      "listop"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored references composition arc",
+      "Reference list has prepend and append operations"
+    ]
+  },
+  {
+    "id": "core-native-instances",
+    "label": "Native instances",
+    "group": "Composition",
+    "root": "coverage/core/native-instances.usda",
+    "files": [
+      "coverage/core/native-instances.usda",
+      "coverage/core/native-instances-asset.usda"
+    ],
+    "features": [
+      "instance"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Three instanceable prims share a prototype"
+    ]
+  },
+  {
+    "id": "core-value-clip",
+    "label": "Value clip",
+    "group": "Composition",
+    "root": "coverage/core/value-clip.usda",
+    "files": [
+      "coverage/core/value-clip.usda",
+      "coverage/core/value-clip-asset.usda"
+    ],
+    "features": [
+      "clip"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Clip drives translation at frame 48"
+    ]
+  },
+  {
+    "id": "core-stronger-override",
+    "label": "Stronger local override",
+    "group": "Composition",
+    "root": "coverage/core/stronger-override.usda",
+    "files": [
+      "coverage/core/stronger-override.usda",
+      "coverage/core/stronger-override-asset.usda"
+    ],
+    "features": [
+      "over"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Composition support varies by arc; native OpenUSD is the reference"
+    },
+    "assertions": [
+      "Composed body is present",
+      "Authored references composition arc",
+      "Local display color wins over reference"
+    ]
+  },
+  {
+    "id": "core-quad-mesh",
+    "label": "Quad mesh",
+    "group": "Geometry",
+    "root": "coverage/core/quad-mesh.usda",
+    "files": [
+      "coverage/core/quad-mesh.usda"
+    ],
+    "features": [
+      "quad-mesh"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "One quad"
+    ]
+  },
+  {
+    "id": "core-triangle-mesh",
+    "label": "Triangle mesh",
+    "group": "Geometry",
+    "root": "coverage/core/triangle-mesh.usda",
+    "files": [
+      "coverage/core/triangle-mesh.usda"
+    ],
+    "features": [
+      "triangle-mesh"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Two triangles"
+    ]
+  },
+  {
+    "id": "core-ngon-mesh",
+    "label": "Pentagon mesh",
+    "group": "Geometry",
+    "root": "coverage/core/ngon-mesh.usda",
+    "files": [
+      "coverage/core/ngon-mesh.usda"
+    ],
+    "features": [
+      "ngon-mesh"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Five sided face"
+    ]
+  },
+  {
+    "id": "core-mesh-hole",
+    "label": "Mesh with a hole",
+    "group": "Geometry",
+    "root": "coverage/core/mesh-hole.usda",
+    "files": [
+      "coverage/core/mesh-hole.usda"
+    ],
+    "features": [
+      "mesh-hole"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "One hole face"
+    ]
+  },
+  {
+    "id": "core-subdivision-catmullclark",
+    "label": "catmullClark subdivision with crease",
+    "group": "Geometry",
+    "root": "coverage/core/subdivision-catmullclark.usda",
+    "files": [
+      "coverage/core/subdivision-catmullclark.usda"
+    ],
+    "features": [
+      "subdivision-catmullclark"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Subdivision scheme"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "core-subdivision-bilinear",
+    "label": "bilinear subdivision with crease",
+    "group": "Geometry",
+    "root": "coverage/core/subdivision-bilinear.usda",
+    "files": [
+      "coverage/core/subdivision-bilinear.usda"
+    ],
+    "features": [
+      "subdivision-bilinear"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Subdivision scheme"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "core-subdivision-loop",
+    "label": "loop subdivision with crease",
+    "group": "Geometry",
+    "root": "coverage/core/subdivision-loop.usda",
+    "files": [
+      "coverage/core/subdivision-loop.usda"
+    ],
+    "features": [
+      "subdivision-loop"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Subdivision scheme"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "core-analytic-primitives",
+    "label": "Analytic primitives",
+    "group": "Geometry",
+    "root": "coverage/core/analytic-primitives.usda",
+    "files": [
+      "coverage/core/analytic-primitives.usda"
+    ],
+    "features": [
+      "analytic-primitives"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Sphere and cylinder exist"
+    ]
+  },
+  {
+    "id": "core-bezier-curves",
+    "label": "Bezier curves",
+    "group": "Geometry",
+    "root": "coverage/core/bezier-curves.usda",
+    "files": [
+      "coverage/core/bezier-curves.usda"
+    ],
+    "features": [
+      "bezier-curves"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Cubic Bezier basis"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high"
+  },
+  {
+    "id": "core-points-widths",
+    "label": "Points with widths",
+    "group": "Geometry",
+    "root": "coverage/core/points-widths.usda",
+    "files": [
+      "coverage/core/points-widths.usda"
+    ],
+    "features": [
+      "points-widths"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Four point widths"
+    ]
+  },
+  {
+    "id": "core-mesh-orientation",
+    "label": "Mesh orientation",
+    "group": "Geometry",
+    "root": "coverage/core/mesh-orientation.usda",
+    "files": [
+      "coverage/core/mesh-orientation.usda"
+    ],
+    "features": [
+      "mesh-orientation"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Left-handed orientation"
+    ]
+  },
+  {
+    "id": "core-shared-vertex-pyramid",
+    "label": "Shared vertex pyramid",
+    "group": "Geometry",
+    "root": "coverage/core/shared-vertex-pyramid.usda",
+    "files": [
+      "coverage/core/shared-vertex-pyramid.usda"
+    ],
+    "features": [
+      "shared-vertex-pyramid"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Shared vertices across four faces"
+    ]
+  },
+  {
+    "id": "core-color-constant",
+    "label": "constant colors",
+    "group": "Primvars",
+    "root": "coverage/core/color-constant.usda",
+    "files": [
+      "coverage/core/color-constant.usda"
+    ],
+    "features": [
+      "constant"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is constant",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-color-uniform",
+    "label": "uniform colors",
+    "group": "Primvars",
+    "root": "coverage/core/color-uniform.usda",
+    "files": [
+      "coverage/core/color-uniform.usda"
+    ],
+    "features": [
+      "uniform"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is uniform",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-color-vertex",
+    "label": "vertex colors",
+    "group": "Primvars",
+    "root": "coverage/core/color-vertex.usda",
+    "files": [
+      "coverage/core/color-vertex.usda"
+    ],
+    "features": [
+      "vertex"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is vertex",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-color-varying",
+    "label": "varying colors",
+    "group": "Primvars",
+    "root": "coverage/core/color-varying.usda",
+    "files": [
+      "coverage/core/color-varying.usda"
+    ],
+    "features": [
+      "varying"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is varying",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-color-facevarying",
+    "label": "faceVarying colors",
+    "group": "Primvars",
+    "root": "coverage/core/color-facevarying.usda",
+    "files": [
+      "coverage/core/color-facevarying.usda"
+    ],
+    "features": [
+      "faceVarying"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is faceVarying",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-indexed-face-colors",
+    "label": "faceVarying colors",
+    "group": "Primvars",
+    "root": "coverage/core/indexed-face-colors.usda",
+    "files": [
+      "coverage/core/indexed-face-colors.usda"
+    ],
+    "features": [
+      "faceVarying"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is faceVarying",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-indexed-uv-seam",
+    "label": "faceVarying indexed UVs",
+    "group": "Primvars",
+    "root": "coverage/core/indexed-uv-seam.usda",
+    "files": [
+      "coverage/core/indexed-uv-seam.usda"
+    ],
+    "features": [
+      "faceVarying"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Interpolation is faceVarying",
+      "Indexing matches fixture"
+    ]
+  },
+  {
+    "id": "core-animated-translation",
+    "label": "Animated translation",
+    "group": "Animation",
+    "root": "coverage/core/animated-translation.usda",
+    "files": [
+      "coverage/core/animated-translation.usda"
+    ],
+    "features": [
+      "animated-translation"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Translation has two samples"
+    ]
+  },
+  {
+    "id": "core-animated-rotation",
+    "label": "Animated rotation",
+    "group": "Animation",
+    "root": "coverage/core/animated-rotation.usda",
+    "files": [
+      "coverage/core/animated-rotation.usda"
+    ],
+    "features": [
+      "animated-rotation"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Rotation has two samples"
+    ]
+  },
+  {
+    "id": "core-animated-scale",
+    "label": "Animated scale",
+    "group": "Animation",
+    "root": "coverage/core/animated-scale.usda",
+    "files": [
+      "coverage/core/animated-scale.usda"
+    ],
+    "features": [
+      "animated-scale"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Scale has two samples"
+    ]
+  },
+  {
+    "id": "core-animated-points",
+    "label": "Animated mesh points",
+    "group": "Animation",
+    "root": "coverage/core/animated-points.usda",
+    "files": [
+      "coverage/core/animated-points.usda"
+    ],
+    "features": [
+      "animated-points"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Mesh points have two samples"
+    ]
+  },
+  {
+    "id": "core-animated-visibility",
+    "label": "Animated visibility",
+    "group": "Animation",
+    "root": "coverage/core/animated-visibility.usda",
+    "files": [
+      "coverage/core/animated-visibility.usda"
+    ],
+    "features": [
+      "animated-visibility"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Visibility changes at frame 24"
+    ]
+  },
+  {
+    "id": "core-animated-color",
+    "label": "Animated display color",
+    "group": "Animation",
+    "root": "coverage/core/animated-color.usda",
+    "files": [
+      "coverage/core/animated-color.usda"
+    ],
+    "features": [
+      "animated-color"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Time-sampled scene data; playback support varies by attribute"
+    },
+    "assertions": [
+      "Display color has two samples"
+    ]
+  },
+  {
+    "id": "core-point-instancer",
+    "label": "Point instancer",
+    "group": "Scene",
+    "root": "coverage/core/point-instancer.usda",
+    "files": [
+      "coverage/core/point-instancer.usda"
+    ],
+    "features": [
+      "point-instancer"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Four point instances"
+    ]
+  },
+  {
+    "id": "core-imageable-purposes",
+    "label": "Imageable purposes",
+    "group": "Scene",
+    "root": "coverage/core/imageable-purposes.usda",
+    "files": [
+      "coverage/core/imageable-purposes.usda"
+    ],
+    "features": [
+      "imageable-purposes"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Guide purpose authored"
+    ]
+  },
+  {
+    "id": "core-nested-transforms",
+    "label": "Nested transforms",
+    "group": "Scene",
+    "root": "coverage/core/nested-transforms.usda",
+    "files": [
+      "coverage/core/nested-transforms.usda"
+    ],
+    "features": [
+      "nested-transforms"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Parent has ordered transform operations"
+    ]
+  },
+  {
+    "id": "core-reset-transform",
+    "label": "Reset transform stack",
+    "group": "Scene",
+    "root": "coverage/core/reset-transform.usda",
+    "files": [
+      "coverage/core/reset-transform.usda"
+    ],
+    "features": [
+      "reset-transform"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Child resets transform stack"
+    ]
+  },
+  {
+    "id": "core-perspective-camera",
+    "label": "Perspective camera",
+    "group": "Scene",
+    "root": "coverage/core/perspective-camera.usda",
+    "files": [
+      "coverage/core/perspective-camera.usda"
+    ],
+    "features": [
+      "perspective-camera"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Focal length is 35"
+    ]
+  },
+  {
+    "id": "core-orthographic-camera",
+    "label": "Orthographic camera",
+    "group": "Scene",
+    "root": "coverage/core/orthographic-camera.usda",
+    "files": [
+      "coverage/core/orthographic-camera.usda"
+    ],
+    "features": [
+      "orthographic-camera"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Orthographic projection"
+    ]
+  },
+  {
+    "id": "core-sphere-light",
+    "label": "Sphere light",
+    "group": "Lights",
+    "root": "coverage/core/sphere-light.usda",
+    "files": [
+      "coverage/core/sphere-light.usda"
+    ],
+    "features": [
+      "sphere-light"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Sphere light intensity authored"
+    ],
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "scenePrimitiveLightIntensityScale": 0.1
+  },
+  {
+    "id": "core-model-extents",
+    "label": "Model extents hint",
+    "group": "Scene",
+    "root": "coverage/core/model-extents.usda",
+    "files": [
+      "coverage/core/model-extents.usda"
+    ],
+    "features": [
+      "model-extents"
+    ],
+    "expected": {
+      "native": "Composes and opens in native OpenUSD",
+      "needle": "Geometry and authored data; individual feature support is viewer dependent"
+    },
+    "assertions": [
+      "Model kind is component"
+    ]
+  }
+]

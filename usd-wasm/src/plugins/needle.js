@@ -35,7 +35,7 @@ function findObject3D(value) {
 }
 
 
-/** @type {import("../types").addPluginForNeedleEngine} */
+/** @type {import("../types/plugins.js").addPluginForNeedleEngine} */
 export async function addPluginForNeedleEngine(options) {
     if (options.debug) console.debug("🐉 Adding USDZ plugin to Needle Engine");
     return import("@needle-tools/engine").then(module => {
@@ -133,7 +133,8 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 files: files,
                 autoPlay: opts.autoPlay === true,
                 waitForMaterials: opts.waitForMaterials,
-                complexity: opts.complexity,
+                complexity: opts.getComplexity?.(url) ?? opts.complexity,
+                scenePrimitiveLightIntensityScale: opts.getScenePrimitiveLightIntensityScale?.(url) ?? opts.scenePrimitiveLightIntensityScale,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);

@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>USD coverage diagnostics</title>
+<style>body{margin:0} canvas{display:block}</style>
+<canvas></canvas>
+<script type="module">
+import * as THREE from 'three';
+import {getUsdModule} from '../../src/bindings/index.js';
+import {createThreeHydra} from '../../src/create.three.js';
+
+const USD = await getUsdModule();
+const nodeRenderer = new URL(location.href).searchParams.get('nodes') === '1';
+const width = nodeRenderer ? 320 : 480, height = nodeRenderer ? 240 : 360;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e5e5e5');
+const ambient = new THREE.DirectionalLight(0xaabbd5,1.5); ambient.position.set(-3,2,-4); scene.add(ambient);
+const light = new THREE.DirectionalLight(0xffffff,3); light.position.set(3,4,5); scene.add(light);
+const Renderer = nodeRenderer ? (await import('three/webgpu')).WebGPURenderer : THREE.WebGLRenderer;
+const renderer = new Renderer(nodeRenderer
+    ? {canvas:document.querySelector('canvas'),forceWebGL:true,antialias:false,preserveDrawingBuffer:true}
+    : {canvas:document.querySelector('canvas'),antialias:false,preserveDrawingBuffer:true});
+if (nodeRenderer) await renderer.init();
+renderer.setSize(width,height); renderer.outputColorSpace=THREE.SRGBColorSpace;
+const volumeFactories = nodeRenderer ? await import('../../src/hydra/materialxVolume.js') : {};
+const camera = new THREE.PerspectiveCamera(45,4/3,.001,100000);
+const errors=[];
+window.addEventListener('error',event=>errors.push(event.message));
+window.addEventListener('unhandledrejection',event=>errors.push(String(event.reason)));
+function dataSnapshot(root, capturePositions) {
+    const objects=[], materials=new Map(), particleFields=[], volumeFields=[];
+    root.updateMatrixWorld(true);
+    root.traverse(o=>{
+        if (o.userData?.usdVolumeFields || o.userData?.usdVolumeEmpty) volumeFields.push({fields:o.userData.usdVolumeFields||[],empty:!!o.userData.usdVolumeEmpty});
+        if (o.userData?.usdTypeName === 'ParticleField3DGaussianSplat') particleFields.push({type:o.type,numSplats:o.extSplats?.numSplats ?? null});
+        if (!(o.isMesh || o.isPoints || o.isLine)) return;
+        const geometry=o.geometry;
+        const attributes=Object.entries(geometry?.attributes || {}).map(([name,a])=>({name,itemSize:a.itemSize,count:a.count}));
+        // Hash complete arrays so point deformation can be observed even if bounds do not change.
+        let hash=2166136261;
+        for (const a of Object.values(geometry?.attributes || {})) for (const n of a.array || []) { const x=Math.round(n*100000); hash=Math.imul(hash ^ x,16777619)>>>0; }
+        const materialDetails=[];
+        for (const m of [o.material].flat()) {
+            if (!m) continue;
+            const fallback=o.userData?.usdHydraFallbackMaterial?.() === m || !!m.userData?.usdHydraMeshOwner || !!m.userData?.usdHydraFallback;
+            const details={name:m.name,type:m.type,materialXPath:m.userData?.materialXPath ?? m.userData?.materialX ?? m.userData?.MaterialXpath ?? null,
+                userData:Object.fromEntries(Object.entries(m.userData||{}).filter(([,v])=>['string','number','boolean'].includes(typeof v) || v===null)),userDataKeys:Object.keys(m.userData||{}),fallback,color:m.color?.toArray() ?? null,opacity:m.opacity,
+                maps:['map','normalMap','roughnessMap','metalnessMap','alphaMap','emissiveMap'].filter(key=>!!m[key])};
+            materials.set(m.uuid,details); materialDetails.push(details);
+        }
+        objects.push({name:o.name,type:o.type,visible:o.visible,mesh:!!o.isMesh,skinnedMesh:!!o.isSkinnedMesh,points:!!o.isPoints,line:!!o.isLine,
+            instanceCount:o.isInstancedMesh?o.count:null,attributes,positions:capturePositions && geometry?.attributes?.position && geometry.attributes.position.count<=2048 ? Array.from(geometry.attributes.position.array) : null,primvars:Object.fromEntries(Object.entries(o.userData?.usdPrimvars||{}).map(([name,value])=>[name,{count:value.length,preview:value.slice(0,12)}])),morphAttributes:Object.fromEntries(Object.entries(geometry?.morphAttributes||{}).map(([k,v])=>[k,v.length])),
+            matrix:o.matrixWorld.toArray().map(n=>Math.round(n*100000)/100000),geometryHash:hash,
+            morphInfluences:o.morphTargetInfluences?.slice()??null,materials:materialDetails});
+    });
+    return {objects,materials:[...materials.values()],particleFields,volumeFields};
+}
+function renderPixels() {
+    renderer.render(scene,camera); const gl=nodeRenderer ? renderer.backend.gl : renderer.getContext(); const p=new Uint8Array(width*height*4); gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,p);
+    const bg=p.slice(0,3); let foreground=0,hash=2166136261;
+    for(let i=0;i<p.length;i+=4) {if(Math.abs(p[i]-bg[0])+Math.abs(p[i+1]-bg[1])+Math.abs(p[i+2]-bg[2])>15) foreground++; hash=Math.imul(hash^p[i],16777619)>>>0; hash=Math.imul(hash^p[i+1],16777619)>>>0; hash=Math.imul(hash^p[i+2],16777619)>>>0;}
+    return {foregroundPixels:foreground,pixelHash:hash,triangles:renderer.info.render.triangles,points:renderer.info.render.points,lines:renderer.info.render.lines};
+}
+window.runCoverage = async asset => {
+    errors.length=0; const start=performance.now(); const root=new THREE.Group(); scene.add(root); let handle;
+    ambient.visible=light.visible=asset.environment !== 'none';
+    scene.environment=null;
+    try {
+        handle=await createThreeHydra({USD,scene:root,url:'/tests/fixtures/'+asset.root,renderer,renderScene:scene,
+            complexity:asset.complexity,scenePrimitiveLightIntensityScale:asset.scenePrimitiveLightIntensityScale,
+            materialXVolumeFactory:volumeFactories.createMaterialXVolumeMaterial,usdVolumeFactory:volumeFactories.createVdbVolumeMesh});
+        await handle.ready(); await handle.materialsReady();
+        root.updateMatrixWorld(true); const bounds=new THREE.Box3().setFromObject(root);
+        root.traverse(o=>{if(o.userData?.usdTypeName === 'ParticleField3DGaussianSplat' && typeof o.getBoundingBox==='function'){const box=o.getBoundingBox();if(box && !box.isEmpty())bounds.union(box.clone().applyMatrix4(o.matrixWorld));}});
+        const valid=!bounds.isEmpty() && Number.isFinite(bounds.min.x) && Number.isFinite(bounds.max.x);
+        if(valid){const center=bounds.getCenter(new THREE.Vector3());const radius=Math.max(bounds.getSize(new THREE.Vector3()).length()/2,.01); camera.near=radius/100;camera.far=radius*100;camera.updateProjectionMatrix();camera.position.copy(center).add(new THREE.Vector3(1,.7,1).normalize().multiplyScalar(radius*3));camera.lookAt(center);} else {camera.position.set(3,2,3);camera.lookAt(0,0,0);camera.updateProjectionMatrix();}
+        const samples=[];
+        for(const time of [1,24,48]) {
+            await handle.setTime(time);
+            let pixels=renderPixels();
+            if(handle.diagnostics().particleFields) {
+                // Spark loads and sorts asynchronously; wait for actual drawn
+                // particles at this time, with a finite timeout for failures.
+                for(let attempt=0;attempt<20 && !pixels.foregroundPixels;attempt++) {
+                    await new Promise(resolve=>setTimeout(resolve,100));
+                    pixels=renderPixels();
+                }
+            }
+            root.updateMatrixWorld(true);samples.push({time,render:pixels,scene:dataSnapshot(root, asset.features?.includes('UsdSkel'))});
+        }
+        const fingerprints=samples.map(x=>JSON.stringify(x.scene.objects.map(o=>[o.name,o.visible,o.matrix,o.geometryHash,o.morphInfluences,o.materials.map(m=>[m.color,m.opacity])])));
+        return {loaded:true,renderer:nodeRenderer?'nodes-force-webgl':'webgl',harnessLighting:asset.environment !== 'none',bounds:valid?{min:bounds.min.toArray(),max:bounds.max.toArray()}:null,
+            samples,animation:{testedTimes:[1,24,48],sceneDataChanged:new Set(fingerprints).size>1,pixelsChanged:new Set(samples.map(x=>x.render.pixelHash)).size>1},
+            diagnostics:handle.diagnostics(),errors:[...errors],durationMs:Math.round(performance.now()-start)};
+    } catch(error) {return {loaded:false,error:String(error?.stack||error),errors:[...errors],durationMs:Math.round(performance.now()-start)};}
+    finally {if(handle) await handle.dispose();scene.remove(root);}
+};
+window.coverageReady=true;
+</script>

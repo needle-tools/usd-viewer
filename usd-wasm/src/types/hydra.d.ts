@@ -1,5 +1,5 @@
 import { Material, Object3D, Texture, WebGLRenderer } from 'three';
-import { HdWebSyncDriver, USD } from './bindings';
+import { HdWebSyncDriver, USD } from './bindings.js';
 
 /** Node renderer capabilities used by bounded MaterialX volumes. */
 export type HydraRenderer = WebGLRenderer | {
@@ -12,14 +12,24 @@ export type MaterialXVolumeFactory = (xml: string, target: string | number, opti
     getTexture?: (url: string) => Texture | null | Promise<Texture | null>,
 }) => Promise<Material>;
 
-export class hydraDelegate { }
+export type UsdVolumeField = { name: string, fieldName: string, filePath: string, resolvedPath?: string, resolvedUrl?: string };
+export type UsdVolumeFactory = (state: { fields: UsdVolumeField[] }, options: {
+    renderer?: HydraRenderer,
+    readFile: (field: UsdVolumeField) => Promise<ArrayBuffer>,
+}) => Promise<Object3D>;
+
+export interface hydraDelegate {
+    createRPrim(typeId: string, id: string, instancerId: unknown): object;
+    createSPrim(typeId: string, id: string): object | undefined;
+    CommitResources(): void;
+}
 
 
 
 
 
 
-export const consoleRenderDelegate: hydraDelegate = {}
+export declare const consoleRenderDelegate: hydraDelegate;
 
 
 
@@ -35,6 +45,7 @@ export type threeJsRenderDelegateConfig = {
     renderer?: HydraRenderer,
     /** Opt in with createMaterialXVolumeMaterial from @needle-tools/usd/volumes. */
     materialXVolumeFactory?: MaterialXVolumeFactory,
+    usdVolumeFactory?: UsdVolumeFactory,
     requestRender?: () => void,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,
@@ -46,6 +57,9 @@ export type threeJsRenderDelegateConfig = {
     /** @deprecated */
     envMap?: Texture,
 }
-export class threeJsRenderDelegate extends hydraDelegate {
-    constructor(path: string, config: threeJsRenderDelegateConfig)
+export declare class threeJsRenderDelegate implements hydraDelegate {
+    constructor(config: threeJsRenderDelegateConfig);
+    createRPrim(typeId: string, id: string, instancerId: unknown): object;
+    createSPrim(typeId: string, id: string): object | undefined;
+    CommitResources(): void;
 }

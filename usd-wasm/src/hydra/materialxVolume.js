@@ -3,6 +3,14 @@
  * renderer's opaque color/depth pass; the legacy WebGLNodesHandler cannot supply it.
  * The medium occupies the assigned box geometry, in inverse world units.
  */
+export async function createVdbVolumeMesh(state, options) {
+  if (!options?.renderer?.isWebGPURenderer || options.renderer.samples > 1) {
+    throw new Error('USD VDB fields require WebGPURenderer (WebGPU or forceWebGL), with antialias: false.');
+  }
+  const module = await import('./vdbVolumeMaterial.js');
+  return module.createVdbVolumeMesh(state, options);
+}
+
 export async function createMaterialXVolumeMaterial(xml, target, { renderer, getTexture }) {
   if (!renderer?.isWebGPURenderer) {
     throw new Error('MaterialX bounded volumes require WebGPURenderer (WebGPU or forceWebGL), with antialias: false. The legacy WebGLRenderer does not provide the required opaque color/depth pass.');

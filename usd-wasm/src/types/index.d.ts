@@ -1,5 +1,6 @@
-export * from "./bindings"
-export * from "./hydra"
-export * from "./create.three"
-export * from "./vite";
-export * from "./plugins"
+export * from "./bindings.js"
+export * from "./hydra.js"
+export * from "./create.three.js"
+export * from "./vite.js";
+export * from "./utils.js";
+export type { PluginContext } from "./plugins.js";

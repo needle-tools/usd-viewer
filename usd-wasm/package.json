@@ -17,6 +17,10 @@
       "types": "./src/types/volumes.d.ts",
       "import": "./src/hydra/materialxVolume.js"
     },
+    "./physics": {
+      "types": "./src/types/physics.d.ts",
+      "import": "./src/physics/createPhysics.js"
+    },
     "./plugins": {
       "types": "./src/types/plugins.d.ts",
       "import": "./src/plugins/index.js"
@@ -56,7 +60,7 @@
   },
   "peerDependencies": {
     "@needle-tools/engine": ">=5.0.0",
-    "@sparkjsdev/spark": ">=2.1.0",
+    "@sparkjsdev/spark": ">=2.2.0",
     "three": ">=0.160.0"
   },
   "peerDependenciesMeta": {
@@ -68,9 +72,13 @@
     }
   },
   "scripts": {
+    "fixtures:catalog": "node scripts/build-coverage-catalog.mjs",
+    "fixtures:thumbnails": "python3 scripts/render-coverage-thumbnails.py",
+    "test:coverage": "node scripts/validate-coverage-browser.mjs",
     "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
     "test:bindings": "node --test tests/bindings/*.test.mjs",
+    "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.nodenext.json",
     "test:hydra": "node --test --test-concurrency=1 tests/hydra/*.test.mjs",
     "test:materialx-volume": "node scripts/test-materialx-volume.mjs",
     "test:safari-reloads": "node scripts/test-safari-reloads.mjs",
@@ -82,11 +90,12 @@
   },
   "devDependencies": {
     "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
-    "@sparkjsdev/spark": "2.1.0",
     "@needle-tools/three-test-matrix": "^0.2.0",
     "@playwright/test": "^1.60.0",
+    "@sparkjsdev/spark": "2.2.0",
     "@types/three": "^0.164.1",
     "three": "npm:@needle-tools/three@0.185.2-alpha.6",
+    "typescript": "5.9.3",
     "vite": "^8.1.0"
   },
   "publishConfig": {
@@ -94,10 +103,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.7.4"
+    "@needle-tools/materialx": "1.8.0"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.4",
+    "@needle-tools/materialx": "1.8.0",
     "three": "$three"
   }
 }

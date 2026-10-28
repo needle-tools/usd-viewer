@@ -121,3 +121,26 @@ test('displayColor arriving after material assignment only changes fallback for 
     assert.equal(mesh._ownedMaterial.vertexColors, false);
     delegate.dispose();
 });
+
+test('shared empty-path fallback preserves per-mesh colors through later assignments and rebinding', async () => {
+    const { delegate, mesh } = setup();
+    delegate.createSPrim('material', '');
+    mesh.setMaterial('');
+    mesh.setDisplayColor([0.72, 0.25, 0.16], 'constant');
+    const second = delegate.createRPrim('mesh', '/Second');
+    second.setDisplayColor([0.2, 0.48, 0.52], 'constant');
+    second.setMaterial('');
+    assert.equal(mesh._mesh.material, mesh._ownedMaterial);
+    assert.deepEqual(mesh._mesh.material.color.toArray(), [0.72, 0.25, 0.16]);
+    assert.equal(second._mesh.material, second._ownedMaterial);
+    assert.deepEqual(second._mesh.material.color.toArray(), [0.2, 0.48, 0.52]);
+    const authored = await preview(delegate, '/Authored', [0, 0, 1]);
+    mesh.setMaterial('/Authored');
+    mesh.setDisplayColor([1, 0, 0], 'constant');
+    second.setMaterial('');
+    assert.equal(mesh._mesh.material, authored._material);
+    assert.deepEqual(mesh._mesh.material.color.toArray(), [0, 0, 1]);
+    mesh.setMaterial('');
+    assert.deepEqual(mesh._mesh.material.color.toArray(), [1, 0, 0]);
+    delegate.dispose();
+});

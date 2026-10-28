@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<materialx version="1.39">
+  
+  <nodedef name="ND_picture" node="picture">
+    <input name="file" type="filename" value="" />
+    <output name="out" type="color3" />
+  </nodedef>
+  <nodegraph name="NG_picture" nodedef="ND_picture">
+    <image name="image" type="color3">
+      <input name="file" type="filename" interfacename="file" />
+    </image>
+    <output name="out" type="color3" nodename="image" />
+  </nodegraph>
+  <nodegraph name="NG">
+    <picture name="n" type="color3">
+      <input name="file" type="filename" value="scales.png" colorspace="srgb_texture" />
+    </picture>
+    <output name="out" type="color3" nodename="n" />
+    <texcoord name="p_1" type="vector2" />
+  </nodegraph>
+  <standard_surface name="preview_surface" type="surfaceshader">
+    <input name="base" type="float" value="0" />
+    <input name="specular" type="float" value="0" />
+    <input name="emission" type="float" value="1" />
+    <input name="emission_color" type="color3" nodegraph="NG" output="out" />
+  </standard_surface>
+  <surfacematerial name="M" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="preview_surface" />
+  </surfacematerial>
+</materialx>

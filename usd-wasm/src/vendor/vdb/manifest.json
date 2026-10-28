@@ -1,0 +1,10 @@
+{
+  "source": "https://github.com/richardmonette/three-vdb-loader",
+  "version": "0.3.0",
+  "gitSha": "0e122cebb51ecc3b5c635b2de96557c33cd58ccc",
+  "license": "MIT",
+  "changes": [
+    "Use the existing three.js fflate addon import instead of adding a second dependency."
+  ],
+  "sha256": "17ce9ea4e6b150caeec9b54c6b98c26d6fab1fc2d3a18a2b6902f973351fdd4f"
+}

@@ -1,3 +1,4 @@
+import { UsdSceneShadows } from "./hydra/sceneShadows.js";
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
 import { Object3D } from "three";
@@ -241,7 +242,11 @@ async function disposeHydraLifetime(lifetime) {
     lifetime.cleanupPromise = (async () => {
         try {
             await lifetime.waitForDrawCompletion?.().catch(() => {});
+            // Async rprim factories can still read scoped files through the driver
+            // after the native draw has finished (e.g. VDB fields or Spark meshes).
+            await lifetime.renderInterface?.waitForRprimsReady().catch(() => {});
             await lifetime.renderInterface?.waitForMaterialsReady().catch(() => {});
+            lifetime.shadows?.dispose();
             lifetime.renderInterface?.dispose();
             if (lifetime.scenePrimitiveRoot) disposeObjectTree(lifetime.scenePrimitiveRoot);
         } finally {
@@ -358,6 +363,7 @@ async function createScopedThreeHydra(config, lifetime) {
         scenePrimitiveRoot,
         renderer: config.renderer,
         materialXVolumeFactory: config.materialXVolumeFactory,
+        usdVolumeFactory: config.usdVolumeFactory,
         requestRender: config.requestRender,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
@@ -425,6 +431,14 @@ async function createScopedThreeHydra(config, lifetime) {
             refreshDrawInFlight();
         }
     };
+    let shadows;
+    let time = 0;
+    let currentTimeCode = 0;
+    let playing = config.autoPlay === true;
+    const finishDraw = () => {
+        renderInterface.endHydraDraw?.();
+        shadows?.update(currentTimeCode);
+    };
     const draw = (force = false) => {
         if (disposed || drawInFlight || driver.isDeleted() || (editInFlight && !force)) {
             return drawPromise;
@@ -441,8 +455,8 @@ async function createScopedThreeHydra(config, lifetime) {
                     })
                     .catch((error) => console.error("Hydra draw failed", error))
                     .finally(() => {
-                        renderInterface.endHydraDraw?.();
-                        drawInFlight = false;
+                        try { finishDraw(); }
+                        finally { drawInFlight = false; }
                     });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw", 30000);
                 return drawPromise;
@@ -454,18 +468,18 @@ async function createScopedThreeHydra(config, lifetime) {
                 activeDrawPromise = result
                     .catch((error) => console.error("Hydra draw failed", error))
                     .finally(() => {
-                        renderInterface.endHydraDraw?.();
-                        drawInFlight = false;
+                        try { finishDraw(); }
+                        finally { drawInFlight = false; }
                     });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw");
             }
             else {
-                renderInterface.endHydraDraw?.();
+                finishDraw();
                 drawPromise = Promise.resolve();
             }
         }
         catch (error) {
-            renderInterface.endHydraDraw?.();
+            finishDraw();
             console.error("Hydra draw failed", error);
             drawPromise = Promise.resolve();
         }
@@ -474,6 +488,7 @@ async function createScopedThreeHydra(config, lifetime) {
     };
 
     const stage = await waitMaybeAsync(driver.GetStage());
+    shadows = lifetime.shadows = new UsdSceneShadows(stage, renderInterface);
     const requireStageMethod = (name) => {
         if (!stage || typeof stage[name] !== "function") {
             throw new Error(`OpenUSD stage API is missing ${name}; cannot read stage metadata`);
@@ -526,17 +541,16 @@ async function createScopedThreeHydra(config, lifetime) {
     applyStageMetadata(readStageMetadata());
 
     /** Draw once, after stage metadata has been applied to the root scene. */
+    currentTimeCode = stageStartTimeCode;
+    driver.SetTime(stageStartTimeCode);
     draw();
     lifetime.waitForDrawCompletion = waitForDrawCompletion;
     const readyPromise = waitForDrawCompletion()
         .then(() => renderInterface.waitForRprimsReady())
         .then(() => config.waitForMaterials
             ? renderInterface.waitForMaterialsReady()
-            : undefined);
-
-    let time = 0;
-    let currentTimeCode = stageStartTimeCode;
-    let playing = config.autoPlay === true;
+            : undefined)
+        .then(() => shadows.refreshBounds());
 
     const stageDuration = () => stageEndTimeCode - stageStartTimeCode;
 
@@ -566,6 +580,7 @@ async function createScopedThreeHydra(config, lifetime) {
     }
 
     return {
+        scene: delegateConfig.usdRoot,
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
         ready: () => readyPromise,
         update: (dt) => {
@@ -601,7 +616,9 @@ async function createScopedThreeHydra(config, lifetime) {
             }
             await waitForDrawCompletion();
             setHydraTime(timeCode);
-            return draw(true);
+            await draw(true);
+            await renderInterface.waitForRprimsReady();
+            shadows.refreshBounds();
         },
         getTime: () => currentTimeCode,
         setPlaying: (value) => {
@@ -643,6 +660,8 @@ async function createScopedThreeHydra(config, lifetime) {
                 }
                 editInFlight = false;
                 await draw(true);
+                await renderInterface.waitForRprimsReady();
+                shadows.refreshBounds();
                 return result;
             }
             finally {
@@ -657,7 +676,10 @@ async function createScopedThreeHydra(config, lifetime) {
             await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
             return draw();
         },
-        materialsReady: () => renderInterface.waitForMaterialsReady(),
+        materialsReady: async () => {
+            await renderInterface.waitForMaterialsReady();
+            shadows.refreshBounds();
+        },
         diagnostics: () => renderInterface.getDiagnostics(),
         stageMetadata: () => {
             applyStageMetadata(readStageMetadata());

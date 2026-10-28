@@ -530,6 +530,19 @@ test.describe('public usd-viewer lifecycle', () => {
         });
 
         expect(materialTypes).toContain('MaterialXMaterial');
+        const authoredTangents = await page.evaluate(() => {
+            let result: any;
+            (window as any).usdRoot?.traverse?.((object: any) => {
+                if (!object.isMesh || !object.geometry?.attributes?.tangent) return;
+                const { position, tangent } = object.geometry.attributes;
+                result = { count: tangent.count, positions: position.count, first: Array.from(tangent.array.slice(0, 3)), generated: object.geometry.userData.usdHydraGeneratedTangents === true };
+            });
+            return result;
+        });
+        expect(authoredTangents).toBeDefined();
+        expect(authoredTangents.count).toBe(authoredTangents.positions);
+        expect(authoredTangents.first).toEqual([1, 0, 0]);
+        expect(authoredTangents.generated).toBe(false);
         expect(diagnostics).toEqual([]);
     });
 

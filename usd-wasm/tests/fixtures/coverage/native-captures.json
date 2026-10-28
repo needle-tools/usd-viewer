@@ -1,0 +1,1344 @@
+{
+  "openusdVersion": [
+    0,
+    26,
+    5
+  ],
+  "renderer": "Storm",
+  "scope": "Native captures; bounds-only entries do not establish rendering of the authored feature.",
+  "results": [
+    {
+      "id": "core-external-reference",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-external-reference.png",
+      "sha256": "6076866612bbbc43587a50b9dd1274f78f176cfe7514d83e73a40cfd5def7eab"
+    },
+    {
+      "id": "core-payload-loaded",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-payload-loaded.png",
+      "sha256": "c7f1bbe92106e118d44748ffb98bbb6509f0734b2215ae3d79502464d6b81474"
+    },
+    {
+      "id": "core-reference-time-offset",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-reference-time-offset.png",
+      "sha256": "17e9af8c9bc8097c4b5f5dab6a60df1f41db9ef6fd52874d849fdb28476d6e24"
+    },
+    {
+      "id": "core-sublayer-offset",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-sublayer-offset.png",
+      "sha256": "ea48374c9434c25e751d995e06eeb85264b5d23cbbbaee293979458d090b7028"
+    },
+    {
+      "id": "core-variant-selection",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-variant-selection.png",
+      "sha256": "4e4b2aa0f3cbf337e61e4cb9d5bac1043140effee8c03f5c9285a3228b0104ad"
+    },
+    {
+      "id": "core-class-inherits",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-class-inherits.png",
+      "sha256": "adced5d1201842248fd9f5c61ffcea190283d4e45857f1768de122cd68f4a465"
+    },
+    {
+      "id": "core-class-specializes",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-class-specializes.png",
+      "sha256": "1747481b5964c3e689f84922a4a34b91d090e1a8826253a5e7d918e065caf2e1"
+    },
+    {
+      "id": "core-internal-reference",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-internal-reference.png",
+      "sha256": "836c24375b7bd36994c210bfef080dde97a1f2e71b193274cbc186e2b56aaa7c"
+    },
+    {
+      "id": "core-reference-listop",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-reference-listop.png",
+      "sha256": "e663f2fc22a541bb48412966feeece35a8517307d9fbbb559d9575349446c21b"
+    },
+    {
+      "id": "core-native-instances",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-native-instances.png",
+      "sha256": "f43e063ffa2f69a890eda4842c6d950477512f2a1814b8a8b433dcd098755ad5"
+    },
+    {
+      "id": "core-value-clip",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-value-clip.png",
+      "sha256": "17e9af8c9bc8097c4b5f5dab6a60df1f41db9ef6fd52874d849fdb28476d6e24"
+    },
+    {
+      "id": "core-stronger-override",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-stronger-override.png",
+      "sha256": "3bd4d122864af3cbb9ac5725738ebb347f84793109b13db6820c376132f31795"
+    },
+    {
+      "id": "core-quad-mesh",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-quad-mesh.png",
+      "sha256": "ff69b0d90f6f8359fcee219e799a267c7b7edbee67f557e83e0ce932c7fa65b6"
+    },
+    {
+      "id": "core-triangle-mesh",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-triangle-mesh.png",
+      "sha256": "119cfd7cde75824b1d99c964cfaf9e855a3eaf99ace391c276348a1e427d4121"
+    },
+    {
+      "id": "core-ngon-mesh",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-ngon-mesh.png",
+      "sha256": "6d7f9557efd31d58cf7226b2c7932581f7e586437b2f67d8daf4b71f3f1adde2"
+    },
+    {
+      "id": "core-mesh-hole",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-mesh-hole.png",
+      "sha256": "48aa62ccab2b24f29b02abb28d8dc2ddd246095c246b9b5df4c758fe4c2b86dd"
+    },
+    {
+      "id": "core-subdivision-catmullclark",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-subdivision-catmullclark.png",
+      "sha256": "06893dd08e745f49d91881203bb2165a5f857d66d287173b894012e82099f751"
+    },
+    {
+      "id": "core-subdivision-bilinear",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-subdivision-bilinear.png",
+      "sha256": "71e7b18a9ecfbbaadec45831c30afa45b949276812c13f747ab8882c3233c00b"
+    },
+    {
+      "id": "core-subdivision-loop",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-subdivision-loop.png",
+      "sha256": "99e5288a42301c117c2b042252e229565e49558e18e9b331c9a07de41e3a98fd"
+    },
+    {
+      "id": "core-analytic-primitives",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-analytic-primitives.png",
+      "sha256": "85752c6bdae889e0ad9a1c1d6d5e533f17a7a1bc373bdf0b4fe56c098bcc5657"
+    },
+    {
+      "id": "core-bezier-curves",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-bezier-curves.png",
+      "sha256": "d3075728c13b8d788dd8a448ea3bc73a592f658feb1a905c47c4aa4b2370d7c9"
+    },
+    {
+      "id": "core-points-widths",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-points-widths.png",
+      "sha256": "11c38d943458636e5536da6e1d5f980a1f8ce32e15bda718a3a92722ff9dd84e"
+    },
+    {
+      "id": "core-mesh-orientation",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-mesh-orientation.png",
+      "sha256": "35b412d9928d00ac58ee40865cf8455696b1e1a77723cecd2141b7150a567c88"
+    },
+    {
+      "id": "core-shared-vertex-pyramid",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-shared-vertex-pyramid.png",
+      "sha256": "8379e2ec1b5984f77275d90d4f2947955860db0c10f8d9a0560b8aa49c5d3050"
+    },
+    {
+      "id": "core-color-constant",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-color-constant.png",
+      "sha256": "690232e5361ee6e482d5185392436558fd03e77c0f5b0f1523449f85d407cf36"
+    },
+    {
+      "id": "core-color-uniform",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-color-uniform.png",
+      "sha256": "17dd6bc5692a74f5d479c0734aae01765f7dadf91fc536187423f11937e6fadb"
+    },
+    {
+      "id": "core-color-vertex",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-color-vertex.png",
+      "sha256": "bb60b4323bc2143811c316b63340722f830131a7f187a1f97d64642f8bfd608e"
+    },
+    {
+      "id": "core-color-varying",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-color-varying.png",
+      "sha256": "bb60b4323bc2143811c316b63340722f830131a7f187a1f97d64642f8bfd608e"
+    },
+    {
+      "id": "core-color-facevarying",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-color-facevarying.png",
+      "sha256": "4da275e857b926871f036a9d8e05da42184551a4a0dde39932d468494d50193f"
+    },
+    {
+      "id": "core-indexed-face-colors",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-indexed-face-colors.png",
+      "sha256": "fe45518a6879aebbe599ddf8c5162e1cf47d8d3475815307779b2077be7693c4"
+    },
+    {
+      "id": "core-indexed-uv-seam",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-indexed-uv-seam.png",
+      "sha256": "60da3505cc6c3e078ae833553516a508f7d70f7dc54aa82d0fbd4ce002c0a2d2"
+    },
+    {
+      "id": "core-animated-translation",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-translation.png",
+      "sha256": "b3436a198ad9814797e7584d3a9e0ac6a7eb3ff0e7aa2764e2c7060dd00b29b3"
+    },
+    {
+      "id": "core-animated-rotation",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-rotation.png",
+      "sha256": "de41e341fa3a291d28df0e00dbe27baee712a1c17c1e2363765e8786b0516056"
+    },
+    {
+      "id": "core-animated-scale",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-scale.png",
+      "sha256": "ffeab58a7e97bdc2d3e10f6c8528910bbb3a3f7368cf5e19e9ca2cb937f50150"
+    },
+    {
+      "id": "core-animated-points",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-points.png",
+      "sha256": "397e4c46cad586be11abb3412f6e9dc2b2b0de5ba8e22c34dcd074502b34384c"
+    },
+    {
+      "id": "core-animated-visibility",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-visibility.png",
+      "sha256": "4b16835066feeabb7243b6dbb6e3abdd9a83f93260fe02a245a298a5e302a6a0"
+    },
+    {
+      "id": "core-animated-color",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/core-animated-color.png",
+      "sha256": "ea8afaadf5494bcbc3df7f7e987758e318f71abff3a8cab5d6119f96b50d0858"
+    },
+    {
+      "id": "core-point-instancer",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-point-instancer.png",
+      "sha256": "4f4437779d3e99bfda0a8e23e7b123446b583ba515ca77d49e97740ab480d1bf"
+    },
+    {
+      "id": "core-imageable-purposes",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-imageable-purposes.png",
+      "sha256": "cbf0b0e10451677543463d26af0a6940cc921879b437d4b2bdaf88edcb7d4556"
+    },
+    {
+      "id": "core-nested-transforms",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-nested-transforms.png",
+      "sha256": "889de2eab55d2264799ef6c022552d6d6bdfa46c7e801523579e43fb5bf3a00c"
+    },
+    {
+      "id": "core-reset-transform",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-reset-transform.png",
+      "sha256": "f8fcc244e08f80d5cae5ac0263f3dfd20777b74915cdcdd78b3f9c2464b5162a"
+    },
+    {
+      "id": "core-perspective-camera",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/core-perspective-camera.png",
+      "sha256": "e5d3e2cedd06b2a913ffb650aab7739bdad210ab284142ba0633cff319c0470a"
+    },
+    {
+      "id": "core-orthographic-camera",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/core-orthographic-camera.png",
+      "sha256": "f85c9f0c29d32e6eefdb5c231f6fc7d151c71f2dde1029655026780710feb5c5"
+    },
+    {
+      "id": "core-sphere-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/core-sphere-light.png",
+      "sha256": "6557b9cce72c4169761fb531d2bbfabfae42378971a1b92ebba1ef9bf897d3f9"
+    },
+    {
+      "id": "core-model-extents",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/core-model-extents.png",
+      "sha256": "f052ebd3076bb3d9ecedb99932a6f851a0a8c6e202a374af7c0fcbd7d8cc6e15"
+    },
+    {
+      "id": "shading-mx_noise_marble",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_noise_marble.png",
+      "sha256": "7dbb469f07383d863d4fac13f44512c88b5328d767eeb452fc5123d4f7918038"
+    },
+    {
+      "id": "shading-mx_cell_terrazzo",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_cell_terrazzo.png",
+      "sha256": "ab11f3538a952bcb1ea516341426a3511b22029b3964485c4d6a2a5b2baa65ba"
+    },
+    {
+      "id": "shading-mx_worley_ceramic",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_worley_ceramic.png",
+      "sha256": "ab068f1100d71ea0629b0b98b0b13544d972bdbf8a861ea3e6bbe429012d87ee"
+    },
+    {
+      "id": "shading-mx_fractal_rock",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_fractal_rock.png",
+      "sha256": "2d6ca3909a1c7511885befdb63c40a67a65b2a5282bc34fae724a7d07a5e67d0"
+    },
+    {
+      "id": "shading-mx_checker_weave",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_checker_weave.png",
+      "sha256": "65c8eab3bc0e1d2ab2bbf35ea8cdaaa0c8e9e0b6bead24a94d70a3edb6314ca5"
+    },
+    {
+      "id": "shading-mx_four_corner_enamel",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_four_corner_enamel.png",
+      "sha256": "3297278db1a8f5b664f1b193e2c4d51180af5b2f2bb459c56f6b138042b24b7f"
+    },
+    {
+      "id": "shading-mx_hsv_glaze",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_hsv_glaze.png",
+      "sha256": "c23a0ed31efff6631a5726b7b0a0721abd1ed3237ed94e716d26b006b5c351e4"
+    },
+    {
+      "id": "shading-mx_position_stripes",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_position_stripes.png",
+      "sha256": "1d40e36ebefa6119d3628a75c1efc41fcf6fc713b73552f4bf40fa934dbc0d8b"
+    },
+    {
+      "id": "shading-mx_triplanar_stone",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_triplanar_stone.png",
+      "sha256": "a1d97e4bcaee9d4bcce87f5411a01701fc5625e4396ee36112247e4b907fae08"
+    },
+    {
+      "id": "shading-mx_bump_hammered",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_bump_hammered.png",
+      "sha256": "21b00cc3731e03148b531c4f88133b7ccd2981807d7251909e50090aeb8f00f5"
+    },
+    {
+      "id": "shading-mx_tangent_normal",
+      "renderer": "Storm",
+      "camera": "/Root/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_tangent_normal.png",
+      "sha256": "9a48cd301b5dfbefeb727d908bf82d8befd03b5cd657f3b139d27500507c43af"
+    },
+    {
+      "id": "shading-mx_layered_clearcoat",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_layered_clearcoat.png",
+      "sha256": "c05a2e67e5ba0e71111f6bafc6f36d129072793bc563c02ed6052f81f601eb89"
+    },
+    {
+      "id": "shading-mx_absorbing_glass",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_absorbing_glass.png",
+      "sha256": "d986645706a32db30fd79b4d9288a67b70eb801f0207877b66cc9a71ebe9ad59"
+    },
+    {
+      "id": "shading-mx_thin_film",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_thin_film.png",
+      "sha256": "eeb2d1d0feeb9456b5050ddea9db4876e63c1c5d4efe7f15b1de62c2ae260c75"
+    },
+    {
+      "id": "shading-mx_velvet_sheen",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_velvet_sheen.png",
+      "sha256": "6170de62356a0e797ee915ce039b9692967b0f67814cf9ad49fa11c8fa7b5f00"
+    },
+    {
+      "id": "shading-mx_brushed_anisotropy",
+      "renderer": "Storm",
+      "camera": "/Root/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_brushed_anisotropy.png",
+      "sha256": "aa44210634e3db1ee7bc0c8a164d6624f5ef1eb3917ce7766207571ae63ffb3f"
+    },
+    {
+      "id": "shading-mx_blackbody_emission",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_blackbody_emission.png",
+      "sha256": "c509e3ba9d7836a2c21f2ee5a510802a1f5d951c19c6bb4ecaae4d10b1533fdf"
+    },
+    {
+      "id": "shading-mx_wax_subsurface",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_wax_subsurface.png",
+      "sha256": "82e26cc8062cc851896a80725ec47b5ecd6a43aa32f1f8491ee4652e828a8b31"
+    },
+    {
+      "id": "shading-mx_cutout_lattice",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_cutout_lattice.png",
+      "sha256": "c3e591e4e771f7b1cefe45d95e1a4d993a6ed6cf54c5df698907824eaeb8a70d"
+    },
+    {
+      "id": "shading-mx_scalar_displacement",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_scalar_displacement.png",
+      "sha256": "9b1ed6621c1fed0c3089e27ad8b990602b402cafa717c0821fa74b3f9056d301"
+    },
+    {
+      "id": "shading-mx_nested_nodegraph",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-mx_nested_nodegraph.png",
+      "sha256": "1d39b2c2ba4b986d4ea393195aa44d3c056f93492f90e69112b1a1b78c1118fc"
+    },
+    {
+      "id": "shading-geomprop_float_constant",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_float_constant.png",
+      "sha256": "e84bc398725d8f86208a4dc12b566d4a398d60a14d040535e85b5ce32bfe9ef4"
+    },
+    {
+      "id": "shading-geomprop_float_uniform",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_float_uniform.png",
+      "sha256": "eb7a8316e3d4c3927072984550cf225734d819b6d54f3dbf8c3b9017720fe0ed"
+    },
+    {
+      "id": "shading-geomprop_float_vertex",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_float_vertex.png",
+      "sha256": "d00b48c284d0b4702bc73f8e648369f2612dc114787e1df773d934efa5d28148"
+    },
+    {
+      "id": "shading-geomprop_float_varying",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_float_varying.png",
+      "sha256": "d00b48c284d0b4702bc73f8e648369f2612dc114787e1df773d934efa5d28148"
+    },
+    {
+      "id": "shading-geomprop_vector_vertex",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_vector_vertex.png",
+      "sha256": "2ab5b96230dc98bf051ce1f0198fe3a059ed6feb62d5519cc2da7377ae520bb7"
+    },
+    {
+      "id": "shading-geomprop_color_facevarying",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_color_facevarying.png",
+      "sha256": "e9f7d0586aa666b0209067bf97d157ce23ed2f89d123817b3c637c92ef836f1f"
+    },
+    {
+      "id": "shading-geomprop_color_indexed",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_color_indexed.png",
+      "sha256": "335aac6fad34ae693443465f3b37de50a278c87215ca9a508549c99fe8ba7a8d"
+    },
+    {
+      "id": "shading-geomprop_vector_indexed",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-geomprop_vector_indexed.png",
+      "sha256": "78f5ab690fee4de6d14b6be4659359b5f5ac107ca15b7204eb5078f7cd28e99a"
+    },
+    {
+      "id": "shading-preview_uv_transform",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-preview_uv_transform.png",
+      "sha256": "eaffb227cb86491b50ab6b7e98ed2f6e38851f69ac1f00f294371672ef6fe38d"
+    },
+    {
+      "id": "shading-preview_sampler_wrap",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-preview_sampler_wrap.png",
+      "sha256": "6ca6f0ce7f6b58b59a13b09bd3dd13d07dfaa2d178cc2cd1f6b192f107a05d3c"
+    },
+    {
+      "id": "shading-preview_channel_packing",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-preview_channel_packing.png",
+      "sha256": "b6a3cc9b478264c04f74a8462500690ebebb6c4d6a7f0437f84607e105ab49d9"
+    },
+    {
+      "id": "shading-preview_opacity_threshold",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-preview_opacity_threshold.png",
+      "sha256": "26268413a0a8329c1bf39755020d5a7bb00f0c312290d2b44a019a87812502ba"
+    },
+    {
+      "id": "shading-preview_normal_texture",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-preview_normal_texture.png",
+      "sha256": "a075abe28e83c183dd90d1a501415c8dc2ce5315240d3670705f42839051b302"
+    },
+    {
+      "id": "shading-shade_material_interface",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_material_interface.png",
+      "sha256": "2b3b912c686761fd21692507c70fa3162be1be010c37dc425059fa2a4148956a"
+    },
+    {
+      "id": "shading-shade_nodegraph_interface",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_nodegraph_interface.png",
+      "sha256": "338971b5f7bafd3910aa21c8d020a2fc2529e37235f99d54aeda2d2d74ccab40"
+    },
+    {
+      "id": "shading-shade_nested_forwarding",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_nested_forwarding.png",
+      "sha256": "26ca4e01c006f9dc794343db9485e7fd793b0fe884a827f28233e7b0f6f14edc"
+    },
+    {
+      "id": "shading-shade_render_contexts",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_render_contexts.png",
+      "sha256": "ec3b25f5363146ae36332d154c09c7b9879d48fd2906bb773e66c80c43ceddee"
+    },
+    {
+      "id": "shading-shade_face_subsets",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_face_subsets.png",
+      "sha256": "22d2bf9498bab0476e9b9e1d9efe3fa736678ce631b1c9f6915b846600039ff8"
+    },
+    {
+      "id": "shading-shade_collection_binding",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_collection_binding.png",
+      "sha256": "6e3b089db27e67acf156505c69066e01fe828dc2c30ec2d842bd72bba76a8a20"
+    },
+    {
+      "id": "shading-shade_strong_binding",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_strong_binding.png",
+      "sha256": "48e8dd77068c9ebd8c1e947dd4dc4e1fdc6edcf48e5d390968b82e7baa68d655"
+    },
+    {
+      "id": "shading-shade_material_purposes",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_material_purposes.png",
+      "sha256": "37c77a9aee0807ae90d9b723e16565fc3f2899ddb4d2dc91a6fedeb6a06fc987"
+    },
+    {
+      "id": "shading-shade_material_specializes",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_material_specializes.png",
+      "sha256": "b3346e3398e248d8a0e14800798ef74226c4966c3916778bdacf23cbaa98bbdd"
+    },
+    {
+      "id": "shading-shade_primvar_fallback",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_primvar_fallback.png",
+      "sha256": "67a036b6f5358fecae900be3e7c3a7f9e761ae78ab00e0f81f74f912d525913c"
+    },
+    {
+      "id": "shading-shade_specular_workflow",
+      "renderer": "Storm",
+      "capture": "surface",
+      "image": "thumbnails/shading-shade_specular_workflow.png",
+      "sha256": "cdd357f100f84d024cfb69043a3738e675b231e1e245fff41562b63533e194dc"
+    },
+    {
+      "id": "advanced-skel-rest",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-rest.png",
+      "sha256": "d5244bf8e9ddc6111e3d05f6c5fde1270660330f5b1aa416b87583cb0d99d334"
+    },
+    {
+      "id": "advanced-skel-bind",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-bind.png",
+      "sha256": "391fd0a2704a05edb98ed248a1e9cdc140a22d716282086594c5c7cf2b28fdc8"
+    },
+    {
+      "id": "advanced-skel-joint-names",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-joint-names.png",
+      "sha256": "3f6e1b093d5c0c9919fd6da261e82482cffa2e3ac017d20f569093d404d2ef1b"
+    },
+    {
+      "id": "advanced-skel-weighted",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-weighted.png",
+      "sha256": "094689fced44fcef31df0c1af5b23a2856656b0f9ad0418bd92798b661081474"
+    },
+    {
+      "id": "advanced-skel-dual-quaternion",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-dual-quaternion.png",
+      "sha256": "48c5a337428fbf1f62fbcbd3687c6d85f8bd0ac16adf795d3a2cf9a5e0a74d79"
+    },
+    {
+      "id": "advanced-skel-translation",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-translation.png",
+      "sha256": "f90f582ed93983524a33ffc9be26e731673652cd93e77cc0e779c3f6fca8dcaa"
+    },
+    {
+      "id": "advanced-skel-rotation",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-skel-rotation.png",
+      "sha256": "485600304cb9b22b724d1160afce169791495e21629de15076158f6a7a8d3ae1"
+    },
+    {
+      "id": "advanced-blendshape",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-blendshape.png",
+      "sha256": "df32a198133c2a5292ff25ce837b9ee0ebc4f0a6c28a2eb0ef0b0197345645b3"
+    },
+    {
+      "id": "advanced-blendshape-sparse",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-blendshape-sparse.png",
+      "sha256": "42fcb6d062ebab4b30048f5526186b0248a5cb4543ac8abd470caad547be6d47"
+    },
+    {
+      "id": "advanced-blendshape-inbetween",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-blendshape-inbetween.png",
+      "sha256": "46a73ae8d76c9c32965eff24e9b51e911900af4863030bdc201b492768e35eb1"
+    },
+    {
+      "id": "advanced-splat-ring",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native Storm 26.05 predates particle-field rendering",
+      "image": "thumbnails/advanced-splat-ring.png",
+      "sha256": "df15cbf9c138df4703bbcaa189df6f3249a3f679e4105849a2d420ee3c603904"
+    },
+    {
+      "id": "advanced-splat-anisotropic",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native Storm 26.05 predates particle-field rendering",
+      "image": "thumbnails/advanced-splat-anisotropic.png",
+      "sha256": "df15cbf9c138df4703bbcaa189df6f3249a3f679e4105849a2d420ee3c603904"
+    },
+    {
+      "id": "advanced-splat-opacity",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native Storm 26.05 predates particle-field rendering",
+      "image": "thumbnails/advanced-splat-opacity.png",
+      "sha256": "df15cbf9c138df4703bbcaa189df6f3249a3f679e4105849a2d420ee3c603904"
+    },
+    {
+      "id": "advanced-splat-harmonics",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native Storm 26.05 predates particle-field rendering",
+      "image": "thumbnails/advanced-splat-harmonics.png",
+      "sha256": "df15cbf9c138df4703bbcaa189df6f3249a3f679e4105849a2d420ee3c603904"
+    },
+    {
+      "id": "advanced-physics-mass",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-mass.png",
+      "sha256": "6a84280369e88ba71dfb67065f0b6609201583b2506aa691b257706f18d910f6"
+    },
+    {
+      "id": "advanced-physics-scene",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-scene.png",
+      "sha256": "a29b60ebb5304e6008bca89e2691244df3f6320d1fffc6f2743ca425cd94be9d"
+    },
+    {
+      "id": "advanced-physics-fixed-joint",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-fixed-joint.png",
+      "sha256": "a62ec58a7ddd152953ef3eeae5f11dd4e595cabf3f6dc06da78a04ad602bc339"
+    },
+    {
+      "id": "advanced-physics-revolute-joint",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-revolute-joint.png",
+      "sha256": "8061878f90d400e37cebeb1ffdfa21f8d15a7cb70a52c6e23471e83eb8641040"
+    },
+    {
+      "id": "advanced-physics-prismatic-joint",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-prismatic-joint.png",
+      "sha256": "d927381588e3cd1821bcdf61accb8d3a79adbe3a3750ab87a46242146decbd08"
+    },
+    {
+      "id": "advanced-physics-collision-group",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-collision-group.png",
+      "sha256": "019620dede88a4f2c7c338374c0027a446a00a68cb72f8fee4613684f2db1da0"
+    },
+    {
+      "id": "advanced-volume-density",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native build has no VDB field plugin",
+      "image": "thumbnails/advanced-volume-density.png",
+      "sha256": "bdd19ec9ee31ea63407d2fbd772cdcb4e959ca7aff37e2ec8c240331d998064e"
+    },
+    {
+      "id": "advanced-volume-density-heat",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native build has no VDB field plugin",
+      "image": "thumbnails/advanced-volume-density-heat.png",
+      "sha256": "bdd19ec9ee31ea63407d2fbd772cdcb4e959ca7aff37e2ec8c240331d998064e"
+    },
+    {
+      "id": "advanced-volume-sequence",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native build has no VDB field plugin",
+      "image": "thumbnails/advanced-volume-sequence.png",
+      "sha256": "940e06abe6e1263051e66e9d8635c92c1b4c0b96dda0c8ab41b0833511079bb7"
+    },
+    {
+      "id": "advanced-volume-transformed",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "bounds-only; native build has no VDB field plugin",
+      "image": "thumbnails/advanced-volume-transformed.png",
+      "sha256": "0406e76f63fb4f109c5e570b06b8a3b07cc2128c22d6492db9219cbc488aa860"
+    },
+    {
+      "id": "advanced-nurbs-curve",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/advanced-nurbs-curve.png",
+      "sha256": "6e2340bb5da5e6df7153d69593acf0ec062c7879e45c70ea7f925eaa37903e2f"
+    },
+    {
+      "id": "advanced-nurbs-patch",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/advanced-nurbs-patch.png",
+      "sha256": "8fed3d90bb22b342bcfd661835f73058880cf94b05634eaafc35e1254b6f5c1c"
+    },
+    {
+      "id": "advanced-periodic-bspline",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-periodic-bspline.png",
+      "sha256": "b05c2f997e2b714e8def08e4aafe26e3b508172d7339bc5c4fc743a83ee893fd"
+    },
+    {
+      "id": "advanced-point-velocities",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-point-velocities.png",
+      "sha256": "8e9f77278793bcb430ae458735db755adf8106e4bc6f2eb6248cd474d716d4e6"
+    },
+    {
+      "id": "advanced-model-draw-mode",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-model-draw-mode.png",
+      "sha256": "9505929627b9a05c62efdb81264a8b26f2107ffc444f55d3483d37e178622f61"
+    },
+    {
+      "id": "advanced-render-settings",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-render-settings.png",
+      "sha256": "6c3cba9401905f63166209727a6d9803fe6a7fb5b4baf0c71c7c091f93e6fc97"
+    },
+    {
+      "id": "advanced-spatial-audio",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-spatial-audio.png",
+      "sha256": "990b34508f7ed3fad98df92bf040f96ed05431e92bc8b172af5c473112ef872d"
+    },
+    {
+      "id": "advanced-camera-optics",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-camera-optics.png",
+      "sha256": "7731f624d6b2224ee62b941a99069b27e7276a769069ec562c8ee16df1c12d5c"
+    },
+    {
+      "id": "lighting-mdl-studio-variants",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-studio-variants.png",
+      "sha256": "964dae9f56c0c5115bd079a45727667436037fb1b9bfd9099e5e7ba707cda711"
+    },
+    {
+      "id": "lighting-mdl-hdr-variants",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-hdr-variants.png",
+      "sha256": "3a9eea918781ce2781fb14db320bf1b51fce514102f90c9cf2f57d717e74fbeb"
+    },
+    {
+      "id": "lighting-mdl-area-softboxes",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-area-softboxes.png",
+      "sha256": "8a9ebd0c78f6f47fd7fe9a154b4ecfe65b401fbbe9aeb4d0f42a3ddc33218bbd"
+    },
+    {
+      "id": "lighting-mdl-colored-spheres",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-colored-spheres.png",
+      "sha256": "3c815c5f53a502c1a7f1482aa75af03dde65918cd1a163af5e1878f813cdc551"
+    },
+    {
+      "id": "lighting-mdl-shaped-spot",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-shaped-spot.png",
+      "sha256": "1fa978e2eb057b332990ab5be8009cc26a4ede65f09d84f683213738066c21df"
+    },
+    {
+      "id": "lighting-mdl-distant-sun",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-distant-sun.png",
+      "sha256": "4ee3a471f11ad2ac2bededb4d107bd5d3d769241eaa1e1d2e55e29a8abdb6273"
+    },
+    {
+      "id": "lighting-mdl-animated-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-animated-light.png",
+      "sha256": "cfe6f7dfb7ff338ec0597791b1dfb7200d37b81f05dfeb348a62a406c31311f5"
+    },
+    {
+      "id": "lighting-mdl-mdl-metal",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-metal.png",
+      "sha256": "da763b22f07858c6bb44f1506e42ba7c3d13bfe4002a32a219ba669c6a90da02"
+    },
+    {
+      "id": "lighting-mdl-mdl-clearcoat",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-clearcoat.png",
+      "sha256": "268ed8d7ff4630409bc592da97458eaa7aba550547676e16ddbd2797b7ac377b"
+    },
+    {
+      "id": "lighting-mdl-mdl-color-texture",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-color-texture.png",
+      "sha256": "a1ddff1b8c00263024dc089207f453d073cd54e0ccbb7225852a26a42c93ee19"
+    },
+    {
+      "id": "lighting-mdl-mdl-normal-texture",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-normal-texture.png",
+      "sha256": "1aad0e69fa3aad0c48f4936990b781691f20332c82298590b87c37e5704f3fd3"
+    },
+    {
+      "id": "materialx-ember-torus",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-ember-torus.png",
+      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+    },
+    {
+      "id": "materialx-jade-plume",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-jade-plume.png",
+      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+    },
+    {
+      "id": "materialx-violet-lattice",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-violet-lattice.png",
+      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+    },
+    {
+      "id": "materialx-nested",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-nested.png",
+      "sha256": "9bfd77641a67b83a5db8d267b8aefdc52a947aa3361facb7fb869405b81f2c91"
+    },
+    {
+      "id": "materialx-multi-output-uv",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-multi-output-uv.png",
+      "sha256": "93dd294103674ec1fe04011ed0059bbff28b6e64f90ca0587b94c817f6c12a4e"
+    },
+    {
+      "id": "materialx-two-instances",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-two-instances.png",
+      "sha256": "8da1fc2ea2e46718413f42cc289c654f5e0d822c5cf9aeef2df6ebb9dbffd6e9"
+    },
+    {
+      "id": "materialx-wrapped-standard_surface",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-wrapped-standard_surface.png",
+      "sha256": "08f54c9483314ed1bdb223d3b422e5270722a619c48db17d83f0e5c230a10946"
+    },
+    {
+      "id": "materialx-filename-interface-colorspace",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-filename-interface-colorspace.png",
+      "sha256": "e2b1a8692d1f0b06c8912afd77b16390ae87e92dbbe8a3fd5213ede690df90fb"
+    },
+    {
+      "id": "materialx-explicit-version",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/materialx-explicit-version.png",
+      "sha256": "1e07e1734c2a3860954dacb0fce22448dc9f207dc997bc2bb5c59328d15784d4"
+    },
+    {
+      "id": "lighting-mdl-mdl-opacity-mask",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-opacity-mask.png",
+      "sha256": "11abcc4da9b0ff17d88c9c79e05fc1084aee88dd4787283057c6042ff4c5b2cf"
+    },
+    {
+      "id": "lighting-mdl-mdl-gltf",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mdl-gltf.png",
+      "sha256": "0a42949d1e1616e61d6ef0cb4fc76a053e3e7b5fb7159ec211cabe32d7ae05dd"
+    },
+    {
+      "id": "curved-subdivision-car",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-subdivision-car.png",
+      "sha256": "86e0bbc65b8d83e754d9f866e7276862c1bb45e9f9bb5bf6facda5d8f7adcd60"
+    },
+    {
+      "id": "curved-subdivision-playground",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-subdivision-playground.png",
+      "sha256": "e4c886d82caa661680a6a31b4287ca5d7feeff3c4ed960f4717c05ca42805029"
+    },
+    {
+      "id": "curved-scheme-comparison",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-scheme-comparison.png",
+      "sha256": "fd9634eaab45379a15cc195ee50c4df1fa6b39c2141fa5f8b1c1b61bfab752a0"
+    },
+    {
+      "id": "curved-crease-ladder",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-crease-ladder.png",
+      "sha256": "2ad6cdc77223a216bdaf9526783edb8946a1da724b34fa3c8cb5ec29d61dc72c"
+    },
+    {
+      "id": "curved-boundary-specimens",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-boundary-specimens.png",
+      "sha256": "a147a3f1e5313be06ceb81b07a170be6b248e62c636b13be65006731f1f36ee9"
+    },
+    {
+      "id": "curved-valence-specimens",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-valence-specimens.png",
+      "sha256": "2abffbb378a9040521b0c369cf1e289aff27d171bbe4ed98a28f23be6360ea90"
+    },
+    {
+      "id": "curved-hole-lantern",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/curved-hole-lantern.png",
+      "sha256": "1efea735bf4f18f31e55400876b21f09fc76ea6d2f0757de10d642ff80be5f62"
+    },
+    {
+      "id": "curved-nurbs-patch-saddle",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-saddle.png",
+      "sha256": "d8bd701352ce4c7114c92a97a820e8c98f04a39ddd71fd0c866d4a16e6577ca4"
+    },
+    {
+      "id": "curved-nurbs-patch-wave",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-wave.png",
+      "sha256": "e7caacb6adf3a912fb612cecf24cd7e87b2ee66ff6a11aa1c6a93b317d8bec1f"
+    },
+    {
+      "id": "curved-nurbs-patch-dome",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-dome.png",
+      "sha256": "9ecc4f4fa1b35348b1d4b2522acbb6c9b0bae1abdd1507a36246a88a7143aead"
+    },
+    {
+      "id": "curved-nurbs-patch-ripple",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-ripple.png",
+      "sha256": "8532a0fa764cb07f7ae874b3fd2fd6d007484e666848d0dc4d7fb15c51fdf8f9"
+    },
+    {
+      "id": "curved-nurbs-patch-fold",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-fold.png",
+      "sha256": "b888b1b09fc3d923145012aca347bcaba2e0e75b5a3b7fa820b323ef88322523"
+    },
+    {
+      "id": "curved-nurbs-patch-weighted",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-patch-weighted.png",
+      "sha256": "ad1a5822553ccbd7082c5fbba29770139ee19eb56d5178025bfdb803da44b117"
+    },
+    {
+      "id": "curved-nurbs-curve-helix",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-helix.png",
+      "sha256": "e9683226ac8fd01c0ef990e4ccd3ac0ed113e694d4c962e448f4cef9602bd736"
+    },
+    {
+      "id": "curved-nurbs-curve-arches",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-arches.png",
+      "sha256": "207b00273121e3633a99cb3990738bb5031138e5bfccf43f1468637fd2aa6a5a"
+    },
+    {
+      "id": "curved-nurbs-curve-ribbons",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-ribbons.png",
+      "sha256": "9627856740791802c4cd547c444bf0903b3e2fb3a0824870d8f88c9b03948730"
+    },
+    {
+      "id": "curved-nurbs-curve-swoosh",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-swoosh.png",
+      "sha256": "4d62fbae35e886b5ca016b8a7f685d1b51eea3af1a9c7a5426e9af13a30293ba"
+    },
+    {
+      "id": "curved-nurbs-curve-spiral",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-spiral.png",
+      "sha256": "71ccaa3656a0c75b33375e1dba14c6c3c6dea2d21520015545dfedcaae6afcdc"
+    },
+    {
+      "id": "curved-nurbs-curve-weighted",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-nurbs-curve-weighted.png",
+      "sha256": "4484273fc334077e8a343aebc9b8ccde2e4c04ea76e1f2953ef8663768c8fff8"
+    },
+    {
+      "id": "advanced-physics-dominoes",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-dominoes.png",
+      "sha256": "b2d1e94a29904a724267fdc11080b608701c91bd622f41dfab54546b2a308bf5"
+    },
+    {
+      "id": "advanced-physics-pendulum",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "capture": "surface",
+      "image": "thumbnails/advanced-physics-pendulum.png",
+      "sha256": "cbcaa23e68ced0fe893b9eb457f8274e1e3186d865c91cc08d35aa27745e899c"
+    },
+    {
+      "id": "lighting-mdl-exr-dome",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-exr-dome.png",
+      "sha256": "0e769361f60fddfbd1357a621e78925785f51910a966b069e2f7701396011399"
+    },
+    {
+      "id": "lighting-mdl-disk-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-disk-light.png",
+      "sha256": "d0dfa6377009494dab0ed28c10daacbdc19638f2b4a814e2612f38b48dd53ee3"
+    },
+    {
+      "id": "lighting-mdl-cylinder-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-cylinder-light.png",
+      "sha256": "1e6e6c95adc83f41376671e53af0d59c5172087fb1b32fd1698c8a1af662cf90"
+    },
+    {
+      "id": "lighting-mdl-temperature-lights",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-temperature-lights.png",
+      "sha256": "1a47ecb7aeb2c9cbf45167956922882acdbe5b3f8bcbe75b4cd0b64134f876ea"
+    },
+    {
+      "id": "lighting-mdl-portal-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-portal-light.png",
+      "sha256": "a0188d8daaf6a79121d080472344172c1751f3bb7b8af11519e24e1cd988f1ad"
+    },
+    {
+      "id": "lighting-mdl-mesh-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-mesh-light.png",
+      "sha256": "38d356c0d0b462b681c7a43174c2e53d8f2861d04c96f8c9bb294e0c5ffc362f"
+    },
+    {
+      "id": "lighting-mdl-geometry-light",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-geometry-light.png",
+      "sha256": "75a935471f1d0f4e8206af8c276339b28660f23ea8ad69b8e6dc208bf1746dd3"
+    },
+    {
+      "id": "lighting-mdl-volume-light",
+      "renderer": "Storm",
+      "camera": "/Camera",
+      "capture": "companion scene only; VDB volume and volume light transport omitted because native Storm has no VDB plugin",
+      "image": "thumbnails/lighting-mdl-volume-light.png",
+      "sha256": "75a935471f1d0f4e8206af8c276339b28660f23ea8ad69b8e6dc208bf1746dd3"
+    },
+    {
+      "id": "lighting-mdl-light-linking",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/lighting-mdl-light-linking.png",
+      "sha256": "1a5d5a1466948591b07a393b6addba26d6ab99939dd18033bb8e245e2ec02161"
+    }
+  ]
+}

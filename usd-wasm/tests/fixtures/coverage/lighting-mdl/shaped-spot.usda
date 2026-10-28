@@ -1,0 +1,148 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Camera "Camera"
+    {
+        float focalLength = 42
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.8479983040050878, 1.387778780781445e-17, -0.5299989400031799, 0), (-0.14081738666722207, 0.9640574933371358, -0.22530781866755525, 0), (0.5109494495708048, 0.2656937137768184, 0.8175191193132876, -0), (4.999999999999999, 3.399999999999999, 7.9999999999999964, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "Looks"
+    {
+        def Material "Matte"
+        {
+            token outputs:surface.connect = </World/Looks/Matte/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.16, 0.5, 0.55)
+                float inputs:metallic = 0
+                float inputs:opacity = 1
+                float inputs:roughness = 0.8
+                token outputs:surface
+            }
+        }
+
+        def Material "Metal"
+        {
+            token outputs:surface.connect = </World/Looks/Metal/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.78, 0.43, 0.18)
+                float inputs:metallic = 0.95
+                float inputs:opacity = 1
+                float inputs:roughness = 0.19
+                token outputs:surface
+            }
+        }
+
+        def Material "Glass"
+        {
+            token outputs:surface.connect = </World/Looks/Glass/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.32, 0.65, 0.8)
+                float inputs:metallic = 0
+                float inputs:opacity = 0.38
+                float inputs:roughness = 0.09
+                token outputs:surface
+            }
+        }
+
+        def Material "Base"
+        {
+            token outputs:surface.connect = </World/Looks/Base/Preview.outputs:surface>
+
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.15, 0.18, 0.22)
+                float inputs:metallic = 0.15
+                float inputs:opacity = 1
+                float inputs:roughness = 0.5
+                token outputs:surface
+            }
+        }
+    }
+
+    def Cube "Stage" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Base>
+        color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
+        double size = 1
+        float3 xformOp:scale = (5, 0.35, 3.3)
+        double3 xformOp:translate = (0, -0.24, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Crystal" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [3, 3, 3, 3, 3, 3, 3, 3]
+        int[] faceVertexIndices = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1, 5, 2, 1, 5, 3, 2, 5, 4, 3, 5, 1, 4]
+        rel material:binding = </World/Looks/Metal>
+        point3f[] points = [(0, 2.4, 0), (-0.8, 1.05, -0.6), (0.8, 1.05, -0.6), (0.8, 1.05, 0.6), (-0.8, 1.05, 0.6), (0, 0.1, 0)]
+        color3f[] primvars:displayColor = [(0.2, 0.55, 0.9)]
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Cube "Pillar0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Matte>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.45, 1, 0.45)
+        double3 xformOp:translate = (-1.45, 0.5, -0.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Pillar1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </World/Looks/Matte>
+        color3f[] primvars:displayColor = [(0.3, 0.5, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.45, 1, 0.45)
+        double3 xformOp:translate = (1.45, 0.5, -0.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "Lights"
+    {
+        def SphereLight "Spot" (
+            prepend apiSchemas = ["ShapingAPI"]
+        )
+        {
+            color3f inputs:color = (1, 0.8, 0.55)
+            float inputs:intensity = 600
+            float inputs:radius = 0.25
+            float inputs:shaping:cone:angle = 28
+            float inputs:shaping:cone:softness = 0.18
+            matrix4d xformOp:transform = ( (1, -0, 0, -0), (0, 0.5812381937190965, -0.8137334712067351, 0), (0, 0.8137334712067351, 0.5812381937190965, -0), (0, 5, 2.9999999999999996, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}

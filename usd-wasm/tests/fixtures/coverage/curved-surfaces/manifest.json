@@ -1,0 +1,508 @@
+[
+  {
+    "id": "curved-subdivision-car",
+    "label": "Subdivision car",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/subdivision-car.usda",
+    "files": [
+      "coverage/curved-surfaces/subdivision-car.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "OpenSubdiv car control cage",
+      "314 edge creases"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "vertices": 1642,
+      "faces": 1575,
+      "creases": 314,
+      "faceVaryingUvIndices": 6300
+    }
+  },
+  {
+    "id": "curved-subdivision-playground",
+    "label": "Subdivision playground",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/subdivision-playground.usda",
+    "files": [
+      "coverage/curved-surfaces/subdivision-playground.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 17,
+      "faceCounts": 433,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-scheme-comparison",
+    "label": "Subdivision schemes",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/scheme-comparison.usda",
+    "files": [
+      "coverage/curved-surfaces/scheme-comparison.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 3,
+      "faceCounts": 24,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-crease-ladder",
+    "label": "Crease sharpness ladder",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/crease-ladder.usda",
+    "files": [
+      "coverage/curved-surfaces/crease-ladder.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 5,
+      "faceCounts": 30,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-boundary-specimens",
+    "label": "Boundary interpolation",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/boundary-specimens.usda",
+    "files": [
+      "coverage/curved-surfaces/boundary-specimens.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 3,
+      "faceCounts": 72,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-valence-specimens",
+    "label": "Extraordinary vertices",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/valence-specimens.usda",
+    "files": [
+      "coverage/curved-surfaces/valence-specimens.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 3,
+      "faceCounts": 73,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-hole-lantern",
+    "label": "Subdivision hole lantern",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/hole-lantern.usda",
+    "files": [
+      "coverage/curved-surfaces/hole-lantern.usda"
+    ],
+    "features": [
+      "subdivision",
+      "control cages",
+      "creases and topology"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "objects": 1,
+      "faceCounts": 96,
+      "source": "subdivision-study/scene.subd"
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-saddle",
+    "label": "Saddle surface",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-saddle.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-saddle.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "saddle"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": false,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-wave",
+    "label": "Wave canopy",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-wave.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-wave.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "wave"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": false,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-dome",
+    "label": "Domed surface",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-dome.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-dome.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "dome"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": false,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-ripple",
+    "label": "Ripple surface",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-ripple.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-ripple.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "ripple"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": false,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-fold",
+    "label": "Folded surface",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-fold.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-fold.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "fold"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": false,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-patch-weighted",
+    "label": "Rational surface",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/nurbs-patch-weighted.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-patch-weighted.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "cubic multispan",
+      "rational weights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "uVertexCount": 7,
+      "vVertexCount": 6,
+      "uOrder": 4,
+      "vOrder": 4,
+      "rationalWeights": true,
+      "multipleSpans": true
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-helix",
+    "label": "Helical strands",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-helix.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-helix.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "helix"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": false
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-arches",
+    "label": "Arched strands",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-arches.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-arches.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "arches"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": false
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-ribbons",
+    "label": "Ribbon splines",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-ribbons.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-ribbons.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "ribbons"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": false
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-swoosh",
+    "label": "Spatial splines",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-swoosh.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-swoosh.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "swoosh"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": false
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-spiral",
+    "label": "Spiral strands",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-spiral.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-spiral.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "spiral"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": false
+    }
+  },
+  {
+    "id": "curved-nurbs-curve-weighted",
+    "label": "Rational strands",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/nurbs-curve-weighted.usda",
+    "files": [
+      "coverage/curved-surfaces/nurbs-curve-weighted.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "cubic multispan",
+      "rational weights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Exercises the authored curve, patch or subdivision geometry; feature support depends on the renderer."
+    },
+    "assertions": {
+      "curveCount": 3,
+      "controlPoints": 21,
+      "order": 4,
+      "multipleSpans": true,
+      "rationalWeights": true
+    }
+  }
+]

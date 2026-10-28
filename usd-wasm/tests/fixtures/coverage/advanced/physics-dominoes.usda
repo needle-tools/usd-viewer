@@ -1,0 +1,130 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Floor" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.19, 0.27, 0.33)]
+        double size = 1
+        float3 xformOp:scale = (6, 0.2, 2)
+        double3 xformOp:translate = (0, -0.7, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def PhysicsScene "PhysicsScene"
+    {
+        vector3f physics:gravityDirection = (0, -1, 0)
+        float physics:gravityMagnitude = 9.81
+    }
+
+    def Cube "Tile0" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        vector3f physics:angularVelocity = (0, 0, -65)
+        color3f[] primvars:displayColor = [(0.8, 0.3, 0.22)]
+        double size = 1
+        float xformOp:rotateZ = -22
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (-1.9, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ", "xformOp:scale"]
+    }
+
+    def Cube "Tile1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.745, 0.34, 0.255)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (-1.44, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile2" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.69, 0.38, 0.29)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (-0.9799999999999999, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile3" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.635, 0.42, 0.325)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (-0.5199999999999998, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile4" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.58, 0.46, 0.36)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (-0.05999999999999983, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile5" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.525, 0.5, 0.395)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (0.40000000000000036, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile6" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.47, 0.54, 0.43)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (0.8600000000000003, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile7" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.415, 0.58, 0.465)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (1.3200000000000003, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tile8" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.36, 0.62, 0.5)]
+        double size = 1
+        float3 xformOp:scale = (0.15, 1.04, 0.48)
+        double3 xformOp:translate = (1.7800000000000002, -0.08, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}

@@ -1,0 +1,111 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Floor" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        color3f[] primvars:displayColor = [(0.19, 0.27, 0.33)]
+        double size = 1
+        float3 xformOp:scale = (4, 0.2, 2)
+        double3 xformOp:translate = (0, -0.7, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "BodyA" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
+    )
+    {
+        bool physics:kinematicEnabled = 1
+        color3f[] primvars:displayColor = [(0.85, 0.38, 0.18)]
+        double size = 1
+        float3 xformOp:scale = (0.3, 0.6, 0.5)
+        double3 xformOp:translate = (-1.1, 0.1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "BodyB" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI"]
+    )
+    {
+        vector3f physics:velocity = (1, 0, 0)
+        double3 xformOp:translate = (0.4, 0.25, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cube "Visual" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            color3f[] primvars:displayColor = [(0.2, 0.65, 0.8)]
+            double size = 1
+            float3 xformOp:scale = (1, 0.65, 0.7)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+    }
+
+    def Cube "Rail0"
+    {
+        color3f[] primvars:displayColor = [(0.85, 0.72, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (3.4, 0.12, 0.12)
+        double3 xformOp:translate = (0, -0.12, -0.4)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Rail1"
+    {
+        color3f[] primvars:displayColor = [(0.85, 0.72, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (3.4, 0.12, 0.12)
+        double3 xformOp:translate = (0, -0.12, 0.4)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tick0"
+    {
+        color3f[] primvars:displayColor = [(0.8, 0.86, 0.79)]
+        double size = 1
+        float3 xformOp:scale = (0.08, 0.05, 0.15)
+        double3 xformOp:translate = (-0.9, -0.03, 0.49)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tick1"
+    {
+        color3f[] primvars:displayColor = [(0.8, 0.86, 0.79)]
+        double size = 1
+        float3 xformOp:scale = (0.08, 0.05, 0.15)
+        double3 xformOp:translate = (0, -0.03, 0.49)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Tick2"
+    {
+        color3f[] primvars:displayColor = [(0.8, 0.86, 0.79)]
+        double size = 1
+        float3 xformOp:scale = (0.08, 0.05, 0.15)
+        double3 xformOp:translate = (0.9, -0.03, 0.49)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def PhysicsPrismaticJoint "Joint"
+    {
+        uniform token physics:axis = "X"
+        rel physics:body0 = </World/BodyA>
+        rel physics:body1 = </World/BodyB>
+        point3f physics:localPos0 = (3.6666665, 0.24999999, 0)
+        point3f physics:localPos1 = (-0.4, 0, 0)
+        float physics:lowerLimit = -0.5
+        float physics:upperLimit = 0.5
+    }
+}

@@ -1,0 +1,81 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Subject"
+    {
+        color3f[] primvars:displayColor = [(0.2, 0.7, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "DisplayBase"
+    {
+        color3f[] primvars:displayColor = [(0.16, 0.23, 0.29)]
+        double size = 1
+        float3 xformOp:scale = (4.6, 0.2, 2.5)
+        double3 xformOp:translate = (0, -1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "RenderOrb0"
+    {
+        color3f[] primvars:displayColor = [(0.95, 0.45, 0.2)]
+        double radius = 0.44
+        double3 xformOp:translate = (-1.5, 0, 0.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "RenderOrb1"
+    {
+        color3f[] primvars:displayColor = [(0.42, 0.45, 0.9)]
+        double radius = 0.44
+        double3 xformOp:translate = (1.5, 0, 0.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "Backdrop"
+    {
+        color3f[] primvars:displayColor = [(0.35, 0.43, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (4.2, 2.7, 0.12)
+        double3 xformOp:translate = (0, 0.35, -1)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Camera "Camera"
+    {
+        double3 xformOp:translate = (0, 1, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def RenderSettings "Settings"
+    {
+        rel camera = </World/Camera>
+        rel products = </World/Product>
+        uniform int2 resolution = (800, 600)
+    }
+
+    def RenderProduct "Product"
+    {
+        rel orderedVars = </World/Color>
+        token productName = "output.exr"
+    }
+
+    def RenderVar "Color"
+    {
+        uniform token dataType = "color3f"
+        uniform string sourceName = "Ci"
+    }
+}
+

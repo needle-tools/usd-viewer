@@ -1,0 +1,2847 @@
+[
+  {
+    "id": "shading-mx_noise_marble",
+    "label": "Noise marble",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "noise3d",
+      "position",
+      "multiply",
+      "mix"
+    ],
+    "root": "coverage/shading/mx_noise_marble.usda",
+    "files": [
+      "coverage/shading/mx_noise_marble.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_noise3d_float",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_cell_terrazzo",
+    "label": "Cell-noise terrazzo",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "cellnoise3d",
+      "mix"
+    ],
+    "root": "coverage/shading/mx_cell_terrazzo.usda",
+    "files": [
+      "coverage/shading/mx_cell_terrazzo.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_cellnoise3d_float",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_worley_ceramic",
+    "label": "Worley ceramic",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "worleynoise3d",
+      "range",
+      "mix"
+    ],
+    "root": "coverage/shading/mx_worley_ceramic.usda",
+    "files": [
+      "coverage/shading/mx_worley_ceramic.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "ND_worleynoise3d_float",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_fractal_rock",
+    "label": "Fractal mineral",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "fractal3d",
+      "bump"
+    ],
+    "root": "coverage/shading/mx_fractal_rock.usda",
+    "files": [
+      "coverage/shading/mx_fractal_rock.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_bump_vector3",
+        "ND_fractal3d_float",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:normal",
+          "source": "/World/Looks/Feature/HammeredNormal.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/HammeredNormal.inputs:height",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_checker_weave",
+    "label": "Checker weave",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "checkerboard",
+      "texcoord"
+    ],
+    "root": "coverage/shading/mx_checker_weave.usda",
+    "files": [
+      "coverage/shading/mx_checker_weave.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_checkerboard_color3",
+        "ND_standard_surface_surfaceshader",
+        "ND_texcoord_vector2",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Weave.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Weave.inputs:texcoord",
+          "source": "/World/Looks/Feature/UV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_four_corner_enamel",
+    "label": "Four-corner enamel",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "ramp4",
+      "texcoord"
+    ],
+    "root": "coverage/shading/mx_four_corner_enamel.usda",
+    "files": [
+      "coverage/shading/mx_four_corner_enamel.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_ramp4_color3",
+        "ND_standard_surface_surfaceshader",
+        "ND_texcoord_vector2",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FourCorners.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FourCorners.inputs:texcoord",
+          "source": "/World/Looks/Feature/UV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_hsv_glaze",
+    "label": "HSV glaze",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "rgbtohsv",
+      "hsvtorgb",
+      "multiply"
+    ],
+    "root": "coverage/shading/mx_hsv_glaze.usda",
+    "files": [
+      "coverage/shading/mx_hsv_glaze.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_checkerboard_color3",
+        "ND_hsvtorgb_color3",
+        "ND_multiply_color3",
+        "ND_rgbtohsv_color3",
+        "ND_standard_surface_surfaceshader",
+        "ND_texcoord_vector2",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/ToRGB.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Weave.inputs:texcoord",
+          "source": "/World/Looks/Feature/UV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/ToHSV.inputs:in",
+          "source": "/World/Looks/Feature/Weave.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Saturation.inputs:in1",
+          "source": "/World/Looks/Feature/ToHSV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/ToRGB.inputs:in",
+          "source": "/World/Looks/Feature/Saturation.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_position_stripes",
+    "label": "Object-space stripes",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "position",
+      "extract",
+      "sin",
+      "mix"
+    ],
+    "root": "coverage/shading/mx_position_stripes.usda",
+    "files": [
+      "coverage/shading/mx_position_stripes.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_extract_vector3",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_noise3d_float",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_sin_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Bands.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Axis.inputs:in",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Bands.inputs:in",
+          "source": "/World/Looks/Feature/Axis.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_triplanar_stone",
+    "label": "Triplanar stone",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "triplanarprojection",
+      "image"
+    ],
+    "root": "coverage/shading/mx_triplanar_stone.usda",
+    "files": [
+      "coverage/shading/mx_triplanar_stone.usda",
+      "coverage/shading/textures/mosaic.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "ND_triplanarprojection_color3",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Projection.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_bump_hammered",
+    "label": "Hammered bump",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "noise3d",
+      "bump",
+      "normal"
+    ],
+    "root": "coverage/shading/mx_bump_hammered.usda",
+    "files": [
+      "coverage/shading/mx_bump_hammered.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_bump_vector3",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_noise3d_float",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:normal",
+          "source": "/World/Looks/Feature/HammeredNormal.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/HammeredNormal.inputs:height",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_tangent_normal",
+    "label": "Tangent normal map",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "image",
+      "normalmap",
+      "tangent"
+    ],
+    "root": "coverage/shading/mx_tangent_normal.usda",
+    "files": [
+      "coverage/shading/mx_tangent_normal.usda",
+      "coverage/shading/textures/normal.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_image_vector3",
+        "ND_normalmap_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:normal",
+          "source": "/World/Looks/Feature/TangentNormal.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/TangentNormal.inputs:in",
+          "source": "/World/Looks/Feature/NormalTexture.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_layered_clearcoat",
+    "label": "Layered clearcoat",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "coat",
+      "coat_normal",
+      "bump"
+    ],
+    "root": "coverage/shading/mx_layered_clearcoat.usda",
+    "files": [
+      "coverage/shading/mx_layered_clearcoat.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_bump_vector3",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_noise3d_float",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:coat_normal",
+          "source": "/World/Looks/Feature/HammeredNormal.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/HammeredNormal.inputs:height",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_absorbing_glass",
+    "label": "Absorbing glass",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "transmission",
+      "transmission_depth",
+      "specular_IOR"
+    ],
+    "root": "coverage/shading/mx_absorbing_glass.usda",
+    "files": [
+      "coverage/shading/mx_absorbing_glass.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Aspirational: transmission, transmission_depth, specular_IOR. Render support must be verified."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_thin_film",
+    "label": "Thin-film interference",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "thin_film_thickness",
+      "thin_film_IOR",
+      "noise3d"
+    ],
+    "root": "coverage/shading/mx_thin_film.usda",
+    "files": [
+      "coverage/shading/mx_thin_film.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Aspirational: thin_film_thickness, thin_film_IOR, noise3d. Render support must be verified."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_noise3d_float",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:thin_film_thickness",
+          "source": "/World/Looks/Feature/FilmThickness.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FilmThickness.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_velvet_sheen",
+    "label": "Velvet sheen",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "sheen",
+      "sheen_roughness"
+    ],
+    "root": "coverage/shading/mx_velvet_sheen.usda",
+    "files": [
+      "coverage/shading/mx_velvet_sheen.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_brushed_anisotropy",
+    "label": "Brushed anisotropy",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "specular_anisotropy",
+      "tangent",
+      "specular_rotation"
+    ],
+    "root": "coverage/shading/mx_brushed_anisotropy.usda",
+    "files": [
+      "coverage/shading/mx_brushed_anisotropy.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "ND_tangent_vector3",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:tangent",
+          "source": "/World/Looks/Feature/Tangent.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_blackbody_emission",
+    "label": "Blackbody emission",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "blackbody",
+      "emission_color"
+    ],
+    "root": "coverage/shading/mx_blackbody_emission.usda",
+    "files": [
+      "coverage/shading/mx_blackbody_emission.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_blackbody",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:emission_color",
+          "source": "/World/Looks/Feature/Incandescence.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_wax_subsurface",
+    "label": "Wax subsurface",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "subsurface",
+      "subsurface_radius"
+    ],
+    "root": "coverage/shading/mx_wax_subsurface.usda",
+    "files": [
+      "coverage/shading/mx_wax_subsurface.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Aspirational: subsurface, subsurface_radius. Render support must be verified."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_cutout_lattice",
+    "label": "Opacity lattice",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "checkerboard",
+      "opacity"
+    ],
+    "root": "coverage/shading/mx_cutout_lattice.usda",
+    "files": [
+      "coverage/shading/mx_cutout_lattice.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_checkerboard_color3",
+        "ND_standard_surface_surfaceshader",
+        "ND_texcoord_vector2",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Weave.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:opacity",
+          "source": "/World/Looks/Feature/Weave.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Weave.inputs:texcoord",
+          "source": "/World/Looks/Feature/UV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_scalar_displacement",
+    "label": "Scalar displacement",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "displacement",
+      "fractal3d"
+    ],
+    "root": "coverage/shading/mx_scalar_displacement.usda",
+    "files": [
+      "coverage/shading/mx_scalar_displacement.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Aspirational: displacement, fractal3d. Render support must be verified."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_displacement_float",
+        "ND_fractal3d_float",
+        "ND_mix_color3",
+        "ND_multiply_vector3",
+        "ND_position_vector3",
+        "ND_range_float",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:displacement",
+          "source": "/World/Looks/Feature/Relief.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PatternScale.inputs:in1",
+          "source": "/World/Looks/Feature/ObjectPosition.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Noise.inputs:position",
+          "source": "/World/Looks/Feature/PatternScale.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Range.inputs:in",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Pigment.inputs:mix",
+          "source": "/World/Looks/Feature/Range.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Relief.inputs:displacement",
+          "source": "/World/Looks/Feature/Noise.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-mx_nested_nodegraph",
+    "label": "Nested nodegraph",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "UsdShadeNodeGraph",
+      "interface",
+      "output forwarding"
+    ],
+    "root": "coverage/shading/mx_nested_nodegraph.usda",
+    "files": [
+      "coverage/shading/mx_nested_nodegraph.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_checkerboard_color3",
+        "ND_constant_color3",
+        "ND_standard_surface_surfaceshader",
+        "ND_texcoord_vector2",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/Weave.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Weave.inputs:color1",
+          "source": "/World/Looks/Feature/PigmentGraph.outputs:color"
+        },
+        {
+          "input": "/World/Looks/Feature/Weave.inputs:texcoord",
+          "source": "/World/Looks/Feature/UV.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PigmentGraph.outputs:color",
+          "source": "/World/Looks/Feature/PigmentGraph/Inner.outputs:color"
+        },
+        {
+          "input": "/World/Looks/Feature/PigmentGraph/Inner.inputs:pigment",
+          "source": "/World/Looks/Feature/PigmentGraph.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/PigmentGraph/Inner.outputs:color",
+          "source": "/World/Looks/Feature/PigmentGraph/Inner/Pigment.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/PigmentGraph/Inner/Pigment.inputs:value",
+          "source": "/World/Looks/Feature/PigmentGraph/Inner.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_float_constant",
+    "label": "Constant float property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "float",
+      "constant"
+    ],
+    "root": "coverage/shading/geomprop_float_constant.usda",
+    "files": [
+      "coverage/shading/geomprop_float_constant.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_float",
+        "ND_mix_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishRamp.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:specular_roughness",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FinishRamp.inputs:mix",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "constant",
+          "indexed": false,
+          "elementCount": 1
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_float_uniform",
+    "label": "Uniform float property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "float",
+      "uniform"
+    ],
+    "root": "coverage/shading/geomprop_float_uniform.usda",
+    "files": [
+      "coverage/shading/geomprop_float_uniform.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_float",
+        "ND_mix_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishRamp.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:specular_roughness",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FinishRamp.inputs:mix",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "uniform",
+          "indexed": false,
+          "elementCount": 800
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_float_vertex",
+    "label": "Vertex float property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "float",
+      "vertex"
+    ],
+    "root": "coverage/shading/geomprop_float_vertex.usda",
+    "files": [
+      "coverage/shading/geomprop_float_vertex.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_float",
+        "ND_mix_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishRamp.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:specular_roughness",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FinishRamp.inputs:mix",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "vertex",
+          "indexed": false,
+          "elementCount": 861
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_float_varying",
+    "label": "Varying float property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "float",
+      "varying"
+    ],
+    "root": "coverage/shading/geomprop_float_varying.usda",
+    "files": [
+      "coverage/shading/geomprop_float_varying.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_float",
+        "ND_mix_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishRamp.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:specular_roughness",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/FinishRamp.inputs:mix",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "varying",
+          "indexed": false,
+          "elementCount": 861
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_vector_vertex",
+    "label": "Vertex vector property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "vector3",
+      "vertex"
+    ],
+    "root": "coverage/shading/geomprop_vector_vertex.usda",
+    "files": [
+      "coverage/shading/geomprop_vector_vertex.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_convert_vector3_color3",
+        "ND_geompropvalue_vector3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/VectorToColor.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/VectorToColor.inputs:in",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "vertex",
+          "indexed": false,
+          "elementCount": 861
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_color_facevarying",
+    "label": "Face-varying color property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "color3",
+      "faceVarying"
+    ],
+    "root": "coverage/shading/geomprop_color_facevarying.usda",
+    "files": [
+      "coverage/shading/geomprop_color_facevarying.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "faceVarying",
+          "indexed": false,
+          "elementCount": 3200
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_color_indexed",
+    "label": "Indexed color property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "color3",
+      "faceVarying",
+      "indexed primvars"
+    ],
+    "root": "coverage/shading/geomprop_color_indexed.usda",
+    "files": [
+      "coverage/shading/geomprop_color_indexed.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_geompropvalue_color3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "faceVarying",
+          "indexed": true,
+          "elementCount": 3200
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-geomprop_vector_indexed",
+    "label": "Indexed vector property",
+    "group": "MaterialX",
+    "features": [
+      "MaterialX",
+      "geompropvalue",
+      "vector3",
+      "vertex",
+      "indexed primvars"
+    ],
+    "root": "coverage/shading/geomprop_vector_indexed.usda",
+    "files": [
+      "coverage/shading/geomprop_vector_indexed.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must select the MaterialX graph without a PreviewSurface fallback."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_convert_vector3_color3",
+        "ND_geompropvalue_vector3",
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:base_color",
+          "source": "/World/Looks/Feature/VectorToColor.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature/VectorToColor.inputs:in",
+          "source": "/World/Looks/Feature/FinishProperty.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [
+        {
+          "path": "/World/Display/Artifact.primvars:finish",
+          "interpolation": "vertex",
+          "indexed": true,
+          "elementCount": 861
+        }
+      ],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:mtlx:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-preview_uv_transform",
+    "label": "UV transform",
+    "group": "UsdShade",
+    "features": [
+      "UsdPreviewSurface",
+      "UsdTransform2d",
+      "rotation",
+      "scale",
+      "translation"
+    ],
+    "root": "coverage/shading/preview_uv_transform.usda",
+    "files": [
+      "coverage/shading/preview_uv_transform.usda",
+      "coverage/shading/textures/mosaic.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float2",
+        "UsdTransform2d",
+        "UsdUVTexture"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature/Texture.outputs:rgb"
+        },
+        {
+          "input": "/World/Looks/Feature/Transform.inputs:in",
+          "source": "/World/Looks/Feature/UV.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Texture.inputs:st",
+          "source": "/World/Looks/Feature/Transform.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-preview_sampler_wrap",
+    "label": "Sampler address modes",
+    "group": "UsdShade",
+    "features": [
+      "UsdUVTexture",
+      "repeat",
+      "mirror",
+      "clamp"
+    ],
+    "root": "coverage/shading/preview_sampler_wrap.usda",
+    "files": [
+      "coverage/shading/preview_sampler_wrap.usda",
+      "coverage/shading/textures/mosaic.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float2",
+        "UsdTransform2d",
+        "UsdUVTexture"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature/Texture.outputs:rgb"
+        },
+        {
+          "input": "/World/Looks/Feature/Transform.inputs:in",
+          "source": "/World/Looks/Feature/UV.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Texture.inputs:st",
+          "source": "/World/Looks/Feature/Transform.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-preview_channel_packing",
+    "label": "Packed material channels",
+    "group": "UsdShade",
+    "features": [
+      "UsdUVTexture",
+      "r/g/b outputs",
+      "metallic",
+      "roughness",
+      "occlusion"
+    ],
+    "root": "coverage/shading/preview_channel_packing.usda",
+    "files": [
+      "coverage/shading/preview_channel_packing.usda",
+      "coverage/shading/textures/channels.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float2",
+        "UsdTransform2d",
+        "UsdUVTexture"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:metallic",
+          "source": "/World/Looks/Feature/Texture.outputs:r"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:occlusion",
+          "source": "/World/Looks/Feature/Texture.outputs:b"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:roughness",
+          "source": "/World/Looks/Feature/Texture.outputs:g"
+        },
+        {
+          "input": "/World/Looks/Feature/Transform.inputs:in",
+          "source": "/World/Looks/Feature/UV.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Texture.inputs:st",
+          "source": "/World/Looks/Feature/Transform.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-preview_opacity_threshold",
+    "label": "Opacity threshold",
+    "group": "UsdShade",
+    "features": [
+      "UsdPreviewSurface",
+      "opacity",
+      "opacityThreshold",
+      "alpha channel"
+    ],
+    "root": "coverage/shading/preview_opacity_threshold.usda",
+    "files": [
+      "coverage/shading/preview_opacity_threshold.usda",
+      "coverage/shading/textures/channels.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float2",
+        "UsdTransform2d",
+        "UsdUVTexture"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:opacity",
+          "source": "/World/Looks/Feature/Texture.outputs:a"
+        },
+        {
+          "input": "/World/Looks/Feature/Transform.inputs:in",
+          "source": "/World/Looks/Feature/UV.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Texture.inputs:st",
+          "source": "/World/Looks/Feature/Transform.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-preview_normal_texture",
+    "label": "Preview normal texture",
+    "group": "UsdShade",
+    "features": [
+      "UsdUVTexture",
+      "scale",
+      "bias",
+      "normal",
+      "raw color space"
+    ],
+    "root": "coverage/shading/preview_normal_texture.usda",
+    "files": [
+      "coverage/shading/preview_normal_texture.usda",
+      "coverage/shading/textures/normal.png"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float2",
+        "UsdTransform2d",
+        "UsdUVTexture"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:normal",
+          "source": "/World/Looks/Feature/Texture.outputs:rgb"
+        },
+        {
+          "input": "/World/Looks/Feature/Transform.inputs:in",
+          "source": "/World/Looks/Feature/UV.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Texture.inputs:st",
+          "source": "/World/Looks/Feature/Transform.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_material_interface",
+    "label": "Material input interface",
+    "group": "UsdShade",
+    "features": [
+      "UsdShadeMaterial",
+      "interface inputs",
+      "input forwarding"
+    ],
+    "root": "coverage/shading/shade_material_interface.usda",
+    "files": [
+      "coverage/shading/shade_material_interface.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:roughness",
+          "source": "/World/Looks/Feature.inputs:finish"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_nodegraph_interface",
+    "label": "Nodegraph input interface",
+    "group": "UsdShade",
+    "features": [
+      "UsdShadeNodeGraph",
+      "input forwarding",
+      "output forwarding"
+    ],
+    "root": "coverage/shading/shade_nodegraph_interface.usda",
+    "files": [
+      "coverage/shading/shade_nodegraph_interface.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float3"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature/Graph.outputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph.outputs:pigment",
+          "source": "/World/Looks/Feature/Graph/Reader.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph/Reader.inputs:fallback",
+          "source": "/World/Looks/Feature/Graph.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_nested_forwarding",
+    "label": "Nested output forwarding",
+    "group": "UsdShade",
+    "features": [
+      "UsdShadeNodeGraph",
+      "nested graphs",
+      "output forwarding"
+    ],
+    "root": "coverage/shading/shade_nested_forwarding.usda",
+    "files": [
+      "coverage/shading/shade_nested_forwarding.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float3"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature/Graph.outputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph.outputs:pigment",
+          "source": "/World/Looks/Feature/Graph/Inner.outputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph/Inner.inputs:pigment",
+          "source": "/World/Looks/Feature/Graph.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph/Inner.outputs:pigment",
+          "source": "/World/Looks/Feature/Graph/Inner/Reader.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Feature/Graph/Inner/Reader.inputs:fallback",
+          "source": "/World/Looks/Feature/Graph/Inner.inputs:pigment"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_render_contexts",
+    "label": "Render-context precedence",
+    "group": "UsdShade",
+    "features": [
+      "UsdShadeMaterial",
+      "universal surface",
+      "mtlx surface",
+      "render context"
+    ],
+    "root": "coverage/shading/shade_render_contexts.usda",
+    "files": [
+      "coverage/shading/shade_render_contexts.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "ND_standard_surface_surfaceshader",
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:mtlx:surface",
+          "source": "/World/Looks/Feature/MaterialXSurface.outputs:out"
+        },
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_face_subsets",
+    "label": "Face material subsets",
+    "group": "UsdShade",
+    "features": [
+      "UsdGeomSubset",
+      "materialBind",
+      "partition"
+    ],
+    "root": "coverage/shading/shade_face_subsets.usda",
+    "files": [
+      "coverage/shading/shade_face_subsets.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Sector0.outputs:surface",
+          "source": "/World/Looks/Feature/Sector0/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Sector1.outputs:surface",
+          "source": "/World/Looks/Feature/Sector1/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Sector2.outputs:surface",
+          "source": "/World/Looks/Feature/Sector2/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Sector3.outputs:surface",
+          "source": "/World/Looks/Feature/Sector3/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_collection_binding",
+    "label": "Collection material binding",
+    "group": "UsdShade",
+    "features": [
+      "CollectionAPI",
+      "collection binding",
+      "membership"
+    ],
+    "root": "coverage/shading/shade_collection_binding.usda",
+    "files": [
+      "coverage/shading/shade_collection_binding.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Companion.outputs:surface",
+          "source": "/World/Looks/Feature/Companion/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_strong_binding",
+    "label": "Ancestor binding strength",
+    "group": "UsdShade",
+    "features": [
+      "MaterialBindingAPI",
+      "strongerThanDescendants",
+      "inherited binding"
+    ],
+    "root": "coverage/shading/shade_strong_binding.usda",
+    "files": [
+      "coverage/shading/shade_strong_binding.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Descendant.outputs:surface",
+          "source": "/World/Looks/Feature/Descendant/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_material_purposes",
+    "label": "Preview and full purposes",
+    "group": "UsdShade",
+    "features": [
+      "MaterialBindingAPI",
+      "preview purpose",
+      "full purpose"
+    ],
+    "root": "coverage/shading/shade_material_purposes.usda",
+    "files": [
+      "coverage/shading/shade_material_purposes.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/preview.outputs:surface",
+          "source": "/World/Looks/Feature/preview/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/full.outputs:surface",
+          "source": "/World/Looks/Feature/full/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature/preview",
+        "full": "/World/Looks/Feature/full"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_material_specializes",
+    "label": "Specialized material",
+    "group": "UsdShade",
+    "features": [
+      "UsdShadeMaterial",
+      "base material",
+      "specializes"
+    ],
+    "root": "coverage/shading/shade_material_specializes.usda",
+    "files": [
+      "coverage/shading/shade_material_specializes.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Base.outputs:surface",
+          "source": "/World/Looks/Base/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_primvar_fallback",
+    "label": "Missing primvar fallback",
+    "group": "UsdShade",
+    "features": [
+      "UsdPrimvarReader_float3",
+      "fallback"
+    ],
+    "root": "coverage/shading/shade_primvar_fallback.usda",
+    "files": [
+      "coverage/shading/shade_primvar_fallback.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface",
+        "UsdPrimvarReader_float3"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Feature/Surface.inputs:diffuseColor",
+          "source": "/World/Looks/Feature/MissingProperty.outputs:result"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  },
+  {
+    "id": "shading-shade_specular_workflow",
+    "label": "Specular workflow",
+    "group": "UsdShade",
+    "features": [
+      "UsdPreviewSurface",
+      "useSpecularWorkflow",
+      "specularColor",
+      "clearcoat"
+    ],
+    "root": "coverage/shading/shade_specular_workflow.usda",
+    "files": [
+      "coverage/shading/shade_specular_workflow.usda"
+    ],
+    "expected": {
+      "native": "Native USD composition and Sdr node validation pass; Storm reference required for rendered appearance.",
+      "needle": "Feature verification required; must preserve authored UsdShade connections and resolved bindings."
+    },
+    "assertions": {
+      "shaderIds": [
+        "UsdPreviewSurface"
+      ],
+      "connections": [
+        {
+          "input": "/World/Looks/Feature.outputs:surface",
+          "source": "/World/Looks/Feature/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Plinth.outputs:surface",
+          "source": "/World/Looks/Plinth/Surface.outputs:surface"
+        },
+        {
+          "input": "/World/Looks/Floor.outputs:surface",
+          "source": "/World/Looks/Floor/Surface.outputs:surface"
+        }
+      ],
+      "primvars": [],
+      "boundMaterial": "/World/Looks/Feature",
+      "bindingsByPurpose": {
+        "allPurpose": "/World/Looks/Feature",
+        "preview": "/World/Looks/Feature",
+        "full": "/World/Looks/Feature"
+      },
+      "surfaceOutput": "/World/Looks/Feature.outputs:surface"
+    },
+    "scenePrimitiveLightIntensityScale": 1
+  }
+]

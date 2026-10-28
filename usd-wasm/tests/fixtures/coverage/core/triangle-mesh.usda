@@ -1,0 +1,97 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    endTimeCode = 48
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Mesh "Mesh"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [3, 3]
+        int[] faceVertexIndices = [0, 1, 2, 0, 2, 3]
+        point3f[] points = [(-1, 0, -1), (1, 0, -1), (1, 0, 1), (-1, 0, 1)]
+        color3f[] primvars:displayColor = [(0.12, 0.68, 0.69), (0.95, 0.53, 0.23)] (
+            interpolation = "uniform"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Cube "FrameFront"
+    {
+        color3f[] primvars:displayColor = [(0.84, 0.62, 0.28)]
+        double size = 1
+        float3 xformOp:scale = (2.8, 0.13, 0.16)
+        double3 xformOp:translate = (0, -0.12, 1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "FrameBack"
+    {
+        color3f[] primvars:displayColor = [(0.84, 0.62, 0.28)]
+        double size = 1
+        float3 xformOp:scale = (2.8, 0.13, 0.16)
+        double3 xformOp:translate = (0, -0.12, -1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "FrameSide0"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.13, 2.6)
+        double3 xformOp:translate = (-1.4, -0.12, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Leg00"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.65, 0.16)
+        double3 xformOp:translate = (-1.4, -0.45, -1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Leg01"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.65, 0.16)
+        double3 xformOp:translate = (-1.4, -0.45, 1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "FrameSide1"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.13, 2.6)
+        double3 xformOp:translate = (1.4, -0.12, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Leg10"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.65, 0.16)
+        double3 xformOp:translate = (1.4, -0.45, -1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Leg11"
+    {
+        color3f[] primvars:displayColor = [(0.18, 0.3, 0.37)]
+        double size = 1
+        float3 xformOp:scale = (0.16, 0.65, 0.16)
+        double3 xformOp:translate = (1.4, -0.45, 1.25)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+
