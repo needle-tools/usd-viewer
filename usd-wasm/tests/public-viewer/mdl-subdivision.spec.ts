@@ -14,7 +14,8 @@ for (const [viewer, name] of [
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`/?viewer=${viewer}&file=/test-fixtures/coverage/lighting-mdl/${name}.usda`);
     await page.waitForFunction(() => !!(window as any).usdHydra, null, { timeout: 120_000 });
-    const selection = page.locator('select[data-usd-variant-set="surface"]');
+    await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
+    const selection = page.locator('select[data-stage-variant="surface"]');
     await expect(selection).toHaveValue('smooth');
     const meshState = () => page.evaluate(async () => {
       const handle = (window as any).usdHydra;

@@ -1,3 +1,4 @@
+import {openAppMenu,openSamples} from './workbench-menus';
 import { test, expect } from '@playwright/test';
 
 // Keep these local rendering checks independent of the web-font CDN.
@@ -7,8 +8,8 @@ test.beforeEach(async ({ page }) => {
 
 test('Hugging Face test set is a separate top-level catalog', async ({ page }) => {
     await page.goto('/?viewer=three');
-    await page.locator('.dropdown-button').click();
-    await page.locator('[data-sample-group="needle"]').click();
+    await openSamples(page);
+    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
     await expect(page.locator('#gallery-title')).toHaveText('Needle');
     await expect(page.locator('#gallery-grid .gallery-card').first()).toBeVisible();
     await expect(page.locator('#needle-group-tree [data-sample-group="needle:remote-usd-assets"]')).toHaveCount(0);
@@ -21,10 +22,8 @@ test('Hugging Face test set is a separate top-level catalog', async ({ page }) =
         await item.click();
         await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(count);
     }
-    const folder = page.locator('#sample-group-list > [data-sample-group="usd-assets"]');
-    await expect(folder).toContainText('Hugging Face test set');
-    await expect(folder.locator('small')).toHaveText('14 assets');
-    await folder.click();
+    await expect(page.locator('#example-library option[value=usd-assets]')).toHaveText('Hugging Face test set');
+    await page.getByRole('combobox',{name:'Example library'}).selectOption('usd-assets');
     await expect(page.locator('#gallery-title')).toHaveText('Hugging Face test set');
     await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(14);
     const displayed = await page.locator('#gallery-grid .gallery-card').evaluateAll(nodes => nodes.map(node => new URL((node as HTMLAnchorElement).href).searchParams.get('file')));
@@ -34,7 +33,8 @@ test('Hugging Face test set is a separate top-level catalog', async ({ page }) =
 test('lighting variants change the authored light rig without a host environment', async ({ page }) => {
     await page.goto('/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda');
     await page.waitForFunction(() => (window as any).usdHydra && (window as any).usdStage);
-    const selection = page.locator('select[data-usd-variant-set="lighting"]');
+    await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
+    const selection = page.locator('select[data-stage-variant="lighting"]');
     await expect(selection).toBeVisible();
     expect(await page.evaluate(() => (window as any).scene.environment === null)).toBe(true);
     await page.waitForTimeout(400);
@@ -56,7 +56,7 @@ test('lighting variants change the authored light rig without a host environment
     }, [before.toString('base64'), after.toString('base64')]);
     expect(diff).toBeGreaterThan(1000);
     await page.reload();
-    await expect(page.locator('select[data-usd-variant-set="lighting"]')).toHaveValue('nightNeon');
+    await expect(page.locator('select[data-stage-variant="lighting"]')).toHaveValue('nightNeon');
 });
 
 test('bounded volume selects the Three node renderer on direct navigation', async ({ page }) => {
@@ -101,14 +101,14 @@ test('bounded volume selects the Three node renderer on direct navigation', asyn
 
 test('gallery keeps the node renderer when leaving bounded volumes', async ({ page }) => {
     await page.goto('/?viewer=needle');
-    await page.locator('.dropdown-button').click();
-    await page.locator('[data-sample-group="needle"]').click();
+    await openSamples(page);
+    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
     await page.locator('[data-sample-group="needle:MaterialX%20Volumes"]').click();
     await page.locator('.gallery-card[data-name="Ember torus"]').click();
     await page.waitForURL(url => url.searchParams.get('viewer') === 'three' && url.searchParams.get('render') === 'nodes');
     await page.waitForFunction(() => !!(window as any).usdHydra, { timeout: 120_000 });
-    await page.locator('.dropdown-button').click();
-    await page.locator('[data-sample-group="needle"]').click();
+    await openSamples(page);
+    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
     await page.locator('[data-sample-group="needle:Composition"]').click();
     await page.locator('.gallery-card[data-name="External reference"]').click();
     await page.waitForURL(url => url.searchParams.get('file')?.includes('external-reference'));
@@ -131,7 +131,8 @@ for (const viewer of ['three', 'needle']) {
         await page.waitForFunction(() => !!(window as any).usdHydra && !!(window as any).usdStage, null, { timeout: 120_000 });
         await page.waitForFunction(viewer => !!(viewer === 'needle' ? (window as any).needleEngineContext?.scene : (window as any).scene)?.environment, viewer);
         const initial = await page.evaluate(viewer => (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environment.uuid, viewer);
-        const selection = page.locator('select[data-usd-variant-set="environment"]');
+        await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
+    const selection = page.locator('select[data-stage-variant="environment"]');
         await selection.selectOption('night');
         await page.waitForFunction(({viewer, initial}) => (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environment?.uuid !== initial, {viewer,initial});
         await expect(selection).toHaveValue('night');
@@ -145,7 +146,7 @@ for (const name of ['volume-density', 'volume-density-heat', 'volume-sequence', 
     test(`renders the ${name} VDB fixture through the public node renderer`, async ({ page }) => {
         const unsafeInvalidations: string[] = [];
         page.on('console', message => { if (message.text().includes('Unsafe scene index invalidation')) unsafeInvalidations.push(message.text()); });
-        await page.setViewportSize({width:320,height:240});
+        await page.setViewportSize({width:640,height:480});
         await page.goto(`/?viewer=needle&file=/test-fixtures/coverage/advanced/${name}.usda`);
         await page.waitForURL(url => url.searchParams.get('viewer') === 'three' && url.searchParams.get('render') === 'nodes');
         await page.waitForFunction(() => !!(window as any).usdHydra, null, { timeout: 120_000 });

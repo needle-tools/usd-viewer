@@ -1,10 +1,12 @@
 import { getUsdModule } from '@needle-tools/usd';
 import { createThreeHydra } from '@needle-tools/usd/three';
-import { createWebGpuSupport } from '@needle-tools/usd/renderers';
-import { mountStagePanel, mountRenderModePicker } from '@needle-tools/usd/viewer';
+import { createWebGpuSupport, configureNeedleAgx, configureNeedleAgxDisplay } from '@needle-tools/usd/renderers';
+import { mountStagePanel, mountRenderModePicker, mountRepl, createSelection } from '@needle-tools/usd/viewer';
+import { setPrimActive, setPrimVisible } from '@needle-tools/usd/scene';
 import { Scene, Group, PerspectiveCamera, WebGPURenderer, AgXToneMapping, Color } from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const renderer = new WebGPURenderer({ antialias: false }); await renderer.init();
+await configureNeedleAgx(renderer);
 renderer.setSize(640, 480); renderer.toneMapping = AgXToneMapping; renderer.setClearColor(new Color(0xf0f4ef), 1); renderer.shadowMap.enabled = true;
 document.body.append(renderer.domElement);
 const scene = new Scene(), root = new Group(); scene.add(root);
@@ -13,8 +15,16 @@ const controls = new OrbitControls(camera, renderer.domElement); controls.target
 const USD = await getUsdModule();
 const handle = await createThreeHydra({ USD, scene: root, renderScene: scene, renderer, url: '/scene.usda', scenePrimitiveLightIntensityScale: 0.1, webGpuSupport: await createWebGpuSupport() });
 await handle.ready(); await handle.materialsReady();
-const picker = await mountRenderModePicker({ renderer, scene, camera, loadPathTracer: () => import('@meimu/mutracer'), loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu') });
+let status;
+const picker = await mountRenderModePicker({ renderer, scene, camera, controls, settings: {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null}, onStatus(info){status=info;}, configurePathTracer: configureNeedleAgxDisplay, loadPathTracer: () => import('@meimu/mutracer'), loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu'), loadDenoiser:()=>import('oidn-webgpu'), denoiserWeightsBaseUrl:'/weights/' });
 let activeCamera = camera;
-const panel = await mountStagePanel({ handle, stage: handle.driver.GetStage(), scene, camera, controls, setCamera(value) { activeCamera = value; } });
-window.packed = { renderer, modes: picker.modes, handle, panel, camera, controls };
-function render() { picker.modes.render(activeCamera); requestAnimationFrame(render); } render();
+const stage = handle.driver.GetStage();
+const panel = await mountStagePanel({ handle, stage, scene, camera, controls, setCamera(value) { activeCamera = value; } });
+const replHost = document.createElement('section'); replHost.style.cssText='height:180px;width:640px;max-width:100%';document.body.append(replHost);
+let current = true, stopped = false, renderFrame;
+const repl = mountRepl({container:replHost,getContext:()=>current?{USD,stage,handle,panel,selection:panel.selection,follow:target=>panel.navigate(target)}:null,edit:callback=>panel.edit(callback)});
+const selection = createSelection();
+window.packed = { renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, setPrimActive, setPrimVisible, get status(){return status;},
+  async dispose(){current=false;stopped=true;cancelAnimationFrame(renderFrame);repl.dispose();panel.dispose();picker.modes.dispose();await handle.dispose();controls.dispose();renderer.dispose();}
+};
+function render() { if(stopped)return;picker.modes.render(activeCamera);renderFrame=requestAnimationFrame(render); } render();

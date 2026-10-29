@@ -13,11 +13,12 @@ function setHeaders(res, path, stat) {
     res.setHeader("Cache-Control", "no-cache");
   }
   const needsHeaders = normalizedPath.includes('/emHd') ||
+    normalizedPath.endsWith('/api/worker.js') ||
     normalizedPath.includes('/materialx/') ||
     normalizedPath.includes('/mutracer/') ||
     normalizedPath.includes('/needle-engine/') ||
     normalizedPath.includes('/@needle-tools/engine/') ||
-    path.endsWith('index.html');
+    path.endsWith('index.html') || normalizedPath.endsWith('/viewer-popout.html');
   if (!needsHeaders) return;
 
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");

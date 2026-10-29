@@ -1,3 +1,5 @@
+import {clearStage} from './workbench-menus';
+import {openAppMenu,openSamples,openSettings} from './workbench-menus';
 import { expect, test, type Page } from '@playwright/test';
 
 const publicSamples = {
@@ -234,6 +236,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto(`/?file=${publicSamples.helmet.url}&viewer=three`);
         await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
 
+        await openAppMenu(page,'view');
         await Promise.all([
             page.waitForURL(/viewer=needle/),
             page.click('[data-viewer-mode="needle-loader"]'),
@@ -1154,6 +1157,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?file=&viewer=needle');
         await expect(page.locator('[data-viewer-mode="needle-loader"]')).toHaveClass(/active/);
 
+        await openAppMenu(page,'view');
         await Promise.all([
             page.waitForURL(/viewer=three/),
             page.click('[data-viewer-mode="three"]'),
@@ -1169,7 +1173,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(state.activeButton).toBe('three');
         expect(state.runtime).toBe('three');
-        expect(state.threeRevision).toBe('185');
+        expect(state.threeRevision).toBe('185.2-alpha.6');
         expect(new URL(state.href).searchParams.get('viewer')).toBe('three');
         expect(diagnostics).toEqual([]);
     });
@@ -1178,6 +1182,7 @@ test.describe('public usd-viewer lifecycle', () => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?file=&viewer=needle');
 
+        await openAppMenu(page,'view');
         await page.locator('#viewer-mode-toggle').hover();
         await expect(page.locator('.ui-tooltip.visible')).toHaveText('USD can be rendered either with Needle Engine or with three.js. Choose the render engine here.');
 
@@ -1204,6 +1209,7 @@ test.describe('public usd-viewer lifecycle', () => {
             { label: 'three.js', mode: 'three', active: false },
         ]);
 
+        await openAppMenu(page,'file');
         await page.locator('#export-gltf').hover();
         await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to share');
         expect(diagnostics).toEqual([]);
@@ -1223,6 +1229,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await expect(page.locator('#wait-materials-toggle')).toHaveCount(0);
         expect(await countTexturedUsdMaterials(page, 'needle')).toBeGreaterThan(0);
 
+        await openAppMenu(page,'view');
         await Promise.all([
             page.waitForURL(/viewer=three/),
             page.click('[data-viewer-mode="three"]'),
@@ -1389,13 +1396,13 @@ test.describe('public usd-viewer lifecycle', () => {
             path: 'tests/fixtures/asset-explorer/BoomBox.glb.three.usdz',
         }));
 
-        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraThree.url)}&viewer=three`);
+        await page.goto(`/?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraThree.url)}&viewer=three&assetCache=0`);
         const initialState = await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraThree.filename);
         expect(initialState.loadedConverterVisible).toBe(true);
         expect(initialState.loadedConverter).toBe('three-r185');
 
-        await page.click('.dropdown-button');
-        await page.click('[data-sample-group="gltf"]');
+        await openSamples(page);
+        await page.getByRole('combobox',{name:'Example library'}).selectOption('gltf');
         await page.waitForFunction(label => {
             return Array.from(document.querySelectorAll<HTMLAnchorElement>('.gallery-card'))
                 .some(card => card.dataset.name === label && card.href.includes('.three.usdz'));
@@ -1421,19 +1428,20 @@ test.describe('public usd-viewer lifecycle', () => {
             { converter: 'blender-5-1', text: 'Blender', tip: 'Version: 5.1.2', hasVisibleVersion: false },
             { converter: 'original-gltf', text: 'Original glTF', tip: 'Original glTF/GLB source asset', hasVisibleVersion: false },
         ]);
+        await openSettings(page);
         await page.locator('#loaded-converter-toggle button[data-converter="three-r185"]').hover();
         await expect(page.locator('.ui-tooltip.visible')).toHaveText('Version: 0.185.0');
 
         await page.dispatchEvent('#loaded-converter-toggle button[data-converter="blender-5-1"]', 'pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 });
         const state = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereBlender.filename);
 
-        expect(state.filename).toBe(assetExplorerSamples.animatedMorphSphereBlender.filename);
+        expect(state.filename).toBe(viewerDisplayFilename(assetExplorerSamples.animatedMorphSphereBlender.filename));
         expect(new URL(state.href).searchParams.get('file')).toBe(assetExplorerSamples.animatedMorphSphereBlender.url);
         expect(state.loadedConverterVisible).toBe(true);
         expect(state.loadedConverter).toBe('blender-5-1');
 
-        await page.click('.dropdown-button');
-        await page.click('[data-sample-group="gltf"]');
+        await openSamples(page);
+        await page.getByRole('combobox',{name:'Example library'}).selectOption('gltf');
         await expect(page.locator(`.gallery-card[data-name="Antique Camera"]`))
             .toHaveAttribute('href', `?file=${assetExplorerSamples.antiqueCameraBlender.url}`);
 
@@ -2656,8 +2664,8 @@ test.describe('public usd-viewer lifecycle', () => {
             }),
         }));
 
-        await page.goto('/?viewer=needle');
-        await page.click('.dropdown-button');
+        await page.goto('/?viewer=needle&assetCache=0');
+        await openSamples(page);
         await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
 
         const state = await page.evaluate(() => ({
@@ -2707,7 +2715,7 @@ test.describe('public usd-viewer lifecycle', () => {
         }));
 
         await page.goto('/?viewer=needle');
-        await page.click('.dropdown-button');
+        await openSamples(page);
         await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
 
         const state = await page.evaluate(() => ({
@@ -2757,15 +2765,12 @@ test.describe('public usd-viewer lifecycle', () => {
             ]),
         }));
 
-        await page.goto('/?viewer=three');
-        await page.click('.dropdown-button');
+        await page.goto('/?viewer=three&assetCache=0');
+        await openSamples(page);
 
-        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(0)).toHaveAttribute('data-sample-group', 'gltf');
-        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(1)).toHaveAttribute('data-sample-group', 'usd-wg');
-        await expect(page.locator('#sample-group-list > [data-sample-group]').nth(2)).toHaveAttribute('data-sample-group', 'needle');
-        await expect(page.locator('#gallery-title')).toHaveText(/glTF\s+USD conversions/);
-        await expect(page.locator('#gallery-subtitle')).toHaveText('Converted from glTF Sample Assets');
-        await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#example-library option')).toHaveText(['glTF → USD conversions','USD Working Group Assets','Hugging Face test set','Needle']);
+        await expect(page.locator('#gallery-title')).toHaveText(/glTF.*USD conversions/);
+        await expect(page.getByRole('combobox',{name:'Example library'})).toHaveValue('gltf');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
         await expect(page.locator('#needle-group-tree')).toBeHidden();
 
@@ -2790,15 +2795,11 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(galleryMotion).toEqual({ inlineDelay: '', animationName: 'none' });
 
         if (!await page.locator('#sample-group-list').isVisible()) {
-            await page.click('.dropdown-button');
+            await openSamples(page);
         }
-        await page.click('[data-sample-group="gltf"]');
-        await expect(page.locator('#gltf-group-tree')).toBeHidden();
-        await expect(page.locator('[data-sample-group="gltf"]')).toHaveAttribute('aria-expanded', 'false');
-        await page.click('[data-sample-group="gltf"]');
         await expect(page.locator('#gltf-group-tree')).toBeVisible();
 
-        await page.click('[data-sample-group="usd-wg"]');
+        await page.getByRole('combobox',{name:'Example library'}).selectOption('usd-wg');
         await expect(page.locator('#usd-wg-group-tree')).toBeVisible();
         await expect(page.locator('#gltf-group-tree')).toBeHidden();
         await expect(page.locator('#needle-group-tree')).toBeHidden();
@@ -2811,7 +2812,7 @@ test.describe('public usd-viewer lifecycle', () => {
             return firstMeta?.textContent?.includes('full_assets');
         });
 
-        await page.click('[data-sample-group="needle"]');
+        await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
         await expect(page.locator('#needle-group-tree')).toBeVisible();
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
         await page.waitForFunction(() => {
@@ -2822,7 +2823,7 @@ test.describe('public usd-viewer lifecycle', () => {
                 && labels.includes('Subdivision');
         });
 
-        await page.click('[data-sample-group="needle:subdivision"]');
+        await page.click('[data-sample-group="needle:Subdivision"]');
         await expect(page.locator('#gallery-title')).toHaveText('Subdivision');
         await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/catmull_clark_cube.usda');
         await expect(page.locator('.gallery-card[data-name="Loop Non-Triangle Fallback"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/loop_non_triangle_fallback.usda');
@@ -2832,9 +2833,9 @@ test.describe('public usd-viewer lifecycle', () => {
 
     test('shows thumbnails for Needle Cloud and local Needle fixture samples', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
-        await page.goto('/?viewer=three');
-        await page.click('.dropdown-button');
-        await page.click('[data-sample-group="needle"]');
+        await page.goto('/?viewer=three&assetCache=0');
+        await openSamples(page);
+        await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
         await page.click('[data-sample-group="needle:cloud"]');
 
         const kitchenThumbnail = page.locator('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');
@@ -2844,7 +2845,7 @@ test.describe('public usd-viewer lifecycle', () => {
             return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
         });
 
-        await page.click('[data-sample-group="needle:usd-concepts"]');
+        await page.click('[data-sample-group="needle:USD%20Concepts"]');
         const fixtureThumbnail = page.locator('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
         await expect(fixtureThumbnail).toHaveAttribute('src', /\/test-fixtures\/thumbnails\/usd-concepts-custom-geomprops-usdshade-usda\.png$/);
         await page.waitForFunction(() => {
@@ -2914,7 +2915,7 @@ test.describe('public usd-viewer lifecycle', () => {
             });
             else expect(await page.evaluate(() => window.renderer?.isWebGPURenderer)).toBe(true);
 
-            await page.locator('.clear-button').click();
+            await clearStage(page);
             await page.waitForFunction(() => !window.usdHydra && !window.needleEngineContext);
             const retainedParticleObjects = await page.evaluate(() => {
                 let count = 0;

@@ -786,6 +786,10 @@ MIT-licensed peer dependency by Yi Shen. It is not embedded in this package.
 Its distribution includes its own third-party notices and OIDN licenses.
 Three.js SSGI and TRAA are supplied by the host's MIT-licensed Three.js package.
 
+Needle AgX node-renderer and MuTracer display adapters retain the arithmetic and
+look from Needle Engine's engine_tonemapping.ts (Needle, https://needle.tools).
+That implementation credits https://iolite-engine.com/blog_posts/minimal_agx_implementation.
+
 GaussianSplat, CountingSort and GaussianSplatUtils (Three.js)
 https://github.com/mrdoob/three.js
 Revision 1a5efaf1d5890d17dcb84d160fe242d871c3064c; adapted for USD data and disposal.
@@ -793,3 +797,8 @@ MIT license: src/vendor/gaussian/LICENSE
 
 three-gpu-pathtracer (gkjohnson) and three-mesh-bvh are optional MIT-licensed
 peer dependencies by Garrett Johnson; their packages preserve their licenses.
+
+Material Symbols Rounded transport icons
+Copyright Google LLC, Apache License 2.0.
+Source: https://github.com/google/material-design-icons
+License: src/viewer/icons-LICENSE.txt

@@ -1,3 +1,5 @@
+import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
+import {viewerToneMapping,mountDisplayControl} from './viewer-display.js';
 import {
   Vector3,
   AnimationMixer,
@@ -27,10 +29,13 @@ import {
   OrbitControls,
   runtimeViewerMode,
 } from 'viewer-runtime';
+import { DataTexture, FloatType, RGBAFormat, LinearSRGBColorSpace } from 'three';
 import { track, trackError, bucketBytes } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 import { fixtureNavigation } from './viewer-fixture-routing.js';
+import { runApiExample } from './viewer-api-examples.js';
+import { viewerIcon } from './usd/viewer/icons.js';
 import { setupViewerPhysics } from './viewer-physics.js';
 import { createViewerLighting } from './viewer-lighting.js';
 
@@ -339,26 +344,15 @@ function updateOpenUsdBuildInfo(Usd) {
   }
 }
 
-// Render a label that may contain a "→" arrow, swapping the glyph for an inline
-// SVG arrow (matching the static markup labels). Group titles are internal
-// constants, but the text parts are HTML-escaped before injection anyway.
-const LABEL_ARROW_MARKUP = '<svg class="label-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12.5"/><path d="M12.5 6l6 6-6 6"/></svg>';
-function setLabelWithArrow(el, text) {
-  if (!el) return;
-  const str = String(text == null ? '' : text);
-  if (!str.includes('→')) { el.textContent = str; return; }
-  el.innerHTML = str
-    .split('→')
-    .map(part => part.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])))
-    .join(LABEL_ARROW_MARKUP);
-}
-
 // Best-effort classification of a failed load into a user-facing message. Only
 // called on the failure path, so the extra request never slows a successful load.
 // A HEAD lets us name a 404 specifically; if it's blocked (CORS / network /
 // method-not-allowed) we fall back to a generic message.
 async function classifyLoadError(url, filename) {
   const name = filename || 'this file';
+  // File inputs and downloaded bundles already supplied their bytes. Their
+  // paths belong to the virtual filesystem, not the web server.
+  if (!url) return { status: 'unknown', message: `Couldn't read “${name}” — it may be invalid or use an unsupported format.` };
   // `status` is reported to Rybbit alongside the failure: an HTTP code when we
   // can read it, 'blocked' when the probe is CORS/network-blocked, or 'unknown'.
   let status = url ? 'blocked' : 'unknown';
@@ -660,13 +654,14 @@ const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
-const renderPreference = ['beauty', 'pathtraced', 'pathtraced-gk'].includes(params.get('render')) ? params.get('render') : 'basic';
+const renderPreference = preferredRenderMode(params);
 const useNodeRenderer = viewerMode === VIEWER_MODE_THREE;
 let renderModes;
 let renderModesUi;
 let startRenderMode;
 let suiteControls;
 let activeCatalogAsset = catalogAssetForUrlPath(filename.split('?')[0]);
+let apiExampleAbort = null;
 const initialNavigation = filename && activeCatalogAsset
   ? fixtureNavigation(location.href, activeCatalogAsset, viewerMode === VIEWER_MODE_THREE ? 'three' : 'needle', useNodeRenderer)
   : null;
@@ -674,7 +669,7 @@ if (initialNavigation) { location.replace(initialNavigation); return; }
 let hostEnvironmentTexture = null;
 let hostEnvironmentPromise = null;
 let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
-let complexity = params.get("complexity") || undefined;
+let complexity = preferredDetail(params);
 let backgroundChoice = params.get('background') === 'dark' ? 'dark' : 'light';
 const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
@@ -686,6 +681,10 @@ var currentHydraHandle = null;
 var pendingHydraFiles = [];
 var lastAnimationTimeSeconds = performance.now() / 1000;
 let needleEngineElement = null;
+let viewportInteraction;
+let resizeRequested = false;
+let needleBackdrop = null;
+window.addEventListener('pagehide', () => needleBackdrop?.dispose(), {once:true});
 let removeNeedleEngineUsdPlugin = null;
 let needleLoaderFiles = [];
 let nativeGltfRoot = null;
@@ -835,6 +834,14 @@ function setFilenameText(__filename) {
   currentDisplayFilename = _filename;
 }
 
+function viewerExposure() {
+  try {
+    const value = readRenderSettings().exposure;
+    if (Number.isFinite(value) && value >= 0 && value <= 32) return value;
+  } catch {}
+  return 1;
+}
+
 function applyAgXToneMapping(rendererLike) {
   const candidates = [
     rendererLike,
@@ -843,9 +850,9 @@ function applyAgXToneMapping(rendererLike) {
   ];
   for (const renderer of candidates) {
     if (!renderer || typeof renderer !== "object") continue;
-    renderer.toneMapping = AgXToneMapping;
+    renderer.toneMapping = viewerToneMapping();
     if (renderer.shadowMap) renderer.shadowMap.enabled = true;
-    if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = 1;
+    if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = viewerExposure();
   }
 }
 
@@ -1100,6 +1107,7 @@ function updateUrl(replaceHistory = false) {
 
 if (messageLog) messageLog.textContent = "Initializing...";
 if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
+const startupFilename = filename, startupGeneration = loadGeneration;
 const initPromise = init();
 
 console.log("Loading USD Module...");
@@ -1127,7 +1135,7 @@ try {
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
     animate();
-    if (filename) {
+    if (startupFilename && loadGeneration === startupGeneration) {
       console.log("Loading File...");
       if (messageLog) messageLog.textContent = "Loading File " + filename;
       if (window.setViewerLoading) window.setViewerLoading(true);
@@ -1143,7 +1151,7 @@ try {
       await clearStage();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
-      if (catalogAsset?.files?.length) {
+      if (catalogAsset?.executable || catalogAsset?.files?.length) {
         await loadCatalogAssetBundle(catalogAsset, filename);
       } else {
         const parts = filename.split('/');
@@ -1155,6 +1163,7 @@ try {
         }
       }
     }
+    window.usdWorkbench?.setReady();
   }).catch((error) => {
     // Async rejections aren't caught by the surrounding try/catch — surface them.
     rejectUsdModuleReady?.(error);
@@ -1454,18 +1463,30 @@ function arrayFromUsdVector(vector) {
   finally { vector.delete?.(); }
 }
 
-function applyViewerBackground() {
-  if (!useNodeRenderer) return;
-  window.renderer.setClearColor(new Color(backgroundChoice === 'dark' ? '#101820' : getComputedStyle(document.body).backgroundColor), 1);
+function applyViewerBackground(context = window.needleEngineContext) {
+  const color = new Color(backgroundChoice === 'dark' ? '#181818' : '#F0F4EF');
+  window.renderer?.setClearColor(color, 1);
+  if (context?.scene && (!context.scene.background || context.scene.background === needleBackdrop)) {
+    // WebGL clear colors bypass tone mapping; WebGPU clears go through AgX.
+    // A linear HDR texture follows the surface display transform in both renderers.
+    // It is a camera backdrop, separate from the scene's lighting environment.
+    if (!needleBackdrop) {
+      needleBackdrop = new DataTexture(new Float32Array(4), 1, 1, RGBAFormat, FloatType);
+      needleBackdrop.colorSpace = LinearSRGBColorSpace;
+      needleBackdrop.name = 'Viewer backdrop';
+    }
+    needleBackdrop.image.data.set([color.r, color.g, color.b, 1]);
+    needleBackdrop.needsUpdate = true;
+    context.scene.background = needleBackdrop;
+  }
   document.body.classList.toggle('dark-scene-background', backgroundChoice === 'dark');
 }
 
 function showUsdBackground() {
   const container = document.getElementById('usd-background-controls');
   if (!container) return;
-  container.replaceChildren(); container.hidden = !useNodeRenderer;
-  if (!useNodeRenderer) return;
-  const label = document.createElement('label'); label.textContent = 'Background ';
+  container.replaceChildren(); container.hidden = false;
+  const label = document.createElement('label'); label.className='usd-settings-row'; label.textContent = 'Background ';
   const select = document.createElement('select'); select.setAttribute('aria-label', 'Background');
   for (const value of ['light', 'dark']) {
     const option = document.createElement('option'); option.value = value;
@@ -1485,7 +1506,7 @@ function showUsdDetail(stage, handle) {
   if (!container) return;
   container.replaceChildren(); container.hidden = true;
   if (!handle?.setComplexity || !handle.driver?.GetComplexity) return;
-  const label = document.createElement('label'); label.textContent = 'Detail ';
+  const label = document.createElement('label'); label.className='usd-settings-row'; label.textContent = 'Detail ';
   const select = document.createElement('select'); select.setAttribute('aria-label', 'USD detail');
   const levels = [['low', 'Low', 1], ['medium', 'Medium', 1.1], ['high', 'High', 1.2], ['very-high', 'Very high', 1.3]];
   const current = handle.driver.GetComplexity();
@@ -1506,6 +1527,7 @@ function showUsdDetail(stage, handle) {
       if (generation !== loadGeneration || currentHydraHandle !== handle) return;
       selected = select.value;
       complexity = selected;
+      saveRenderSettings({detail: selected});
       const url = new URL(location.href); url.searchParams.set('complexity', selected);
       history.replaceState({}, '', url);
       await applyStageLighting(handle, window.needleEngineContext, stage, generation);
@@ -1583,8 +1605,10 @@ async function showUsdVariants(stage, handle) {
 }
 
 async function clearStage({ clearNeedleEngine = false } = {}) {
+  apiExampleAbort?.abort(); apiExampleAbort = null;
   loadGeneration++;
-  suiteControls?.dispose(); suiteControls = null;
+  viewportInteraction?.clear();
+  suiteControls?.dispose(); suiteControls = null; window.usdStagePanel = null;
   ready = false;
   viewerPhysics?.dispose(); viewerPhysics = null;
   viewerLighting?.dispose(); viewerLighting = null;
@@ -1711,16 +1735,20 @@ async function ensureNeedleEngineLoader() {
   if (!removeNeedleEngineUsdPlugin) {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
       waitForMaterials,
-      complexity,
+      complexity: complexity ?? activeCatalogAsset?.complexity ?? 'medium',
       autoPlay: true,
       getFiles: () => needleLoaderFiles,
       getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale,
-      getComplexity: () => complexity ?? activeCatalogAsset?.complexity,
+      getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? 'medium',
     });
   }
   if (!needleEngineElement) {
     needleEngineElement = document.createElement("needle-engine");
     needleEngineElement.className = "usd-viewer-needle-engine";
+    // Docking and compact layouts can reparent the live viewport. This viewer
+    // retains its Needle context across those moves; clearing a file still
+    // disposes its Hydra handle and clears src through clearStage().
+    needleEngineElement.setAttribute("keep-alive", "true");
     needleEngineElement.setAttribute("camera-controls", "true");
     needleEngineElement.setAttribute("auto-fit", "true");
     needleEngineElement.setAttribute("auto-rotate", "false");
@@ -1732,6 +1760,23 @@ async function ensureNeedleEngineLoader() {
     applyNeedleEngineEnvironment(needleEngineElement, resolveEnvironment('none'));
     needleEngineElement.addEventListener("loadstart", () => {
       ready = false;
+      // Supply Needle's supported custom loading element in the actual render
+      // root. The workbench already owns progress/cancellation; its own loader
+      // must not be covered by a second poster or completion fade.
+      const root = needleEngineElement.shadowRoot || needleEngineElement;
+      if (!root.querySelector('[data-usd-loading-style]')) {
+        const style = document.createElement('style');
+        style.dataset.usdLoadingStyle = '';
+        style.textContent = '.loading { display: none !important; }';
+        root.appendChild(style);
+      }
+      if (!root.querySelector('.loading')) {
+        const loadingView = document.createElement('div');
+        loadingView.className = 'loading';
+        loadingView.style.setProperty('display', 'none', 'important');
+        loadingView.setAttribute('aria-hidden', 'true');
+        root.appendChild(loadingView);
+      }
     });
     needleEngineElement.addEventListener("progress", event => {
       const progress = event.detail?.totalProgress01;
@@ -1744,7 +1789,7 @@ async function ensureNeedleEngineLoader() {
     });
     needleEngineElement.addEventListener("drop", dropHandler);
     needleEngineElement.addEventListener("dragover", dragOverHandler);
-    document.body.appendChild(needleEngineElement);
+    (window.usdWorkbench?.viewport || document.body).appendChild(needleEngineElement);
   }
   return needleEngineElement;
 }
@@ -1831,6 +1876,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
   applyAgXToneMapping(context?.renderer);
+  applyViewerBackground(context);
 
   const handle = await waitForNeedleHydraHandle(context);
   if (!handle) throw new Error("Needle Engine loaded " + filename + " without creating a USD Hydra handle");
@@ -1882,6 +1928,7 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   const context = loadDetail?.context || element.context;
   if (generation !== loadGeneration) return null;
   applyAgXToneMapping(context?.renderer);
+  applyViewerBackground(context);
   return context;
 }
 
@@ -1955,7 +2002,8 @@ async function loadNativeGltfFile(filename, path) {
     const current = generation === loadGeneration;
     const info = current ? await classifyLoadError(path, filename) : null;
     trackError('gltf_load', err, { type: extOf(filename), name: safeName(filename), status: info?.status });
-    if (info && window.showLoadError) window.showLoadError(info.message);
+    // A local File -> Open can replace this load while its HTTP probe awaits.
+    if (info && generation === loadGeneration && window.showLoadError) window.showLoadError(info.message);
   }
 }
 
@@ -1964,6 +2012,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
   const generation = loadGeneration;
+  await window.usdWorkbench?.prepareStage();
+  if (generation !== loadGeneration) return;
 
   // Remember a URL/sample source (no directory) so "Upload to Needle Cloud" can
   // re-fetch it — drag-drop loads are captured separately in loadFile.
@@ -2000,7 +2050,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         files: filesForHydra,
         autoPlay: true,
         waitForMaterials,
-        complexity: complexity ?? activeCatalogAsset?.complexity,
+        complexity: complexity ?? activeCatalogAsset?.complexity ?? 'medium',
         scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale,
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
@@ -2065,7 +2115,14 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     showUsdBackground();
     await suiteControls?.dispose();
     const { mountUsdSuite } = await import('./viewer-suite.js');
-    suiteControls = await mountUsdSuite({ handle, stage, scene: needleContext?.scene || window.scene, camera: window.camera, controls: window._controls, beforeEdit: () => { viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined; }, afterEdit: async () => {
+    suiteControls = await mountUsdSuite({ handle, stage,
+      containers: window.usdWorkbench?.containers,
+      stateKey: 'needle-usd-stage:' + (path || filename),
+      onSelect: (selected, items) => { viewportInteraction?.select(items || selected); window.usdWorkbench?.selectPrim(selected); },
+      onPickModeChange: mode => viewportInteraction?.setPickMode(mode),
+      onOpen: () => window.usdWorkbench?.openPanel('stage'),
+      onStage: info => window.usdWorkbench?.setStage(info),
+      scene: needleContext?.scene || window.scene, camera: window.camera, controls: window._controls, beforeEdit: () => { viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined; }, afterEdit: async () => {
       if (generation !== loadGeneration || currentHydraHandle !== handle) return;
       await applyStageLighting(handle, needleContext, stage, generation);
       viewerPhysics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
@@ -2073,6 +2130,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       await showUsdVariants(stage, handle);
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
+    window.usdStagePanel = suiteControls;
+    viewportInteraction?.select(suiteControls.selection);
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
@@ -2115,9 +2174,10 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     // Classify (best-effort) so BOTH the UI message and the Rybbit event carry
     // the HTTP status (e.g. 404). Surface the card only for the current load.
     const current = generation === loadGeneration;
-    const info = current ? await classifyLoadError(path, filename) : null;
+    const info = current ? await classifyLoadError(filesForHydra?.length ? undefined : path, filename) : null;
     trackError('usd_load', err, { type: extOf(filename), name: safeName(filename), status: info?.status });
-    if (info && window.showLoadError) window.showLoadError(info.message);
+    // Keep telemetry for the failed request, but never cover its replacement.
+    if (info && generation === loadGeneration && window.showLoadError) window.showLoadError(info.message);
   }
 }
 
@@ -2151,6 +2211,7 @@ async function fetchCatalogFile(path, onProgress) {
 }
 
 async function loadCatalogAssetBundle(asset, displayName) {
+  if (asset.executable) return loadApiExample(asset);
   activeCatalogAsset = asset;
   if (window.scene) window.scene.environment = asset.environment === 'none' ? null : hostEnvironmentTexture;
   const rootPath = asset.root;
@@ -2184,6 +2245,49 @@ async function loadCatalogAssetBundle(asset, displayName) {
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     ready = false;
+  }
+}
+
+async function loadApiExample(asset) {
+  const generation = loadGeneration;
+  const controller = new AbortController(); apiExampleAbort = controller;
+  if (window.showLoadingOverlay) window.showLoadingOverlay(asset.label);
+  try {
+    const result = await runApiExample(asset.executable, controller.signal);
+    if (generation !== loadGeneration || controller.signal.aborted) return;
+    activeCatalogAsset = asset;
+    for (const file of result.files.slice(1)) {
+      if (generation !== loadGeneration || controller.signal.aborted) return;
+      await loadFile(new File([file.bytes], file.path.split('/').pop()), false, file.path);
+    }
+    if (generation !== loadGeneration || controller.signal.aborted) return;
+    if (result.files.length) {
+      const root = result.files[0];
+      await loadFile(new File([root.bytes], root.path), true, root.path);
+    } else {
+      // Runtime/inspection examples can legitimately produce output alone.
+      ready = true;
+      window.setViewerLoading?.(false); window.hideLoadingOverlay?.();
+    }
+    if (generation !== loadGeneration || controller.signal.aborted) return;
+    setFilenameText(asset.label);
+    const output = window.usdWorkbench?.containers.console.querySelector('.usd-repl-output');
+    if (output) {
+      output.replaceChildren();
+      for (const text of [asset.label, ...result.output]) {
+        const line = document.createElement('pre'); line.className = 'usd-repl-result'; line.textContent = text;
+        output.append(line);
+      }
+      output.scrollTop = output.scrollHeight;
+    }
+    if (!result.hasGeometry) window.usdWorkbench?.openPanel('console');
+  } catch (error) {
+    if (controller.signal.aborted || generation !== loadGeneration) return;
+    ready = false; console.error('API example failed:', error);
+    window.setViewerLoading?.(false); window.hideLoadingOverlay?.();
+    window.showLoadError?.(error.message || String(error));
+  } finally {
+    if (apiExampleAbort === controller) apiExampleAbort = null;
   }
 }
 
@@ -2285,7 +2389,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
 }
 
 async function init() {
-  const camera = window.camera = new PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
+  const camera = window.camera = new PerspectiveCamera( 27, viewportSize().width / viewportSize().height, 1, 3500 );
   camera.position.z = params.get('cameraZ') || 7;
   camera.position.y = params.get('cameraY') || 7;
   camera.position.x = params.get('cameraX') || 0;
@@ -2321,36 +2425,83 @@ async function init() {
   const renderer = window.renderer = new Renderer(useNodeRenderer ? { forceWebGL: params.get('backend') === 'webgl', antialias: false, alpha: true } : { antialias: true, alpha: true });
   if (useNodeRenderer) {
     await renderer.init();
+    await (await import('./usd/renderers/index.js')).configureNeedleAgx(renderer);
     window.usdWebGpuSupport = await (await import('./usd/renderers/index.js')).createWebGpuSupport();
   }
   renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setSize( viewportSize().width, viewportSize().height );
   renderer.outputColorSpace = SRGBColorSpace;
   applyAgXToneMapping(renderer);
   renderer.shadowMap.enabled = true;
-  // Volume materials sample the opaque pass, so it needs the same background
-  // color as the page instead of transparent black.
-  renderer.setClearColor(useNodeRenderer ? new Color(getComputedStyle(document.body).backgroundColor) : 0x000000, useNodeRenderer ? 1 : 0);
+  // Scene backdrop choices are independent of the workbench UI theme.
   applyViewerBackground();
 
 
-  document.body.appendChild( renderer.domElement );
+  (window.usdWorkbench?.viewport || document.body).appendChild( renderer.domElement );
   renderer.domElement.classList.add("usd-viewer-three-canvas");
   const controls = window._controls = new OrbitControls( camera, renderer.domElement );
   controls.enableDamping = true;
   controls.dampingFactor = 0.2;
   controls.update(0);
+  if (window.usdWorkbench?.containers.settings) mountDisplayControl(window.usdWorkbench.containers.settings, renderer, () => window.needleEngineContext?.renderer);
 
   if (viewerMode === VIEWER_MODE_THREE) {
     const { mountRenderModes } = await import('./viewer-render-modes.js');
-    renderModesUi = await mountRenderModes({ renderer, scene, camera, preference: renderPreference });
+    renderModesUi = await mountRenderModes({ renderer, scene, camera, controls, preference: renderPreference });
     ({ modes: renderModes, start: startRenderMode } = renderModesUi);
     window.usdRenderModes = renderModes;
     window.renderUsdFrame = () => renderModes.render(window.usdRenderCamera || window.camera);
+  } else if (window.usdWorkbench?.containers.settings) {
+    const label = document.createElement('label'); label.className = 'usd-settings-row'; label.textContent = 'Exposure';
+    const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.max = '32'; input.step = '0.1';
+    input.setAttribute('aria-label', 'Exposure'); input.value = String(renderer.toneMappingExposure);
+    input.onchange = () => {
+      const exposure = Number(input.value);
+      if (!Number.isFinite(exposure) || exposure < 0 || exposure > 32) { input.value = String(renderer.toneMappingExposure); return; }
+      renderer.toneMappingExposure = exposure;
+      if (window.needleEngineContext?.renderer) window.needleEngineContext.renderer.toneMappingExposure = exposure;
+      saveRenderSettings({exposure});
+    };
+    label.append(input); window.usdWorkbench.containers.settings.append(label);
   }
 
   window.addEventListener( 'resize', onWindowResize );
+  window.addEventListener('usd-viewport-resize', onWindowResize);
   
+  const { createViewportInteraction } = await import('./viewer-interaction.js');
+  viewportInteraction = window.usdViewportInteraction = createViewportInteraction({
+    viewport: window.usdWorkbench?.viewport || renderer.domElement,
+    getState: () => currentHydraHandle ? {
+      handle: currentHydraHandle, stage: window.usdStage,
+      scene: window.needleEngineContext?.scene || window.scene,
+      camera: window.needleEngineContext?.mainCamera || window.usdRenderCamera || window.camera,
+      useFreeCamera: () => suiteControls?.useFreeCamera(),
+      getControls: () => {
+        if(!window.needleEngineContext)return window._controls;
+        let controls;window.needleEngineContext.scene.traverse(object=>{for(const component of object.userData.components||[])if(component.controls?.object===window.needleEngineContext.mainCamera)controls=component.controls;});return controls;
+      },
+    } : null,
+    onSelect: (item, options) => window.usdStagePanel?.selectPrim(item || '', options),
+  });
+  window.addEventListener('pagehide', () => viewportInteraction?.dispose(), {once:true});
+  if (window.usdWorkbench?.containers.console) {
+    const [{mountRepl}, api, three] = await Promise.all([import('./usd/viewer/repl.js'), import('./usd/scene/index.js'), import('three')]);
+    window.usdRepl = mountRepl({container:window.usdWorkbench.containers.console, stateKey:'needle-usd-repl-history',
+      getContext:()=>currentHydraHandle && suiteControls && window.usdStage ? {
+        USD, stage:window.usdStage, handle:currentHydraHandle, generation:loadGeneration,
+        scene:window.needleEngineContext?.scene || window.scene, selection:suiteControls.selection, panel:suiteControls, api, three,
+        select:value=>Array.isArray(value)?suiteControls.selectMany(value):suiteControls.selectPrim(value),
+        follow:target=>suiteControls.navigate(target),
+        inspect:(value=suiteControls.selectedPath)=>api.inspectPrim(window.usdStage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime()),
+      }:null,
+      edit:callback=>{
+        const panel=suiteControls, handle=currentHydraHandle;
+        if(!panel || !handle)return Promise.reject(new Error('No USD stage is open.'));
+        return panel.edit(callback);
+      },
+    });
+    window.addEventListener('pagehide',()=>window.usdRepl?.dispose(),{once:true});
+  }
   renderer.domElement.addEventListener("drop", dropHandler);
   renderer.domElement.addEventListener("dragover", dragOverHandler);
 
@@ -2407,21 +2558,21 @@ async function init() {
   });
   window.addEventListener("dragend", endDrag);
 
-  // ---- Sample Library mega-menu -------------------------------------------
-  // The left column selects a source group; every group renders into the same
-  // right-hand card grid. Converter variants are exposed on the loaded-file row.
+  // ---- Docked example library ---------------------------------------------
+  // The library/folder navigator and card grid remain mounted while assets load. Converter variants are exposed on the loaded-file row.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
   const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
   const EXCLUDED_ASSET_EXPLORER_MODEL_KEYS = new Set(['nodeperformancetest']);
-  const dropdownEl = document.querySelector('.dropdown');
-  const dropdownMenu = document.querySelector('.dropdown-menu');
+  const examplesRoot = document.querySelector('.usd-examples-browser');
+  const exampleLibrary=document.getElementById('example-library');
+  const examplesAll=document.getElementById('examples-all');
+  const exampleFolders = document.querySelector('.usd-examples-folders');
   const sampleGroupList = document.getElementById('sample-group-list');
   const usdWgGroupTree = document.getElementById('usd-wg-group-tree');
   const gltfGroupTree = document.getElementById('gltf-group-tree');
   const needleGroupTree = document.getElementById('needle-group-tree');
-  const galleryTitle = document.getElementById('gallery-title');
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
   const galleryStatus = document.getElementById('gallery-status');
@@ -2459,55 +2610,53 @@ async function init() {
   let lastPointerActivatedHref = '';
   let lastPointerActivatedAt = 0;
   const conversionCardByUrl = new Map();
-  const collapsedSampleTrees = new Set(Array.isArray(savedSamplePicker.collapsedTrees)
-    ? savedSamplePicker.collapsedTrees.filter(group => ['gltf', 'usd-wg', 'needle'].includes(group)) : ['usd-wg']);
+  const examplesVisible=()=>examplesRoot?.dataset.visible==='true';
 
   function saveSamplePicker(captureScroll = true) {
     clearTimeout(pickerSaveTimer);
-    if (captureScroll && !restoringPicker && renderedSampleGroup === selectedSampleGroup && dropdownEl?.classList.contains('menu-open')) {
+    if (captureScroll && !restoringPicker && renderedSampleGroup === selectedSampleGroup && examplesVisible()) {
       samplePickerPositions.set(selectedSampleGroup, {
         ...samplePickerPositions.get(selectedSampleGroup),
         grid: galleryGrid?.scrollTop || 0,
-        sidebar: dropdownMenu?.scrollTop || 0,
+        sidebar: exampleFolders?.scrollTop || 0,
       });
     }
     safeLocalStorageSet(samplePickerStorageKey, JSON.stringify({
       group: selectedSampleGroup,
       positions: Object.fromEntries(samplePickerPositions),
-      collapsedTrees: [...collapsedSampleTrees],
       expandedFolders: [...expandedSampleFolders],
     }));
   }
 
   function restoreSamplePickerScroll() {
-    if (!dropdownEl?.classList.contains('menu-open') || renderedSampleGroup !== selectedSampleGroup) return;
+    if (!examplesVisible() || renderedSampleGroup !== selectedSampleGroup) return;
     const version = ++pickerRestoreVersion;
     const position = samplePickerPositions.get(selectedSampleGroup) || {};
     const offset = value => Number.isFinite(value) && value > 0 ? value : 0;
     restoringPicker = true;
     const restore = () => {
-      if (version !== pickerRestoreVersion || !dropdownEl.classList.contains('menu-open')) return;
+      if (version !== pickerRestoreVersion || !examplesVisible()) return;
       if (galleryGrid) galleryGrid.scrollTop = offset(position.grid);
-      if (dropdownMenu) dropdownMenu.scrollTop = offset(position.sidebar);
+      if (exampleFolders) exampleFolders.scrollTop = offset(position.sidebar);
     };
     restore();
     requestAnimationFrame(restore);
-    // Folder trees animate their height; restore the sidebar after that settles too.
+    // Wait for asynchronous folders and lazy image layout before finishing restoration.
     setTimeout(() => { restore(); if (version === pickerRestoreVersion) restoringPicker = false; }, 260);
   }
 
   function rememberPickerScroll() {
-    if (restoringPicker || renderedSampleGroup !== selectedSampleGroup || !dropdownEl?.classList.contains('menu-open')) return;
+    if (restoringPicker || renderedSampleGroup !== selectedSampleGroup || !examplesVisible()) return;
     samplePickerPositions.set(selectedSampleGroup, {
-      ...samplePickerPositions.get(selectedSampleGroup), grid: galleryGrid?.scrollTop || 0, sidebar: dropdownMenu?.scrollTop || 0,
+      ...samplePickerPositions.get(selectedSampleGroup), grid: galleryGrid?.scrollTop || 0, sidebar: exampleFolders?.scrollTop || 0,
     });
     clearTimeout(pickerSaveTimer);
     pickerSaveTimer = setTimeout(() => saveSamplePicker(false), 150);
   }
   galleryGrid?.addEventListener('scroll', rememberPickerScroll, { passive: true });
-  dropdownMenu?.addEventListener('scroll', rememberPickerScroll, { passive: true });
+  exampleFolders?.addEventListener('scroll', rememberPickerScroll, { passive: true });
   for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
-    dropdownEl?.addEventListener(event, () => { ++pickerRestoreVersion; restoringPicker = false; }, { passive: true });
+    examplesRoot?.addEventListener(event, () => { ++pickerRestoreVersion; restoringPicker = false; }, { passive: true });
   }
   window.addEventListener('pagehide', () => saveSamplePicker());
   const converterMetadataById = new Map();
@@ -2691,6 +2840,7 @@ async function init() {
         const active = normalizeConverterId(button.dataset.converter) === visibleActiveId;
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        button.parentElement?.classList.add('segmented-control');
       }
     }
   }
@@ -2763,7 +2913,7 @@ async function init() {
   }
 
   function sampleHref(url) {
-    return '?file=' + url;
+    return '?file=' + encodeURIComponent(url);
   }
 
   function needleCloudScreenshotThumbnail(assetUrl) {
@@ -2959,17 +3109,12 @@ async function init() {
     for (const [key, tree] of treeByGroup) {
       if (!tree) continue;
       const isActive = key === activeTopLevel;
-      // Inactive groups are fully removed; the active group slides open/closed
-      // via .is-open (see .sample-group-tree in styles.css).
+      // Only the selected library's folders participate in panel layout.
       tree.hidden = !isActive;
-      tree.classList.toggle('is-open', isActive && !collapsedSampleTrees.has(key));
+      tree.classList.toggle('is-open', isActive);
     }
-    if (!sampleGroupList) return;
-    for (const button of sampleGroupList.querySelectorAll('.sample-root-folder[data-sample-group]')) {
-      const group = button.dataset.sampleGroup || '';
-      const expanded = group === activeTopLevel && !collapsedSampleTrees.has(group);
-      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    }
+    if(exampleLibrary)exampleLibrary.value=activeTopLevel;
+    examplesAll?.classList.toggle('active',groupId===activeTopLevel);
   }
 
   function compareGltfTags(a, b) {
@@ -3112,6 +3257,7 @@ async function init() {
 
   function fixtureThumbnailPath(asset) {
     if (asset?.thumbnail) return asset.thumbnail;
+    if (asset?.executable) return '';
     const root = String(asset?.root || '').trim();
     if (!root) return '';
     const slug = root
@@ -3140,12 +3286,13 @@ async function init() {
     const rootFolder = String(asset?.root || asset?.files?.[0] || '').replace(/^\/+/, '').split('/')[0] || '';
     const groupLabel = prettyNeedleFixtureGroupLabel(group);
     const folderLabel = prettyNeedleFixtureFolderLabel(rootFolder);
-    const meta = [groupLabel, folderLabel].filter((label, index, labels) => label && labels.indexOf(label) === index);
+    const meta = (asset.executable ? [groupLabel, asset.exampleGroup] : [groupLabel, folderLabel]).filter((label, index, labels) => label && labels.indexOf(label) === index);
     return {
       name: asset.label || asset.root || 'Fixture',
       meta: meta.join(' · '),
       url: testFixtureUrl(asset.root),
       thumbnail: thumbnail ? testFixtureUrl(thumbnail) : undefined,
+      icon: asset.executable ? 'terminal' : undefined,
     };
   }
 
@@ -3404,6 +3551,7 @@ async function init() {
   }
 
   async function preflightDebugTarget(target) {
+    if (catalogAssetForUrlPath(target.url)?.executable) return null;
     if (target.files?.length) return null;
     try {
       const response = await fetch(target.url, { method: 'HEAD', cache: 'no-store' });
@@ -3695,6 +3843,8 @@ async function init() {
         img.alt = card.dataset.name;
         img.src = item.thumbnail;
         thumbWrap.appendChild(img);
+      } else if (item.icon) {
+        const icon = viewerIcon(item.icon); icon.classList.add('gallery-placeholder-icon'); thumbWrap.append(icon);
       }
       card.appendChild(thumbWrap);
 
@@ -3751,11 +3901,14 @@ async function init() {
     group = group || sampleGroups.get('usd-wg');
     if (!group) return;
     saveSamplePicker();
+    if(!samplePickerPositions.has(groupId) && topLevelSampleGroup(groupId)===topLevelSampleGroup(selectedSampleGroup)) {
+      samplePickerPositions.set(groupId,{grid:0,sidebar:exampleFolders?.scrollTop||0});
+    }
     selectedSampleGroup = groupId;
     renderedSampleGroup = '';
     const loadVersion = ++galleryLoadVersion;
     saveSamplePicker(false);
-    setLabelWithArrow(galleryTitle, group.title);
+    galleryGrid.setAttribute('aria-label', `${group.title} examples`);
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
     if (sampleGroupList) {
       const activeTopLevel = topLevelSampleGroup(groupId);
@@ -3790,7 +3943,7 @@ async function init() {
   }
 
   function addOpenUsdTestAssets() {
-    if (!dropdownMenu) return;
+    if (!exampleFolders) return;
     const grouped = new Map();
     for (const asset of testAssetLibrary) {
       const assets = grouped.get(asset.group) || [];
@@ -3808,85 +3961,26 @@ async function init() {
       for (const asset of assets) {
         const link = document.createElement('a');
         link.className = 'file';
-        link.href = '?file=' + testFixtureUrl(asset.root);
+        link.href = sampleHref(testFixtureUrl(asset.root));
         link.dataset.name = asset.label;
         link.dataset.testAssetRoot = asset.root;
         if (asset.files) link.dataset.testAssetFiles = JSON.stringify(asset.files);
         link.textContent = asset.label;
         section.appendChild(link);
       }
-      dropdownMenu.appendChild(section);
+      exampleFolders.appendChild(section);
     }
   }
 
   if (SHOW_OPENUSD_TEST_ASSETS) addOpenUsdTestAssets();
 
-  // Menu open/close is JS-driven (class .menu-open) so the close can be delayed.
-  let menuCloseTimer = null;
-  let menuOpenedAt = 0;
-  function menuOpen() {
-    if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
-    if (!dropdownEl) return;
-    const wasOpen = dropdownEl.classList.contains('menu-open');
-    dropdownEl.classList.add('menu-open');
-    if (!wasOpen) menuOpenedAt = performance.now();
-    if (!wasOpen) {
-      if (renderedSampleGroup === selectedSampleGroup) restoreSamplePickerScroll();
-      else selectSampleGroup(selectedSampleGroup);
-    }
-    if (!menuOpen.tracked) { menuOpen.tracked = true; track('open_gallery'); }
-  }
-  function menuClose() {
-    if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
-    saveSamplePicker();
-    ++pickerRestoreVersion; restoringPicker = false;
-    if (dropdownEl) dropdownEl.classList.remove('menu-open');
-  }
-  // Close after a 300ms grace so a brief cursor excursion (or just-loaded a
-  // sample) doesn't yank the menu away instantly.
-  function menuScheduleClose() {
-    if (menuCloseTimer) clearTimeout(menuCloseTimer);
-    menuCloseTimer = setTimeout(menuClose, 300);
-  }
-
-  if (dropdownEl) {
-    // Mouse pointers: open on enter, close 300ms after leaving. Touch/pen
-    // are ignored here (pointerType !== 'mouse') so the synthetic hover a tap
-    // generates doesn't open the menu only for the tap-click to toggle it back
-    // shut — which made the first tap do nothing and only the second one work.
-    dropdownEl.addEventListener('pointerenter', function(e) {
-      if (e.pointerType === 'mouse') menuOpen();
-    });
-    dropdownEl.addEventListener('pointerleave', function(e) {
-      if (e.pointerType === 'mouse') menuScheduleClose();
-    });
-    dropdownEl.addEventListener('focusin', menuOpen);
-
-    // Tap/click the button toggles the menu — the open path on touch, and a
-    // toggle on pointer devices.
-    const dropdownButton = dropdownEl.querySelector('.dropdown-button');
-    if (dropdownButton) {
-      dropdownButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (dropdownEl.classList.contains('menu-open')) {
-          // If it only just opened (a hover/pointerenter opened it as part of
-          // this same gesture), keep it open — don't let the click toggle it
-          // shut, which made the first tap appear to do nothing. A click after
-          // the grace is a deliberate close.
-          if (performance.now() - menuOpenedAt < 400) return;
-          menuClose();
-        } else {
-          menuOpen();
-        }
-      });
-    }
-    // Tap/click anywhere outside the dropdown closes an open menu.
-    document.addEventListener('click', function(e) {
-      if (!dropdownEl.classList.contains('menu-open')) return;
-      if (dropdownEl.contains(e.target)) return; // inside the trigger or the menu
-      menuClose();
-    });
-  }
+  examplesRoot?.addEventListener('usd-examples-visibility',event=>{
+    if(event.detail){restoreSamplePickerScroll();if(!restoreSamplePickerScroll.tracked){restoreSamplePickerScroll.tracked=true;track('open_gallery');}}
+    else {saveSamplePicker(false);++pickerRestoreVersion;restoringPicker=false;}
+  });
+  if(exampleLibrary){exampleLibrary.disabled=false;exampleLibrary.onchange=()=>{selectSampleGroup(exampleLibrary.value);track('gallery_select_group',{group:exampleLibrary.value,action:'select'});};}
+  if(examplesAll)examplesAll.onclick=()=>selectSampleGroup(topLevelSampleGroup(selectedSampleGroup));
+  document.getElementById('examples-search').disabled=false;
   const converterToggleActivation = new WeakMap();
 
   function converterButtonFromEvent(event) {
@@ -3941,21 +4035,8 @@ async function init() {
       const button = event.target.closest('[data-sample-group]');
       if (!button) return;
       const groupId = button.dataset.sampleGroup;
-      const isTopLevel = sampleGroups.has(groupId);
-      const hasTree = groupId === 'usd-wg' || groupId === 'gltf' || groupId === 'needle';
-      let action;
-      if (isTopLevel && hasTree && selectedSampleGroup === groupId) {
-        const wasCollapsed = collapsedSampleTrees.has(groupId);
-        if (wasCollapsed) collapsedSampleTrees.delete(groupId);
-        else collapsedSampleTrees.add(groupId);
-        syncSampleTreeVisibility(groupId);
-        saveSamplePicker();
-        action = wasCollapsed ? 'expand' : 'collapse';
-      } else {
-        if (hasTree) collapsedSampleTrees.delete(groupId);
-        selectSampleGroup(groupId);
-        action = 'select';
-      }
+      selectSampleGroup(groupId);
+      const action='select';
       track('gallery_select_group', { group: groupId, action });
     });
   }
@@ -3964,8 +4045,7 @@ async function init() {
   refreshLoadedConverterState(filename);
 
   function activateFileLink(link) {
-    // Highlight the active gallery card, then close the menu after a 300ms grace
-    // (not instantly) so the choice registers visually before it disappears.
+    // Keep the library open while replacing the viewport scene.
     if (link.classList.contains('gallery-card')) {
       if (galleryGrid) {
         for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
@@ -3975,7 +4055,7 @@ async function init() {
         ...samplePickerPositions.get(selectedSampleGroup), selected: link.dataset.sampleKey,
       });
       saveSamplePicker();
-      menuScheduleClose();
+      window.usdWorkbench?.exampleChosen();
     }
     const target = new URL(link.href, location.href);
     const asset = catalogAssetForUrlPath((target.searchParams.get('file') || '').split('?')[0]);
@@ -3993,6 +4073,7 @@ async function init() {
   }
 
   async function queueFileLinkLoad(link) {
+    apiExampleAbort?.abort();
     pendingFileLinkRequest = fileLinkRequestFrom(link);
     if (fileLinkLoadRunning) return;
 
@@ -4038,7 +4119,7 @@ async function init() {
     }, true);
   }
 
-  // Load handler for our curated "a.file" links: the dropdown samples, the Clear
+  // Load handler for our curated "a.file" links: the example browser, the Clear
   // button, and the runtime-populated gallery cards. Delegated from the body so
   // dynamically-added cards are covered without re-binding.
   async function loadFromFileLink(link) {
@@ -4049,7 +4130,7 @@ async function init() {
     catch {}
     const requestedFilename = params.get("file");
 
-    if (requestedFilename && requestedFilename === filename && ready && currentHydraHandle) {
+    if (requestedFilename && requestedFilename === filename && ready && currentHydraHandle && !catalogAssetForUrlPath(requestedFilename)?.executable) {
       return;
     }
 
@@ -4100,7 +4181,7 @@ async function init() {
       updateUrl();
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
-      if (catalogAsset?.files?.length) {
+      if (catalogAsset?.executable || catalogAsset?.files?.length) {
         await loadCatalogAssetBundle(catalogAsset, filename);
         return;
       }
@@ -4132,7 +4213,7 @@ async function init() {
   });
 
   setupDebugTestButton();
-  document.querySelector('.dropdown-button').disabled = false;
+  exampleLibrary.disabled = false;
   window.__usdViewerUiReady = true;
   
   render();
@@ -4140,25 +4221,21 @@ async function init() {
   return Promise.resolve();
 }
 
-// A little helper. Press space to pause/enable rendering. Useful when looking at animated scenes.
-let stop = false;
+// Space toggles stage playback; rendering and camera interaction keep running.
 document.body.onkeyup = function(e){
+  if (e.target.closest?.('input,textarea,select,button,summary,a,[contenteditable]')) return;
   if(e.keyCode == 32){
-    stop = !stop;
+    if (currentHydraHandle) currentHydraHandle.setPlaying(!currentHydraHandle.isPlaying());
   }
 }
 
 async function animate() {
   
-  if (stop) {
-    requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
-    return;
-  }
-
   const now = performance.now() / 1000;
   const dt = Math.min(0.1, Math.max(0, now - lastAnimationTimeSeconds));
   lastAnimationTimeSeconds = now;
-  window._controls.update(dt);
+  // The presentation controller owns OrbitControls in the Three viewer.
+  if (!window.usdRenderModes) window._controls.update(dt);
   if (nativeGltfMixers.length && ready) {
     for (const mixer of nativeGltfMixers) mixer.update(dt);
   }
@@ -4168,14 +4245,26 @@ async function animate() {
   requestAnimationFrame( animate.bind(null, timeout, endTimeCode) );
 }
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+function viewportSize() {
+  const viewport = window.usdWorkbench?.viewport;
+  return { width: Math.max(1, viewport?.clientWidth || window.innerWidth), height: Math.max(1, viewport?.clientHeight || window.innerHeight) };
+}
+function onWindowResize() { resizeRequested = true; }
+function resizeBeforeRender() {
+  if (!resizeRequested) return;
+  resizeRequested = false;
+  const size = viewportSize();
+  const pixelRatio = renderer.getPixelRatio();
+  if (renderer.domElement.width === Math.floor(size.width * pixelRatio) && renderer.domElement.height === Math.floor(size.height * pixelRatio)) return;
+  camera.aspect = size.width / size.height;
   camera.updateProjectionMatrix();
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setSize(size.width, size.height, false);
   window.usdRenderModes?.resize();
 }
 
 function render() {
+  resizeBeforeRender();
+  if (window.usdViewportVisible === false) return;
   const time = Date.now() * 0.001;
   if (window.renderer.render && window.scene){
     if (window.renderUsdFrame) window.renderUsdFrame();

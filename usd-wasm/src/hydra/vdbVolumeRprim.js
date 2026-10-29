@@ -18,6 +18,8 @@ export class VdbVolumeRprim {
         this._root.userData.usdPath = id;
         this._root.userData.usdTypeName = 'Volume';
         hydraInterface.config.usdRoot.add(this._root);
+        this._visible = false; this._renderTag = 'geometry';
+        this._root.visible = false;
         this._generation = 0;
     }
 
@@ -28,7 +30,9 @@ export class VdbVolumeRprim {
             this._root.matrixAutoUpdate = false;
             this._root.matrixWorldNeedsUpdate = true;
         }
-        this._root.visible = state.visible !== false;
+        this._visible = state.visible !== false; this._renderTag = state.renderTag || 'geometry';
+        this._root.userData.usdRenderTag = this._renderTag;
+        this._applyVisibilityState();
         const key = JSON.stringify(state.fields);
         if (key === this._key) return;
         this._key = key;
@@ -47,6 +51,10 @@ export class VdbVolumeRprim {
             this._interface.config.requestRender?.();
         })();
         this._interface.trackRprimUpdate(update);
+    }
+
+    _applyVisibilityState() {
+        this._root.visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag);
     }
 
     // Volume data is applied atomically when the tracked field load finishes.

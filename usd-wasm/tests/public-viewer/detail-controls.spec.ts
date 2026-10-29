@@ -1,3 +1,4 @@
+import {clearStage} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 
 for (const viewer of ['three', 'needle']) {
@@ -31,7 +32,7 @@ for (const viewer of ['three', 'needle']) {
     await page.reload();
     await expect(detail).toHaveValue('high');
     expect((await state()).vertices).toBe(high.vertices);
-    await page.locator('a.clear-button').click();
+    await clearStage(page);
     await expect(page.locator('#usd-detail-controls')).toBeHidden();
     expect(errors).toEqual([]);
   });

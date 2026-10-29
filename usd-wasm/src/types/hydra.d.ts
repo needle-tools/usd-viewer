@@ -51,6 +51,7 @@ export type threeJsRenderDelegateConfig = {
     driver: () => HdWebSyncDriver,
     USD?: USD,
     usdRoot: Object3D,
+    includedPurposes?: string[],
     renderScene?: Object3D,
     scenePrimitiveRoot?: Object3D,
     renderer?: HydraRenderer,
@@ -71,6 +72,8 @@ export type threeJsRenderDelegateConfig = {
 }
 export declare class threeJsRenderDelegate implements hydraDelegate {
     constructor(config: threeJsRenderDelegateConfig);
+    setIncludedPurposes(purposes: string[]): void;
+    isRenderTagIncluded(tag?: string): boolean;
     createRPrim(typeId: string, id: string, instancerId: unknown): object;
     createSPrim(typeId: string, id: string): object | undefined;
     CommitResources(): void;

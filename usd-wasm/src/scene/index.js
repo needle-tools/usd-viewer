@@ -14,16 +14,35 @@ const identity = value => value;
 const strings = vector => readVector(vector, identity);
 
 /** Plain snapshots of the composed stage. No embind objects escape this API. */
-export function inspectStage(stage) {
+export function inspectStage(stage, time = 0) {
+  let firstSample = Infinity, lastSample = -Infinity, timeVarying = false;
   const prims = readVector(stage.TraverseAll(), prim => {
     const path = prim.GetPath();
     const variants = strings(prim.GetVariantSetNames()).map(setName => ({
       path, setName, choices: strings(prim.GetVariantNames(setName)), selection: prim.GetVariantSelection(setName),
     }));
-    return { path, name: prim.GetName(), type: prim.GetTypeName(), active: prim.IsActive(), loaded: prim.IsLoaded(),
+    if (prim.IsActive() && prim.IsLoaded()) readVector(prim.GetAttributes?.(), attribute => {
+      const count = attribute.GetNumTimeSamples();
+      if (count > 1) {
+        timeVarying = true;
+        const samples = attribute.GetTimeSamples();
+        try { if (samples.size()) { firstSample = Math.min(firstSample, samples.get(0)); lastSample = Math.max(lastSample, samples.get(samples.size() - 1)); } }
+        finally { samples.delete?.(); }
+      } else {
+        const resolve = attribute.GetResolveInfo?.(0);
+        if (resolve?.valueSourceMightBeTimeVarying && ['ValueClips', 'Spline'].includes(resolve.source)) timeVarying = true;
+      }
+    });
+    const visibility = prim.GetAttribute('visibility');
+    let visible = true, imageable = false;
+    try { imageable = visibility.IsValid(); if (imageable) visible = visibility.GetValueStringAtTime(time) !== 'invisible'; }
+    finally { visibility.delete?.(); }
+    return { path, name: prim.GetName(), type: prim.GetTypeName(), specifier: (prim.GetSpecifier?.() || '').replace(/^SdfSpecifier/, '').toLowerCase(), active: prim.IsActive(), visible, imageable, loaded: prim.IsLoaded(),
       payload: prim.HasAuthoredPayloads(), reference: prim.HasAuthoredReferences(), instance: prim.IsInstance(), variants };
   });
-  return { prims, variants: prims.flatMap(prim => prim.variants), payloads: prims.filter(prim => prim.payload),
+  const start = stage.GetStartTimeCode?.(), end = stage.GetEndTimeCode?.();
+  const timeRange = timeVarying ? (end > start ? { start, end } : Number.isFinite(firstSample) ? { start: firstSample, end: lastSample } : null) : null;
+  return { prims, time: timeRange, variants: prims.flatMap(prim => prim.variants), payloads: prims.filter(prim => prim.payload),
     layers: stage.GetLayerStack?.(true) || [], errors: stage.GetCompositionErrors?.() || [] };
 }
 
@@ -32,8 +51,9 @@ export function inspectPrim(stage, path, time = 0) {
   try {
     if (!prim?.IsValid()) return null;
     return { path, type: prim.GetTypeName(), metadata: prim.GetAllMetadata(),
-      attributes: readVector(prim.GetAttributes(), attribute => ({ name: attribute.GetName(), type: attribute.GetTypeName(), value: attribute.GetValueStringAtTime(time) })),
-      relationships: readVector(prim.GetRelationships(), relation => ({ name: relation.GetName(), targets: strings(relation.GetTargets()) })) };
+      attributes: readVector(prim.GetAttributes(), attribute => ({ name: attribute.GetName(), path: attribute.GetPath(), type: attribute.GetTypeName(), value: attribute.GetValueStringAtTime(time),
+        connections: strings(attribute.GetConnections?.()), resolveInfo: attribute.GetResolveInfo?.(time), authored: attribute.HasAuthoredValueOpinion?.() || false })),
+      relationships: readVector(prim.GetRelationships(), relation => ({ name: relation.GetName(), path: relation.GetPath(), targets: strings(relation.GetTargets()) })) };
   } finally { prim?.delete?.(); }
 }
 
@@ -55,6 +75,30 @@ export async function setPayloadLoaded(handle, path, loaded) {
       if (!prim?.IsValid() || !prim.HasAuthoredPayloads()) throw new Error(`No USD payload at ${path}`);
       if (loaded) await prim.Load(); else await prim.Unload();
     } finally { prim?.delete?.(); }
+  });
+}
+
+export async function setPrimActive(handle, path, active) {
+  return handle.editStage(stage => {
+    const prim = stage.GetPrimAtPath(path);
+    try {
+      if (!prim?.IsValid()) throw new Error(`No USD prim at ${path}`);
+      if (!prim.SetActive(active)) throw new Error(`Could not change activation of ${path}`);
+    } finally { prim?.delete?.(); }
+  });
+}
+
+export async function setPrimVisible(handle, path, visible) {
+  return handle.editStage(stage => {
+    const prim = stage.GetPrimAtPath(path);
+    let attribute;
+    try {
+      if (!prim?.IsValid()) throw new Error(`No USD prim at ${path}`);
+      attribute = prim.GetAttribute('visibility');
+      if (!attribute.IsValid()) throw new Error(`Prim is not imageable: ${path}`);
+      const time = attribute.GetNumTimeSamples() ? handle.getTime?.() || 0 : Number.NaN;
+      if (!attribute.SetToken(visible ? 'inherited' : 'invisible', time)) throw new Error(`Could not change visibility of ${path}`);
+    } finally { attribute?.delete?.(); prim?.delete?.(); }
   });
 }
 

@@ -20,7 +20,7 @@ export class HydraStroke {
             usdHydraApplyMaterialSide: material => this._prepareMaterial(material),
             usdHydraSetMaterialPending: (id, pending) => {
                 if (pending) this._pending.add(id); else this._pending.delete(id);
-                this._applyVisibility();
+                this._applyVisibilityState();
             },
         });
         delegate.config.usdRoot.add(this._mesh);
@@ -132,15 +132,15 @@ export class HydraStroke {
         this._mesh.boundingBox = null; this._mesh.boundingSphere = null;
         if (count && this._geometry.attributes.position) { this._mesh.computeBoundingBox(); this._mesh.computeBoundingSphere(); }
         this._interface.prepareMeshMaterialGeometry(this._mesh);
-        this._applyVisibility();
+        this._applyVisibilityState();
     }
     setVisibilityState(visible, tag = 'geometry') {
-        this._visible = visible && tag !== 'hidden'; this._mesh.userData.usdRenderTag = tag; this._applyVisibility();
+        this._visible = Boolean(visible); this._renderTag = tag; this._mesh.userData.usdRenderTag = tag; this._applyVisibilityState();
     }
-    _applyVisibility() {
-        this._mesh.visible = this._visible && !this._pending.size && this._mesh.count > 0 && !!this._geometry.attributes.position?.count;
+    _applyVisibilityState() {
+        this._mesh.visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag) && !this._pending.size && this._mesh.count > 0 && !!this._geometry.attributes.position?.count;
     }
-    commit() { this._applyVisibility(); }
+    commit() { this._applyVisibilityState(); }
     dispose() {
         this._interface.unassignMeshFromMaterials(this._mesh);
         this._mesh.removeFromParent(); this._mesh.dispose(); this._geometry.dispose();

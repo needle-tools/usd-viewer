@@ -1,3 +1,4 @@
+import {clearStage,openAppMenu} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
@@ -13,6 +14,7 @@ for (const viewer of ['three', 'needle']) {
     });
     await page.goto(`/?viewer=${viewer}&file=/test-fixtures/coverage/advanced/physics-mass.usda`);
     const simulate = page.getByRole('button', { name: 'Simulate', exact: true });
+    await openAppMenu(page,'window');await page.getByRole('checkbox',{name:'Show Simulation',exact:true}).check();
     await expect(simulate).toBeVisible();
     await simulate.click();
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
@@ -49,7 +51,7 @@ for (const viewer of ['three', 'needle']) {
     await page.getByRole('button', { name: 'Reset', exact: true }).click();
     await expect(simulate).toBeVisible();
     expect(await page.evaluate(() => (window as any).usdPhysics.simulation)).toBeNull();
-    await page.locator('.filename-bar .clear-button').click();
+    await clearStage(page);
     await expect(page.locator('#usd-physics-controls')).toBeHidden();
     expect(await page.evaluate(() => (window as any).usdPhysics)).toBeUndefined();
     expect(errors).toEqual([]);
@@ -65,6 +67,7 @@ test('physics runtime is downloaded only when simulation starts', async ({ page 
   await expect(page.locator('#usd-physics-controls')).toBeHidden();
   expect(requests).toEqual([]);
   await page.goto('/?viewer=three&file=/test-fixtures/coverage/advanced/physics-dominoes.usda');
+  await openAppMenu(page,'window');await page.getByRole('checkbox',{name:'Show Simulation',exact:true}).check();
   await expect(page.getByRole('button', { name: 'Simulate', exact: true })).toBeVisible();
   expect(requests).toEqual([]);
   await page.getByRole('button', { name: 'Simulate', exact: true }).click();

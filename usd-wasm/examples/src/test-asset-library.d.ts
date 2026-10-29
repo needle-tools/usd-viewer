@@ -5,6 +5,7 @@ declare module "../../tests/fixtures/test-asset-library.js" {
     label: string;
     root: string;
     files?: string[];
+    executable?: string;
   }>;
   export function fixtureUrl(path: string, basePath?: string): string;
 }

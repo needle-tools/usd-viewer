@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
 const copies = [
+  { from: join(root, 'node_modules', 'dockview-core', 'dist'), to: join(root, 'public', 'dockview'), label: '/dockview' },
   ...['three-gpu-pathtracer', 'three-mesh-bvh'].map(name => ({ from: join(root, 'node_modules', name), to: join(root, 'public', name), label: '/' + name })),
   { from: join(root, "node_modules", "@meimu", "mutracer"), to: join(root, "public", "mutracer"), label: "/mutracer" },
   { from: join(root, "node_modules", "oidn-webgpu"), to: join(root, "public", "oidn-webgpu"), label: "/oidn-webgpu" },
@@ -43,8 +44,12 @@ for (const copy of copies) {
         return source === copy.from || source === join(copy.from, 'rapier.mjs') || source === join(copy.from, 'package.json');
       }
       const relativeSource = source.startsWith(copy.from) ? source.slice(copy.from.length) : source;
+      if (copy.label === '/test-fixtures' && (
+        /validation\.json$/.test(relativeSource)
+        || /[\\/]lighting-mdl[\\/]references[\\/]mdl-[^\\/]+\.json$/.test(relativeSource)
+      )) return false;
       return !relativeSource.split(/[\\/]/).includes("node_modules")
-        && !(source.endsWith("/dist") && copy.label !== "/oidn-webgpu")
+        && !(source.endsWith("/dist") && copy.label !== "/oidn-webgpu" && copy.label !== "/dockview")
         && !source.endsWith("/.DS_Store");
     },
   });

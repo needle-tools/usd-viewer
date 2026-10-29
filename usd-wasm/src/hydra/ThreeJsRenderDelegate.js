@@ -998,7 +998,11 @@ class HydraParticleField {
   setVisibilityState(visible, renderTag = 'geometry') {
     this._visible = Boolean(visible);
     this._renderTag = String(renderTag || 'geometry');
-    this._root.visible = this._visible && this._renderTag !== 'hidden';
+    this._applyVisibilityState();
+  }
+
+  _applyVisibilityState() {
+    this._root.visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag);
   }
 
   _scheduleUpdate() {
@@ -1074,7 +1078,7 @@ class HydraParticleField {
       this._root.add(mesh);
     }
     this._appliedRevision = revision;
-    this._root.visible = this._visible && this._renderTag !== 'hidden';
+    this._applyVisibilityState();
   }
 
   _hasRenderableGeometry() {
@@ -1478,7 +1482,7 @@ class HydraMesh {
   }
 
   _applyVisibilityState() {
-    const visible = this._visible && this._renderTag !== 'hidden' && this._pendingMaterialIds.size === 0 && this._hasRenderableGeometry();
+    const visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag) && this._pendingMaterialIds.size === 0 && this._hasRenderableGeometry();
     if (this._mesh) {
       this._mesh.visible = !this._instancedMesh && visible;
       this._mesh.userData.usdRenderTag = this._renderTag;
@@ -2601,6 +2605,7 @@ export class ThreeRenderDelegateInterface {
     this.registry = new TextureRegistry(config);
     this.materials = {};
     this.meshes = {};
+    this.includedRenderTags = new Set((config.includedPurposes?.length ? config.includedPurposes : ['default', 'render']).map(purpose => purpose === 'default' ? 'geometry' : purpose));
     this.retiredMeshes = new Map();
     this.retiredMeshReleaseFrames = new Map();
     this.hydraDrawDepth = 0;
@@ -2631,6 +2636,19 @@ export class ThreeRenderDelegateInterface {
       scenePrimitiveIds: [],
       particleFields: 0,
     };
+  }
+
+  isRenderTagIncluded(tag = 'geometry') {
+    return tag !== 'hidden' && this.includedRenderTags.has(tag);
+  }
+
+  setIncludedPurposes(purposes) {
+    this.includedRenderTags = new Set((purposes?.length ? purposes : ['default', 'render'])
+      .map(purpose => purpose === 'default' ? 'geometry' : purpose));
+    // Hydra filters future syncs; retained Three objects also need filtering.
+    // Keep the authored visibility separate so re-including a purpose restores it.
+    for (const prim of Object.values(this.meshes)) prim._applyVisibilityState();
+    for (const retired of this.retiredMeshes.values()) for (const prim of retired) prim._applyVisibilityState();
   }
 
   trackMaterialUpdate(promise) {
@@ -2729,6 +2747,12 @@ export class ThreeRenderDelegateInterface {
 
   getDiagnostics() {
     return { ...this.diagnostics };
+  }
+
+  /** Points render one glyph per point per USD instance; Hydra indexes parents. */
+  getInstanceStride(path) {
+    const mesh = this.meshes[path]?._mesh;
+    return mesh?.userData.usdPrimitiveType === 'points' ? Math.max(1, mesh.userData.usdPointCount || 0) : 1;
   }
 
   /**

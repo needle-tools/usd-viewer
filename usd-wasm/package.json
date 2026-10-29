@@ -103,6 +103,7 @@
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
     "test:bindings": "node --test tests/bindings/*.test.mjs",
     "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.nodenext.json",
+    "test:viewer-icons": "node scripts/icon-audit/lint.mjs --source=src/viewer/icons.js --json=.cache/icon-review/lint-gate.json",
     "test:hydra": "node --test --test-concurrency=1 tests/hydra/*.test.mjs",
     "test:materialx-volume": "node scripts/test-materialx-volume.mjs",
     "test:safari-reloads": "node scripts/test-safari-reloads.mjs",

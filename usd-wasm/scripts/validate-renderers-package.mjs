@@ -23,13 +23,14 @@ try {
     const root = await mkdtemp(join(tmpdir(), `needle-usd-renderers-${name}-`));
     result.consumers.push({ name, root, three });
     await writeFile(join(root, 'package.json'), JSON.stringify({ name: `usd-renderers-${name}`, private: true, type: 'module', scripts: { build: 'vite build' },
-      dependencies: { '@needle-tools/usd': `file:${tarball}`, three, vite: '8.1.0', ...(name === 'modern' ? { '@meimu/mutracer': '0.2.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three' } }, null, 2));
+      dependencies: { '@needle-tools/usd': `file:${tarball}`, three, vite: '8.1.0', ...(name === 'modern' ? { '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three' } }, null, 2));
     await command(`${name}-install`, root, 'npm', ['install', '--no-audit', '--no-fund', '--prefer-offline']);
     assert.equal(await realpath(join(root, 'node_modules/@needle-tools/usd')), join(await realpath(root), 'node_modules/@needle-tools/usd'));
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
+    if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
     if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage };\n");
-    await mkdir(join(root, 'public'));
+    await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     await command(`${name}-build`, root, 'npm', ['run', 'build']);
   }
@@ -49,7 +50,10 @@ try {
     await page.waitForTimeout(700); await page.screenshot({ path: join(output, 'beauty.png') });
     await page.evaluate(() => window.packed.modes.setMode('pathtraced'));
     await page.waitForFunction(() => window.packed.modes.samples > 3, null, { timeout: 90_000 });
+    await page.waitForFunction(() => window.packed.modes.samples === 32, null, { timeout: 90_000 });
     result.samples = await page.evaluate(() => window.packed.modes.samples);
+    result.settings = await page.evaluate(() => window.packed.modes.settings);
+    assert.deepEqual(result.settings, {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null});
     await page.screenshot({ path: join(output, 'pathtraced.png') });
     await page.evaluate(() => window.packed.modes.setMode('pathtraced-gk'));
     await page.waitForFunction(() => window.packed.modes.samples > 3, null, { timeout: 90_000 });
@@ -59,7 +63,30 @@ try {
     await page.getByRole('button', { name: 'Stage', exact: true }).click();
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('/World/Camera');
     await page.waitForTimeout(500); await page.screenshot({ path: join(output, 'authored-camera.png') });
-    await page.evaluate(() => { window.packed.panel.dispose(); window.packed.modes.dispose(); });
+    await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('');
+    for(const mode of ['pathtraced-gk','pathtraced']) {
+      await page.evaluate(async mode=>{const p=window.packed;await p.modes.setSettings({maxSamples:2,bounces:2,denoiser:'oidn-fast',gkDenoiser:'oidn-fast'});await p.modes.setMode(mode);},mode);
+      await page.waitForFunction(()=>window.packed.status?.status==='finished',null,{timeout:90000});
+      await page.screenshot({path:join(output,`${mode}-oidn.png`)});
+    }
+    result.denoising='OIDN small model completed on both tracers from self-hosted weights';
+    await page.evaluate(async()=>{const p=window.packed;await p.modes.setMode('basic');await p.setPrimVisible(p.handle,'/World/Sphere1',false);await p.setPrimVisible(p.handle,'/World/Sphere1',true);await p.setPrimActive(p.handle,'/World/Sphere1',false);await p.setPrimActive(p.handle,'/World/Sphere1',true);p.panel.refresh();});
+    assert.equal(await page.getByRole('button',{name:'Deactivate /World/Sphere1',exact:true}).getAttribute('aria-pressed'),'true');
+    result.stageEdits='Packed visibility/activation exports edit and restore the loaded stage';
+    await page.evaluate(async()=>{
+      const p=window.packed;p.panel.selectMany(['/World/Sphere0','/World/Sphere2']);
+      if(await p.repl.run('selection.length')!==2)throw new Error('Packed multi-selection is missing');
+      await p.repl.run('follow("/World/Sphere1.radius")');
+      if(p.panel.selectedProperty!=='/World/Sphere1.radius')throw new Error('Packed property navigation is missing');
+      if(await p.repl.run('await Promise.resolve(42)')!==42)throw new Error('Packed REPL await failed');
+      await p.repl.run('await edit(stage => {const prim=stage.GetPrimAtPath("/World/Sphere1"), attr=prim.GetAttribute("radius");try{attr.SetDouble(0.6,NaN);}finally{attr.delete();prim.delete();}})');
+      if(p.panel.selection[0]?.path!=='/World/Sphere1')throw new Error('Packed edit lost selection');
+    });
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.usd-repl')).display==='flex');
+    await page.screenshot({path:join(output,'inspection-repl.png')});
+    result.inspection='Packed public exports: multi-selection, exact property navigation, REPL await, serialized authored edits and default SDK console styles';
+    await page.evaluate(async () => { await window.packed.dispose(); });
+    await page.waitForTimeout(100);
     assert.deepEqual(result.errors, []);
     assert.ok(result.requests.some(request => /worker.*\.js|bvh.*\.js/.test(request.url) && request.status === 200), 'bundled worker loads');
     assert.ok(result.requests.some(request => request.url.endsWith('.wasm') && request.status === 200), 'packed WASM loads');

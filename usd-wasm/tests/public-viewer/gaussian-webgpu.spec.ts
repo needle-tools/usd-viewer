@@ -1,3 +1,4 @@
+import {openSettings,stageReady} from './workbench-menus';
 import { expect, test, type Page } from '@playwright/test';
 
 // No external fonts are needed to verify local GPU rendering.
@@ -24,7 +25,7 @@ for (const backend of ['webgpu', 'webgl']) {
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
         await page.goto(`/?viewer=three&backend=${backend}&background=dark&file=/test-fixtures/regressions/mixed-mesh-volume-splats.usda&assetCache=0`, { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+        await stageReady(page);
         const state = await page.evaluate(async () => {
             const w = window as any; await w.usdHydra.materialsReady(); w.usdHydra.setPlaying(false); w._controls.enableDamping = false;
             w.camera.position.set(1.2,0,12); w._controls.target.set(1.2,0,0); w._controls.update();
@@ -74,7 +75,7 @@ for (const backend of ['webgpu', 'webgl']) test(`Gaussian SH changes with view d
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`/?viewer=three&backend=${backend}&file=/test-fixtures/coverage/advanced/splat-harmonics.usda&assetCache=0`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await stageReady(page);
     await page.evaluate(() => { const w = window as any; w.usdHydra.setPlaying(false); w._controls.enableDamping = false; });
     await page.addStyleTag({ content: '#top-center,#render-mode-controls,#usd-suite,.usd-timeline {visibility:hidden!important}' });
     const images: Buffer[] = [];
@@ -108,7 +109,7 @@ for (const backend of ['webgpu', 'webgl']) test(`orthographic splats retain size
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`/?viewer=three&backend=${backend}&file=/test-fixtures/coverage/advanced/splat-harmonics.usda`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await stageReady(page);
     await page.evaluate(async () => {
         const w = window as any, T = await import('three/webgpu');
         w.usdHydra.setPlaying(false); const aspect = w.renderer.domElement.clientWidth / w.renderer.domElement.clientHeight;
@@ -126,7 +127,7 @@ for (const backend of ['webgpu', 'webgl']) test(`repeated Gaussian disposal rele
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`/?viewer=three&backend=${backend}&file=/test-fixtures/coverage/advanced/splat-harmonics.usda`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await stageReady(page);
     const counts = await page.evaluate(async () => {
         const w = window as any; w.usdHydra.setPlaying(false);
         const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -148,7 +149,7 @@ for (const backend of ['webgpu','webgl']) test(`Gaussian tails stay smooth on da
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
   await page.setViewportSize({width:700,height:600});
   await page.goto(`/?viewer=three&backend=${backend}&file=/test-fixtures/coverage/advanced/splat-harmonics.usda`);
-  await expect(page.getByRole('button',{name:'Stage',exact:true})).toBeVisible();
+  await stageReady(page);
   const sigma=await page.evaluate(async()=>{
     const w=window as any,T=await import('three/webgpu');w.usdHydra.setPlaying(false);w.usdRoot.visible=false;
     w.renderer.toneMapping=T.NoToneMapping;w.renderer.outputColorSpace=T.LinearSRGBColorSpace;w.renderer.setClearColor(0,1);w.scene.background=null;
@@ -168,6 +169,7 @@ for (const backend of ['webgpu','webgl']) test(`Gaussian tails stay smooth on da
   // HDR green radiance is 2.5 times red, including in the unsaturated tail.
   expect(pixels[1][1]/pixels[1][0]).toBeGreaterThan(2);
   await page.evaluate(()=>{const w=window as any;w.tailSplat.removeFromParent();w.tailSplat.dispose();w.usdRoot.visible=true;});
+  await openSettings(page);
   const background=page.getByRole('combobox',{name:'Background',exact:true});
   for(const mode of ['basic','beauty']){
     await page.evaluate(mode=>(window as any).usdRenderModes.setMode(mode),mode);

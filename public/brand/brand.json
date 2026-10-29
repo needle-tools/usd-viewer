@@ -1,0 +1,732 @@
+{
+  "$conventions": {
+    "cssTokenNaming": "CSS variables follow semantic role paths. Join groups with hyphens and convert camelCase to kebab-case. Example: palette.roles.surface.pageElevated → --surface-page-elevated. Typography roles use the same pattern with a type- prefix.",
+    "cssFile": "Ship a local brand.css with the page, or copy the needed rules into the app stylesheet.",
+    "componentAnatomyVariables": "Reuse the classes from brand.css before writing custom CSS: `.header-tool`, `.header-tool-leading`, `.header-tool-title-group`, `.header-tool-actions`, `.header-tool-status`, `.header-tool-button`, `.status-strip`, `.status-strip-item`, `.status-strip-label`, `.workbench-shell`, `.workbench-grid`, `.stage`, `.stage-toolbar`, `.stage-canvas`, `.stage-footer`, `.pane`, `.pane-head`, `.pane-body`, `.segmented-control`, `.settings-shell`, `.settings-section-nav`, `.settings-content`, `.split-action`, `.split-action-row`, `.split-action-main`, `.split-action-options`, `.split-action-popover`, `.property-list`, `.property-row`, `.property-row-head`, `.check-row`, `.color-row`, `.color-field`, `.color-field-button`, `.color-popover`, `.tag-list`, `.tag`, `.tag-segmented`, `.tag-segmented-label`, `.tag-segmented-meta`, `.list`, `.list-row`, `.user-profile`, `.user-profile-logo`, `.user-profile-identity`, `.user-profile-avatar`, `.user-profile-card`, `.user-profile-card-row`, `.user-profile-card-actions`, `.header-pill-shell`, `.header-pill`, `.header-pill-brand`, `.header-pill-nav`, `.header-pill-actions`, `.header-pill-dropdown`, `.footer-area`, `.footer-area-main`, `.footer-area-brand`, and `.footer-area-column`. Matching `--*-*` variables follow the same structure.",
+    "svelteComponents": "The branding site uses the private @marketing-templates/needle-ui Svelte 5 package. Its current exports are BrandLogo, Button, Callout, CheckboxField, ColorField, CopyButton, Dialog, Disclosure, IconButton, Popover, RangeField, SegmentedControl, SelectField, SettingsNavigation, SplitAction, and ToolHeader. Product repositories do not need to install this package: brand.css classes, semantic HTML shown in the prerendered page, and brand-recipes.json remain the portable contract.",
+    "recipes": "brand-recipes.json lists the UI patterns. Each pattern names the roles it uses and includes the build instruction in `llmInstruction`.",
+    "fontFiles": "Font files are relative to brand.css. Every family with a `file` field gets an @font-face in brand.css. If `fontStyle` is set, the @font-face uses it.",
+    "archetypeSelection": "Choose in this order:\n1. Identify the primary task.\n2. Identify the primary object or data.\n3. Decide whether the user needs a visual stage.\n4. Keep controls close to the thing they change.\n5. Then choose the page type: workbench for hands-on product workflows, settings for configuration, data for inspection-heavy reading, management for browsing or operational overviews, docs for reference, and marketing for outward-facing pages.",
+    "assetUsage": "Copy the local logo assets into the app bundle. Do not redraw the logo, replace it with initials, hand-copy colors, or swap in unrelated fonts.",
+    "copyEconomy": "Keep tool copy short. Use short labels, one-line helper text, and inline status. Move long explanations to docs, onboarding, or empty states.",
+    "referenceCalibration": "Use the screenshots to match density, spacing rhythm, and component treatment. Copy a layout only when the task matches that layout.",
+    "controlGeometry": "Follow the geometry on the brand page. Reuse the classes from brand.css first. Do not restyle `.header-tool`, `.header-pill`, `.segmented-control`, `.status-strip`, `.property-row`, `.check-row`, or `.color-row` from scratch.",
+    "headerFamilies": "Use one header family per page. `header-tool` is the compact top-aligned header for dense operational pages. It sits on the page background and holds the real lockup, a relatively large light-weight product name, optional muted file or project context inline beside that name, mode switch, and actions in one row. Never turn the context into a stacked subtitle. `header-pill` is the floating white navigation pill for marketing, docs, cloud overviews, list pages, and lighter management surfaces. It holds the lockup on the left, navigation in the middle, and actions on the right, with an overflow menu on narrow widths. Choose once and stay consistent.",
+    "footerUsage": "Use `footer-area` only on marketing, docs, and website-like management pages. The footer spans the full page width; constrain inner content inside `.footer-area-main`. Keep it open on the page stage, with no boxed footer panel. Do not append it to dense operational pages.",
+    "shellSelection": "Choose the information architecture first, then the shell:\n- one dominant work surface with dense operational chrome -> `header-tool`\n- browsing, docs, marketing, or lighter management -> `header-pill`\n- use `footer-area` only when the page genuinely ends like a website\n- dense operational pages do not end with a marketing footer",
+    "shellSkeletons": "Canonical shells:\n\n`workbench`\n```html\n<div class=\"workbench-shell\">\n  <header class=\"header-tool\">...</header>\n  <!-- optional status-strip -->\n  <main class=\"workbench-grid\">\n    <!-- choose one dominant surface -->\n    <section class=\"stage\">...</section>\n    <!-- add one or two panes only if the task needs them -->\n    <aside class=\"pane\">...</aside>\n  </main>\n</div>\n```\n\n`management`\n```html\n<div class=\"management-page\">\n  <div class=\"header-pill-shell\">\n    <header class=\"header-pill\">...</header>\n  </div>\n  <main>...</main>\n  <!-- optional footer-area when the page ends like a website -->\n</div>\n```\n\n`docs`\n```html\n<div class=\"docs-page\">\n  <div class=\"header-pill-shell\">\n    <header class=\"header-pill\">...</header>\n  </div>\n  <main>...</main>\n  <footer class=\"footer-area\">...</footer>\n</div>\n```\n\n`marketing`\n```html\n<div class=\"marketing-page\">\n  <div class=\"header-pill-shell\">\n    <header class=\"header-pill\">...</header>\n  </div>\n  <main>...</main>\n  <footer class=\"footer-area\">...</footer>\n</div>\n```",
+    "componentSkeletons": "Reuse these classes from a local copy of brand.css:\n\n`header-tool`\n```html\n<header class=\"header-tool\">\n  <div class=\"header-tool-leading\">\n    <img src=\"./logos/logo_needle_black_no_padding.svg\" alt=\"Needle\" />\n    <div class=\"header-tool-title-group\">\n      <strong>Current Tool</strong>\n      <span>current file / current context</span>\n    </div>\n  </div>\n  <div class=\"segmented-control\" role=\"tablist\" aria-label=\"Workspace mode\">\n    <button aria-selected=\"true\">Primary</button>\n    <button>Secondary</button>\n    <button>Export</button>\n  </div>\n  <div class=\"header-tool-actions\">\n    <button class=\"header-tool-button\" aria-label=\"App settings\">Settings</button>\n    <button class=\"header-tool-button\" aria-label=\"Toggle sidebar\">Sidebar</button>\n  </div>\n</header>\n```\nThe toolbar owns workspace switching, app settings, and sidebar visibility. Keep action-specific settings next to the action.\n\n`segmented-control`\n```html\n<div class=\"segmented-control\" role=\"tablist\" aria-label=\"View mode\">\n  <button aria-selected=\"true\">Primary</button>\n  <button>Secondary</button>\n  <button>Raw</button>\n</div>\n```\n\n`settings-shell`\n```html\n<div class=\"settings-shell\">\n  <nav class=\"settings-section-nav\" aria-label=\"Settings sections\">...</nav>\n  <section class=\"settings-content\">...</section>\n</div>\n```\nUse this sidebar only when there are more than a few peer settings sections; otherwise use headings in one pane.\n\n`split-action`\n```html\n<div class=\"split-action\">\n  <div class=\"split-action-row\">\n    <button class=\"split-action-main\">Run</button>\n    <button class=\"split-action-options\" aria-label=\"Run options\">Settings</button>\n  </div>\n  <div class=\"split-action-popover\">...</div>\n</div>\n```\nUse the small options popover only for settings of the next run; use the settings pane or app dialog for persistent configuration.\n\n`property-row`\n```html\n<div class=\"property-row\">\n  <div class=\"property-row-head\">\n    <label for=\"exposure\">Exposure</label>\n    <output for=\"exposure\">1.10</output>\n  </div>\n  <input id=\"exposure\" type=\"range\" min=\"0\" max=\"100\" value=\"24\" />\n</div>\n```\n\n`check-row`\n```html\n<div class=\"check-row\">\n  <label for=\"volumetric\">Enabled</label>\n  <input id=\"volumetric\" type=\"checkbox\" checked />\n</div>\n```\n\n`color-row`\n```html\n<div class=\"color-row\">\n  <label for=\"key-tint\">Tint</label>\n  <div class=\"color-field\">\n    <button class=\"color-field-button\" type=\"button\">\n      <span class=\"color-swatch\" style=\"background:#F6DDBB\"></span>\n      <span>#F6DDBB</span>\n    </button>\n    <div class=\"color-popover\">\n      <input id=\"key-tint\" type=\"color\" value=\"#F6DDBB\" />\n      <input class=\"color-input\" type=\"text\" value=\"#F6DDBB\" />\n      <input type=\"range\" min=\"0\" max=\"100\" value=\"72\" />\n    </div>\n  </div>\n</div>\n```\n\n`user-profile`\n```html\n<button class=\"user-profile\" type=\"button\">\n  <img class=\"user-profile-logo\" src=\"./logos/logo_needle_black_no_padding.svg\" alt=\"Needle\" />\n  <span class=\"user-profile-identity\">\n    <strong class=\"user-profile-name\">Felix Herbst</strong>\n    <span class=\"user-profile-meta\">Needle Test</span>\n  </span>\n  <span class=\"user-profile-avatar\">FH</span>\n</button>\n```\nUse the same segmented control everywhere. Use property, check, and color rows directly in technical panes. Use user-profile for account identity, not page titles. Do not box controls individually.",
+    "hardRules": "Hard rules:\n- The finished page is self-contained.\n- Use one header family per page.\n- Dense operational pages use `header-tool`; browsing, docs, marketing, and lighter management pages use `header-pill`.\n- If you copied brand.css, do not redeclare `--surface-*`, `--text-*`, `--accent-*`, or `--border-*`.\n- Reuse the canonical segmented control, property rows, check rows, and color rows.\n- Do not append `footer-area` to dense operational pages.",
+    "commonPatterns": "Common patterns:\n- A three-pane workbench is common when a visual result needs a large stage.\n- A two-column layout is common when the task is result plus settings.\n- One continuous inspector is common when the task is mostly configuration or review.\n- Management pages often use rows, tables, or compact cards instead of a stage.",
+    "workbenchBehavior": "Workbench pages are compact applications. Start from the primary task and the primary surface. Use a stage only when the user needs space to inspect or manipulate a result. Common layouts are stage plus inspector, two-column result plus settings, or one continuous inspector. Choose the layout from the workflow, not from the page label.",
+    "workbenchImplementation": "Workbench UI uses solid surfaces, one radius family, solid buttons, and a neutral or dark stage. `header-tool` sits on the page background. No blur. No glass. No gradients in normal panes or buttons.",
+    "pageImplementation": "The finished page must be self-contained. Ship local CSS and local logo assets. Use the live branding site only while generating. Do not link runtime HTML to localhost URLs. If you copied brand.css, do not redeclare `--surface-*`, `--text-*`, `--accent-*`, or `--border-*`."
+  },
+  "identity": {
+    "name": "Needle",
+    "summary": "Needle interfaces are calm, precise, compact, and easy to work in. Use a soft green stage, crisp white work surfaces, dark readable text, restrained shadows, and green accents that support the task.",
+    "sources": [
+      {
+        "label": "Miro Board — Branding",
+        "url": "https://miro.com/app/board/uXjVMtbJd74=/"
+      },
+      {
+        "label": "Google Drive — Fonts",
+        "url": "https://drive.google.com/drive/folders/1ViWPX5azV2QFrb9K9OexkDzB5H4SvOxU"
+      }
+    ],
+    "logoRules": [
+      "The Needle logo must not be edited, distorted, recolored, or reconfigured.",
+      "Maintain clear space around the lockup equal to roughly the height of the wordmark letter e.",
+      "Use the full lockup unless Needle is already clearly identified nearby.",
+      "Use black artwork on light surfaces and white artwork on dark surfaces with strong contrast.",
+      "The wordmark font treatment is reserved for the actual Needle lockup and should not be reused for ordinary UI text."
+    ],
+    "logoAssets": [
+      {
+        "file": "logos/logo_needle.svg",
+        "pngFile": "logos/logo_needle 2.png",
+        "type": "lockup",
+        "description": "Color lockup — symbol + wordmark together",
+        "usage": "Primary brand mark for light surfaces. Use this as the default logo anywhere the Needle brand needs to appear."
+      },
+      {
+        "file": "logos/logo_needle_black.svg",
+        "pngFile": "logos/logo_needle_black 2.png",
+        "type": "lockup",
+        "description": "Black lockup — symbol + wordmark, single-color black",
+        "usage": "Monochrome variant for light surfaces when color is not available or appropriate."
+      },
+      {
+        "file": "logos/logo_needle_white.svg",
+        "pngFile": "logos/logo_needle_white 2.png",
+        "type": "lockup",
+        "description": "White lockup — symbol + wordmark, single-color white",
+        "usage": "Inverse variant for dark surfaces."
+      },
+      {
+        "file": "logos/logo_no_padding.svg",
+        "pngFile": "logos/logo_no_padding.png",
+        "type": "symbol",
+        "description": "Color symbol only — no wordmark, no surrounding padding",
+        "usage": "Use when space is constrained (favicons, app icons, avatar-sized spots) and the Needle name is already visible nearby."
+      },
+      {
+        "file": "logos/logo_needle_black_no_padding.svg",
+        "pngFile": "logos/logo_needle_black_no_padding.png",
+        "type": "lockup",
+        "description": "Black lockup without padding — symbol + wordmark, tight bounding box",
+        "usage": "For inline placement in headers, toolbars, or dense layouts where extra whitespace around the mark is undesirable."
+      },
+      {
+        "file": "logos/logo_needle_white_no_padding.svg",
+        "pngFile": "logos/logo_needle_white_no_padding.png",
+        "type": "lockup",
+        "description": "White lockup without padding — symbol + wordmark, tight bounding box",
+        "usage": "Inverse version of the tight lockup, for dark surfaces."
+      },
+      {
+        "file": "logos/needle_black_no_padding.svg",
+        "pngFile": "logos/needle_black_no_padding.png",
+        "type": "wordmark",
+        "description": "Black wordmark — the word 'needle' in the brand typeface, no symbol",
+        "usage": "Rarely used alone. Only when the symbol is already visible separately and the name needs textual reinforcement."
+      },
+      {
+        "file": "logos/needle_white_no_padding.svg",
+        "pngFile": "logos/needle_white_no_padding.png",
+        "type": "wordmark",
+        "description": "White wordmark — the word 'needle' in the brand typeface, no symbol",
+        "usage": "Inverse version of the wordmark, for dark surfaces."
+      },
+      {
+        "file": "logos/powered_by_needle_black_no_padding.svg",
+        "pngFile": "logos/powered_by_needle_black_no_padding.png",
+        "type": "badge",
+        "description": "'Powered by Needle' badge, black",
+        "usage": "Attribution badge for third-party apps or scenes built with Needle Engine."
+      },
+      {
+        "file": "logos/powered_by_needle_white_no_padding.svg",
+        "pngFile": "logos/powered_by_needle_white_no_padding.png",
+        "type": "badge",
+        "description": "'Powered by Needle' badge, white",
+        "usage": "Inverse attribution badge for dark surfaces."
+      },
+      {
+        "file": "logos/needle-icon-no-spacing-favicon.psd",
+        "type": "source",
+        "description": "Favicon source file (PSD)",
+        "usage": "Source artwork for generating favicon.ico at various sizes."
+      },
+      {
+        "file": "favicon.ico",
+        "type": "symbol",
+        "description": "Favicon (ICO)",
+        "usage": "Ready-to-use browser favicon. Place at the root of the deployed site and reference via <link rel=\"icon\" href=\"favicon.ico\" />."
+      }
+    ],
+    "exampleAssets": [
+      {
+        "title": "Inspector — compact property editing and workflow density",
+        "file": "examples/screenshots/needle-inspector-01.png"
+      },
+      {
+        "title": "Cloud — management page, not workbench",
+        "file": "examples/screenshots/needle-cloud-03.png"
+      },
+      {
+        "title": "Cloud — compact list rows and inline actions",
+        "file": "examples/screenshots/needle-cloud-07.png"
+      },
+      {
+        "title": "Needle Inspector — Launch Graphic",
+        "file": "examples/needle-inspector-launch.png"
+      }
+    ]
+  },
+  "palette": {
+    "colors": {
+      "brand": [
+        {
+          "name": "Needle Dark Green",
+          "hex": "#74AF52",
+          "description": "The darker Needle green used for deeper emphasis inside the core brand family."
+        },
+        {
+          "name": "Needle Green",
+          "hex": "#99CC33",
+          "description": "Primary Needle green for brand recognition and key emphasis."
+        },
+        {
+          "name": "Needle Light Green",
+          "hex": "#D7DB0A",
+          "description": "Bright light green used sparingly for higher-energy Needle moments."
+        }
+      ],
+      "supporting": [
+        {
+          "name": "Teal",
+          "hex": "#0BA398",
+          "description": "Cool supporting accent for information and secondary emphasis."
+        },
+        {
+          "name": "Mint",
+          "hex": "#62D399",
+          "description": "Soft mint that lightens gradients and supportive surfaces."
+        },
+        {
+          "name": "Highlight Purple",
+          "hex": "#826AED",
+          "description": "Purple highlight used for links and select accent moments, especially in docs."
+        },
+        {
+          "name": "Blue",
+          "hex": "#1F51FF",
+          "description": "Occasional technical highlight color."
+        },
+        {
+          "name": "Plum",
+          "hex": "#7A306C",
+          "description": "Warm dark accent for editorial or artistic emphasis."
+        }
+      ],
+      "neutrals": [
+        {
+          "name": "Page Mist",
+          "hex": "#F0F4EF",
+          "description": "Default pastel page backdrop seen across cloud and docs surfaces."
+        },
+        {
+          "name": "Page Mist Deep",
+          "hex": "#EFF5EC",
+          "description": "A slightly deeper green-tinted backdrop for layered page stages."
+        },
+        {
+          "name": "Panel White",
+          "hex": "#FFFFFF",
+          "description": "Primary content panel and card surface."
+        },
+        {
+          "name": "Panel Mist",
+          "hex": "#F7F9F4",
+          "description": "Muted panel or grouped-control background."
+        },
+        {
+          "name": "Ink",
+          "hex": "#1A1A1A",
+          "description": "Primary text and icon color."
+        },
+        {
+          "name": "Slate",
+          "hex": "#6B6F6B",
+          "description": "Muted body copy and metadata color."
+        }
+      ]
+    },
+    "gradients": {
+      "brand": {
+        "stops": [
+          "#D7DB0A",
+          "#62D399"
+        ],
+        "css": "linear-gradient(90deg, #D7DB0A 0%, #62D399 100%)",
+        "usage": "Primary brand gradient for marketing flourishes, onboarding accents, and rare high-attention highlights. Avoid using this inside workbench stages, inspector panels, queue cards, export presets, or segmented controls."
+      },
+      "cta": {
+        "stops": [
+          "#3EB127",
+          "#ADD616"
+        ],
+        "css": "linear-gradient(90deg, #3EB127 0%, #ADD616 100%)",
+        "usage": "Primary action gradient for strong marketing or booking calls to action. Product workbenches use solid fills or quiet outlined controls instead."
+      },
+      "sectionBackgrounds": [
+        {
+          "name": "Coral",
+          "from": "#FEAC8B",
+          "to": "#FE5A46",
+          "css": "linear-gradient(135deg, #FEAC8B 0%, #FE5A46 100%)"
+        },
+        {
+          "name": "Charcoal",
+          "from": "#40393B",
+          "to": "#222125",
+          "css": "linear-gradient(90deg, #40393B 30%, #222125 100%)"
+        },
+        {
+          "name": "Lavender",
+          "from": "#CAB3ED",
+          "to": "#DE6CDC",
+          "css": "linear-gradient(90deg, #CAB3ED 30%, #DE6CDC 100%)"
+        },
+        {
+          "name": "Teal",
+          "from": "#A6D4D4",
+          "to": "#688D9A",
+          "css": "linear-gradient(90deg, #A6D4D4 30%, #688D9A 100%)"
+        },
+        {
+          "name": "Green",
+          "from": "#9BDE8A",
+          "to": "#5CBD79",
+          "css": "linear-gradient(90deg, #9BDE8A 30%, #5CBD79 100%)"
+        },
+        {
+          "name": "Sand",
+          "from": "#F6DDBB",
+          "to": "#F19931",
+          "css": "linear-gradient(90deg, #F6DDBB 30%, #F19931 100%)"
+        },
+        {
+          "name": "Rose",
+          "from": "#FFB8B4",
+          "to": "#EF8E89",
+          "css": "linear-gradient(90deg, #FFB8B4 30%, #EF8E89 100%)"
+        }
+      ]
+    },
+    "roles": {
+      "surface": {
+        "page": "#F0F4EF",
+        "pageElevated": "#EFF5EC",
+        "panel": "#FFFFFF",
+        "panelMuted": "#F7F9F4",
+        "panelStrong": "#F3F6EE",
+        "calloutSuccess": "#DBEBE1",
+        "calloutInfo": "#EAF5FF",
+        "code": "#FFFFFF"
+      },
+      "text": {
+        "primary": "#1A1A1A",
+        "secondary": "#4A4E4A",
+        "muted": "#767A76",
+        "link": "#826AED",
+        "success": "#27835C",
+        "inverse": "#FFFFFF"
+      },
+      "accent": {
+        "brand": "#99CC33",
+        "brandDeep": "#74AF52",
+        "secondary": "#0BA398",
+        "highlight": "#D7DB0A",
+        "tertiary": "#826AED",
+        "error": "#FF0051"
+      },
+      "border": {
+        "subtle": "#D9E2D7",
+        "strong": "#C6D0C4",
+        "focus": "#74AF52"
+      }
+    },
+    "themes": {
+      "dark": {
+        "roles": {
+          "surface": {
+            "page": "#0F1110",
+            "pageElevated": "#121413",
+            "panel": "#171A18",
+            "panelMuted": "#1F2320",
+            "panelStrong": "#2A2E2B",
+            "calloutSuccess": "#1D3529",
+            "calloutInfo": "#172A31",
+            "code": "#0D0F0E"
+          },
+          "text": {
+            "primary": "#F3F5F1",
+            "secondary": "#CDD3C8",
+            "muted": "#939D91",
+            "link": "#B9AFFF",
+            "success": "#8FE0B7",
+            "inverse": "#101211"
+          },
+          "accent": {
+            "brand": "#99CC33",
+            "brandDeep": "#74AF52",
+            "secondary": "#0BA398",
+            "highlight": "#D7DB0A",
+            "tertiary": "#B9AFFF",
+            "error": "#FF6B8F"
+          },
+          "border": {
+            "subtle": "#343C35",
+            "strong": "#505A51",
+            "focus": "#99CC33"
+          }
+        },
+        "shadow": {
+          "panel": "0 14px 34px rgba(0, 0, 0, 0.28)",
+          "floating": "0 18px 44px rgba(0, 0, 0, 0.34)",
+          "subtle": "0 2px 10px rgba(0, 0, 0, 0.22)"
+        }
+      }
+    },
+    "contrastGuidance": [
+      "Use pastel green for the page stage and white for readable content.",
+      "Default to dark text on light surfaces. Use white text only on genuinely dark or saturated surfaces.",
+      "Use purple mainly for links and secondary emphasis.",
+      "Use Needle Green and Needle Light Green as accents, not as noise."
+    ]
+  },
+  "typography": {
+    "families": {
+      "display": {
+        "name": "Nunito Sans",
+        "css": "NunitoSans",
+        "file": "fonts/NunitoSans-Variable.ttf",
+        "usage": "Hero headlines, section titles, and the dominant UI typography."
+      },
+      "body": {
+        "name": "Nunito Sans",
+        "css": "NunitoSans",
+        "file": "fonts/NunitoSans-Variable.ttf",
+        "usage": "Body text, metadata, labels, and general interface copy."
+      },
+      "wordmark": {
+        "name": "Oblique",
+        "css": "Oblique",
+        "file": "fonts/Oblique/Oblique-SemiBold.ttf",
+        "usage": "Reserved for the Needle lockup and wordmark artwork only."
+      },
+      "accentSerif": {
+        "name": "IBM Plex Serif Italic",
+        "css": "IBMPlexSerif",
+        "file": "fonts/IBMPlexSerif-Italic-Variable.ttf",
+        "fontStyle": "italic",
+        "usage": "Occasional editorial accent or italic pull quote treatment."
+      },
+      "code": {
+        "name": "Monaspace Neon",
+        "css": "Monaspace Neon",
+        "file": "fonts/MonaspaceNeonVar.woff2",
+        "usage": "Inline code, code blocks, JSON/data views, and terminal-style technical output."
+      }
+    },
+    "roles": {
+      "display": {
+        "family": "display",
+        "size": "clamp(2.8rem, 6vw, 4.6rem)",
+        "weight": 800,
+        "lineHeight": "0.95",
+        "letterSpacing": "-0.05em",
+        "usage": "Hero titles, landing page feature names, and the strongest title moments.",
+        "tone": "Confident, rounded, compact, and highly legible."
+      },
+      "page-title": {
+        "family": "display",
+        "size": "clamp(1.8rem, 3.6vw, 2.6rem)",
+        "weight": 720,
+        "lineHeight": "1.02",
+        "letterSpacing": "-0.04em",
+        "usage": "Primary title at the top of a docs page, marketing section, or a major standalone view. Do not use this as the default title size for everyday workbench tools.",
+        "tone": "Strong but calmer than display."
+      },
+      "section-title": {
+        "family": "display",
+        "size": "1.35rem",
+        "weight": 700,
+        "lineHeight": "1.12",
+        "letterSpacing": "-0.025em",
+        "usage": "Section headings and prominent content grouping labels.",
+        "tone": "Clear, friendly, and compact."
+      },
+      "tool-title": {
+        "family": "display",
+        "size": "1.2rem",
+        "weight": 700,
+        "lineHeight": "1.1",
+        "letterSpacing": "-0.02em",
+        "usage": "Compact titles inside product headers, toolbars, modal heads, and operational shells. The `header-tool` component deliberately applies its lighter product-name treatment through header-specific variables.",
+        "tone": "Direct, technical, and not promotional."
+      },
+      "panel-title": {
+        "family": "body",
+        "size": "0.98rem",
+        "weight": 700,
+        "lineHeight": "1.25",
+        "letterSpacing": "0em",
+        "usage": "Inspector group titles, sidebar section headings, compact cards, and data panels.",
+        "tone": "Small, sturdy, and matter-of-fact."
+      },
+      "micro-label": {
+        "family": "body",
+        "size": "0.74rem",
+        "weight": 700,
+        "lineHeight": "1.15",
+        "letterSpacing": "0.08em",
+        "usage": "Overlines, metric captions, compact status labels, and inspector metadata.",
+        "tone": "Quiet, technical, and highly compact."
+      },
+      "metric": {
+        "family": "body",
+        "size": "0.95rem",
+        "weight": 650,
+        "lineHeight": "1.2",
+        "letterSpacing": "0em",
+        "usage": "Numeric status readouts, compact KPIs, and operational summaries.",
+        "tone": "Readable, dense, and stable."
+      },
+      "body": {
+        "family": "body",
+        "size": "1rem",
+        "weight": 400,
+        "lineHeight": "1.55",
+        "letterSpacing": "0em",
+        "usage": "Paragraphs, standard UI copy, and descriptive text.",
+        "tone": "Quiet, readable, and neutral."
+      },
+      "body-muted": {
+        "family": "body",
+        "size": "1rem",
+        "weight": 400,
+        "lineHeight": "1.55",
+        "letterSpacing": "0em",
+        "usage": "Secondary explanation, timestamps, counts, and supporting metadata.",
+        "tone": "Softer than body but still crisp."
+      },
+      "label": {
+        "family": "body",
+        "size": "0.9rem",
+        "weight": 500,
+        "lineHeight": "1.25",
+        "letterSpacing": "0.01em",
+        "usage": "Field labels, tabs, small buttons, and compact interface labels.",
+        "tone": "Firm and tidy."
+      },
+      "link": {
+        "family": "body",
+        "size": "1rem",
+        "weight": 500,
+        "lineHeight": "1.45",
+        "letterSpacing": "0em",
+        "usage": "Inline links and navigation links.",
+        "tone": "Plainspoken with color emphasis rather than decoration-heavy styling."
+      },
+      "code-inline": {
+        "family": "code",
+        "size": "0.84em",
+        "weight": 400,
+        "lineHeight": "1.4",
+        "letterSpacing": "0em",
+        "usage": "Inline code, identifiers, and short technical terms. Use em not rem so the size scales relative to surrounding body text and appears optically similar in height.",
+        "tone": "Clean, structured, and understated.",
+        "inlineStyle": "Inline code receives padding (3px 6px), border-radius (4px), and a soft grey background (rgba(142, 150, 170, 0.14)) so it is visually distinct from prose without being heavy. This matches the Needle docs VuePress treatment."
+      },
+      "code-block": {
+        "family": "code",
+        "size": "0.9rem",
+        "weight": 400,
+        "lineHeight": "1.65",
+        "letterSpacing": "0em",
+        "usage": "Larger code samples and dense technical information boxes.",
+        "tone": "Spacious, readable, and calm."
+      }
+    },
+      "guidance": [
+        "Set headings in Nunito Sans and keep them compact.",
+        "Set interface copy in Nunito Sans.",
+        "Use tool-title, panel-title, micro-label, and metric on workbench and inspector surfaces before page-title or display.",
+        "Use label or micro-label sizing for segmented controls, tabs, toolbar labels, and compact buttons.",
+        "Use purple for links and emphasis. Do not underline everything.",
+        "Use Monaspace for technical information.",
+        "Keep long prose in docs and onboarding. Keep everyday tool surfaces to short labels and one-line helper text."
+      ]
+  },
+  "principles": {
+    "summary": "Needle interfaces are calm, compact, and technical without feeling cold. Use a soft green stage, white work surfaces, restrained chrome, and real information density.",
+    "surfaces": [
+      "Use a very light green page stage with white working surfaces.",
+      "Use solid surfaces in workbench UI.",
+      "Do not use blur, glass, or decorative gradients in normal panes or buttons.",
+      "Do not turn small facts into separate cards by default.",
+      "Keep the stage neutral or dark and let the content provide the texture.",
+      "Treat the stage as a working viewport, not a poster illustration."
+    ],
+    "layout": [
+      "Start from the primary task and surface, not from a preferred layout or hero header.",
+      "Fit the main workflow into the first viewport.",
+      "Use a stage only when the user is inspecting or manipulating a visual result.",
+      "A three-pane shell is common, not mandatory.",
+      "When a stage is present, keep it wider than the side panes.",
+      "Place controls close to the object they change.",
+      "Keep presets next to the settings or objects they affect.",
+      "Use tabs, drawers, or modals for secondary steps.",
+      "Use one shell before introducing nested cards.",
+      "Left and right panes should have different jobs. Do not mirror them."
+    ],
+    "interaction": [
+      "Reuse the core classes from brand.css before writing custom control CSS.",
+      "Segmented controls are one joined row of small segments with shared borders.",
+      "Keep segmented controls small and identical across header, stage, and inspector.",
+      "Slider rows are direct: label, value, then one real range input. No extra box.",
+      "Boolean rows are direct: label plus checkbox. No phone switch. No outer box.",
+      "Color-driven tools should expose real color inputs and direct hex values. Add one alpha slider row when opacity matters.",
+      "Tags are small, thin-bordered, and lightly tinted. No gradients.",
+      "Buttons in workbench UI are solid. Do not use gradients.",
+      "Use one small-control radius family per tool row. Do not mix multiple radii side by side."
+    ],
+    "iconography": [
+      "Use one icon family per surface: Material Symbols Rounded for product UI, Lucide for marketing and docs.",
+      "Use Material Symbols Rounded in product UI. Use the outline treatment with variable font settings: opsz 20, wght 300–400, FILL 0, GRAD 0.",
+      "Use Lucide in marketing and docs.",
+      "Prefer outlined icons with rounded joins at around 20×20 optical size and 1.5–2px stroke weight.",
+      "Icons should feel secondary to text — use them to reinforce meaning, not replace labels. Icon-only buttons need a tooltip or accessible label.",
+      "Use a neutral text color for icons by default; tint with the brand green or purple only for active/selected state.",
+      "Keep the icon vocabulary small and consistent within a product: one icon per concept, reused everywhere that concept appears.",
+      "Mark icon elements with class='notranslate' and translate='no' so machine-translation services do not mangle icon ligatures."
+    ],
+    "commonMaterialSymbols": [
+      "close", "add", "delete", "edit", "code", "folder", "folder_open",
+      "description", "article", "download", "upload", "link", "send",
+      "chevron_right", "expand_more", "play_arrow", "pause", "skip_next",
+      "skip_previous", "search", "info", "content_copy", "visibility",
+      "settings", "refresh", "save", "more_horiz", "more_vert", "check",
+      "check_circle", "warning", "error", "share", "view_in_ar",
+      "lightbulb", "videocam", "deployed_code", "drag_indicator", "folder_copy"
+    ],
+    "commonLucideIcons": [
+      "X", "Plus", "Trash2", "Pen", "Code", "FolderClosed", "FolderOpen",
+      "File", "BookOpen", "Download", "Upload", "Link", "Send",
+      "ChevronRight", "ChevronDown", "Play", "Pause", "SkipForward",
+      "SkipBack", "Search", "Info", "Copy", "Eye", "Settings",
+      "RefreshCw", "Save", "MoreHorizontal", "MoreVertical", "Check",
+      "CheckCircle", "TriangleAlert", "CircleX", "Share2", "Box",
+      "Lightbulb", "Camera", "FileCode2", "Grab", "Files"
+    ],
+    "hierarchy": [
+      "Tree views and nested lists use a consistent indentation rhythm so structure is scannable at a glance.",
+      "Rows stay content-height rather than oversized so trees remain dense and navigable.",
+      "Expand/collapse affordances (arrows or folder icons) sit to the left of the label. A single click toggles expansion; double-click or Enter activates.",
+      "Selection is shown with a subtle background fill (pale green or neutral tint), not a heavy border or color block.",
+      "Hover state is a lighter tint of the selection color. Keep the contrast low — just enough to confirm the pointer target.",
+      "Use connector lines or indentation guides only when they improve scanning. Keep them very light."
+    ],
+    "informationDensity": [
+      "Build the inspector as one continuous pane.",
+      "Use section dividers, alignment, and spacing instead of boxing every row.",
+      "Keep pane headers brief and singular.",
+      "Use tabs or modes instead of showing every surface at once.",
+      "Prefer compact rows and lists before larger cards or tiles."
+    ],
+    "contentEconomy": [
+      "Keep tool titles short.",
+      "In workbench headers, order the identity as Needle lockup, light-weight product name, then optional muted context on the same line.",
+      "Pane headers should not restate their own role.",
+      "Helper text is short and local.",
+      "Long explanation belongs in docs, onboarding, help, or empty states."
+    ],
+    "antiPatterns": [
+      "Do not use a hero header in a workbench.",
+      "Do not use `header-pill` inside dense editors, inspectors, or technical panes.",
+      "Do not add a four-up KPI card row under the header by default.",
+      "Do not mirror the left and right sidebars.",
+      "Do not use gradients in normal panes, segmented controls, or workbench buttons.",
+      "Do not use multiple slider styles in one tool.",
+      "Do not mix multiple button radii in the same control row.",
+      "Do not box sliders, toggles, or small metrics in their own mini-cards.",
+      "Do not append a page-level footer strip to a workbench.",
+      "Do not redefine the core brand.css component classes."
+    ],
+    "accessibility": [
+      "Every interactive element must show a visible :focus-visible ring: 2px solid var(--border-focus) with outline-offset 2px. Never remove outlines without providing an equivalent indicator.",
+      "Respect prefers-reduced-motion: reduce — collapse all transitions and animations to near-zero duration and revert smooth scrolling to instant jumps.",
+      "Support prefers-contrast: more by strengthening borders (--border-subtle → #666), removing decorative shadows, and ensuring minimum text contrast against backgrounds.",
+      "Support forced-colors: active (Windows High Contrast Mode) by removing box-shadows and custom backgrounds, ensuring links are underlined, and adding explicit borders to interactive controls.",
+      "Mark icon ligature text (Material Symbols, emoji text) with class='notranslate' and translate='no' so machine-translation services do not mangle them.",
+      "Ship accessibility.css with the page."
+    ],
+    "pageArchetypes": {
+      "marketing": {
+        "summary": "Marketing pages are brighter and more playful, with floating pills, gradients, and larger type.",
+        "rules": [
+          "Keep the backdrop light and optimistic.",
+          "Use the brand or CTA gradient in focused, high-value moments only.",
+          "Let the lockup and call to action breathe inside large rounded panels or pill bars.",
+          "Use the header-pill plus footer-area shell for full marketing pages."
+        ]
+      },
+      "docs": {
+        "summary": "Docs pages are quieter and more structured, on the same soft green stage with white content blocks.",
+        "rules": [
+          "Use one clear page title, then move into the content. Avoid marketing-style slogan stacks.",
+          "Use purple for link emphasis and navigation state more than bright green buttons.",
+          "Callouts are softly tinted green or blue on top of the pale page.",
+          "Code blocks are white and rounded, with restrained borders and plenty of internal padding.",
+          "Use the header-pill plus footer-area shell for full docs pages.",
+          "Footer links inherit the footer text color. Do not let browser-default violet show through."
+        ]
+      },
+      "management": {
+        "summary": "Management pages are operational overviews and browsing surfaces. Use them for uploads, libraries, project lists, and cloud-style organization pages.",
+        "rules": [
+          "Use `header-pill` by default.",
+          "Keep one shared content width across the header, main sections, and footer inner content.",
+          "Prefer rows, tables, lists, and compact cards over a stage-first layout.",
+          "Use cards only where they group genuinely different content.",
+          "Footer is optional. Use `footer-area` only when the page ends like a website."
+        ]
+      },
+      "workbench": {
+        "summary": "Workbench pages are hands-on product pages. Use them for focused tasks where the user is creating, editing, inspecting, or processing something.",
+        "rules": [
+          "Choose `header-tool` for dense operational pages. Use `header-pill` only if the page behaves more like browsing or management.",
+          "No hero.",
+          "Use the real Needle lockup when branding appears.",
+          "Order header identity as Needle lockup, light-weight product name, then optional muted file or project context on the same line.",
+          "Decide the primary surface first.",
+          "Use a stage only when the result itself needs space.",
+          "If the task is mostly configuration or review, a two-column or single-pane layout may be better than a stage-first layout.",
+          "Group presets with the settings or objects they affect.",
+          "Add side panes only when they help the workflow. If both are present, they should have different jobs.",
+          "Reuse the same segmented control in the header, stage, and inspector.",
+          "Use direct property rows, check rows, and color rows inside the inspector.",
+          "Use a neutral or dark stage when the page needs a visual work surface.",
+          "Status is inline or optional. Do not add a KPI card row by default.",
+          "No blur, no glass, no marketing footer."
+        ]
+      },
+      "settings": {
+        "summary": "Settings pages use white panels on green, clear labels, and compact spacing.",
+        "rules": [
+          "Use distinct white panels, but keep them compact and quiet.",
+          "Use tabs and segmented controls in the same compact viewer-style treatment used elsewhere in the product.",
+          "Keep only the active settings group in focus. Use tabs or sections to avoid overwhelming the user with everything at once.",
+          "Keep forms readable, direct, and factual rather than glossy or promotional."
+        ]
+      },
+      "data": {
+        "summary": "Data-heavy and inspector views use mono details, white panels, and muted separators on a pale green stage.",
+        "rules": [
+          "Place structured data inside white rounded containers.",
+          "Use the Monaspace-style mono face selectively for identifiers, values, JSON structure, and technical labels.",
+          "Prefer light separators and spacing over dense grid lines.",
+          "Keep inspector rows compact and aligned. Avoid nested boxes around each field or duplicated summary panels.",
+          "Apply the data-ink ratio principle: remove any UI element that does not directly help the user read or compare values."
+        ]
+      }
+    },
+    "dimensions": {
+      "radius": {
+        "panel": "18px",
+        "card": "14px",
+        "control": "12px",
+        "pill": "999px",
+        "callout": "16px"
+      },
+      "spacing": {
+        "pagePadding": "20px",
+        "sectionGap": "18px",
+        "panelPadding": "16px",
+        "controlGap": "8px",
+        "clusterGap": "12px",
+        "scrollMarginTop": "96px"
+      },
+      "scrollMarginTopNote": "The floating header pill sits near the top of the viewport. Apply the scroll margin token so anchored sections land below it: .brand-section[id] { scroll-margin-top: var(--space-scroll-margin-top); }.",
+      "shadow": {
+        "panel": "0 10px 26px rgba(34, 44, 32, 0.07)",
+        "floating": "0 14px 34px rgba(34, 44, 32, 0.09)",
+        "subtle": "0 2px 8px rgba(34, 44, 32, 0.07)"
+      }
+    }
+  }
+}

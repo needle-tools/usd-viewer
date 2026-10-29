@@ -1,11 +1,26 @@
 export { createWebGpuSupport } from './webGpuSupport.js';
-import { Vector2, CubeUVReflectionMapping } from 'three';
+export { configureNeedleAgxDisplay } from './needleAgxDisplay.js';
+/** Load the TSL display transform only for applications using the modern renderer. */
+export async function configureNeedleAgx(renderer) {
+  return (await import('./needleAgx.js')).configureNeedleAgx(renderer);
+}
+import { Vector2, Color, CubeUVReflectionMapping, NoToneMapping } from 'three';
+import { createOrbitControlUpdater } from './orbitControls.js';
 
 /** Optional presentation modes. The caller retains ownership of the Three renderer and scene. */
-export async function createRenderModes({ renderer, scene, camera, canvas, onStatus = () => {}, loadPathTracer, loadGkPathTracer, convertMaterial, convertLight }) {
+export async function createRenderModes({ renderer, scene, camera, canvas, controls, settings: initialSettings = {}, onStatus = () => {}, loadPathTracer, loadGkPathTracer, loadDenoiser, denoiserWeightsBaseUrl, configurePathTracer, convertMaterial, convertLight }) {
+  const settings = { maxSamples: 512, bounces: 8, denoiser: 'jnlm', gkDenoiser: loadDenoiser ? 'oidn-fast' : null, ...initialSettings };
+  const muDenoiser = type => !type ? null : type === 'jnlm' ? {type, schedule:'progressive'} : {type:'oidn', model:type === 'oidn-fast' ? 'small' : 'standard', schedule:'progressive', ...(denoiserWeightsBaseUrl ? {weightsBaseUrl:denoiserWeightsBaseUrl} : {})};
+  function validateSettings(values) {
+    if (!Number.isInteger(values.maxSamples) || values.maxSamples < 1 || values.maxSamples > 65536) throw new Error('Samples must be an integer from 1 to 65536.');
+    if (!Number.isInteger(values.bounces) || values.bounces < 1 || values.bounces > 20) throw new Error('Bounces must be an integer from 1 to 20.');
+    if (![null, 'jnlm', 'oidn', 'oidn-fast'].includes(values.denoiser) || ![null,'oidn','oidn-fast'].includes(values.gkDenoiser)) throw new Error('Unknown denoiser.');
+  }
+  validateSettings(settings);
+  const orbit = controls ? createOrbitControlUpdater(controls) : null; let lastControlTime = performance.now();
   let mode = 'basic', disposed = false, revision = 0;
   let beauty, beautyPending, tracer, loop, sync, sourceCamera;
-  let gk;
+  let gk, pathDisplayDispose;
   let lastStatus = '';
   const pathCanvas = canvas || document.createElement('canvas');
   const ownsCanvas = !canvas;
@@ -17,12 +32,12 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
   }
   pathCanvas.hidden = true;
   const notify = (detail = {}) => {
-    const state = { mode, samples: gk?.samples || loop?.samples || 0, status: loop?.status || 'ready', ...detail };
+    const state = { mode, samples: gk?.samples || loop?.samples || 0, status: gk?.status || loop?.status || 'ready', maxSamples: settings.maxSamples, ...detail };
     const key = JSON.stringify(state); if (key !== lastStatus) { lastStatus = key; onStatus(state); }
   };
   const showPath = (show) => { pathCanvas.hidden = !show; renderer.domElement.style.opacity = show ? '0' : originalOpacity; };
   function releasePath() {
-    loop?.dispose(); sync?.dispose(); tracer?.dispose();
+    loop?.dispose(); sync?.dispose(); pathDisplayDispose?.(); pathDisplayDispose = undefined; tracer?.dispose();
     loop = sync = tracer = sourceCamera = undefined;
     showPath(false);
   }
@@ -57,14 +72,47 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
     return createBeauty({ renderer, scene, camera: activeCamera });
   }
 
+  function createSync(api, engine, activeCamera) {
+    const bridge = new api.THREESync(engine, { scene, camera: activeCamera, controls: activeCamera === camera ? controls : undefined, updateControls: false, convertMaterial, convertLight });
+    const update = bridge.update.bind(bridge), clear = new Color();
+    const pixels = new Float32Array([0,0,0,1]);
+    const background = new api.Texture({width:1,height:1,data:pixels});
+    bridge.update = () => {
+      update();
+      // Flat MuTracer colors bypass exposure/tone mapping. A constant HDR map
+      // follows the same display transform as Three's clear color/Color background.
+      // Retain its identity and change its version only when the input changes.
+      if (bridge.scene && !scene.userData?.mutracerHiddenBackground && !scene.userData?.mutracerGroundedSkybox && (!scene.background || scene.background.isColor)) {
+        if (scene.background?.isColor) clear.copy(scene.background);
+        else if (renderer.getClearColor) renderer.getClearColor(clear);
+        else return;
+        const values = [clear.r,clear.g,clear.b,scene.background ? 1 : renderer.getClearAlpha?.() ?? 1];
+        if (values.some((value,index) => Math.fround(value) !== pixels[index])) {
+          pixels.set(values); background.markUpdated();
+        }
+        bridge.scene.background = background;
+      }
+    };
+    return bridge;
+  }
   function makeSync(api, activeCamera) {
     sync?.dispose();
-    sync = new api.THREESync(tracer, { scene, camera: activeCamera, convertMaterial, convertLight });
+    sync = createSync(api, tracer, activeCamera);
     sourceCamera = activeCamera;
   }
   let pathApi;
   return {
     get mode() { return mode; },
+    get settings() { return { ...settings }; },
+    async setSettings(next) {
+      const values = { ...settings, ...next };
+      validateSettings(values);
+      if (loop && values.denoiser !== settings.denoiser) await loop.final.setDenoiser(muDenoiser(values.denoiser));
+      await gk?.setSettings(values);
+      Object.assign(settings, values);
+      if (loop) { loop.final.maxSamples = settings.maxSamples; loop.final.bounces = settings.bounces; }
+      notify();
+    },
     get samples() { return gk?.samples || loop?.samples || 0; },
     get backend() { return mode === 'pathtraced' ? tracer?.backend : renderer.backend?.isWebGPUBackend ? 'webgpu' : 'webgl'; },
     get pathCanvas() { return pathCanvas; },
@@ -87,23 +135,30 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
           if (!loadGkPathTracer) throw new Error("Pass loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu') to enable this mode.");
           const [api, { createGkjohnsonTracer }] = await Promise.all([loadGkPathTracer(), import('./gkjohnson.js')]);
           if (disposed || request !== revision) return;
-          nextGk = createGkjohnsonTracer({ api, renderer, scene, camera, onError: error => notify({ status: 'error', error: error.message }) });
+          nextGk = await createGkjohnsonTracer({ api, renderer, scene, camera, settings, loadDenoiser, denoiserWeightsBaseUrl, onError: error => notify({ status: 'error', error: error.message }) });
+          if (disposed || request !== revision) { nextGk.dispose(); return; }
         }
         if (next === 'pathtraced') {
           if (!loadPathTracer) throw new Error("Pass loadPathTracer: () => import('@meimu/mutracer') to enable path tracing.");
           pathApi = await loadPathTracer();
           if (disposed || request !== revision) return;
           const candidate = new pathApi.Engine({ canvas: pathCanvas, backend: 'auto' });
-          try { await candidate.init(); } catch (error) { candidate.dispose(); throw error; }
-          if (disposed || request !== revision) { candidate.dispose(); return; }
-          const nextSync = new pathApi.THREESync(candidate, { scene, camera, convertMaterial, convertLight });
-          const nextLoop = new pathApi.RenderLoop(candidate, { sync: nextSync, final: { maxSamples: 512, bounces: 8 } });
-          try { await nextLoop.final.setDenoiser({ type: 'jnlm' }); }
-          catch (error) { nextLoop.dispose(); nextSync.dispose(); candidate.dispose(); throw error; }
-          if (disposed || request !== revision) { nextLoop.dispose(); nextSync.dispose(); candidate.dispose(); return; }
-          tracer = candidate; sync = nextSync; loop = nextLoop; sourceCamera = camera;
+          let displayDispose;
+          try { await candidate.init(); displayDispose = await configurePathTracer?.(candidate); }
+          catch (error) { candidate.dispose(); throw error; }
+          if (disposed || request !== revision) { displayDispose?.(); candidate.dispose(); return; }
+          let nextSync, nextLoop;
+          try {
+            nextSync = createSync(pathApi, candidate, camera);
+            nextLoop = new pathApi.RenderLoop(candidate, { sync: nextSync, idleMs: 80, preview: { timeBudgetMs: 32 }, final: { maxSamples: settings.maxSamples, bounces: settings.bounces } });
+            await nextLoop.final.setDenoiser(muDenoiser(settings.denoiser));
+          }
+          catch (error) { nextLoop?.dispose(); nextSync?.dispose(); displayDispose?.(); candidate.dispose(); throw error; }
+          if (disposed || request !== revision) { nextLoop.dispose(); nextSync.dispose(); displayDispose?.(); candidate.dispose(); return; }
+          pathDisplayDispose = displayDispose; tracer = candidate; sync = nextSync; loop = nextLoop; sourceCamera = camera;
           tracer.on('error', error => notify({ error: error.message, status: 'error' }));
-          tracer.display.toneMapping = 'agx'; tracer.display.toneMappingExposure = renderer.toneMappingExposure;
+          if (!configurePathTracer) tracer.display.toneMapping = 'agx';
+          tracer.display.toneMappingExposure = renderer.toneMapping === NoToneMapping ? 1 : renderer.toneMappingExposure;
           this.resize();
         } else releasePath();
         gk?.dispose(); gk = nextGk;
@@ -120,6 +175,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
     },
     render(activeCamera = camera) {
       if (disposed) return;
+      const now = performance.now(); orbit?.update(Math.min(0.1,Math.max(0,(now-lastControlTime)/1000))); lastControlTime=now;
       if (mode === 'pathtraced-gk') {
         try { validatePath(true); gk.render(activeCamera); notify(); }
         catch (error) { gk?.dispose(); gk = undefined; mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); }
@@ -127,7 +183,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
         // Stage edits can introduce materials absent when this mode was selected.
         try { validatePath(); } catch (error) { releasePath(); mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); return; }
         if (sourceCamera !== activeCamera) { loop.removeSync(sync); makeSync(pathApi, activeCamera); loop.addSync(sync); }
-        tracer.display.toneMappingExposure = renderer.toneMappingExposure;
+        tracer.display.toneMappingExposure = renderer.toneMapping === NoToneMapping ? 1 : renderer.toneMappingExposure;
         loop.tick(); notify();
       } else if (mode === 'beauty') {
         if (beauty?.camera !== activeCamera) {
@@ -143,6 +199,6 @@ export async function createRenderModes({ renderer, scene, camera, canvas, onSta
         beauty.render();
       } else renderer.render(scene, activeCamera);
     },
-    dispose() { if (disposed) return; disposed = true; revision++; gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
+    dispose() { if (disposed) return; disposed = true; revision++; orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
   };
 }

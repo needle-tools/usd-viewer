@@ -4,9 +4,14 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, it } from "node:test";
+import { createHash } from 'node:crypto';
 import { createPxrFacade } from "../../examples/src/repl/pxr.js";
 import { replExamples } from "../../examples/src/repl/examples.js";
 import { testAssetLibrary } from "../fixtures/test-asset-library.js";
+import { apiExampleAssets } from '../fixtures/api/examples.js';
+import { executeExample } from '../fixtures/api/execute.js';
+import { createApiStage } from '../fixtures/api/create-api-stage.js';
+import { createSceneKit } from '../fixtures/api/scene-kit.js';
 
 const bindingsDir = resolve("src/bindings");
 const fixturesDir = resolve("tests/fixtures");
@@ -30,6 +35,75 @@ async function loadUsdModuleFromTempCopy() {
 }
 
 describe("OpenUSD browser REPL examples", () => {
+  it('maps scene geometry into the native stage up axis', async () => {
+    const USD = await loadUsdModuleFromTempCopy(), kit = createSceneKit(USD);
+    for (const axis of ['Y', 'Z']) {
+      const stage = USD.CreateStage(`/tmp/scene-kit-${axis}.usda`); stage.SetUpAxis(axis);
+      const box = kit.box(stage, '/Box', [1, 2, 3], [4, 5, 6]);
+      assert.equal(box.GetAttribute('xformOp:translate').GetValueString(), axis === 'Z' ? '(1, -3, 2)' : '(1, 2, 3)');
+      assert.equal(box.GetAttribute('xformOp:scale').GetValueString(), axis === 'Z' ? '(4, 6, 5)' : '(4, 5, 6)');
+    }
+  });
+  it('has a current distinct native Storm thumbnail for every executable scene', async () => {
+    const capture = JSON.parse(await readFile(join(fixturesDir, 'api/native-captures.json'), 'utf8'));
+    const kit = await readFile(join(fixturesDir, 'api/scene-kit.js'), 'utf8');
+    const authoring = await readFile(join(fixturesDir, 'api/create-api-stage.js'), 'utf8');
+    const hashes = new Set();
+    assert.equal(capture.results.length, replExamples.length);
+    for (const [index, example] of replExamples.entries()) {
+      const asset = apiExampleAssets[index], record = capture.results.find(record => record.id === `api-${asset.executable}`);
+      assert.ok(asset.thumbnail, `${example.title}: missing thumbnail`);
+      assert.equal(record?.status, 'rendered', example.title);
+      assert.equal(record?.renderer, 'Storm', example.title);
+      assert.equal(record?.sourceFingerprint, createHash('sha256').update(JSON.stringify([example.code, kit, authoring])).digest('hex'), `${example.title}: stale scene capture`);
+      const hash = createHash('sha256').update(await readFile(join(fixturesDir, asset.thumbnail))).digest('hex');
+      assert.equal(record.imageSha256, hash, `${example.title}: capture image changed`);
+      assert.ok(!hashes.has(hash), `${example.title}: duplicate thumbnail`); hashes.add(hash);
+    }
+  });
+  it('executes the catalog sources and preserves generated stages and dependencies for the viewer', async () => {
+    const USD = await loadUsdModuleFromTempCopy();
+    assert.equal(apiExampleAssets.length, replExamples.length);
+    assert.equal(new Set(apiExampleAssets.map(asset => asset.root)).size, replExamples.length);
+    for (const [index, example] of replExamples.entries()) {
+      const asset = testAssetLibrary.find(asset => asset.executable === apiExampleAssets[index].executable);
+      assert.equal(asset.label, example.title);
+      const phases = [];
+      const result = await executeExample(USD, example, {
+        fixtureCatalog: testAssetLibrary,
+        readFixture: async path => new Uint8Array(await readFile(join(fixturesDir, path))),
+        onExecute: value => phases.push(value),
+      });
+      assert.deepEqual(phases, [true, false], `${example.title}: exclude preview serialization from call measurement`);
+      assert.ok(result.output.length || result.files.length, example.title);
+      assert.ok(result.hasGeometry && result.files.length, `${example.title}: must produce a visible scene`);
+      if (result.files.length) {
+        const text = new TextDecoder().decode(result.files[0].bytes);
+        assert.match(text, /^#usda 1.0/, example.title);
+        assert.ok(!text.includes('@/tmp/repl-fixtures/'), `${example.title}: dependencies are portable`);
+        if (example.title === 'Mesh From Arrays') assert.match(text, /int\[\] faceVertexCounts = \[3\]/);
+        if (example.title === 'Texture Shader Network') {
+          assert.match(text, /rel material:binding = <\/World\/Looks\/Textured>/);
+          assert.ok(!/rel material:binding = \[/.test(text), 'replacing a material leaves exactly one binding target');
+        }
+        if (example.title === 'Variant Switch') assert.match(text, /variantSet "look"/);
+        if (example.title === 'Referenced Layer') {
+          assert.match(text, /references = @reference-base.usda@/);
+          assert.ok(result.files.some(file => file.path.endsWith('/reference-base.usda')));
+        }
+        if (example.title === 'Fixture: MaterialX Texture + Noise') {
+          assert.ok(result.files.some(file => file.path.endsWith('checker.png')));
+          assert.ok(result.files.some(file => file.path.endsWith('.mtlx')));
+        }
+      }
+    }
+    const phases = [];
+    await assert.rejects(executeExample(USD, { code: 'throw new Error("fixture failed")' }, {
+      fixtureCatalog: testAssetLibrary, readFixture: async () => { throw new Error('Unexpected fetch'); },
+      onExecute: value => phases.push(value),
+    }), /fixture failed/);
+    assert.deepEqual(phases, [true, false], 'a failed fixture must close its execution phase');
+  });
   it("ships at least 30 examples", () => {
     assert.ok(replExamples.length >= 30);
   });
@@ -133,6 +207,8 @@ describe("OpenUSD browser REPL examples", () => {
     const context = {
       USD,
       ...pxr,
+      createApiStage,
+      sceneKit: createSceneKit(USD),
       stage: null,
       print(value) {
         logs.push(value);

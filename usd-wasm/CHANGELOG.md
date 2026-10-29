@@ -6,7 +6,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [1.2.0] - 2026-10-28
+
+- Apply purpose changes to retained Three objects as well as Hydra sync filters. Restore excluded meshes, curves, points, splats and volumes correctly when re-included, while preserving authored visibility.
+
+- Confine hierarchy selection and keyboard scrolling to the tree, preventing inactive dock panels from moving the host viewport after resize. Add a host hook to reveal the selected row when showing the hierarchy.
+
+- Expose composed def/over/class specifiers in stage snapshots; distinguish schema types, lights, classes and overrides in the hierarchy. Preserve content-sized type columns with tabular numeral fonts.
+
+- Add reversible USD prim visibility/activation controls and a bounded, scrollable stage tree.
+- Expose OIDN Fast/Quality for both optional path tracers; retain progressive MuTracer JNLM and load OIDN/models on demand.
+- Allow the MuTracer display adapter to follow the host's Needle AgX, ACES Filmic, Khronos PBR Neutral, Linear, Reinhard or unmodified output transform.
+- Preserve absent environment lighting and transformed directional/spot-light targets in the gkjohnson adapter; viewport clear colors remain independent of illumination.
+- Use shared accessible icon controls for Stage visibility/activation and fit the Type column to complete USD schema names. Expose a free-camera reset for selection framing without modifying authored cameras.
+
+- Show the timeline only for composed time-varying content, refresh it after variant/payload edits, and use regular frame ticks with resize updates outside ResizeObserver delivery.
+- Provide Needle Engine's AgX look for node renderers and MuTracer's HDR display pipeline; preserve exposure when switching viewer integrations.
+- Match MuTracer backgrounds to the host renderer's clear color, preserving authored scene backgrounds and independent environment lighting.
+- Share one OrbitControls update path across render modes and stop imperceptible damping drift from restarting accumulation.
+- Add configurable tracer samples, bounces and denoising, a panel layout for render settings, and a compact timeline with frame transport and entry.
+
 ### Added
+- Add separate DOM hosts and persisted hierarchy state for stage controls. The development viewer uses the Needle brand, light/dark themes and a Dockview workspace with Stage, Properties, Layers, Timeline and Console panels.
 - Keep all Three.js scenes on WebGPURenderer, including mixed Gaussian splats, meshes and bounded volumes; preserve full-precision directional SH and dispose compute resources.
 - Add lazy gkjohnson WebGPU path tracing on the shared renderer/canvas, with edit invalidation and private BVH geometry ownership.
 - Add optional Basic, Beauty (Three.js SSGI/temporal AA) and MuTracer path-tracing controllers and a render-mode picker.

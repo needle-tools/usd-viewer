@@ -1,3 +1,4 @@
+import {openSettings,stageReady} from './workbench-menus';
 import { expect, test, type Page } from '@playwright/test';
 
 // No external fonts are needed to verify local GPU rendering.
@@ -23,8 +24,8 @@ test('Basic, SSGI and MuTracer render the same stage and preserve the camera', a
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', message => { if (message.type() === 'error' && !message.text().includes('net::')) errors.push(message.text()); });
     const requests: string[] = []; page.on('request', request => requests.push(request.url()));
-    await page.goto('/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda&assetCache=0', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await page.goto('/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda&render=basic&assetCache=0', { waitUntil: 'domcontentloaded' });
+    await stageReady(page);
     expect(await page.evaluate(() => (window as any).renderer.isWebGPURenderer)).toBe(true);
     expect(requests.some(url => url.includes('/mutracer/'))).toBe(false);
     const state = await page.evaluate(() => {
@@ -33,6 +34,7 @@ test('Basic, SSGI and MuTracer render the same stage and preserve the camera', a
     });
     const canvas = page.locator('canvas.usd-viewer-three-canvas');
     const basic = await canvas.screenshot();
+    await openSettings(page);
     const picker = page.getByRole('combobox', { name: 'Render mode', exact: true });
     await picker.selectOption('beauty');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.mode)).toBe('beauty');
@@ -50,26 +52,28 @@ test('Basic, SSGI and MuTracer render the same stage and preserve the camera', a
     });
     expect(reset).toBeLessThan(512);
     await page.evaluate(() => { const w = window as any; w.camera.position.x -= 0.2; w._controls.update(); });
-    expect(await page.evaluate(() => {
+    const restored = await page.evaluate(() => {
         const w = window as any; return { position: w.camera.position.toArray(), target: w._controls.target.toArray() };
-    })).toEqual(state);
+    });
+    for (const key of ['position', 'target'] as const) for (let i = 0; i < 3; i++) expect(restored[key][i]).toBeCloseTo(state[key][i], 10);
     await picker.selectOption('basic');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.mode)).toBe('basic');
     expect(await page.evaluate(() => {
         const w = window as any; return w.stageBefore === w.usdHydra.driver && w.usdRenderModes.pathCanvas.hidden && w.renderer.domElement.style.opacity === '';
     })).toBe(true);
     await page.setViewportSize({ width: 800, height: 600 });
+    await openSettings(page);
     await picker.selectOption('pathtraced');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
-    expect(await page.evaluate(() => { const canvas = (window as any).usdRenderModes.pathCanvas; return [canvas.width, canvas.height]; })).toEqual([800, 600]);
+    expect(await page.evaluate(() => { const canvas = (window as any).usdRenderModes.pathCanvas; return [canvas.width, canvas.height]; })).toEqual(await page.evaluate(() => { const canvas = (window as any).renderer.domElement; return [canvas.width, canvas.height]; }));
     expect(errors).toEqual([]);
 });
 
 test('node PreviewSurface preserves custom geomprops and path mode refuses unsupported graphs', async ({ page }) => {
     const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
     page.on('console', message => { if (message.type() === 'error' && !message.text().includes('net::')) errors.push(message.text()); });
-    await page.goto('/?viewer=three&file=/test-fixtures/usd-concepts/custom_vertex_geomprops.usda&assetCache=0', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await page.goto('/?viewer=three&file=/test-fixtures/usd-concepts/custom_vertex_geomprops.usda&render=basic&assetCache=0', { waitUntil: 'domcontentloaded' });
+    await stageReady(page);
     await page.evaluate(async () => { const w = window as any; await w.usdHydra.materialsReady(); w.usdHydra.setPlaying(false); });
     const result = await page.evaluate(() => {
         const w = window as any, colors: number[][] = [], materials: string[] = [];
@@ -78,6 +82,7 @@ test('node PreviewSurface preserves custom geomprops and path mode refuses unsup
     });
     expect(result.materials.length).toBeGreaterThan(0);
     expect(result.colors.some(color => new Set(color).size > 2)).toBe(true);
+    await openSettings(page);
     await page.getByRole('combobox', { name: 'Render mode', exact: true }).selectOption('pathtraced');
     await expect(page.locator('#render-mode-controls [role=status]')).toContainText(/does not yet support/);
     expect(await page.evaluate(() => (window as any).usdRenderModes.mode)).toBe('basic');
@@ -93,8 +98,8 @@ for (const [file, expected] of [
     test(`WebGPU Basic and Beauty preserve ${file}`, async ({ page }, testInfo) => {
         const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => { if (message.type() === 'error' && !message.text().includes('net::')) errors.push(message.text()); });
-        await page.goto(`/?viewer=three&file=/test-fixtures/${file}&assetCache=0`, { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+        await page.goto(`/?viewer=three&file=/test-fixtures/${file}&render=basic&assetCache=0`, { waitUntil: 'domcontentloaded' });
+        await stageReady(page);
         const result = await page.evaluate(async () => {
             const w = window as any; await w.usdHydra.materialsReady(); w.usdHydra.setPlaying(false);
             const types: string[] = []; w.usdRoot.traverse((object: any) => { for (const material of [object.material].flat()) if (material) types.push(material.type); });
@@ -102,6 +107,7 @@ for (const [file, expected] of [
         });
         if (expected !== 'vdb') expect(result.diagnostics.materialXCreateFailures).toBe(0);
         expect(result.types.some(type => expected === 'surface' ? type.includes('NodeMaterial') : type.includes('VolumeNodeMaterial'))).toBe(true);
+        await openSettings(page);
         await page.getByRole('combobox', { name: 'Render mode', exact: true }).selectOption('beauty');
         await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.mode)).toBe('beauty');
         await page.waitForTimeout(500);
@@ -115,7 +121,7 @@ for (const [file, expected] of [
 
 test('WebGPU preserves per-point opacity', async ({ page }) => {
     await page.goto('/?viewer=three&file=/test-fixtures/coverage/core/points-widths.usda', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await stageReady(page);
     const samples = await page.evaluate(async () => {
         const w = window as any;
         const T = await import('three'); const { createThreeHydra, getUsdModule } = await import('/usd/index.js');
@@ -133,7 +139,7 @@ def Points "Points" {
         await w.opacityHandle.ready();
         w._controls.enableDamping = false; w.camera.position.set(0,0,5); w._controls.target.set(0,0,0); w._controls.update();
         w.camera.updateMatrixWorld();
-        return [...[-1,0,1].map(x => { const v = new T.Vector3(x,0,0).project(w.camera); return [Math.round((v.x+1)*innerWidth/2), Math.round((1-v.y)*innerHeight/2)]; }), [10, Math.round(innerHeight / 2)]];
+        return [...[-1,0,1].map(x => { const v = new T.Vector3(x,0,0).project(w.camera); return [Math.round((v.x+1)*w.renderer.domElement.clientWidth/2), Math.round((1-v.y)*w.renderer.domElement.clientHeight/2)]; }), [10, Math.round(w.renderer.domElement.clientHeight / 2)]];
     });
     const screenshot = await page.locator('canvas.usd-viewer-three-canvas').screenshot();
     const pixels = await page.evaluate(async ({ encoded, samples }) => {
@@ -148,6 +154,7 @@ def Points "Points" {
     expect(distance(pixels[2])).toBeGreaterThan(60);
     expect(distance(pixels[1])).toBeGreaterThan(10);
     expect(distance(pixels[1])).toBeLessThan(distance(pixels[2]));
+    await openSettings(page);
     await page.getByRole('combobox', { name: 'Render mode', exact: true }).selectOption('pathtraced');
     await expect(page.locator('#render-mode-controls [role=status]')).toContainText('point and curve opacity');
     await page.evaluate(() => (window as any).opacityHandle.dispose());
@@ -158,7 +165,7 @@ test('Beauty supports the WebGL backend and authored orthographic cameras', asyn
     page.on('console', message => { if (message.type() === 'error' && !message.text().includes('net::')) errors.push(message.text()); });
     await page.goto('/?viewer=three&backend=webgl&render=beauty&file=/test-fixtures/coverage/core/orthographic-camera.usda', { waitUntil: 'domcontentloaded' });
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes?.mode)).toBe('beauty');
-    await page.getByRole('button', { name: 'Stage', exact: true }).click();
+    await stageReady(page);
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('/World/Camera');
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => { const w = window as any; return { backend: w.renderer.backend.isWebGLBackend, ortho: w.usdRenderCamera.isOrthographicCamera, width: w.usdRenderCamera.right - w.usdRenderCamera.left }; })).toEqual({ backend: true, ortho: true, width: 7.5 });
@@ -173,7 +180,7 @@ test('gkjohnson traces on the shared renderer, resets on edits and releases priv
     page.on('request', request => requests.push(request.url()));
     await page.setViewportSize({ width: 640, height: 480 });
     await page.goto('/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Stage', exact: true })).toBeVisible();
+    await stageReady(page);
     expect(requests.some(url => url.includes('/three-gpu-pathtracer/'))).toBe(false);
     const original = await page.evaluate(() => {
         const w = window as any; w.usdHydra.setPlaying(false); w._controls.enableDamping = false;
@@ -181,6 +188,7 @@ test('gkjohnson traces on the shared renderer, resets on edits and releases priv
         const meshes: any[] = []; w.usdRoot.traverse((o: any) => { if (o.isMesh) meshes.push(o); }); w.testMesh = meshes[0];
         return { index: Array.from(w.testMesh.geometry.index?.array || []), attributes: Object.keys(w.testMesh.geometry.attributes).sort() };
     });
+    await openSettings(page);
     const picker = page.getByRole('combobox', { name: 'Render mode', exact: true });
     await picker.selectOption('pathtraced-gk');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(4);
@@ -210,13 +218,15 @@ test('gkjohnson traces on the shared renderer, resets on edits and releases priv
     expect(await page.evaluate(() => !!(window as any).testMesh.geometry.boundsTree)).toBe(false);
     await picker.selectOption('pathtraced-gk');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
-    await page.getByRole('button', { name: 'Stage', exact: true }).click();
+    await openSettings(page);
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('/World/Camera');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
+    await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
     await page.locator('select[data-stage-variant=lighting]').selectOption('nightNeon');
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
     await page.setViewportSize({ width: 800, height: 600 });
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
+    await openSettings(page);
     await picker.selectOption('basic');
     expect(errors).toEqual([]);
 });

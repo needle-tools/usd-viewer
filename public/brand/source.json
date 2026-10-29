@@ -1,0 +1,14 @@
+{
+  "source": "https://brand.needle.tools",
+  "downloaded": "2026-10-29",
+  "changes": [
+    "Local logo URLs under /brand/logos/"
+  ],
+  "assets": [
+    "fonts/NunitoSans-Variable.ttf",
+    "fonts/MonaspaceNeonVar.woff2",
+    "logos/logo_needle_black_no_padding.svg",
+    "logos/logo_needle_white_no_padding.svg"
+  ],
+  "localAssetSource": "Shared Needle brand assets in git/sf3d-web/src/assets"
+}

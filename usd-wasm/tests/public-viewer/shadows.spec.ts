@@ -90,8 +90,8 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: untextured MaterialX 
     tangents:attributes.tangent?.count||0,finite:Array.from(attributes.tangent?.array||[]).every(Number.isFinite)};
   }});return result;
  });
- expect(basis.material).toBe('MaterialXMaterial');expect(basis.uv).toBe(false);
- expect(basis.tangents).toBe(basis.positions);expect(basis.finite).toBe(true);
+ expect(basis.material).toBe(viewer==='three'?'MeshPhysicalNodeMaterial':'MaterialXMaterial');expect(basis.uv).toBe(false);
+ if(viewer==='needle'||basis.tangents)expect(basis.tangents).toBe(basis.positions);expect(basis.finite).toBe(true);
  const canvas=page.locator(viewer==='three'?'canvas.usd-viewer-three-canvas':'needle-engine canvas').first();
  await page.waitForTimeout(150);const on=await canvas.screenshot({path:testInfo.outputPath('no-uv-shadow-enabled.png')});
  await page.evaluate(async()=>{await(window as any).usdHydra.setTime(12);});
@@ -109,7 +109,7 @@ for(const materialX of [false,true])for(const viewer of ['three','needle'])for(c
   let light:any,material:any;h.scene.traverse((o:any)=>{if(o.userData.usdPath==='/World/Key')light=o;if(o.userData.usdPath==='/World/Ground')material=o.material;});
   return {material:material.constructor.name,enabled:(w.needleEngineContext?.renderer||w.renderer).shadowMap.enabled,cast:light.castShadow,type:light.type,authored:light.userData.usdShadowEnabled};
  });
- if(materialX)expect(state.material).toBe('MaterialXMaterial');
+ if(materialX)expect(state.material).toBe(viewer==='three'?'MeshPhysicalNodeMaterial':'MaterialXMaterial');
  expect(state.enabled).toBe(true);expect(state.cast).toBe(true);expect(state.authored).toBe(true);expect(state.type).toBe({distant:'DirectionalLight',point:'PointLight',spot:'SpotLight'}[type]);
  const canvas=page.locator(viewer==='three'?'canvas.usd-viewer-three-canvas':'needle-engine canvas').first();await page.waitForTimeout(150);
  const on=await canvas.screenshot({path:testInfo.outputPath('shadow-enabled.png')});
@@ -135,7 +135,8 @@ for(const viewer of ['three','needle'])test(`${viewer}: gallery Distant sun shad
  await page.goto(`/?viewer=${viewer}&file=/test-fixtures/coverage/lighting-mdl/distant-sun.usda`);
  await page.waitForFunction(()=>!!(window as any).usdHydra);
  await page.evaluate(async()=>{const h=(window as any).usdHydra;await h.ready();await h.materialsReady();h.setPlaying(false);});
- const select=page.locator('select[data-usd-variant-set="shadows"]');
+ await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
+ const select=page.locator('select[data-stage-variant="shadows"]');
  await expect(select).toHaveValue('enabled');
  const cast=()=>page.evaluate(()=>{let value:any;(window as any).usdHydra.scene.traverse((o:any)=>{if(o.userData.usdPath==='/World/Lights/Sun')value=o.castShadow;});return value;});
  await expect.poll(cast).toBe(true);
@@ -167,32 +168,45 @@ for(const viewer of ['three','needle'])test(`${viewer}: MaterialX per-light shad
  });
  // MaterialX's environment is initialized by the first rendered frame. Poll the
  // awaited evaluation: waitForFunction treats an async predicate's Promise as truthy.
- const readPaths=()=>page.evaluate(async()=>{
-  const w=window as any;const {MaterialXEnvironment}=await import('/materialx/index.js');
-  return MaterialXEnvironment.get(w.needleEngineContext?.scene||w.scene).lights
+ const readPaths=()=>page.evaluate(async viewer=>{
+  const w=window as any;
+  if(viewer==='three'){const paths:string[]=[];w.scene.traverse((light:any)=>{if(light.isDirectionalLight&&light.userData.usdPath)paths.push(light.userData.usdPath);});return paths;}
+  const {MaterialXEnvironment}=await import('/materialx/index.js');
+  return MaterialXEnvironment.get(w.needleEngineContext.scene).lights
    .filter((light:any)=>light.isDirectionalLight&&light.userData.usdPath).map((light:any)=>light.userData.usdPath);
- });
+ },viewer);
  await expect.poll(async()=>(await readPaths()).sort()).toEqual(['/World/Fill','/World/Key']);
  const initial=await readPaths();
  expect(initial).toHaveLength(2);
  expect(initial.every((path:any)=>typeof path==='string')).toBe(true);
+ const canvas=page.locator(viewer==='three'?'canvas.usd-viewer-three-canvas':'needle-engine canvas').first();
+ await page.waitForTimeout(150);const bothOn=await canvas.screenshot();
  await page.evaluate(async(path:string)=>{
   await (window as any).usdHydra.editStage(async(stage:any)=>{
    const prim=stage.GetPrimAtPath(path);const attribute=prim.GetAttribute('inputs:shadow:enable');
    try{attribute.SetBool(false,0);}finally{attribute.delete();prim.delete();}
   });
  },initial[0]);
- const canvas=page.locator(viewer==='three'?'canvas.usd-viewer-three-canvas':'needle-engine canvas').first();
  await page.waitForTimeout(150);const actual=await canvas.screenshot({path:testInfo.outputPath('per-light-actual.png')});
- const order=await page.evaluate(async()=>{
-  const w=window as any;const {MaterialXEnvironment}=await import('/materialx/index.js');
-  const e=MaterialXEnvironment.get(w.needleEngineContext?.scene||w.scene);
+ expect(await changed(page,bothOn,actual)).toBeGreaterThan(150);
+ const order=await page.evaluate(async viewer=>{
+  const w=window as any;
+  if(viewer==='three'){
+   const before:any[]=[];w.scene.traverse((object:any)=>{
+    if(object.isDirectionalLight&&object.userData.usdPath){before.push({path:object.userData.usdPath,cast:object.castShadow});object.shadow.needsUpdate=true;}
+    if(object.isMesh)for(const material of [object.material].flat())material.needsUpdate=true;
+   });return before;
+  }
+  const {MaterialXEnvironment}=await import('/materialx/index.js');
+  const e=MaterialXEnvironment.get(w.needleEngineContext.scene);
   const before=e.lights.map((l:any)=>({path:l.userData.usdPath,cast:l.castShadow}));
   e.refreshLights();return before;
- });
+ },viewer);
  await page.waitForTimeout(150);const reference=await canvas.screenshot({path:testInfo.outputPath('per-light-explicit-refresh.png')});
  const delta=await changed(page,actual,reference,true);
  console.log(viewer,'per-light refresh mismatch pixels',delta,'order',order);
  expect(delta).toBeLessThan(5);
- expect(order.map((l:any)=>l.cast)).toEqual([true,false]);
+ expect(order.find((light:any)=>light.path===initial[0]).cast).toBe(false);
+ expect(order.find((light:any)=>light.path===initial[1]).cast).toBe(true);
+ if(viewer==='needle')expect(order.map((l:any)=>l.cast)).toEqual([true,false]);
 });

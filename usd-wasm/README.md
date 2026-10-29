@@ -557,7 +557,8 @@ const handle = await createThreeHydra({
 });
 await handle.ready();
 const modes = await createRenderModes({
-  renderer, scene, camera,
+  renderer, scene, camera, controls,
+  settings: { maxSamples: 512, bounces: 8, denoiser: 'jnlm' },
   // npm install @meimu/mutracer@0.2.0; stays outside the base loader graph.
   loadPathTracer: () => import('@meimu/mutracer'),
   // npm install three-gpu-pathtracer@0.0.27 three-mesh-bvh@0.9.16 xatlas-web@0.1.0
@@ -570,12 +571,67 @@ modes.render(camera);
 // On teardown: modes.dispose(); await handle.dispose(); renderer.dispose();
 ```
 
+When `controls` is supplied, `modes.render()` owns its updates; do not also call `controls.update()` in the host loop. This keeps orbit damping and tracer activity detection in sync. Omit it if the application manages its own controls. `await modes.setSettings({ maxSamples: 256, bounces: 4, denoiser: null })` changes tracer settings; `modes.settings` returns a copy. A renderer clear color supplies the backdrop when `scene.background` is unset; an authored scene background takes precedence. Environment lighting remains separate.
+
+To match Needle Engine's AgX look, call `await configureNeedleAgx(renderer)` before compiling materials on a `WebGPURenderer`, then select `AgXToneMapping` normally. This registers Needle's transform on that renderer, including its WebGL fallback. For MuTracer, pass `configurePathTracer: configureNeedleAgxDisplay` to `createRenderModes` or `mountRenderModePicker`; it applies the same transform after denoising through MuTracer's public display-pass API. This MuTracer integration requires WebGPU extended HDR output; unsupported devices report a mode error. Import both helpers from `@needle-tools/usd/renderers`. The default loader remains compatible with Three r160.
+
 Basic renders directly. Beauty adds Three.js SSGI, ambient occlusion and temporal antialiasing. Path traced uses MuTracer with 512 samples, eight bounces and JNLM denoising; scene and camera edits reset accumulation. MuTracer is an optional peer and must be supplied with `loadPathTracer` when path tracing is enabled. It loads only when selected. A separate output canvas keeps the existing orbit controls connected; an application may supply its own `canvas` for embedded layouts.
 
 WebGPU support translates MaterialX surfaces through the bundled TSL loader, including textures, nested graphs and geometry properties. Bounded MaterialX and VDB volumes additionally require the factories from `/volumes`. Gaussian splats use the same WebGPURenderer through the particle-field factory in `createWebGpuSupport()`.
 
-`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas and JNLM denoising.
+`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
+
+`configureNeedleAgxDisplay(engine, () => renderer.toneMapping)` follows changes to the host's AgX (Needle), Linear, Reinhard or NoToneMapping choice. Needle AgX remains the default when no callback is supplied. NoToneMapping ignores exposure, matching Three's presentation.
+
+The `/scene` entry also exports `setPrimVisible(handle, path, visible)` and `setPrimActive(handle, path, active)`. They synchronize through `handle.editStage`; activation recomposes descendants. Visibility edits the authored default for static visibility, or the current time for animated visibility. These are in-memory stage edits, like variants; the host decides whether to export them.
 
 MuTracer's built-in conversion supports ordinary Three.js PBR surfaces, including the viewer's MDL input approximations. Arbitrary MaterialX graphs, bounded volumes, custom primvar shaders, per-point/curve opacity, Gaussian splats and PMREM-only environments cannot currently be translated by this integration; selecting path tracing preserves the current mode and reports the unsupported content. Applications can supply `convertMaterial` and `convertLight` for their own MuTracer conversions. Use an equirectangular HDR/EXR environment for path tracing.
 
 For controls, `mountRenderModePicker` from `/viewer` wraps the same render-mode controller. `mountStagePanel({ handle, stage, scene, camera, controls, setCamera })` adds cameras, purposes, variants, payloads, a searchable prim tree, attributes, relationships, metadata, layers and a timeline. `setCamera` receives the selected, fully composed Hydra camera, or the supplied free camera. Use `beforeEdit`/`afterEdit` to coordinate host integrations such as physics. Dispose the panel before disposing its handle. The default stylesheet loads relative to the installed module; pass `style: false` to provide your own styles. `inspectStage`, `inspectPrim`, `setVariant`, `setPayloadLoaded` and `stageCameras` from `/scene` are available without the UI.
+
+
+Use `mountRenderModePicker({ layout: 'settings', ... })` for mode, exposure and tracer controls in a settings panel. `onSettingsChange` reports preferences for host persistence; the default compact picker remains available.
+
+Pass `containers: { stage, properties, layers, timeline, view }` to host the
+stage controls in separate layout panels. These are plain HTMLElements; the SDK
+has no framework or Dockview dependency. The optional `view` host places camera and purpose controls in a shared settings panel. Timeline controls provide frame stepping, range endpoints, numeric entry and scrubbing. `stateKey` persists the prim filter,
+collapsed branches and selection. `onSelect` reports the selected prim path;
+`panel.selectPrim(path)` connects viewport picking to the inspector. `onOpen`
+lets a host reveal its panels, and `onStage` receives refreshed stage information.
+The callback also receives the complete immutable selection as its second
+argument. `panel.selectMany(items)` supports multiple authored identities;
+`panel.selection` and `panel.selectedProperty` expose inspection context.
+`panel.navigate('/Looks/Material/Shader.inputs:roughness')` follows a property
+without framing the camera. Properties provides target/connection links,
+Back/Forward, filtering, copying and selected-property provenance.
+
+For viewport picks, `handle.resolvePick(renderPath, instanceIndex)` translates
+the renderer's index to an authored path and instancer context. Point glyphs,
+mixed prototypes, masking and nested instancers use the same mapping;
+`handle.resolveSelection(renderPath, count, items)` returns renderer indices for
+outlines/framing. Authored point IDs are exact strings. `panel.selectPrim(item)`
+accepts these identities as well as ordinary prim paths.
+
+`mountRepl` from `/viewer` mounts an inline JavaScript console with expression
+results, top-level await, errors and bounded command history. Supply
+`getContext()` for the current `{USD, stage, handle, panel, selection}` and
+`edit: callback => panel.edit(callback)`. Return `null` from `getContext` before
+closing the document. Ctrl/Cmd+Enter runs; `help` lists symbols/shortcuts.
+Declarations are command-local; `scratch` persists only for the current
+document. This is trusted in-page JavaScript, not a sandbox.
+
+`panel.edit(callback)` serializes mutations through `handle.editStage` and the
+host lifecycle. A failed arbitrary callback can leave authored changes; those
+changes are synchronized and the host restored before the error is rethrown.
+This is not automatic rollback/undo or a save/export workflow. Do not nest a
+second `handle.editStage` inside the callback.
+
+Embedded panels do not add a second Stage button. `inspectStage().time` is null
+for static content, including files that only declare frame bounds; otherwise it
+reports the composed animation range. The timeline follows that information after
+variant and payload edits, with regularly spaced frame ticks.
+
+The development viewer uses Dockview Core for resizable, dockable, floating and
+popout panels, saved workspace layouts and viewport maximization. Its local
+Needle brand assets support system, light and dark UI themes independently of
+the scene background.

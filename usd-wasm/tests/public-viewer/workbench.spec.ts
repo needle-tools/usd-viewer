@@ -1,0 +1,161 @@
+import {stageReady,openSettings,openAppMenu} from './workbench-menus';
+import { expect, test } from '@playwright/test';
+
+const stage = '/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
+test('Needle workspace resizes the viewport, restores layouts and keeps UI theme independent of scene background', async ({ page }, info) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(stage);
+  await stageReady(page);
+  const alignment = () => page.evaluate(() => {
+    const w = window as any, view = w.usdWorkbench.viewport.getBoundingClientRect(), canvas = w.renderer.domElement.getBoundingClientRect();
+    return { width: Math.abs(view.width - canvas.width), height: Math.abs(view.height - canvas.height), x: Math.abs(view.x - canvas.x), y: Math.abs(view.y - canvas.y), aspect: Math.abs(w.camera.aspect - view.width / view.height) };
+  });
+  for (const value of Object.values(await alignment())) expect(value).toBeLessThan(1);
+  expect(await page.evaluate(() => {
+    const stage = document.querySelector('[data-panel=stage]')!.getBoundingClientRect(), viewport = document.querySelector('#usd-viewport')!.getBoundingClientRect(), properties = document.querySelector('[data-panel=properties]')!.getBoundingClientRect();
+    return stage.right <= viewport.left + 2 && properties.left >= viewport.right - 2;
+  })).toBe(true);
+  await page.locator('[data-usd-menu=view] > summary').click();
+  await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await openSettings(page);await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveValue('light');await page.keyboard.press('Escape');
+  await page.locator('[data-prim-path="/World/Camera"]').click();
+  await expect(page.locator('[data-panel=properties] table')).toContainText('focalLength');
+  await page.evaluate(() => {
+    const w = window as any; w.testDriver = w.usdHydra.driver;
+    w.usdWorkbench.dock.getPanel('stage').api.setSize({width: 320});
+  });
+  await expect.poll(async () => (await alignment()).aspect).toBeLessThan(0.01);
+  await page.screenshot({path: info.outputPath('workbench-dark.png')});
+  await page.locator('[data-usd-menu=window] > summary').click();
+  await page.getByRole('textbox', {name:'Layout name'}).fill('My workspace');
+  await page.getByRole('button', {name:'Save',exact:true}).click();
+  await page.getByRole('combobox', {name:'Workspace layout'}).selectOption('viewport');
+  await expect(page.locator('[data-panel=stage]')).toBeHidden();
+  await page.getByRole('combobox', {name:'Workspace layout'}).selectOption('saved:My workspace');
+  await expect(page.locator('[data-panel=stage]')).toBeVisible();
+  expect(await page.evaluate(() => (window as any).testDriver === (window as any).usdHydra.driver)).toBe(true);
+  await page.reload();
+  await expect(page.locator('[data-prim-path="/World/Camera"]')).toHaveAttribute('aria-selected','true');
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  expect(await page.locator('[data-panel=stage]').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(300);
+  await page.evaluate(() => { const w = window as any; w.usdWorkbench.dock.getPanel('viewport').api.maximize(); });
+  await expect(page.locator('[data-panel=stage]')).toBeHidden();
+  await page.evaluate(() => { const w = window as any; w.usdWorkbench.dock.getPanel('viewport').api.exitMaximized(); });
+  await expect(page.locator('[data-panel=stage]')).toBeVisible();
+  for (const value of Object.values(await alignment())) expect(value).toBeLessThan(1);
+  await page.locator('[data-usd-menu=view] > summary').click();
+  await page.getByRole('combobox',{name:'Color theme'}).selectOption('light');
+  await page.keyboard.press('Escape');
+  await page.screenshot({path:info.outputPath('workbench-light.png')});
+  expect(errors).toEqual([]);
+});
+
+test('floating properties and popout windows retain their content and theme', async ({page},info) => {
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(stage); await stageReady(page);
+  await page.locator('[data-prim-path="/World/Camera"]').click();
+  await page.evaluate(() => { const w=window as any; w.usdWorkbench.dock.addFloatingGroup(w.usdWorkbench.dock.getPanel('properties'),{width:440,height:420,x:400,y:180}); });
+  await expect(page.getByRole('dialog', {name:'Properties',exact:true})).toBeVisible();
+  await page.screenshot({path:info.outputPath('floating-properties.png')});
+  const popupPromise=page.waitForEvent('popup');
+  await page.evaluate(() => { const w=window as any; void w.usdWorkbench.dock.addPopoutGroup(w.usdWorkbench.dock.getPanel('properties'),{popoutUrl:location.origin+'/viewer-popout.html'}); });
+  const popup=await popupPromise;popup.on('pageerror',e=>errors.push(e.message));
+  await expect(popup.locator('[data-panel=properties] table')).toContainText('focalLength');
+  await page.locator('[data-usd-menu=view] > summary').click();
+  await page.getByRole('combobox',{name:'Color theme'}).selectOption('dark');
+  await page.keyboard.press('Escape');
+  await expect(popup.locator('html')).toHaveAttribute('data-theme','dark');
+  await popup.screenshot({path:info.outputPath('popout-properties.png')});
+  await page.setViewportSize({width:390,height:700});
+  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('properties'));
+  await expect(popup.locator('[data-panel=properties] table')).toBeVisible();
+  await expect.poll(()=>page.locator('#usd-viewport').evaluate(el=>el.getBoundingClientRect().width)).toBe(390);
+  await page.setViewportSize({width:1280,height:900});
+  await popup.close({runBeforeUnload:true});
+  await expect(page.locator('[data-panel=properties] table')).toContainText('focalLength');
+  expect(errors).toEqual([]);
+});
+
+test('small viewports start with a usable canvas and can open a local file',async({page})=>{
+  await page.setViewportSize({width:700,height:600}); await page.goto('/?viewer=three');
+  const source='#usda 1.0\n def Cube "LocalCube" {}';
+  await page.locator('[data-usd-menu=file] > summary').click();
+  await expect(page.getByRole('button',{name:'Open…',exact:true})).toBeEnabled();
+  await page.locator('input[type=file]').setInputFiles({name:'local.usda',mimeType:'application/octet-stream',buffer:Buffer.from(source)});
+  await expect(page.locator('[data-prim-path="/LocalCube"]')).toBeAttached();
+  expect(await page.locator('#usd-viewport').evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(650);
+  await expect(page.locator('.usd-file-context')).toContainText('local');
+  await page.setViewportSize({width:390,height:700});
+  await expect.poll(()=>page.locator('#container button:visible, #container summary:visible, #container select:visible').evaluateAll(nodes=>nodes.every(el=>el.getBoundingClientRect().right<=390))).toBe(true);
+  const rects=await page.locator('#container button:visible, #container summary:visible, #container select:visible').evaluateAll(nodes=>nodes.map(el=>el.getBoundingClientRect().toJSON()));
+  for(const rect of rects){expect(rect.left).toBeGreaterThanOrEqual(0);expect(rect.right).toBeLessThanOrEqual(390);}
+  expect(await page.locator('#usd-viewport').evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(380);
+});
+
+for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus and tooltips remain readable`, async ({page}, info) => {
+  await page.addInitScript(value => localStorage.setItem('needle-usd-theme', JSON.stringify(value)), theme);
+  await page.goto('/?viewer=three');
+  await expect(page.locator('#usd-workbench')).toHaveAttribute('data-loaded', 'false');
+  await expect(page.locator('#dropzone')).toBeVisible();
+  const contrast = (selector: string, background?: string) => page.locator(selector).evaluate((node, bg) => {
+    const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v => {v/=255; return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
+    const luminance = (value: string) => rgb(value).reduce((sum,v,i)=>sum+v*[0.2126,0.7152,0.0722][i],0);
+    const style=getComputedStyle(node), foreground=luminance(style.color), back=luminance(getComputedStyle(bg ? document.querySelector(bg)! : node).backgroundColor);
+    return (Math.max(foreground,back)+0.05)/(Math.min(foreground,back)+0.05);
+  }, background);
+  expect(await contrast('.dropzone-title','#usd-viewport')).toBeGreaterThan(4.5);
+  expect(await contrast('.dropzone-subtitle','#usd-viewport')).toBeGreaterThan(4.5);
+  await page.locator('[data-usd-menu=file]>summary').click();
+  await page.locator('#export-gltf').hover();
+  await expect(page.locator('.ui-tooltip')).toBeVisible();
+  await expect(page.locator('.ui-tooltip')).toContainText('Load a USD');
+  await expect(page.locator('.ui-tooltip')).toHaveCSS('opacity','1');
+  expect(await contrast('.ui-tooltip')).toBeGreaterThan(4.5);
+  await page.screenshot({path:info.outputPath(`${theme}-empty-tooltip.png`)});
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({width:390,height:700});
+  await page.screenshot({path:info.outputPath(`${theme}-empty-narrow.png`)});
+  await page.setViewportSize({width:1280,height:900});
+  await page.locator('[data-usd-menu=view]>summary').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('[data-usd-menu=window]>summary')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('combobox',{name:'Workspace layout'})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await page.locator('[data-usd-menu=file]>summary').click();
+  await page.getByRole('button',{name:'Examples',exact:true}).click();
+  await expect(page.locator('.usd-examples-browser')).toBeVisible();
+  await expect(page.locator('[data-usd-menu=file]')).not.toHaveAttribute('open');
+  await page.keyboard.press('Escape');
+  await page.locator('[data-usd-menu=file]>summary').click();
+  const chooserPromise=page.waitForEvent('filechooser');
+  await page.getByRole('button',{name:'Open…',exact:true}).click();
+  const chooser=await chooserPromise;
+  await chooser.setFiles({name:'contrast.usda',mimeType:'text/plain',buffer:Buffer.from('#usda 1.0\n def Cube "Cube" {}')});
+  await expect(page.locator('#usd-workbench')).toHaveAttribute('data-loaded','true');
+  await page.waitForFunction(()=>!!(window as any).usdHydra);
+  await page.evaluate(async()=>{await(window as any).usdHydra.ready();});
+  await expect(page.locator('#dropzone')).toBeHidden();
+  await page.locator('[data-usd-menu=file]>summary').click();
+  await page.locator('#export-gltf').hover();
+  await expect(page.locator('.ui-tooltip')).toContainText('Share or export');
+  await expect(page.locator('.ui-tooltip')).toHaveCSS('opacity','1');
+  expect(await contrast('.ui-tooltip')).toBeGreaterThan(4.5);
+  await page.screenshot({path:info.outputPath(`${theme}-loaded-tooltip.png`)});
+  await page.locator('#export-gltf').click();
+  await expect(page.locator('#export-dialog')).toBeVisible();
+  await page.locator('#export-dialog-close-btn').click();
+  await page.setViewportSize({width:390,height:700});
+  await expect(page.locator('#usd-viewport')).toBeVisible();
+  await expect.poll(()=>page.locator('#usd-viewport').evaluate(node=>node.getBoundingClientRect().width)).toBeGreaterThan(380);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  for (const name of ['file','view','window','help']) {
+    await openAppMenu(page,name as 'file'|'view'|'window'|'help');
+    const rect=await page.locator(`[data-usd-menu=${name}] .usd-menu-body`).boundingBox();
+    expect(rect!.x).toBeGreaterThanOrEqual(0);expect(rect!.x+rect!.width).toBeLessThanOrEqual(390);
+    await page.screenshot({path:info.outputPath(`${theme}-narrow-${name}.png`)});
+  }
+});

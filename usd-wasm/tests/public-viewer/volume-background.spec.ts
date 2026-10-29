@@ -1,3 +1,4 @@
+import {clearStage} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 
 // Keep these local rendering checks independent of the web-font CDN.
@@ -28,7 +29,7 @@ test('jade volume composites over the background and receives light without an o
     const pixel = () => page.evaluate(() => {
         const w = window as any; w.renderer.render(w.scene, w.camera);
         const gl = w.renderer.backend.gl, data = new Uint8Array(4);
-        gl.readPixels(640, 450, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        gl.readPixels(Math.floor(gl.drawingBufferWidth / 2), Math.floor(gl.drawingBufferHeight / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
         return Array.from(data);
     });
     await page.waitForTimeout(100);
@@ -57,7 +58,7 @@ test('jade volume composites over the background and receives light without an o
     await page.reload();
     await expect(background).toHaveValue('dark');
     await page.screenshot({ path: testInfo.outputPath('jade-default-camera-dark.png') });
-    await page.locator('a.clear-button').click();
+    await clearStage(page);
     await expect(page.locator('#usd-background-controls')).toBeHidden();
     expect(errors).toEqual([]);
 });

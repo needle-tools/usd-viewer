@@ -32,15 +32,21 @@ const format: 'usd' | 'usda' | 'usdc' | 'usdz' | 'unknown' = tryDetermineFileFor
 void [info, loaded, snapshot, createUsdPhysics, format];
 
 import { inspectStage, inspectPrim, setVariant, setPayloadLoaded, stageCameras } from '@needle-tools/usd/scene';
-import { createRenderModes, type RenderModes } from '@needle-tools/usd/renderers';
+import { createRenderModes, configureNeedleAgx, configureNeedleAgxDisplay, type RenderModes } from '@needle-tools/usd/renderers';
 import { WebGLRenderer, PerspectiveCamera } from 'three';
 const inspection = inspectStage(await stage.driver.GetStage());
 inspectPrim(await stage.driver.GetStage(), '/World', 24);
 await setVariant(stage, '/World', 'look', 'red');
 await setPayloadLoaded(stage, '/World/Payload', true);
 stageCameras(scene);
-const modes: RenderModes = await createRenderModes({ renderer: new WebGLRenderer(), scene, camera: new PerspectiveCamera(), onStatus(status) { status.samples.toFixed(); } });
+await configureNeedleAgx(new WebGLRenderer());
+const modes: RenderModes = await createRenderModes({ renderer: new WebGLRenderer(), scene, camera: new PerspectiveCamera(), configurePathTracer: configureNeedleAgxDisplay, onStatus(status) { status.samples.toFixed(); } });
 await modes.setMode('beauty');
+await modes.setSettings({maxSamples:256,bounces:4,denoiser:null});
+const sampleCap: number = modes.settings.maxSamples;
+// @ts-expect-error Only supported denoisers can be configured.
+await modes.setSettings({denoiser:'unknown'});
+void sampleCap;
 // @ts-expect-error Render modes are explicit.
 await modes.setMode('unknown');
 modes.dispose();

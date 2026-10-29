@@ -9,6 +9,7 @@ import UsdViewPanel from './UsdViewPanel.svelte';
 import { allDroppedFiles } from './fileHandling';
 import { usdViewState } from './usdViewStore.svelte';
 import { testAssetLibrary } from '../../tests/fixtures/test-asset-library.js';
+import { createApiStage } from '../../tests/fixtures/api/create-api-stage.js';
 
 globalThis.NEEDLE_MATERIALX_LOCATION ??= "package";
 
@@ -72,7 +73,7 @@ let needleLoaderFiles: HydraFile[] = [];
 
 type TestFile = { path: string, url: string };
 type TestAsset = { label: string, root?: string, url?: string, files?: TestFile[], group: string };
-type TestAssetLibraryEntry = { label: string, root: string, files?: string[], group: string };
+type TestAssetLibraryEntry = { label: string, root: string, files?: string[], group: string, executable?: string };
 type ApiSceneKind = "preview" | "animated" | "variant-sphere" | "variant-cube";
 type NeedleIntegrationMode = "direct" | "loader";
 type RenderMode = "three" | "needle-direct" | "needle-loader";
@@ -120,7 +121,9 @@ const testAssets: TestAsset[] = [
   { group: "Regressions", label: "Carbon Bike USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/CarbonFrameBike/index.usda" },
   { group: "Regressions", label: "McUsd USDA", url: "https://github.com/usd-wg/assets/blob/jcowles/discoverability/full_assets/McUsd/McUsd.usda" },
   { group: "Regressions", label: "Teapot USD", url: "https://github.com/usd-wg/assets/blob/main/full_assets/Teapot/Teapot.usd" },
-  ...(testAssetLibrary as TestAssetLibraryEntry[]).map(catalogAsset),
+  // Executable fixtures are hosted by the viewer and the dedicated REPL page;
+  // this lower-level file-loading harness accepts USD inputs only.
+  ...(testAssetLibrary as TestAssetLibraryEntry[]).filter(asset => !asset.executable).map(catalogAsset),
 ];
 
 getUsdModule({
@@ -701,56 +704,13 @@ async function loadApiScene(kind: ApiSceneKind) {
   lastApiKind = kind;
   await resetScene();
   const path = `/tmp/${kind}.usda`;
-  const stage = await createApiStage(kind, path);
+  const stage = await createApiStage(usd, kind, path);
   stage.GetRootLayer().Export(path);
   const bytes = usd.ReadFile(path);
   usd.ReleaseStage(stage);
   await loadBuffer(bytes, `${kind}.usda`, `API ${kind}`, false);
 }
 
-async function createApiStage(kind: string, path: string) {
-  const stage = await usd.CreateStage(path);
-  stage.SetUpAxis("Z");
-  stage.SetStartTimeCode(1);
-  stage.SetEndTimeCode(48);
-  stage.SetTimeCodesPerSecond(24);
-
-  const world = stage.DefinePrim("/World", "Xform");
-
-  if (kind.startsWith("variant")) {
-    world.AddVariant("shape", "sphere");
-    world.AddVariant("shape", "cube");
-    world.DefinePrimInVariant("shape", "sphere", "/World/Shape", "Sphere")
-      .CreateAttribute("radius", "double", false).SetDouble(0.95, Number.NaN);
-    world.DefinePrimInVariant("shape", "cube", "/World/Shape", "Cube")
-      .CreateAttribute("size", "double", false).SetDouble(1.5, Number.NaN);
-    world.SetVariantSelection("shape", kind === "variant-cube" ? "cube" : "sphere");
-  }
-  else {
-    const sphere = stage.DefinePrim("/World/ApiSphere", "Sphere");
-    sphere.CreateAttribute("radius", "double", false).SetDouble(1, Number.NaN);
-    sphere.ApplyAPI("MaterialBindingAPI");
-    sphere.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
-  }
-
-  const material = stage.DefinePrim("/Looks/ApiPreview", "Material");
-  const shader = stage.DefinePrim("/Looks/ApiPreview/Shader", "Shader");
-  shader.CreateAttribute("info:id", "token", false).SetToken("UsdPreviewSurface", Number.NaN);
-  const diffuseColor = shader.CreateAttribute("inputs:diffuseColor", "color3f", false);
-  diffuseColor.SetColor3f(0.95, 0.25, 0.1, Number.NaN);
-  if (kind === "animated") {
-    diffuseColor.SetColor3f(0.1, 0.35, 1, 1);
-    diffuseColor.SetColor3f(1, 0.35, 0.05, 24);
-    diffuseColor.SetColor3f(0.1, 0.35, 1, 48);
-  }
-  shader.CreateAttribute("inputs:roughness", "float", false).SetFloat(0.28, Number.NaN);
-  shader.CreateAttribute("outputs:surface", "token", false);
-  material.CreateAttribute("outputs:surface", "token", false).AddConnection("/Looks/ApiPreview/Shader.outputs:surface");
-  world.ApplyAPI("MaterialBindingAPI");
-  world.CreateRelationship("material:binding", false).AddTarget("/Looks/ApiPreview");
-
-  return stage;
-}
 
 async function loadBuffer(bytes: Uint8Array, filename: string, label: string, reset = true) {
   assetFetchStatusEnabled = false;
@@ -798,7 +758,7 @@ async function loadBuffer(bytes: Uint8Array, filename: string, label: string, re
 }
 
 async function downloadApiUsdz() {
-  const stage = await createApiStage(lastApiKind, "/tmp/api-download.usda");
+  const stage = await createApiStage(usd, lastApiKind, "/tmp/api-download.usda");
   stage.GetRootLayer().Export("/tmp/api-download.usda");
   usd.CreateUsdzPackage("/tmp/api-download.usda", "/tmp/api-download.usdz");
   const bytes = usd.ReadFile("/tmp/api-download.usdz");

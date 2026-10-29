@@ -6,7 +6,7 @@
     <input name="in2" type="vector2" value="4, 2" />
   </multiply>
   <image name="CheckerImage" type="color3">
-    <input name="file" type="filename" value="./textures/checker.png" colorspace="srgb_texture" uniform="true" />
+    <input name="file" type="filename" value="../textures/checker.png" colorspace="srgb_texture" uniform="true" />
     <input name="texcoord" type="vector2" nodename="UVScale" />
   </image>
   <noise2d name="RoughnessNoise" type="float">

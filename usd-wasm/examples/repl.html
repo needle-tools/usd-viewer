@@ -485,6 +485,8 @@
     import { createThreeHydra } from "../src/create.three.js";
     import { createPxrFacade } from "./src/repl/pxr.js";
     import { replExamples } from "./src/repl/examples.js";
+    import { createApiStage } from "../tests/fixtures/api/create-api-stage.js";
+    import { createSceneKit } from "../tests/fixtures/api/scene-kit.js";
     import { testAssetLibrary } from "../tests/fixtures/test-asset-library.js";
     import { mount } from "svelte";
     import UsdViewPanel from "./src/UsdViewPanel.svelte";
@@ -894,6 +896,8 @@
       return {
         USD,
         ...pxr,
+        createApiStage,
+        sceneKit: createSceneKit(USD),
         stage: null,
         print: log,
         vectorToArray,

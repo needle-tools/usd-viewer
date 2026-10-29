@@ -359,6 +359,7 @@ async function createScopedThreeHydra(config, lifetime) {
      */
     const delegateConfig = {
         usdRoot: config.scene,
+        includedPurposes: config.includedPurposes,
         renderScene: config.renderScene,
         scenePrimitiveRoot,
         renderer: config.renderer,
@@ -435,8 +436,10 @@ async function createScopedThreeHydra(config, lifetime) {
     let shadows;
     let time = 0;
     let currentTimeCode = 0;
+    let sceneRevision = 0, completedTimeCode = 0, stageEditQueue = Promise.resolve();
     let playing = config.autoPlay === true;
     const finishDraw = () => {
+        completedTimeCode = currentTimeCode;
         renderInterface.endHydraDraw?.();
         shadows?.update(currentTimeCode);
     };
@@ -626,13 +629,32 @@ async function createScopedThreeHydra(config, lifetime) {
             playing = Boolean(value);
         },
         isPlaying: () => playing,
-        refresh: () => draw(),
+        get revision() { return sceneRevision; },
+        get renderedTime() { return completedTimeCode; },
+        refresh: () => { sceneRevision++; return draw(); },
+        /** Query authored identity only after Hydra finishes its current sync. */
+        resolvePick: async (renderPath, instanceIndex = 0) => {
+            await waitForDrawCompletion();
+            if (disposed || editInFlight || driver.isDeleted()) return null;
+            const stride = renderInterface.getInstanceStride?.(renderPath) || 1;
+            return driver.ResolvePick?.(renderPath, Math.floor(instanceIndex / stride)) || null;
+        },
+        resolveSelection: async (renderPath, count, selections) => {
+            await waitForDrawCompletion();
+            if (disposed || editInFlight || driver.isDeleted()) return null;
+            const stride = renderInterface.getInstanceStride?.(renderPath) || 1;
+            const indices = driver.ResolveSelection?.(renderPath, Math.ceil(count / stride), selections);
+            if (!indices || stride === 1) return indices ?? null;
+            return indices.flatMap(index => Array.from({length: stride}, (_, point) => index * stride + point)).filter(index => index < count);
+        },
         setIncludedPurposes: async (includedPurposes) => {
             if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {
                 return Promise.resolve();
             }
             await waitForDrawCompletion();
             driver.SetIncludedPurposes(includedPurposes);
+            renderInterface.setIncludedPurposes(includedPurposes);
+            sceneRevision++;
             return draw(true);
         },
         setComplexity: async (complexity) => {
@@ -644,30 +666,31 @@ async function createScopedThreeHydra(config, lifetime) {
             driver.SetComplexity(normalizedComplexity);
             return draw(true);
         },
-        editStage: async (callback) => {
-            if (disposed || driver.isDeleted()) {
-                return undefined;
-            }
-            await waitForDrawCompletion();
-            if (disposed || driver.isDeleted()) {
-                return undefined;
-            }
-            const stage = await waitMaybeAsync(driver.GetStage());
-            editInFlight = true;
-            try {
-                const result = await callback(stage, driver);
-                if (disposed || driver.isDeleted()) {
-                    return result;
-                }
-                editInFlight = false;
-                await draw(true);
-                await renderInterface.waitForRprimsReady();
-                shadows.refreshBounds();
-                return result;
-            }
-            finally {
-                editInFlight = false;
-            }
+        editStage: (callback) => {
+            const result = stageEditQueue.then(async () => {
+                if (disposed || driver.isDeleted()) return undefined;
+                await waitForDrawCompletion();
+                if (disposed || driver.isDeleted()) return undefined;
+                const stage = await waitMaybeAsync(driver.GetStage());
+                editInFlight = true;
+                let value, failure, failed = false;
+                try {
+                    try { value = await callback(stage, driver); }
+                    catch (error) { failure = error; failed = true; }
+                    // Arbitrary JS is not an atomic command: a thrown callback
+                    // may already have authored valid opinions. Show that state.
+                    sceneRevision++;
+                    if (!disposed && !driver.isDeleted()) {
+                        editInFlight = false;
+                        try { await draw(true); await renderInterface.waitForRprimsReady(); shadows.refreshBounds(); }
+                        catch (error) { if (!failed) {failure = error; failed = true;} }
+                    }
+                    if (failed) throw failure;
+                    return value;
+                } finally { editInFlight = false; }
+            });
+            stageEditQueue = result.catch(() => {});
+            return result;
         },
         repopulate: async () => {
             if (disposed || driver.isDeleted()) {
@@ -675,6 +698,7 @@ async function createScopedThreeHydra(config, lifetime) {
             }
             await waitForDrawCompletion();
             await withTimeout(waitMaybeAsync(driver.Repopulate()), "Hydra repopulate");
+            sceneRevision++;
             return draw();
         },
         materialsReady: async () => {

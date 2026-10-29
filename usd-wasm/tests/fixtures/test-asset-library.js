@@ -1,8 +1,10 @@
 import { coverageAssetLibrary } from './coverage/asset-library.js';
+import { apiExampleAssets } from './api/examples.js';
 
 export const fixtureBasePath = "/test-fixtures/";
 
 export const testAssetLibrary = [
+  ...apiExampleAssets,
   ...coverageAssetLibrary,
   { group: "Composition", label: "Payload Root", root: "payloads/payload_root.usda", files: ["payloads/payload_root.usda", "payloads/payload_payload.usda"] },
   { group: "Composition", label: "Nested Variants", root: "variants/nested_variants.usda", files: ["variants/nested_variants.usda"] },

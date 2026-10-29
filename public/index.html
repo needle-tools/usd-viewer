@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-workbench="loading">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, user-scalable=no, viewport-fit=cover" />
@@ -109,14 +109,23 @@
     })();
   </script>
 
-  <!-- Needle brand typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300;0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800&display=swap">
-
+  <script>
+    try { const mode = JSON.parse(localStorage.getItem('needle-usd-theme')) || 'system'; document.documentElement.dataset.theme = mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode; } catch {}
+  </script>
+  <style>
+    /* Legacy markup supplies controls to the workbench; it is never a page layout. */
+    html { background: var(--surface-page, #F0F4EF); }
+    html[data-theme="dark"] { background: var(--surface-page, #0F1110); }
+    body > #top-center, body > .footer, body > #dropzone, body > #loading-overlay { display: none; }
+    html[data-workbench="loading"] body > :not(#usd-workbench):not(script) { visibility: hidden; }
+    .usd-startup-error { color: var(--text-primary); padding: 24px; font: 14px sans-serif; }
+  </style>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="brand/brand.css">
+  <link rel="stylesheet" href="dockview/styles/dockview.css">
+  <link rel="stylesheet" href="css/workbench.css">
 </head>
-<body>
+<body class="usd-product">
   <script type="text/javascript" async src="modules/es-module-shims@1.8.0.js"></script>
   <script>
     (() => {
@@ -147,8 +156,12 @@
         "@needle-tools/materialx": "/materialx/index.js"
       };
       imports["three-gpu-pathtracer/webgpu"] = "/three-gpu-pathtracer/src/webgpu/index.js";
+      // The isolated selection contour uses the node renderer in both viewer modes.
+      imports["three/webgpu"] = "/three/build/three.webgpu.js";
+      imports["three/tsl"] = "/three/build/three.tsl.js";
       imports["three-mesh-bvh"] = "/three-mesh-bvh/src/index.js";
       imports["three-mesh-bvh/webgpu"] = "/three-mesh-bvh/src/webgpu/index.js";
+      imports["dockview-core"] = "/dockview/package/main.esm.mjs";
       imports["@meimu/mutracer"] = "/mutracer/lib/main.js";
       imports["oidn-webgpu"] = "/oidn-webgpu/dist/oidn.js";
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
@@ -162,31 +175,17 @@
     globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";
   </script>
   <script type="module">
-    import(window.__usdViewerEntry || "/index.three.js");
+    try {
+      window.usdWorkbench = await (await import("/viewer-workbench.js")).mountWorkbench();
+      document.documentElement.dataset.workbench = 'ready';
+      await import(window.__usdViewerEntry || "/index.three.js");
+    } catch (error) {
+      document.documentElement.dataset.workbench = 'error';
+      const message = document.createElement('p'); message.className = 'usd-startup-error';
+      message.setAttribute('role', 'alert'); message.textContent = 'Could not start the viewer. Reload to try again.';
+      document.body.append(message); console.error(error);
+    }
   </script>
-  <!-- Official Needle marketer engagement tracker. Exposes window.needleWhatsNew
-       (impression/hover/click); whats-new.js calls it imperatively because our
-       single rotating banner can't be followed by the script's DOM scan. Served
-       with Cross-Origin-Resource-Policy: cross-origin, so it loads under this
-       page's COEP: require-corp. Loaded before whats-new.js so the global is
-       ready early (whats-new.js also queues calls until it appears). -->
-  <script>
-    (() => {
-      const params = new URLSearchParams(location.search);
-      if (window.__usdViewerDiagnosticsMode === true || params.has("debug") || navigator.webdriver === true) return;
-      const script = document.createElement("script");
-      script.defer = true;
-      script.src = "https://marketer.needle.tools/whatsnew.js";
-      document.currentScript.after(script);
-    })();
-  </script>
-
-  <!-- Subtle rotating "What's New" banner (bottom-right), fed by the Needle marketer feed -->
-  <script type="module" src="whats-new.js"></script>
-
-  <!-- Crawlable page heading. Visually hidden because the UI is a full-bleed 3D
-       canvas with its own chrome, but search engines and screen readers need a
-       actual <h1>. -->
   <h1 class="sr-only">USD &amp; USDZ Viewer — view and export OpenUSD files online</h1>
 
   <!-- Centered top stack: the header pill, with the loaded-file row below it. -->
@@ -203,61 +202,40 @@
     </div>
     <a href="#" id="about-link" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
 
-    <div class="dropdown">
-      <button class="dropdown-button" disabled>
-        <svg class="btn-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/>
-          <path d="M3 7l9 4.5L21 7"/>
-          <path d="M12 11.5v10"/>
-        </svg>
-        Load Sample
-      </button>
-      <div class="dropdown-content">
-        <div class="dropdown-menu">
-          <div class="sample-group-list" id="sample-group-list" role="listbox" aria-label="Sample groups">
-            <button type="button" class="sample-group-button sample-root-folder active" data-sample-group="gltf" role="option" aria-selected="true" aria-expanded="true">
-              <span>glTF <svg class="label-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12.5"/><path d="M12.5 6l6 6-6 6"/></svg> USD conversions</span>
-              <small>Converted from glTF Sample Assets</small>
-              <svg class="sample-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
+    <section class="usd-examples-browser" aria-label="Example browser">
+      <div class="usd-examples-library">
+        <select id="example-library" aria-label="Example library" disabled>
+          <option value="gltf">glTF → USD conversions</option>
+          <option value="usd-wg">USD Working Group Assets</option>
+          <option value="usd-assets">Hugging Face test set</option>
+          <option value="needle">Needle</option>
+        </select>
+      </div>
+      <div class="usd-examples-content">
+        <nav id="example-folders" class="usd-examples-folders" aria-label="Example folders">
+          <button type="button" id="examples-all" class="sample-group-button sample-folder-button">All examples</button>
+          <div class="sample-group-list" id="sample-group-list">
             <div class="sample-group-tree" id="gltf-group-tree" aria-label="glTF Sample Asset tags"></div>
-            <button type="button" class="sample-group-button sample-root-folder" data-sample-group="usd-wg" role="option" aria-selected="false" aria-expanded="false">
-              <span>USD Working Group Assets</span>
-              <small>Production USD samples</small>
-              <svg class="sample-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
             <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders" hidden></div>
-            <button type="button" class="sample-group-button" data-sample-group="usd-assets" role="option" aria-selected="false">
-              <span>Hugging Face test set</span>
-              <small>14 assets</small>
-            </button>
-            <button type="button" class="sample-group-button sample-root-folder" data-sample-group="needle" role="option" aria-selected="false" aria-expanded="false">
-              <span>Needle</span>
-              <small>Viewer fixtures and hosted assets</small>
-              <svg class="sample-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
             <div class="sample-group-tree" id="needle-group-tree" aria-label="Needle asset folders" hidden></div>
           </div>
-          <div class="dropdown-section sample-external-links">
-            <h4>More</h4>
-            <a href="https://asset-explorer.needle.tools" target="_blank" rel="noopener">Needle Asset Explorer</a>
-            <a href="https://github.com/usd-wg/assets" target="_blank">Browse usd-wg/assets</a>
-          </div>
-        </div>
-        <!-- Sample Library flyout — each selected group renders into this same
-             card grid. Converter variants are chosen after loading an asset. -->
-        <div class="gallery-flyout" id="gallery-panel">
+        </nav>
+        <div class="usd-examples-divider" role="separator" tabindex="0" aria-label="Resize example folders" aria-orientation="horizontal" aria-controls="example-folders gallery-panel"></div>
+        <div class="usd-examples-results" id="gallery-panel">
           <div class="gallery-panel-head">
-            <div class="gallery-panel-title">
-              <h4 id="gallery-title">glTF &rarr; USD conversions</h4>
-              <span class="gallery-panel-subtitle" id="gallery-subtitle">Converted from glTF Sample Assets</span>
-            </div>
+            <input type="search" id="examples-search" aria-label="Search examples" placeholder="Search examples" disabled />
           </div>
-          <p id="gallery-status" class="gallery-status">Hover to load sample models&hellip;</p>
-          <div id="gallery-grid" class="gallery-grid"></div>
+          <p id="gallery-status" class="gallery-status">Loading…</p>
+          <p id="examples-empty" class="usd-examples-empty" role="status" hidden>No matching examples</p>
+          <div id="gallery-grid" class="gallery-grid" aria-label="Example previews"></div>
         </div>
       </div>
-    </div>
+      <footer class="usd-examples-footer">
+        <output id="examples-count" aria-live="polite">0 examples</output>
+        <label class="usd-examples-size">Size<input type="range" id="examples-preview-size" aria-label="Preview size" min="88" max="216" step="8" value="128" /></label>
+        <button type="button" id="examples-details" aria-pressed="true" title="Show example details">Details</button>
+      </footer>
+    </section>
 
     <a href="#" id="feedback-link" class="feedback-button" data-open-feedback><svg class="inline-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg><span class="feedback-text">Feedback</span></a>
     <button type="button" id="debug-test-button" class="debug-test-button" hidden>Test</button>

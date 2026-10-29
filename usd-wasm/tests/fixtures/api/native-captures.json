@@ -1,0 +1,472 @@
+{
+  "results": [
+    {
+      "id": "api-hello-world",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "b5699e92caffd83bda541920324d08a564b3ae36cc2b1a00ac1f11fa8b9966f4",
+      "imageSha256": "4ff330805b506f4c5971f984fff41c973b666d06a5bffd9b3bbab5adc1139727"
+    },
+    {
+      "id": "api-stage-metadata",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "0e59d9688aa8c91fa213fe3fe44cc9bcf7e45f844f085d58cc564d5f92e8c41b",
+      "imageSha256": "9b6aa5d0640bc5d5409d7e38af24f6846ac8050857cff6f5b28bda4c29803c58"
+    },
+    {
+      "id": "api-generic-prims",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "5e77bc0376493ccd204186290b74cba3806b5a9686f09115e6c288fbe845eaed",
+      "imageSha256": "fe573d7090e5928652544e80d7755687cca73e73ba7553d7a3bac28d1cbd5b8f"
+    },
+    {
+      "id": "api-schema-shapes",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "18885043bfd7a5e47f9a6589b6b6dcdcddc7315fea43da626584f7d19c6b85a0",
+      "imageSha256": "e71fb1937c8e6d84c80114aafa79ddf500edea7771556b72bbb769cbb27ab13d"
+    },
+    {
+      "id": "api-mesh-from-arrays",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "446e1aa320f010fd9b0fa6b4e77320f6c3f5fe342aae57b852d4169c30525395",
+      "imageSha256": "b066d97adc2f0b04a1e0cc68a6f1bdd96cad40c5af439bf95de4b0c03fbd7d1d"
+    },
+    {
+      "id": "api-xform-ops",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "77bb707e0f352780ecbbaf67763173fcee57c7d269f31796a53d5ed8ba4a581b",
+      "imageSha256": "3b0ca107f99086e6882378a03b9e04345be827bcd404994d79d64e288996b527"
+    },
+    {
+      "id": "api-xform-common-api",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "074b2e01bcd08dd0794b1b830fcd737d9d8d864e4e5f2301992fa6199a84a398",
+      "imageSha256": "c5f0b5dd6a63716c718bd89cb8526e3c76ddf1232914b963898fa34282afdb0a"
+    },
+    {
+      "id": "api-matrix-transform",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "f9d8b2646770f78d398a39caf80910be7c0791238b16643bb51b579abd6053cc",
+      "imageSha256": "7966e7c09cd3499114518bcaf71ffc955c6b962577d32f3af6e1e08b5dbd4c88"
+    },
+    {
+      "id": "api-animated-radius",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "68e4541e830b4215a894e1584d8960ecce308f1571fc6950552e2b4693ab8bf1",
+      "imageSha256": "7417770b851c2586e727643b69c451620b2d4cf6070ba78d9d5baaba333e4ded"
+    },
+    {
+      "id": "api-animated-transform",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "57fe7466ded2b56fc51c2011f58631955fe12736b5a6ffd988bd56f100ccebab",
+      "imageSha256": "83cd01f3899b2e7161933c4e2d596c4d16d4ff7a1485cb424af478460108fdc0"
+    },
+    {
+      "id": "api-shader-color-inputs",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "94a10813203cf2957974e0278a5f37576247731322f15fa53c44d43dd7368e78",
+      "imageSha256": "3acd3cc810d1b15dee1ecd4ee68110c22819e68e8a3598ce67747df35b904d53"
+    },
+    {
+      "id": "api-visibility",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "a598774453ca3764a44cfe5bad46e15d3de73d8fb540bd03a4b8ce72d07e7861",
+      "imageSha256": "f3c879f804a6c67990eedc24a71bef9a8fee36239e474b2e69a869328dc3b156"
+    },
+    {
+      "id": "api-purpose",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "298ad1c08da564db9919175ad8901607c175bc685717ab84f3ece9f7cdc259cc",
+      "imageSha256": "9721b650123e534a7b4208ed1fd19a91b62e09d879d5cb0aa2d929f044b8f579"
+    },
+    {
+      "id": "api-custom-properties",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "7316a6506e632c5d6b3e7e2081e5a37c9177e74602eebae28cc93503643a5bc5",
+      "imageSha256": "ac7a2f7bc6f6c8f4042f6a5a1d62c9f4876a627478728fc8c92e830e28eaf325"
+    },
+    {
+      "id": "api-relationships",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "439445f514912f1a71fedd9c2d9dbfd9d8422c4cee86875a6d7e0107ce5f66a8",
+      "imageSha256": "5d0a8a6a337aa3c450646daf704079ad5b72df4b765bca731a475d258ed613ef"
+    },
+    {
+      "id": "api-preview-material",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "14237fd01efeb2e2fbc96cd4c822d59132a0ea65f3671b0fa07632bc60012c51",
+      "imageSha256": "47399030e844f2b14d4865bf560b2982fcc0f5543fa9fc70ce0293bf5cd1bb88"
+    },
+    {
+      "id": "api-bind-material",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "c08dfdf72e5f914df7284b1abd24ffa3553d676171db66a98ae8631511612a47",
+      "imageSha256": "8ff438547a4f7cb0e527fb565bb126eb2286a331d4eda6d0e7bb7b70542b40e0"
+    },
+    {
+      "id": "api-texture-shader-network",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "1df01223c665d4293ae94191dcb7e1bb1ecff0f07df9d0e411abea624e226763",
+      "imageSha256": "15afbfb919673bfd0ccbdd8bbbe23edecdbd198905add791208d5d0386e66678"
+    },
+    {
+      "id": "api-variant-set",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "2b8f655559e022096a3610955023b28ff3d9a383d30937c5b30196517345ad8e",
+      "imageSha256": "856b4ce43f1aba6231952eb3a0be000fd034ac812fb5a37284b2990aa488ab83"
+    },
+    {
+      "id": "api-variant-switch",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "ce68c7e6a17ea5b11eeb39577ee6c544ff02674f860508dc0ec667d54a68bc7c",
+      "imageSha256": "ab0bb426a3596d48e536202b3a13887d3ac7a0bcdd68535e094a81f75b2d2ff1"
+    },
+    {
+      "id": "api-payload",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "3ee2f013397b4df73a274237d1d5fa45ec43a81b8dbbdbbb775f19b0e68c68e5",
+      "imageSha256": "00cfbea61e9494052119d2f026cb9a6075069e3225f7d9e505f7a562be450612"
+    },
+    {
+      "id": "api-payload-load-state",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "74bc017b6e2558a5212b64e3f54c36bf8c1cbdcb8efc098b112acd7a8ad005be",
+      "imageSha256": "259a57b4d1987dee55be20ab39e5f483b079b62dec09e5ce0189b204a3763f30"
+    },
+    {
+      "id": "api-open-text-layer",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "e2f6c78a0f2ff728d4f493edf99d5ecd3ad78bddab7db9bc5f4d8bcc5d94af68",
+      "imageSha256": "b9abb8c3e5a70c7209b77e90e3b2dd9fbe1f6a377a39c9f6c17203f3be440fb0"
+    },
+    {
+      "id": "api-referenced-layer",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "cd7536bafef6b62e4cce1f84c5e415261cf78182cf8b066e6b54b471802e2aa2",
+      "imageSha256": "3dcefa2e1a068cc1a0bf20183c42ae162b2cead68b0bab4a30c085644819abef"
+    },
+    {
+      "id": "api-layer-stack",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "b2d02a75b0a02fc45fa8d09e282badf49757b02ae202c240c7a386e24cb47b6d",
+      "imageSha256": "6d41aabaa7b6eee4e2772b35129180d530ea360ee9639d0da88b1d705b5a48c9"
+    },
+    {
+      "id": "api-used-layers",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "6c2015e080b37c5c869ffd870e6f1d14be673b9cb37eee062979e7589ba8d5a3",
+      "imageSha256": "9bc0541ea25b33728214b2eb306de504d64471f01914b2329247361b070f5de9"
+    },
+    {
+      "id": "api-traverse",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "d414a04c97996d24fa9efe6b22a60495920145cbddfefb0d6d2b33ff99acd9fa",
+      "imageSha256": "3d925fd342847d9ad8ab3caeef864773bf65da5b8a0f0ea55e8392da95ae3397"
+    },
+    {
+      "id": "api-property-names",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "77f05300ea4cb72357337d10068815264014c29c5823e6266140d0b9c1417fd5",
+      "imageSha256": "43b92fe4c531ef40c666693ae241be1a944b08456e54270707909f72e403abbe"
+    },
+    {
+      "id": "api-attribute-resolve-info",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "b1c7f47d98630691682df74510792211d7c813d113bde78d119b43d398807ef3",
+      "imageSha256": "dbde7ea5a8e2d1e872df4d6904d036405a87a4983a81fe0d6d5dbb377d875129"
+    },
+    {
+      "id": "api-prim-stack",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "d13083c73bcd2e8279928ac65eaabc0818824aa30df3cce7ea5c7d3a7ff6ad8e",
+      "imageSha256": "91be3f80e302017ab79fa689652c6dc6e2ffef70ad814b2b9e0212870c48acfe"
+    },
+    {
+      "id": "api-composition-arcs",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "4bf29231047a47ecced9590808b0127af0155e48991ac8331d15af7726f0a564",
+      "imageSha256": "69005ddbbe976572b8715534d8dd70025c4690e343a56efb42cab8dce0884183"
+    },
+    {
+      "id": "api-fixture-unmaterialed-empty-subset",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "3355df796c15150fc25bb15d9da6d03ebdd36b5d4b3e993fa338c35434a8f7f4",
+      "imageSha256": "a8ce63d540eec201ab4f65c3937bfd7029075670eb47903b806af63442b7063e"
+    },
+    {
+      "id": "api-fixture-face-varying-normals-matrix",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "101c04d1b346ca8c80fd5e6df74cd5325a76d6f8d87f71f632d4cec5d8e2c4c9",
+      "imageSha256": "5d7fd7fcbef9d1c28936e835fa7c15cf3309bb2da25a88ef623fd0600edbef71"
+    },
+    {
+      "id": "api-fixture-parent-folder-reference",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "90069a276b323fcdd58cd1303d53a4ddbf3a082f3db6cd19079780f47bd07142",
+      "imageSha256": "37109e4670ab4f17494a0418171be299a97e6dc2dedf48acf63c56e1fb2d2424"
+    },
+    {
+      "id": "api-fixture-payload-root",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "9b18ab55dce57d4829c746a1c8d099c9f29c63a7181e4b59a2b12c26c5c6e1f6",
+      "imageSha256": "437c8a42a4023581583810db2430d2d80ed42b2bc119369d4bf2fee8179a25b9"
+    },
+    {
+      "id": "api-fixture-native-instances",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "4637bff8113d3f736716d9c9783ec5b77a7ff2784300c6aee42835e1f36ca565",
+      "imageSha256": "3a41701002c947b3cebd7ababacbfea763a83a50913dce8e2c221bddd3c33e84"
+    },
+    {
+      "id": "api-fixture-point-instancer",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "34befea348b616fe59425f717dfdec4595c9ff66f5ef20f9cc3475076de72002",
+      "imageSha256": "620f091e1c6ce5bfe65e12041bb97785c3349a17383ffa771ff0fdc10f3e3005"
+    },
+    {
+      "id": "api-fixture-camera-light",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/Root/World/ShotCam",
+      "exitCode": 0,
+      "sourceFingerprint": "a6b050f98cb0da07b0dcc6b9a1123903845742fc04b8d519609449d16e57f9e3",
+      "imageSha256": "82a1c1196e69f7d328c74051c0c6250dde141d792945fccc4ed53e94ccba21b7"
+    },
+    {
+      "id": "api-fixture-materialx-texture-noise",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "0497aded8d43daaf5fca8b9f631038205edfe9e4b62ba8facb36846ea1fa1727",
+      "imageSha256": "0bc96b2787c1cbc490876107d27eee030e32a9c2ac3507bc801db29e067e37e4"
+    },
+    {
+      "id": "api-objects-changed",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "3d3ce7eb5616a64d5b21ae956d1288d24719e2c753eb94fb83f43a18e6ff988d",
+      "imageSha256": "79b3dc11119b93fd45186d5c983366ed9548c29dfbde76e84a48871b7faa9482"
+    },
+    {
+      "id": "api-active-state",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "7e888fba9fe805c0cce1dc624eba13d6a5d336b255a7456420abe7d1cea31cdb",
+      "imageSha256": "5adad592321c9bfba9a4ff5df5235372466a0135401b63e1d5b31b6f2bd7085d"
+    },
+    {
+      "id": "api-apply-api-schema",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "3f53935517351c28f39228145b0356de3eeaf796541ca1d84fa88c55300c1dfa",
+      "imageSha256": "39ac9a6b47ec007a4acfa7dd36809012ea948b7ebdbb45cdd579535ff061767c"
+    },
+    {
+      "id": "api-cameras-and-lights",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "exitCode": 0,
+      "sourceFingerprint": "b81be1bc3a200169c5ed73dd378bc52881e65fa2efa817d2e9fcdf831371a9b9",
+      "imageSha256": "9cfa3dc199d7c4edcf47d39694c2c85903e7da31e9500528e99169a3c9490aba"
+    },
+    {
+      "id": "api-usdz-package",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "59fd9c4fb8a675aa346b023c9b76f1d5a108ea2b21612d08a1a50addf5c9c248",
+      "imageSha256": "e5924b2274df44ffdc3a250dd138577fd4950b65bdb8f785c13a127593db89c6"
+    },
+    {
+      "id": "api-reopen-verification",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "41be9ed040220ffcb1e3528b33775b85fc7ef0dd04a6f636d3a73ebff5ed3d2e",
+      "imageSha256": "10b22488fc64b52939ae6ff2a9e5dde27e522cfa194ede36f37a975a28ddfa7e"
+    },
+    {
+      "id": "api-build-info",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "6b37eb744d877771a80f3c4837c21bfa854ff96e20b440a292380f0ff5c0debb",
+      "imageSha256": "2bec0a8bebbe59af214c9aaf4e5f4164c54d43c44fd454965c81558face87439"
+    },
+    {
+      "id": "api-virtual-filesystem",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "904b9bcd0c1b0cf8727891c4aeecef6fffdbf704edb120b3899b03a7f3f51e40",
+      "imageSha256": "63741ee39964e53927257094c26ad09bf49042b8c9b38d0c8289a21f6ef0b75f"
+    },
+    {
+      "id": "api-sdf-paths",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "436d3d4035f314dcf441ee1433f2ec18265385f51d298f6073a7e20a0b993312",
+      "imageSha256": "8d5e1d67be3e61dc64e5bf2c2c5cb1e2a2818b3b9753e135a1ac383dba127f80"
+    },
+    {
+      "id": "api-api-preview-surface",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "5a80f7bd85b0f1d283d558749420017095e495cf8a798fac9b100e264ccab10f",
+      "imageSha256": "533a0425b2a06d34e4ea41ef2e9f0b904e096d8724f0910bccc35a452c7ef4b6"
+    },
+    {
+      "id": "api-api-animated-material",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "a32c557b727f504c52faf388a9e611a2737e1d591d808c989a825556a2ea7510",
+      "imageSha256": "53c21d66e30a4202e088292b474b4b252640ecc913baf960b3d028d473004725"
+    },
+    {
+      "id": "api-api-variant-sphere",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "401755f24c75d8bdd2377499b75b514a0395678f02a9b1a74754f516edd8330d",
+      "imageSha256": "f7957b7f05645d4261b573b66db0a49ae9bc34dcbc5d6aab52cd1c2728b73501"
+    },
+    {
+      "id": "api-api-variant-cube",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "sourceFingerprint": "b1613633ea84a394f65d1bda80cff1ebbf7dc32b08af02acb76781859e954cce",
+      "imageSha256": "feed1285c8a124d0584a5b5a2a06550f189337d97fb87af1676dec1b55986550"
+    }
+  ]
+}

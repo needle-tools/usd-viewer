@@ -143,6 +143,14 @@ export declare type NeedleThreeHydraHandle = {
     /** Redraw the current USD stage after imperative stage edits.
      */
     refresh: () => Promise<void>,
+    /** Changes after synchronized edits, explicit refresh or population changes. */
+    readonly revision: number,
+    /** Stage time represented by the last completed Hydra draw. */
+    readonly renderedTime: number,
+    /** Resolve a raycast's Hydra path and rendered instance index into authored USD identity. */
+    resolvePick(renderPath: string, instanceIndex?: number): Promise<{path: string; instances: {path: string; index: number; id?: string}[]} | null>,
+    /** Resolve selected authored subtrees/instance contexts to indices in one rendered mesh. */
+    resolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): Promise<number[] | null>,
     /** Change the visible USD geometry purposes for the current Hydra view.
      */
     setIncludedPurposes: (includedPurposes: Array<"default" | "render" | "proxy" | "guide" | string>) => Promise<void>,

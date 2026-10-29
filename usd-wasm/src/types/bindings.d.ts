@@ -539,6 +539,8 @@ declare type HdWebSyncDriver = {
     getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => void,
     resolveAssetUrl: (path: string) => string,
     HasStage(): boolean,
+    ResolvePick(renderPath: string, instanceIndex: number): {path: string; instances: {path: string; index: number; id?: string}[]} | null,
+    ResolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): number[] | null,
     HasScopedHttpCache?(): boolean,
     GetStage(): USDStage,
     /** Read-only composed UsdPhysics descriptors, serialized as JSON. */
