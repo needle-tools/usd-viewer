@@ -28,6 +28,22 @@
     "./vite": {
       "types": "./src/types/vite.d.ts",
       "import": "./src/vite/index.js"
+    },
+    "./renderers": {
+      "types": "./src/types/renderers.d.ts",
+      "import": "./src/renderers/index.js"
+    },
+    "./scene": {
+      "types": "./src/types/scene.d.ts",
+      "import": "./src/scene/index.js"
+    },
+    "./viewer": {
+      "types": "./src/types/viewer.d.ts",
+      "import": "./src/viewer/index.js"
+    },
+    "./viewer/style.css": {
+      "types": "./src/types/viewer-style.d.ts",
+      "default": "./src/viewer/style.css"
     }
   },
   "files": [
@@ -61,13 +77,21 @@
   "peerDependencies": {
     "@needle-tools/engine": ">=5.0.0",
     "@sparkjsdev/spark": ">=2.2.0",
-    "three": ">=0.160.0"
+    "three": ">=0.160.0",
+    "@meimu/mutracer": "^0.2.0",
+    "three-gpu-pathtracer": "^0.0.27"
   },
   "peerDependenciesMeta": {
     "@needle-tools/engine": {
       "optional": true
     },
     "@sparkjsdev/spark": {
+      "optional": true
+    },
+    "@meimu/mutracer": {
+      "optional": true
+    },
+    "three-gpu-pathtracer": {
       "optional": true
     }
   },

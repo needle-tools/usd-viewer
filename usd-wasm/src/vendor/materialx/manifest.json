@@ -125,8 +125,8 @@
       "path": "materials/BoundedVolumeNodeMaterial.js",
       "sourcePath": "examples/jsm/materials/BoundedVolumeNodeMaterial.js",
       "sourceSha256": "8c64f9e7523351a710e8336f795beccfea0d8fc38c49e8530f963c29e7307484",
-      "sha256": "2c631c6cc4868e194cb05260b764963a5159d63cf0b9223ce2c15ac16510c52c",
-      "bytes": 9104
+      "sha256": "168ebd3cccd2edbe520d600c73447c0eb1d3844ed47f6d1f31ff67c67286b7a1",
+      "bytes": 9653
     },
     {
       "path": "nodes/MaterialXCore.js",

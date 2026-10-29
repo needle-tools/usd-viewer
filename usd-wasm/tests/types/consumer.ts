@@ -30,3 +30,27 @@ getHydraHandleFromNeedleEngineAsset({});
 needleUSD();
 const format: 'usd' | 'usda' | 'usdc' | 'usdz' | 'unknown' = tryDetermineFileFormat(new ArrayBuffer(16));
 void [info, loaded, snapshot, createUsdPhysics, format];
+
+import { inspectStage, inspectPrim, setVariant, setPayloadLoaded, stageCameras } from '@needle-tools/usd/scene';
+import { createRenderModes, type RenderModes } from '@needle-tools/usd/renderers';
+import { WebGLRenderer, PerspectiveCamera } from 'three';
+const inspection = inspectStage(await stage.driver.GetStage());
+inspectPrim(await stage.driver.GetStage(), '/World', 24);
+await setVariant(stage, '/World', 'look', 'red');
+await setPayloadLoaded(stage, '/World/Payload', true);
+stageCameras(scene);
+const modes: RenderModes = await createRenderModes({ renderer: new WebGLRenderer(), scene, camera: new PerspectiveCamera(), onStatus(status) { status.samples.toFixed(); } });
+await modes.setMode('beauty');
+// @ts-expect-error Render modes are explicit.
+await modes.setMode('unknown');
+modes.dispose();
+void inspection;
+import { mountStagePanel, mountRenderModePicker } from '@needle-tools/usd/viewer';
+import { createWebGpuSupport } from '@needle-tools/usd/renderers';
+const support = await createWebGpuSupport();
+await createThreeHydra({ USD, scene, webGpuSupport: support });
+const stagePanel = await mountStagePanel({ handle: stage, stage: stage.driver.GetStage(), scene, camera: new PerspectiveCamera(), controls: { enabled: true }, onVariantChange(path, setName, value) { void [path, setName, value]; } });
+stagePanel.dispose();
+void mountRenderModePicker;
+
+import '@needle-tools/usd/viewer/style.css';

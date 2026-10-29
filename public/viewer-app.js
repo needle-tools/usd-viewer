@@ -660,7 +660,12 @@ const VIEWER_MODE_THREE = "three";
 const VIEWER_MODE_NEEDLE_LOADER = "needle-loader";
 const VIEWER_MODE_STORAGE_KEY = "usd-viewer-mode";
 let viewerMode = normalizeViewerMode(runtimeViewerMode);
-const useNodeRenderer = params.get('render') === 'nodes' && viewerMode === VIEWER_MODE_THREE;
+const renderPreference = ['beauty', 'pathtraced', 'pathtraced-gk'].includes(params.get('render')) ? params.get('render') : 'basic';
+const useNodeRenderer = viewerMode === VIEWER_MODE_THREE;
+let renderModes;
+let renderModesUi;
+let startRenderMode;
+let suiteControls;
 let activeCatalogAsset = catalogAssetForUrlPath(filename.split('?')[0]);
 const initialNavigation = filename && activeCatalogAsset
   ? fixtureNavigation(location.href, activeCatalogAsset, viewerMode === VIEWER_MODE_THREE ? 'three' : 'needle', useNodeRenderer)
@@ -1517,7 +1522,7 @@ async function showUsdVariants(stage, handle) {
   const container = document.getElementById('usd-variant-controls');
   if (!container) return;
   container.replaceChildren(); container.hidden = true;
-  if (!activeCatalogAsset || !stage?.Traverse || !handle?.editStage) return;
+  if (!stage?.Traverse || !handle?.editStage) return;
   const prims = arrayFromUsdVector(stage.Traverse());
   const variants = [];
   for (const prim of prims) {
@@ -1568,6 +1573,7 @@ async function showUsdVariants(stage, handle) {
         const url = new URL(location.href);
         url.searchParams.set('stageVariant', [variant.path, variant.setName, select.value].join('|'));
         history.replaceState({}, '', url);
+        suiteControls?.refresh();
       } catch (error) { console.error('Failed to change USD variant', error); }
       finally { controls.forEach(control => { control.disabled = false; }); }
     });
@@ -1578,6 +1584,7 @@ async function showUsdVariants(stage, handle) {
 
 async function clearStage({ clearNeedleEngine = false } = {}) {
   loadGeneration++;
+  suiteControls?.dispose(); suiteControls = null;
   ready = false;
   viewerPhysics?.dispose(); viewerPhysics = null;
   viewerLighting?.dispose(); viewerLighting = null;
@@ -1988,6 +1995,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         scene: window.usdRoot,
         renderScene: window.scene,
         renderer: window.renderer,
+        webGpuSupport: window.usdWebGpuSupport,
         url: filesForHydra?.length ? undefined : path,
         files: filesForHydra,
         autoPlay: true,
@@ -2055,6 +2063,17 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
 
     showUsdDetail(stage, handle);
     showUsdBackground();
+    await suiteControls?.dispose();
+    const { mountUsdSuite } = await import('./viewer-suite.js');
+    suiteControls = await mountUsdSuite({ handle, stage, scene: needleContext?.scene || window.scene, camera: window.camera, controls: window._controls, beforeEdit: () => { viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined; }, afterEdit: async () => {
+      if (generation !== loadGeneration || currentHydraHandle !== handle) return;
+      await applyStageLighting(handle, needleContext, stage, generation);
+      viewerPhysics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
+      window.usdPhysics = viewerPhysics;
+      await showUsdVariants(stage, handle);
+    }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
+    if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
+    await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     messageLog.textContent = "";
@@ -2299,8 +2318,11 @@ async function init() {
   */
 
   const Renderer = useNodeRenderer ? (await import('three/webgpu')).WebGPURenderer : WebGLRenderer;
-  const renderer = window.renderer = new Renderer(useNodeRenderer ? { forceWebGL: true, antialias: false, alpha: true } : { antialias: true, alpha: true });
-  if (useNodeRenderer) await renderer.init();
+  const renderer = window.renderer = new Renderer(useNodeRenderer ? { forceWebGL: params.get('backend') === 'webgl', antialias: false, alpha: true } : { antialias: true, alpha: true });
+  if (useNodeRenderer) {
+    await renderer.init();
+    window.usdWebGpuSupport = await (await import('./usd/renderers/index.js')).createWebGpuSupport();
+  }
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.outputColorSpace = SRGBColorSpace;
@@ -2318,6 +2340,14 @@ async function init() {
   controls.enableDamping = true;
   controls.dampingFactor = 0.2;
   controls.update(0);
+
+  if (viewerMode === VIEWER_MODE_THREE) {
+    const { mountRenderModes } = await import('./viewer-render-modes.js');
+    renderModesUi = await mountRenderModes({ renderer, scene, camera, preference: renderPreference });
+    ({ modes: renderModes, start: startRenderMode } = renderModesUi);
+    window.usdRenderModes = renderModes;
+    window.renderUsdFrame = () => renderModes.render(window.usdRenderCamera || window.camera);
+  }
 
   window.addEventListener( 'resize', onWindowResize );
   
@@ -4102,6 +4132,8 @@ async function init() {
   });
 
   setupDebugTestButton();
+  document.querySelector('.dropdown-button').disabled = false;
+  window.__usdViewerUiReady = true;
   
   render();
   
@@ -4140,12 +4172,14 @@ function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize( window.innerWidth, window.innerHeight );
+  window.usdRenderModes?.resize();
 }
 
 function render() {
   const time = Date.now() * 0.001;
   if (window.renderer.render && window.scene){
-    window.renderer.render( window.scene, window.camera );
+    if (window.renderUsdFrame) window.renderUsdFrame();
+    else window.renderer.render( window.scene, window.usdRenderCamera || window.camera );
   }
 }
 

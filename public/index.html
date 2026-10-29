@@ -121,7 +121,7 @@
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
-      const viewerMode = params.get("viewer") === "three" ? "three" : "needle";
+      const viewerMode = params.get("viewer") === "needle" || params.get("viewer") === "needle-loader" ? "needle" : "three";
       const useNeedleLoader = viewerMode === "needle";
       const imports = useNeedleLoader ? {
         "three": "/needle-engine/dist/three.min.js",
@@ -146,6 +146,11 @@
         "@sparkjsdev/spark": "/spark/dist/spark.module.js",
         "@needle-tools/materialx": "/materialx/index.js"
       };
+      imports["three-gpu-pathtracer/webgpu"] = "/three-gpu-pathtracer/src/webgpu/index.js";
+      imports["three-mesh-bvh"] = "/three-mesh-bvh/src/index.js";
+      imports["three-mesh-bvh/webgpu"] = "/three-mesh-bvh/src/webgpu/index.js";
+      imports["@meimu/mutracer"] = "/mutracer/lib/main.js";
+      imports["oidn-webgpu"] = "/oidn-webgpu/dist/oidn.js";
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
       importMap.type = "importmap";
@@ -199,7 +204,7 @@
     <a href="#" id="about-link" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
 
     <div class="dropdown">
-      <button class="dropdown-button">
+      <button class="dropdown-button" disabled>
         <svg class="btn-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/>
           <path d="M3 7l9 4.5L21 7"/>

@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+// Keep these local rendering checks independent of the web-font CDN.
+test.beforeEach(async ({ page }) => {
+  await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
+});
+
 for (const [viewer, name] of [
   ['three', 'mdl-metal'], ['needle', 'mdl-metal'],
   ['three', 'mdl-clearcoat'], ['three', 'mdl-color-texture'],

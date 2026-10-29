@@ -15,6 +15,9 @@ Local changes:
 - The existing MaterialX TSL math/noise helpers are included under `nodes/`.
   Their renderer imports use public `three/tsl`; loader imports select these
   helpers to preserve the fork's MaterialX semantics and missing public exports.
+- Empty/non-scattering samples skip shadow integration; emitted and scattered radiance are unchanged.
+- Optional opaque color/depth nodes let multi-pass compositors provide the resolved
+  HDR scene and depth without extra framebuffer copies.
 - `BoundedVolumeNodeMaterial.setupLighting()` always enters the integration
   model, including scenes with no lights, so absorption and emission still work.
 

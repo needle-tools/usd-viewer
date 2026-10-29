@@ -1,0 +1,26 @@
+
+.viewer-render-modes { position: fixed; left: 16px; bottom: 52px; z-index: 80; display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); padding: 8px 12px; border: 1px solid #bbc4c8; border-radius: 9px; background: #f6f8f6ed; color: #24363b; font-size: 13px; }
+.viewer-render-modes select, .usd-suite select { font: inherit; max-width: 100%; padding: 3px; }
+.viewer-render-modes [role=status] { max-width: 28em; }
+.viewer-render-modes[data-error] [role=status] { color: #8a3020; }
+.usd-suite { position: fixed; right: 16px; top: 100px; z-index: 85; color: #24363b; font-size: 13px; }
+.usd-suite > button { float: right; }
+.usd-suite button { font: inherit; border: 1px solid #c3cdcd; border-radius: 6px; background: #f6f8f6; color: inherit; padding: 6px 12px; cursor: pointer; }
+#usd-suite-content { clear: both; width: min(370px, calc(100vw - 32px)); max-height: calc(100dvh - 190px); overflow: auto; padding: 12px; border: 1px solid #bbc4c8; border-radius: 10px; background: #f6f8f6f5; box-shadow: 0 3px 16px #172e3320; }
+#usd-suite-content[hidden] { display: none; }
+.usd-suite-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.usd-suite details { border-top: 1px solid #ccd4d4; padding: 9px 0; }
+.usd-suite summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+.usd-suite label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 7px 0; overflow-wrap: anywhere; }
+.usd-suite label select { flex-shrink: 0; max-width: 65%; }
+.usd-prim-tree { max-height: 260px; overflow: auto; margin-top: 8px; }
+.usd-prim-tree button { display: block; text-align: left; width: 100%; border: 0; border-radius: 0; white-space: nowrap; font-size: 12px; }
+.usd-prim-tree button:hover { background: #deece9; }
+.usd-suite code, .usd-suite td, .usd-layer { overflow-wrap: anywhere; word-break: break-word; }
+.usd-suite table { width: 100%; font-size: 11px; border-collapse: collapse; margin-top: 6px; }
+.usd-suite th { width: 40%; text-align: left; vertical-align: top; }
+.usd-suite td, .usd-suite th { padding: 5px 3px; border-bottom: 1px solid #dbe1df; }
+.usd-layer { margin: 8px 0; font-size: 11px; }
+.usd-timeline { position: fixed; left: 50%; transform: translateX(-50%); bottom: 52px; z-index: 81; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 9px; border: 1px solid #bbc4c8; background: #f6f8f6ed; color: #24363b; font-size: 13px; }
+.usd-timeline input { width: min(28vw, 300px); }
+@media (max-width: 760px) { .usd-suite { top: 135px; } .usd-timeline { bottom: 100px; } .viewer-render-modes [role=status] { max-width: 45vw; font-size: 11px; } }

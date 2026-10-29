@@ -34,7 +34,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   container.replaceChildren(); container.hidden = true;
   if (!snapshot.bodies?.some(body => body.rigidBodyEnabled && !body.kinematicBody)) return null;
   let simulation, disposed = false, dragging = false, previousControls = [], operation = 0;
-  const camera = context?.mainCamera || fallbackCamera;
+  const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
   const canvas = context?.renderer?.domElement || fallbackControls.domElement;
   const raycaster = new Raycaster(), pointer = new Vector2(), plane = new Plane(), hit = new Vector3();
   const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Simulate';
@@ -92,11 +92,13 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   function ray(event) {
     const bounds = canvas.getBoundingClientRect();
     pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, 1 - (event.clientY - bounds.top) / bounds.height * 2);
-    camera.updateMatrixWorld(); raycaster.setFromCamera(pointer, camera);
+    const camera = activeCamera();
+    camera.updateWorldMatrix(true, false); raycaster.setFromCamera(pointer, camera);
+    return camera;
   }
   function down(event) {
     if (!simulation?.isPlaying() || event.button !== 0 || dragging) return;
-    ray(event); handle.scene.updateWorldMatrix(true, true);
+    const camera = ray(event); handle.scene.updateWorldMatrix(true, true);
     const intersections = raycaster.intersectObject(handle.scene, true);
     for (const intersection of intersections) {
       const body = simulation.bodyForObject(intersection.object);

@@ -12,6 +12,17 @@ export type MaterialXVolumeFactory = (xml: string, target: string | number, opti
     getTexture?: (url: string) => Texture | null | Promise<Texture | null>,
 }) => Promise<Material>;
 
+/** Optional support from @needle-tools/usd/renderers; keeps modern Three modules out of the base loader. */
+export interface WebGpuSupport {
+    SurfaceMaterial: new () => Material;
+    createParticleField?(data: {
+      positions: Float32Array; orientations: Float32Array; scales: Float32Array; opacities: Float32Array;
+      degree: number; coefficients: Float32Array; projectionModeHint: string; sortingModeHint: string;
+    }): Promise<Object3D & { dispose(): void }>;
+    createMaterialXMaterial: MaterialXVolumeFactory;
+    configurePreviewPrimvars(material: Material): void;
+    configureStrokeMaterial?(material: Material): void;
+}
 export type UsdVolumeField = { name: string, fieldName: string, filePath: string, resolvedPath?: string, resolvedUrl?: string };
 export type UsdVolumeFactory = (state: { fields: UsdVolumeField[] }, options: {
     renderer?: HydraRenderer,
@@ -43,6 +54,7 @@ export type threeJsRenderDelegateConfig = {
     renderScene?: Object3D,
     scenePrimitiveRoot?: Object3D,
     renderer?: HydraRenderer,
+    webGpuSupport?: WebGpuSupport,
     /** Opt in with createMaterialXVolumeMaterial from @needle-tools/usd/volumes. */
     materialXVolumeFactory?: MaterialXVolumeFactory,
     usdVolumeFactory?: UsdVolumeFactory,

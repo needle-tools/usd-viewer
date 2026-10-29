@@ -302,9 +302,15 @@ required COOP/COEP headers.
 
 ### Gaussian Splats
 
-OpenUSD `UsdVolParticleField3DGaussianSplat` prims are rendered through Spark.
-Install Spark alongside Three.js 0.180 or newer and pass the host renderer to
-`createThreeHydra` as shown above:
+OpenUSD `UsdVolParticleField3DGaussianSplat` prims use the native Three.js Gaussian
+splat implementation with WebGPURenderer and `createWebGpuSupport()` (r185+).
+Meshes, bounded volumes and splats share the renderer, camera and depth buffer.
+Signed/HDR SH coefficients of degrees 0–3 are retained. WebGPU sorts on the GPU;
+WebGPURenderer's WebGL2 backend uses CPU sorting. Splats are sorted within each
+particle field; intersecting transparent fields/media do not have a global sort.
+
+Legacy WebGLRenderer and Needle Engine integrations continue to use Spark.
+Install Spark alongside Three.js 0.180 or newer and pass the host renderer:
 
 ```sh
 npm install @sparkjsdev/spark@^2.1.0 three@^0.185.0
@@ -532,3 +538,44 @@ For commercial use, please contact [hi@needle.tools](mailto:hi@needle.tools).
 [Discord](https://discord.needle.tools) • 
 [Forum](https://forum.needle.tools) • 
 [Youtube](https://www.youtube.com/@needle-tools)
+
+### Render modes and stage controls
+
+The optional `@needle-tools/usd/renderers` and `/viewer` entries use Three.js r185 or newer. The base loader and `/scene` inspection helpers continue to support r160. A host keeps ownership of its renderer, scene, controls and Hydra handle.
+
+```js
+import { WebGPURenderer } from 'three/webgpu';
+import { createThreeHydra } from '@needle-tools/usd/three';
+import { createWebGpuSupport, createRenderModes } from '@needle-tools/usd/renderers';
+import { mountStagePanel } from '@needle-tools/usd/viewer';
+
+const renderer = new WebGPURenderer({ antialias: false });
+await renderer.init(); // WebGPU, with Three.js's WebGL2 fallback when needed
+const handle = await createThreeHydra({
+  USD, scene: usdRoot, renderScene: scene, renderer, url,
+  webGpuSupport: await createWebGpuSupport(),
+});
+await handle.ready();
+const modes = await createRenderModes({
+  renderer, scene, camera,
+  // npm install @meimu/mutracer@0.2.0; stays outside the base loader graph.
+  loadPathTracer: () => import('@meimu/mutracer'),
+  // npm install three-gpu-pathtracer@0.0.27 three-mesh-bvh@0.9.16 xatlas-web@0.1.0
+  loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu'),
+});
+await modes.setMode('beauty'); // 'basic' | 'beauty' | 'pathtraced' | 'pathtraced-gk'
+// In the host animation loop, after handle.update(delta):
+modes.render(camera);
+// After renderer.setSize(...): modes.resize();
+// On teardown: modes.dispose(); await handle.dispose(); renderer.dispose();
+```
+
+Basic renders directly. Beauty adds Three.js SSGI, ambient occlusion and temporal antialiasing. Path traced uses MuTracer with 512 samples, eight bounces and JNLM denoising; scene and camera edits reset accumulation. MuTracer is an optional peer and must be supplied with `loadPathTracer` when path tracing is enabled. It loads only when selected. A separate output canvas keeps the existing orbit controls connected; an application may supply its own `canvas` for embedded layouts.
+
+WebGPU support translates MaterialX surfaces through the bundled TSL loader, including textures, nested graphs and geometry properties. Bounded MaterialX and VDB volumes additionally require the factories from `/volumes`. Gaussian splats use the same WebGPURenderer through the particle-field factory in `createWebGpuSupport()`.
+
+`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas and JNLM denoising.
+
+MuTracer's built-in conversion supports ordinary Three.js PBR surfaces, including the viewer's MDL input approximations. Arbitrary MaterialX graphs, bounded volumes, custom primvar shaders, per-point/curve opacity, Gaussian splats and PMREM-only environments cannot currently be translated by this integration; selecting path tracing preserves the current mode and reports the unsupported content. Applications can supply `convertMaterial` and `convertLight` for their own MuTracer conversions. Use an equirectangular HDR/EXR environment for path tracing.
+
+For controls, `mountRenderModePicker` from `/viewer` wraps the same render-mode controller. `mountStagePanel({ handle, stage, scene, camera, controls, setCamera })` adds cameras, purposes, variants, payloads, a searchable prim tree, attributes, relationships, metadata, layers and a timeline. `setCamera` receives the selected, fully composed Hydra camera, or the supplied free camera. Use `beforeEdit`/`afterEdit` to coordinate host integrations such as physics. Dispose the panel before disposing its handle. The default stylesheet loads relative to the installed module; pass `style: false` to provide your own styles. `inspectStage`, `inspectPrim`, `setVariant`, `setPayloadLoaded` and `stageCameras` from `/scene` are available without the UI.

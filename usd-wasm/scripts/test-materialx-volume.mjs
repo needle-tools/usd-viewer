@@ -44,6 +44,8 @@ try {
             assert.ok(result.materials.every(material => material.side === 1), 'surface sidedness must not change the back-face volume proxy');
             const expected = emission ? [51, 102, 153] : [171, 94, 35];
             expected.forEach((value, channel) => assert.ok(Math.abs(result.pixel[channel] - value) <= 2, `channel ${channel}: expected ${value}, got ${result.pixel[channel]}`));
+            expected.forEach((value, channel) => assert.ok(Math.abs(result.beautyPixel[channel] - value) <= 2, `Beauty channel ${channel}: expected ${value}, got ${result.beautyPixel[channel]}`));
+            result.occluderOnly.slice(0,3).forEach((value, channel) => assert.ok(Math.abs(result.occluded[channel]-value)<=2, `Beauty opaque occluder channel ${channel}: expected ${value}, got ${result.occluded[channel]}`));
         }
         for (const name of ['ember-torus', 'jade-plume', 'violet-lattice']) {
             errors.length = 0;

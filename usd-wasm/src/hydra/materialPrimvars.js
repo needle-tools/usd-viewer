@@ -99,6 +99,10 @@ export function configureMaterialXPrimvars(material) {
 }
 
 export function prepareMaterialXPrimvars(material, mesh) {
+    for (const binding of material?.userData?.usdMaterialXPrimvars || []) {
+        const attribute = primvarAttribute(mesh, binding.name, binding.size);
+        if (attribute) mesh.geometry.setAttribute(binding.name, attribute);
+    }
     if (!material?.isMaterialXMaterial && material?.constructor?.name !== 'MaterialXMaterial') return;
     // These names come from MaterialX's generated vertex inputs. Built-in inputs
     // are handled by MaterialXMaterial; custom geomprops need Hydra data aliases.

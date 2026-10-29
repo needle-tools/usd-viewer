@@ -38,3 +38,18 @@ test('solid dome lights illuminate the scene and restore its environment on disp
     assert.equal(scene.environment, null);
     delegate.dispose();
 });
+
+test('orthographic cameras use Hydra world aperture units and preserve authored clipping and transforms', () => {
+    const { delegate } = setup();
+    const camera = delegate.createSPrim('camera', '/Camera');
+    camera.updateCameraState({ projection: 'orthographic', horizontalAperture: 8, verticalAperture: 4, near: 0.2, far: 250,
+        transform: [1,0,0,0, 0,1,0,0, 0,0,1,0, 3,4,5,1] });
+    assert.equal(camera._object.isOrthographicCamera, true);
+    assert.deepEqual([camera._object.left, camera._object.right, camera._object.top, camera._object.bottom], [-4, 4, 2, -2]);
+    assert.deepEqual(camera._object.position.toArray(), [3,4,5]);
+    assert.equal(camera._object.near, 0.2); assert.equal(camera._object.far, 250);
+    camera.updateCameraState({ projection: 'perspective', focalLength: 50, verticalAperture: 24 });
+    assert.equal(camera._object.isPerspectiveCamera, true);
+    assert.ok(Math.abs(camera._object.fov - 26.99146656) < 0.00001);
+    delegate.dispose();
+});

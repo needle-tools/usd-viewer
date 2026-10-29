@@ -137,3 +137,19 @@ test('MaterialX custom attribute and varying names stay distinct across shader s
     assert.equal(generated.vertexShader, result, 'already valid shaders remain unchanged');
     generated.dispose();
 });
+
+test('WebGPU PreviewSurface readers use TSL attributes and survive material side cloning', async () => {
+    const { createWebGpuSupport } = await import('../../src/renderers/webGpuSupport.js');
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), renderer: { isWebGPURenderer: true }, webGpuSupport: await createWebGpuSupport() });
+    const panel = mesh(delegate, '/Panel');
+    panel.updatePrimvar('displayColor', [1,0,0, 0,1,0, 0,0,1, 1,1,1], 3, 'vertex');
+    const authored = await material(delegate);
+    assert.equal(authored._material.isMeshPhysicalNodeMaterial, true);
+    assert.equal(authored._material.vertexColors, false, 'a direct color reader is not multiplied a second time');
+    assert.ok(authored._material.colorNode.isNode);
+    assert.ok(authored._material.roughnessNode.isNode);
+    assert.deepEqual(values(panel._mesh, 'diffuseColor').slice(0, 9), [1,0,0, 0,1,0, 0,0,1]);
+    const clone = authored._material.clone();
+    assert.equal(clone.colorNode, authored._material.colorNode);
+    clone.dispose(); delegate.dispose();
+});

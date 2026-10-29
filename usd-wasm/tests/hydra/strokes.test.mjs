@@ -90,3 +90,18 @@ test('malformed curve data hides the primitive without escaping the native callb
     assert.equal(stroke._mesh.userData.usdStrokeError, undefined);
     delegate.dispose();
 });
+
+test('node strokes combine authored opacity with widths without stacking opacity on refresh', async () => {
+    const { createWebGpuSupport } = await import('../../src/renderers/webGpuSupport.js');
+    const support = await createWebGpuSupport();
+    const root = new Group(), delegate = new ThreeRenderDelegateInterface({ usdRoot: root, webGpuSupport: support });
+    const stroke = delegate.createRPrim('points', '/Points');
+    stroke.setStrokeData({ points: [[0,0,0], [1,0,0]], primvars: { widths: primvar([0.4]), displayOpacity: primvar([0,0.5], 'vertex') } });
+    assert.ok(stroke._mesh.material.opacityNode.isNode);
+    assert.equal(stroke._mesh.material.transparent, true);
+    assert.deepEqual([...stroke._geometry.attributes.strokeOpacity.array], [0,0.5]);
+    const base = stroke._mesh.material.opacityNode.aNode;
+    support.configureStrokeMaterial(stroke._mesh.material);
+    assert.equal(stroke._mesh.material.opacityNode.aNode, base);
+    delegate.dispose();
+});

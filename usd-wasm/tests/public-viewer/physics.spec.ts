@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+test.beforeEach(async ({ page }) => {
+  await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
+});
 
 for (const viewer of ['three', 'needle']) {
   test(`${viewer}: authored USD bodies simulate, drag, pause and reset`, async ({ page }) => {

@@ -1,10 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+// Keep these local rendering checks independent of the web-font CDN.
+test.beforeEach(async ({ page }) => {
+  await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
+});
+
 test('jade volume composites over the background and receives light without an opaque proxy shadow', async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto('/?viewer=three&render=nodes&file=/test-fixtures/coverage/materialx/jade-plume.usda&assetCache=0');
+    await page.goto('/?viewer=three&render=nodes&backend=webgl&file=/test-fixtures/coverage/materialx/jade-plume.usda&assetCache=0');
     const background = page.getByRole('combobox', { name: 'Background', exact: true });
     await expect(background).toHaveValue('light');
     const initial = await page.evaluate(async () => {

@@ -1,11 +1,17 @@
 # Changelog
 All notable changes to this package will be documented in this file.
 
+
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [1.2.0] - 2026-10-28
 ### Added
+- Keep all Three.js scenes on WebGPURenderer, including mixed Gaussian splats, meshes and bounded volumes; preserve full-precision directional SH and dispose compute resources.
+- Add lazy gkjohnson WebGPU path tracing on the shared renderer/canvas, with edit invalidation and private BVH geometry ownership.
+- Add optional Basic, Beauty (Three.js SSGI/temporal AA) and MuTracer path-tracing controllers and a render-mode picker.
+- Add reusable stage inspection and viewer controls, consolidating the USD-WG viewer's cameras, purposes, variants and payload tools, with prim inspection and timeline controls.
+- Support MaterialX TSL surfaces and PreviewSurface primvar readers with WebGPURenderer, and correct orthographic camera aperture units. Modern renderer imports stay isolated from the r160-compatible base loader.
 - Added public-viewer Detail controls and smooth/cage variants for the curved MDL vessels, with high-detail defaults and updated native Storm cards for affected fixtures.
 - Added authored `UsdLuxShadowAPI` enable controls for directional, point and spot-light raster shadows, with animated and variant changes.
 - Added world-space points with per-point widths, evaluated Bézier/B-spline/NURBS curves, and optional real OpenVDB density/heat rendering with animated field files.
@@ -28,6 +34,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Recorded an optional Binaryen post-link size pass with input/output hashes and exact optimizer flags.
 
 ### Fixed
+- Composite transparent volumes and splats after opaque SSGI/temporal AA, with explicit screen-space HDR color/depth for bounded media. Retain exit-face volume rendering and skip shadow rays for non-scattering samples.
+- Preserve smooth Gaussian tails and HDR radiance; avoid an undefined axis for circular projected splats.
 - Keep bounded-medium box proxies out of opaque shadow maps so they do not block their own volume lighting; retain surface-caster settings when materials change.
 - Drain asynchronous volume/geometry factories before disposing the driver and scoped files, including when another factory rejects.
 - Supply an orthogonal tangent basis for untextured MaterialX geometry without UVs, preserving authored tangents and UV-based MikkTSpace generation. This fixes black untextured surfaces and their shadow reception.

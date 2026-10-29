@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
 const copies = [
+  ...['three-gpu-pathtracer', 'three-mesh-bvh'].map(name => ({ from: join(root, 'node_modules', name), to: join(root, 'public', name), label: '/' + name })),
+  { from: join(root, "node_modules", "@meimu", "mutracer"), to: join(root, "public", "mutracer"), label: "/mutracer" },
+  { from: join(root, "node_modules", "oidn-webgpu"), to: join(root, "public", "oidn-webgpu"), label: "/oidn-webgpu" },
   {
     from: join(root, 'node_modules', '@dimforge', 'rapier3d-compat', 'dist'),
     to: join(root, 'public', 'rapier'),
@@ -41,7 +44,7 @@ for (const copy of copies) {
       }
       const relativeSource = source.startsWith(copy.from) ? source.slice(copy.from.length) : source;
       return !relativeSource.split(/[\\/]/).includes("node_modules")
-        && !source.endsWith("/dist")
+        && !(source.endsWith("/dist") && copy.label !== "/oidn-webgpu")
         && !source.endsWith("/.DS_Store");
     },
   });

@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+// Keep these local rendering checks independent of the web-font CDN.
+test.beforeEach(async ({ page }) => {
+  await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
+});
+
 test('Hugging Face test set is a separate top-level catalog', async ({ page }) => {
     await page.goto('/?viewer=three');
     await page.locator('.dropdown-button').click();
@@ -84,7 +89,7 @@ test('bounded volume selects the Three node renderer on direct navigation', asyn
         const domes: any[]=[]; w.usdRoot.traverse((o:any)=>{if(o.userData?.usdTypeName==='DomeLight') domes.push({type:o.type,isLight:!!o.isLight,path:o.userData.usdPath});});
         return {rgb,domes,environment:!!w.scene.environment,material:plinth.material.type};
     }, screenshot.toString('base64'));
-    expect(opaqueLighting.material).toBe('MeshPhysicalMaterial');
+    expect(opaqueLighting.material).toBe('MeshPhysicalNodeMaterial');
     expect(opaqueLighting.environment).toBe(true);
     expect(opaqueLighting.domes.length).toBeGreaterThan(0);
     expect(opaqueLighting.domes.every(dome=>dome.type==='Group'&&!dome.isLight&&dome.path)).toBe(true);
@@ -94,7 +99,7 @@ test('bounded volume selects the Three node renderer on direct navigation', asyn
     expect(Math.max(...opaqueLighting.rgb)).toBeGreaterThan(30);
 });
 
-test('gallery changes renderer only when entering or leaving bounded volumes', async ({ page }) => {
+test('gallery keeps the node renderer when leaving bounded volumes', async ({ page }) => {
     await page.goto('/?viewer=needle');
     await page.locator('.dropdown-button').click();
     await page.locator('[data-sample-group="needle"]').click();
@@ -106,8 +111,8 @@ test('gallery changes renderer only when entering or leaving bounded volumes', a
     await page.locator('[data-sample-group="needle"]').click();
     await page.locator('[data-sample-group="needle:Composition"]').click();
     await page.locator('.gallery-card[data-name="External reference"]').click();
-    await page.waitForURL(url => url.searchParams.get('viewer') === 'three' && !url.searchParams.has('render'));
-    await page.waitForFunction(() => !!(window as any).usdHydra && !(window as any).renderer.isWebGPURenderer, { timeout: 120_000 });
+    await page.waitForURL(url => url.searchParams.get('file')?.includes('external-reference'));
+    await page.waitForFunction(() => !!(window as any).usdHydra && (window as any).renderer.isWebGPURenderer, { timeout: 120_000 });
 });
 
 test('Needle lighting fixtures do not inherit the host environment', async ({ page }) => {
@@ -154,7 +159,7 @@ for (const name of ['volume-density', 'volume-density-heat', 'volume-sequence', 
         if(name==='volume-transformed') expect(scene.transform[12]).toBeCloseTo(1);
         // Element screenshots include DOM overlays. Keep toolbar text out of the
         // scene-pixel assertions, especially at this deliberately small viewport.
-        await page.locator('#top-center').evaluate((element: HTMLElement) => { element.style.visibility = 'hidden'; });
+        await page.locator('#top-center, #render-mode-controls, #usd-suite, .usd-timeline').evaluateAll(elements => { for (const element of elements) (element as HTMLElement).style.visibility = 'hidden'; });
         await page.waitForTimeout(500);
         const filled=await page.locator('canvas.usd-viewer-three-canvas').screenshot({path:`.cache/coverage-validation/vdb-public/${name}-filled.png`});
         const foreground = await page.evaluate(async encoded => {

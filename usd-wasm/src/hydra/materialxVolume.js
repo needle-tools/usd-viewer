@@ -18,7 +18,18 @@ export async function createMaterialXVolumeMaterial(xml, target, { renderer, get
   if (renderer.samples > 1) {
     throw new Error('MaterialX bounded volumes require a single-sample depth buffer; construct WebGPURenderer with antialias: false.');
   }
-  const [{ MaterialXLoader }, { LoadingManager }] = await Promise.all([
+  const material = await createMaterialXNodeMaterial(xml, target, { renderer, getTexture });
+  if (!material?.isBoundedVolumeNodeMaterial) {
+    material?.dispose();
+    throw new Error('The selected MaterialX material is not a supported bounded volume.');
+  }
+  return material;
+}
+
+/** Translate MaterialX surfaces and bounded media to the existing TSL implementation. */
+export async function createMaterialXNodeMaterial(xml, target, { renderer, getTexture }) {
+  if (!renderer?.isWebGPURenderer) throw new Error('MaterialX node materials require WebGPURenderer.');
+  const [{ MaterialXLoader }, { LoadingManager, DoubleSide }] = await Promise.all([
     import('../vendor/materialx/loaders/MaterialXLoader.js'),
     import('three'),
   ]);
@@ -49,9 +60,15 @@ export async function createMaterialXVolumeMaterial(xml, target, { renderer, get
   const entries = Object.values(result.materials);
   const material = typeof target === 'number' ? entries[target] : result.materials[target] || entries[0];
   for (const other of entries) if (other !== material) other.dispose();
-  if (!material?.isBoundedVolumeNodeMaterial) {
-    material?.dispose();
-    throw new Error('The selected MaterialX material is not a supported bounded volume.');
-  }
+  if (!material) throw new Error('The selected MaterialX document contains no material.');
+  // Bounded media integrate the complete ray at the exit face. Surface sidedness
+  // would shade the same ray twice and double the expensive scattering work.
+  if (!material.isBoundedVolumeNodeMaterial) material.side = DoubleSide;
+  material.userData.usdMaterialX = { target };
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  material.userData.usdMaterialXPrimvars = [...document.querySelectorAll('geompropvalue, [nodedef^="ND_geompropvalue_"]')].map(node => ({
+    name: node.querySelector('input[name="geomprop"]')?.getAttribute('value'),
+    size: { float: 1, integer: 1, vector2: 2, vector3: 3, vector4: 4, color3: 3, color4: 4 }[node.getAttribute('type')] || 3,
+  })).filter(binding => binding.name);
   return material;
 }

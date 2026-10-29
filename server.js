@@ -14,6 +14,7 @@ function setHeaders(res, path, stat) {
   }
   const needsHeaders = normalizedPath.includes('/emHd') ||
     normalizedPath.includes('/materialx/') ||
+    normalizedPath.includes('/mutracer/') ||
     normalizedPath.includes('/needle-engine/') ||
     normalizedPath.includes('/@needle-tools/engine/') ||
     path.endsWith('index.html');

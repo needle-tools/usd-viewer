@@ -37,7 +37,7 @@ for (const viewer of ['three', 'needle']) {
       w.usdHydra.scene.traverse((object: any) => {
         if (object.isMesh) {
           object.visible = object.userData.usdPath === '/World/Display/Artifact';
-          if (object.visible) materialX = object.material.constructor.name === 'MaterialXMaterial';
+          if (object.visible) materialX = object.material.constructor.name === 'MaterialXMaterial' || !!(object.material.isNodeMaterial && object.material.userData.usdMaterialX);
         }
         if (object.isRectAreaLight && object.intensity > 0) rectangles++;
       });
@@ -117,9 +117,9 @@ def Xform "World" {
     await page.evaluate(async () => { await (window as any).usdHydra.ready(); await (window as any).usdHydra.materialsReady(); });
     expect(warnings).toEqual([]);
     await expect.poll(() => page.evaluate(() => {
-      const w = window as any; let renderer: any;
-      (w.needleEngineContext?.scene || w.scene).traverse((o: any) => { if (o.userData.usdParticleFieldRenderer) renderer = o; });
-      return renderer?.timer?.getElapsed() > 0;
+      const w = window as any; let renderer: any; let gaussian: any;
+      (w.needleEngineContext?.scene || w.scene).traverse((o: any) => { if (o.userData.usdParticleFieldRenderer) renderer = o; if (o.isGaussianSplat) gaussian = o; });
+      return w.renderer?.isWebGPURenderer ? gaussian?._sortInitialized === true : renderer?.timer?.getElapsed() > 0;
     })).toBe(true);
   });
 }

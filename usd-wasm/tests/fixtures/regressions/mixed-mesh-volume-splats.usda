@@ -1,0 +1,26 @@
+#usda 1.0
+(
+ defaultPrim = "World"
+ metersPerUnit = 1
+ upAxis = "Y"
+)
+def Xform "World" {
+    def Xform "Plume" (prepend references = @../coverage/materialx/jade-plume.usda@) {
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        over "Key" {
+            float inputs:intensity = 400
+        }
+    }
+    def Xform "Cloud" (prepend references = @../coverage/advanced/splat-harmonics.usda@) {
+        double3 xformOp:translate = (2.8, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    def Cube "Occluder" {
+        double size = 1
+        color3f[] primvars:displayColor = [(0.1, 0.3, 0.8)]
+        double3 xformOp:translate = (2.8, 0, 0.7)
+        double3 xformOp:scale = (0.55, 2.5, 0.1)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}

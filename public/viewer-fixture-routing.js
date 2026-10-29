@@ -2,6 +2,8 @@
 // are established at startup. Ordinary same-backend selections stay in-page.
 export function fixtureNavigation(url, asset, currentMode, currentNodes) {
   const needsNodes = asset?.renderer === 'bounded-volume';
+  // Node modes support ordinary assets too; preserve the selected presentation.
+  if (currentMode === 'three' && currentNodes) return null;
   const needsThree = needsNodes && currentMode !== 'three';
   if (!needsThree && needsNodes === currentNodes) return null;
   const target = new URL(url);

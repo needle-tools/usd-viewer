@@ -46,6 +46,7 @@ export class HydraStroke {
         material.customProgramCacheKey = () => `usd-stroke-opacity:${source.uuid}:${originalCacheKey()}`;
         material.userData.usdStrokeBaseTransparent = !!source.transparent;
         material.transparent = source.transparent || !!this._hasTransparency;
+        this._interface.config.webGpuSupport?.configureStrokeMaterial?.(material);
         material.needsUpdate = true;
         return material;
     }

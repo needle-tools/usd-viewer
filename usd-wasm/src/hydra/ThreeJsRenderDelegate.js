@@ -689,14 +689,19 @@ class HydraScenePrimitive {
       this._object.userData.usdKind = "sprim";
     }
 
-    const focalLength = Number(state?.focalLength) || 50;
-    const verticalAperture = Number(state?.verticalAperture) || 20.955;
+    const focalLength = Number(state?.focalLength) || 5;
+    const verticalAperture = Number(state?.verticalAperture) || 1.52908;
     const horizontalAperture = Number(state?.horizontalAperture) || verticalAperture;
     const near = Number(state?.near);
     const far = Number(state?.far);
     if (this._object.isPerspectiveCamera) {
       this._object.fov = MathUtils.radToDeg(2 * Math.atan((verticalAperture * 0.5) / focalLength));
       this._object.aspect = horizontalAperture > 0 && verticalAperture > 0 ? horizontalAperture / verticalAperture : 1;
+    }
+    if (this._object.isOrthographicCamera) {
+      // Hydra has already converted USD apertures to world units.
+      this._object.left = -horizontalAperture / 2; this._object.right = horizontalAperture / 2;
+      this._object.top = verticalAperture / 2; this._object.bottom = -verticalAperture / 2;
     }
     if (Number.isFinite(near) && near > 0) this._object.near = near;
     if (Number.isFinite(far) && far > 0) this._object.far = far;
@@ -939,7 +944,7 @@ class HydraParticleField {
     const count = positionValues.length / 3;
     const normalizedDegree = Number(degree);
     if (!Number.isInteger(normalizedDegree) || normalizedDegree < 0 || normalizedDegree > 3) {
-      throw new Error(`Spark supports particleField spherical harmonics degrees 0 through 3; received ${degree}`);
+      throw new Error(`Particle fields support spherical harmonics degrees 0 through 3; received ${degree}`);
     }
 
     const orientationValues = normalizeOptionalParticleArray(
@@ -1030,27 +1035,29 @@ class HydraParticleField {
       return;
     }
 
-    const spark = await getSparkModule();
-    const renderer = this._interface.ensureSparkRenderer(spark, data.sortingModeHint);
-    if (data.projectionModeHint !== 'perspective') {
-      this._interface.warnUnsupportedParticleProjection(data.projectionModeHint, this._id);
+    const factory = this._interface.config.webGpuSupport?.createParticleField;
+    const transforms = this._instanceTransforms.length ? this._instanceTransforms : [this._transform];
+    let candidates;
+    if (this._interface.config.renderer?.isWebGPURenderer) {
+      if (!factory) throw new Error('WebGPURenderer particle fields require createWebGpuSupport().');
+      const results = await Promise.allSettled(transforms.map(() => Promise.resolve().then(() => factory(data))));
+      candidates = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure) { for (const mesh of candidates) mesh.dispose(); throw failure.reason; }
+    } else {
+      const spark = await getSparkModule();
+      const renderer = this._interface.ensureSparkRenderer(spark, data.sortingModeHint);
+      if (data.projectionModeHint !== 'perspective') this._interface.warnUnsupportedParticleProjection(data.projectionModeHint, this._id);
+      renderer.sortRadial = data.sortingModeHint !== 'zDepth';
+      candidates = transforms.map(() => new spark.SplatMesh({ extSplats: createSparkExtSplats(data, spark) }));
+      await Promise.all(candidates.map(mesh => mesh.initialized));
     }
-    renderer.sortRadial = data.sortingModeHint !== 'zDepth';
-
-    const transforms = this._instanceTransforms.length
-      ? this._instanceTransforms
-      : [this._transform];
-    const candidates = transforms.map((transform, index) => {
-      const mesh = new spark.SplatMesh({ extSplats: createSparkExtSplats(data, spark) });
+    candidates.forEach((mesh, index) => {
       mesh.name = `${this._root.name}${transforms.length > 1 ? `_instance_${index}` : ''}`;
       mesh.userData.usdPath = this._id;
       mesh.userData.usdTypeName = 'ParticleField3DGaussianSplat';
-      mesh.matrix.copy(transform);
-      mesh.matrixAutoUpdate = false;
-      mesh.visible = false;
-      return mesh;
+      mesh.matrix.copy(transforms[index]); mesh.matrixAutoUpdate = false; mesh.visible = false;
     });
-    await Promise.all(candidates.map(mesh => mesh.initialized));
 
     if (this._disposed || revision !== this._revision) {
       for (const mesh of candidates) mesh.dispose();
@@ -2429,7 +2436,8 @@ class HydraMaterial {
     // TODO: Ideally, we don't recreate the material on every update.
     // Creating a new one requires to also update any meshes that reference it. So we're relying on the C++ side to
     // call this before also calling `setMaterial` on the affected meshes.
-    this._material = new MeshPhysicalMaterial({});
+    const SurfaceMaterial = this._interface.config.webGpuSupport?.SurfaceMaterial || MeshPhysicalMaterial;
+    this._material = new SurfaceMaterial({});
     this._material.side = DoubleSide;
     // split _id
     let _name = this._id;
@@ -2467,7 +2475,10 @@ class HydraMaterial {
       this.assignProperty(mainMaterialNode, key);
     }
 
-    if (!usingMdl) configurePreviewPrimvars(this._material, mainMaterialNode);
+    if (!usingMdl) {
+      configurePreviewPrimvars(this._material, mainMaterialNode);
+      this._interface.config.webGpuSupport?.configurePreviewPrimvars?.(this._material);
+    }
 
     if (usingMdl) {
       const { normalScale, specularColor, ...settings } = mdlPreview.settings;
@@ -2517,6 +2528,18 @@ class HydraMaterial {
         volume.name = materialName;
         this._interface.diagnostics.materialXCreateSuccess++;
         return volume;
+      }
+      if (this._interface.config.webGpuSupport) {
+        const material = await this._interface.config.webGpuSupport.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
+          renderer: this._interface.config.renderer,
+          getTexture: async url => {
+            const path = this._resolveMaterialTexturePath(url);
+            return path ? this._interface.registry.getTexture(path) : null;
+          },
+        });
+        material.name = materialName;
+        this._interface.diagnostics.materialXCreateSuccess++;
+        return material;
       }
       const { MaterialX, MaterialXMaterial, MaterialXEnvironment } = await getMaterialXModule();
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {

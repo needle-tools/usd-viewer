@@ -1,0 +1,30 @@
+{
+  "repository": "https://github.com/mrdoob/three.js",
+  "revision": "1a5efaf1d5890d17dcb84d160fe242d871c3064c",
+  "license": "MIT",
+  "files": [
+    {
+      "path": "objects/GaussianSplat.js",
+      "source": "examples/jsm/objects/GaussianSplat.js",
+      "sourceSha256": "ea3f148d39413ef31781cdbb1c97a8972b2dce01ef5eebe6ef800c2b1ba7ab42"
+    },
+    {
+      "path": "gpgpu/CountingSort.js",
+      "source": "examples/jsm/gpgpu/CountingSort.js",
+      "sourceSha256": "e9e90b6940a4da923534c3f249e8e7bd2c7603f8b432c54c62ecdc6db4be47e3"
+    },
+    {
+      "path": "utils/GaussianSplatUtils.js",
+      "source": "examples/jsm/utils/GaussianSplatUtils.js",
+      "sourceSha256": "4b9b010149b3e1a7673de37638365e937e005a03ba706e4cd81301b717d30f54"
+    }
+  ],
+  "changes": [
+    "TSL unpackUnorm4x8 compatibility with Three.js r185",
+    "Preserve full-precision USD SH coefficients and linear HDR base colors",
+    "Dispose owned compute pipelines and storage buffers",
+    "Orthographic projection Jacobian and parallel-ray SH direction",
+    "Extend Gaussian tails to 1/255 opacity cutoff and retain HDR radiance in the shader",
+    "Keep isotropic projected covariance on a defined axis instead of atan(0, 0)"
+  ]
+}

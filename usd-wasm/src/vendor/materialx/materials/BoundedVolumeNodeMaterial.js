@@ -1,7 +1,7 @@
 import { BackSide, LightingModel, MathUtils, NodeMaterial, Vector3 } from 'three/webgpu';
 import {
 	cameraFar, cameraNear, cameraPosition, cameraViewMatrix, cameraWorldMatrix,
-	float, Loop, mix, modelWorldMatrixInverse, positionWorld,
+	float, If, Loop, mix, modelWorldMatrixInverse, positionWorld,
 	step, uniform, vec3, vec4, viewportDepthTexture, viewportOpaqueMipTexture, linearDepth, logarithmicDepthToViewZ, lightingContext,
 } from 'three/tsl';
 
@@ -50,7 +50,7 @@ class BoundedVolumeLightingModel extends LightingModel {
 		const localOrigin = modelWorldMatrixInverse.mul( vec4( origin, 1 ) ).xyz.toVar();
 		const localDirection = modelWorldMatrixInverse.mul( vec4( direction, 0 ) ).xyz.toVar();
 		const bounds = intersectBox( localOrigin, localDirection, minimum, maximum );
-		let depth = viewportDepthTexture();
+		let depth = ( material.opaqueDepthNode || viewportDepthTexture() ).toVar( 'opaqueDepth' );
 		if ( builder.renderer.reversedDepthBuffer ) depth = depth.oneMinus();
 		const viewDepth = builder.renderer.logarithmicDepthBuffer ? logarithmicDepthToViewZ( depth, cameraNear, cameraFar ).negate() : cameraNear.add( linearDepth( depth ).mul( cameraFar.sub( cameraNear ) ) );
 		const opaqueDistance = depth.greaterThanEqual( 1 ).select( cameraFar, viewDepth ).div( viewScale );
@@ -96,7 +96,7 @@ class BoundedVolumeLightingModel extends LightingModel {
 
 		}
 
-		this.radiance.addAssign( transmittance.mul( viewportOpaqueMipTexture().rgb ) );
+		this.radiance.addAssign( transmittance.mul( ( material.opaqueColorNode || viewportOpaqueMipTexture() ).rgb ) );
 
 	}
 
@@ -105,31 +105,33 @@ class BoundedVolumeLightingModel extends LightingModel {
 		const { material } = builder;
 		if ( material.scatteringNode === null ) return;
 		const direction = cameraWorldMatrix.mul( vec4( lightDirection, 0 ) ).xyz.normalize().toVar();
-		const localDirection = modelWorldMatrixInverse.mul( vec4( direction, 0 ) ).xyz;
-		let distance = intersectBox( this.sampleLocal, localDirection, this.minimum, this.maximum ).far.max( 0 );
-		if ( lightNode.light.isPointLight || lightNode.light.isSpotLight ) distance = distance.min( lightNode.getLightVector( builder ).length() );
-		const steps = uniform( 'int' ).onObjectUpdate( ( { material } ) => Math.max( 1, Math.floor( material.shadowSteps ) ) );
-		const delta = distance.div( steps ).toVar();
-		const opticalDepth = vec3( 0 ).toVar();
-		if ( material.extinctionNode ) {
-
-			Loop( steps, ( { i } ) => {
-
-				const offset = float( i ).add( 0.5 ).mul( delta );
-				opticalDepth.addAssign( material.extinctionNode( {
-					positionLocal: this.sampleLocal.add( localDirection.mul( offset ) ),
-					positionWorld: this.sampleWorld.add( direction.mul( offset ) ),
-				} ).max( 0 ).mul( delta ) );
-
-			} );
-
-		}
-
 		const scattering = material.scatteringNode( {
 			positionLocal: this.sampleLocal, positionWorld: this.sampleWorld,
 			lightDirection: direction, viewDirection: this.direction.negate(),
+		} ).max(0).toVar();
+		If( scattering.x.max( scattering.y ).max( scattering.z ).greaterThan( 0 ), () => {
+			const localDirection = modelWorldMatrixInverse.mul( vec4( direction, 0 ) ).xyz;
+			let distance = intersectBox( this.sampleLocal, localDirection, this.minimum, this.maximum ).far.max( 0 );
+			if ( lightNode.light.isPointLight || lightNode.light.isSpotLight ) distance = distance.min( lightNode.getLightVector( builder ).length() );
+			const steps = uniform( 'int' ).onObjectUpdate( ( { material } ) => Math.max( 1, Math.floor( material.shadowSteps ) ) );
+			const delta = distance.div( steps ).toVar();
+			const opticalDepth = vec3( 0 ).toVar();
+			if ( material.extinctionNode ) {
+
+				Loop( steps, ( { i } ) => {
+
+					const offset = float( i ).add( 0.5 ).mul( delta );
+					opticalDepth.addAssign( material.extinctionNode( {
+						positionLocal: this.sampleLocal.add( localDirection.mul( offset ) ),
+						positionWorld: this.sampleWorld.add( direction.mul( offset ) ),
+					} ).max( 0 ).mul( delta ) );
+
+				} );
+
+			}
+
+			this.source.addAssign( scattering.max( 0 ).mul( lightColor ).mul( opticalDepth.negate().exp() ) );
 		} );
-		this.source.addAssign( scattering.max( 0 ).mul( lightColor ).mul( opticalDepth.negate().exp() ) );
 
 	}
 
@@ -167,6 +169,9 @@ class BoundedVolumeNodeMaterial extends NodeMaterial {
 		this.steps = 64;
 		/** Number of light-ray integration steps. @type {number} */
 		this.shadowSteps = 16;
+		/** Optional opaque depth supplied by a multi-pass compositor. @type {?Node<float>} */
+		this.opaqueDepthNode = null;
+		this.opaqueColorNode = null;
 		/** @type {?(Function|FunctionNode<vec3>)} Extinction coefficient at a local/world position. */
 		this.extinctionNode = null;
 		/** @type {?(Function|FunctionNode<vec3>)} Emission coefficient at a local/world position. */
@@ -199,7 +204,7 @@ class BoundedVolumeNodeMaterial extends NodeMaterial {
 
 	customProgramCacheKey() {
 
-		return super.customProgramCacheKey() + [ this.extinctionNode, this.emissionNode, this.scatteringNode ].map( getCoefficientFunctionId ).join( ',' );
+		return super.customProgramCacheKey() + ':' + ( this.opaqueDepthNode?.id ?? '' ) + ':' + ( this.opaqueColorNode?.id ?? '' ) + [ this.extinctionNode, this.emissionNode, this.scatteringNode ].map( getCoefficientFunctionId ).join( ',' );
 
 	}
 
@@ -208,6 +213,8 @@ class BoundedVolumeNodeMaterial extends NodeMaterial {
 		super.copy( source );
 		this.steps = source.steps;
 		this.shadowSteps = source.shadowSteps;
+		this.opaqueDepthNode = source.opaqueDepthNode;
+		this.opaqueColorNode = source.opaqueColorNode;
 		this.extinctionNode = source.extinctionNode;
 		this.emissionNode = source.emissionNode;
 		this.scatteringNode = source.scatteringNode;

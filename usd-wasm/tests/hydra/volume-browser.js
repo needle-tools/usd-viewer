@@ -1,7 +1,8 @@
-import { Scene, Color, PerspectiveCamera, WebGPURenderer, RenderTarget, LinearSRGBColorSpace, NoToneMapping, Mesh, BoxGeometry, DirectionalLight } from 'three/webgpu';
+import { Scene, Color, PerspectiveCamera, WebGPURenderer, RenderTarget, LinearSRGBColorSpace, NoToneMapping, Mesh, BoxGeometry, DirectionalLight, MeshBasicNodeMaterial } from 'three/webgpu';
 import { createThreeHydra } from '../../src/create.three.js';
 import { getUsdModule } from '../../src/bindings/index.js';
 import { ThreeRenderDelegateInterface } from '../../src/hydra/ThreeJsRenderDelegate.js';
+import { createRenderModes } from '../../src/renderers/index.js';
 import { createMaterialXVolumeMaterial } from '../../src/hydra/materialxVolume.js';
 
 function backendFlags(renderer) {
@@ -91,7 +92,22 @@ export async function probeVolumeStage({ forceWebGL, emission }) {
         renderer.setOutputRenderTarget(target);
         renderer.render(scene, camera);
         const data = await renderer.readRenderTargetPixelsAsync(target, 32, 32, 1, 1);
-        return { backend, materials, pixel: [...data], terminals: documents.map(document => document.terminal), diagnostics: handle.diagnostics() };
+        const modes = await createRenderModes({renderer, scene, camera});
+        let beautyPixel, occluded, occluderOnly;
+        try {
+            await modes.setMode('beauty');
+            for(let frame=0;frame<3;frame++) { await new Promise(requestAnimationFrame); modes.render(); }
+            beautyPixel = [...await renderer.readRenderTargetPixelsAsync(target, 32, 32, 1, 1)];
+            const occluder = new Mesh(new BoxGeometry(4,4,0.1),new MeshBasicNodeMaterial({color:new Color(0.3,0.4,0.5)}));
+            occluder.position.z=2; scene.add(occluder);
+            try { for(let frame=0;frame<3;frame++) { await new Promise(requestAnimationFrame); modes.render(); } occluded=[...await renderer.readRenderTargetPixelsAsync(target,32,32,1,1)];
+                const media=[];scene.traverse(o=>{if(o.material?.isBoundedVolumeNodeMaterial){media.push(o);o.visible=false;}});
+                try {for(let frame=0;frame<3;frame++){await new Promise(requestAnimationFrame);modes.render();}occluderOnly=[...await renderer.readRenderTargetPixelsAsync(target,32,32,1,1)];}
+                finally {media.forEach(o=>o.visible=true);}
+            }
+            finally { occluder.removeFromParent(); occluder.geometry.dispose();occluder.material.dispose(); }
+        } finally { modes.dispose(); }
+        return { backend, materials, pixel: [...data], beautyPixel, occluded, occluderOnly, terminals: documents.map(document => document.terminal), diagnostics: handle.diagnostics() };
     } finally {
         renderer.setOutputRenderTarget(null);
         await handle.dispose();

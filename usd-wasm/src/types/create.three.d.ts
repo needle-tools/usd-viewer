@@ -1,5 +1,5 @@
 import { Object3D } from "three"
-import { HydraRenderer, MaterialXVolumeFactory, UsdVolumeFactory } from "./hydra.js"
+import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory } from "./hydra.js"
 import { HdWebSyncDriver, USD, USDStage } from "./bindings.js"
 
 export declare type HydraFile = File & { path: string };
@@ -47,6 +47,8 @@ export declare type createThreeHydraConfig = {
      * MaterialX volumes require WebGPURenderer with antialias: false.
      */
     renderer?: HydraRenderer,
+    /** Create with createWebGpuSupport from @needle-tools/usd/renderers for WebGPURenderer surfaces. */
+    webGpuSupport?: WebGpuSupport,
 
     /** Optional bounded-volume support from @needle-tools/usd/volumes. Requires a compatible node renderer. */
     materialXVolumeFactory?: MaterialXVolumeFactory,

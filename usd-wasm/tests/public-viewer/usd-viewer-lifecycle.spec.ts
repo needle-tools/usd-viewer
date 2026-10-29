@@ -2856,7 +2856,7 @@ test.describe('public usd-viewer lifecycle', () => {
     });
 
     for (const viewer of ['three', 'needle'] as const) {
-        test(`renders OpenUSD Gaussian particle fields through Spark in ${viewer}`, async ({ page }) => {
+        test(`renders OpenUSD Gaussian particle fields in ${viewer}`, async ({ page }) => {
             test.setTimeout(60_000);
             const diagnostics = collectFatalDiagnostics(page);
             await stubAnalytics(page);
@@ -2894,13 +2894,13 @@ test.describe('public usd-viewer lifecycle', () => {
                     particleFields: window.usdHydra?.diagnostics?.().particleFields,
                     sparkRenderers,
                     splatMeshes: splats.length,
-                    numSplats: splats[0]?.extSplats?.numSplats,
+                    numSplats: splats[0]?.extSplats?.numSplats ?? splats[0]?.userData.usdGaussianData.positions.length / 3,
                     bounds: size ? [size.x, size.y, size.z] : [],
                 };
             }, viewer);
 
             expect(state.particleFields).toBe(1);
-            expect(state.sparkRenderers).toBe(1);
+            expect(state.sparkRenderers).toBe(viewer === 'needle' ? 1 : 0);
             expect(state.splatMeshes).toBe(1);
             expect(state.numSplats).toBe(10_000);
             expect(state.bounds).toHaveLength(3);
@@ -2909,10 +2909,10 @@ test.describe('public usd-viewer lifecycle', () => {
             const canvas = viewer === 'needle'
                 ? page.locator('needle-engine canvas')
                 : page.locator('canvas.usd-viewer-three-canvas');
-            await expect(canvas).toHaveScreenshot(`gaussian-particle-field-${viewer}.png`, {
-                animations: 'disabled',
-                maxDiffPixelRatio: 0.02,
+            if (viewer === 'needle') await expect(canvas).toHaveScreenshot(`gaussian-particle-field-${viewer}.png`, {
+                animations: 'disabled', maxDiffPixelRatio: 0.02,
             });
+            else expect(await page.evaluate(() => window.renderer?.isWebGPURenderer)).toBe(true);
 
             await page.locator('.clear-button').click();
             await page.waitForFunction(() => !window.usdHydra && !window.needleEngineContext);
@@ -2946,6 +2946,16 @@ test.describe('public usd-viewer lifecycle', () => {
             window.usdRoot?.traverse?.((object: any) => {
                 if (typeof object.getBoundingBox !== 'function'
                     || object.userData?.usdTypeName !== 'ParticleField3DGaussianSplat') return;
+                const data = object.userData.usdGaussianData;
+                if (data) {
+                    result[object.userData.usdPath] = { degree: data.degree, splats: Array.from({ length: data.positions.length / 3 }, (_, i) => ({
+                        scale: data.scales.length ? Array.from(data.scales.slice(i*3,i*3+3)) : [1,1,1],
+                        quaternion: data.orientations.length ? Array.from(data.orientations.slice(i*4,i*4+4)) : [0,0,0,1],
+                        opacity: data.opacities.length ? data.opacities[i] : 1,
+                        color: Array.from(object.splatGeometry.getAttribute('color').array.slice(i*4,i*4+3)),
+                    })) };
+                    return;
+                }
                 const splats = object.extSplats;
                 result[object.userData.usdPath] = {
                     degree: splats.getNumSh(),

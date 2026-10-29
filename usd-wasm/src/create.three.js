@@ -362,6 +362,7 @@ async function createScopedThreeHydra(config, lifetime) {
         renderScene: config.renderScene,
         scenePrimitiveRoot,
         renderer: config.renderer,
+        webGpuSupport: config.webGpuSupport,
         materialXVolumeFactory: config.materialXVolumeFactory,
         usdVolumeFactory: config.usdVolumeFactory,
         requestRender: config.requestRender,
