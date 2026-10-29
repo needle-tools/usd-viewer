@@ -5,87 +5,64 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-10-28
+## [Unreleased]
 
-- Apply purpose changes to retained Three objects as well as Hydra sync filters. Restore excluded meshes, curves, points, splats and volumes correctly when re-included, while preserving authored visibility.
-
-- Confine hierarchy selection and keyboard scrolling to the tree, preventing inactive dock panels from moving the host viewport after resize. Add a host hook to reveal the selected row when showing the hierarchy.
-
-- Expose composed def/over/class specifiers in stage snapshots; distinguish schema types, lights, classes and overrides in the hierarchy. Preserve content-sized type columns with tabular numeral fonts.
-
-- Add reversible USD prim visibility/activation controls and a bounded, scrollable stage tree.
-- Expose OIDN Fast/Quality for both optional path tracers; retain progressive MuTracer JNLM and load OIDN/models on demand.
-- Allow the MuTracer display adapter to follow the host's Needle AgX, ACES Filmic, Khronos PBR Neutral, Linear, Reinhard or unmodified output transform.
-- Preserve absent environment lighting and transformed directional/spot-light targets in the gkjohnson adapter; viewport clear colors remain independent of illumination.
-- Use shared accessible icon controls for Stage visibility/activation and fit the Type column to complete USD schema names. Expose a free-camera reset for selection framing without modifying authored cameras.
-
-- Show the timeline only for composed time-varying content, refresh it after variant/payload edits, and use regular frame ticks with resize updates outside ResizeObserver delivery.
-- Provide Needle Engine's AgX look for node renderers and MuTracer's HDR display pipeline; preserve exposure when switching viewer integrations.
-- Match MuTracer backgrounds to the host renderer's clear color, preserving authored scene backgrounds and independent environment lighting.
-- Share one OrbitControls update path across render modes and stop imperceptible damping drift from restarting accumulation.
-- Add configurable tracer samples, bounces and denoising, a panel layout for render settings, and a compact timeline with frame transport and entry.
+## [1.2.0] - 2026-10-30
 
 ### Added
-- Add separate DOM hosts and persisted hierarchy state for stage controls. The development viewer uses the Needle brand, light/dark themes and a Dockview workspace with Stage, Properties, Layers, Timeline and Console panels.
-- Keep all Three.js scenes on WebGPURenderer, including mixed Gaussian splats, meshes and bounded volumes; preserve full-precision directional SH and dispose compute resources.
-- Add lazy gkjohnson WebGPU path tracing on the shared renderer/canvas, with edit invalidation and private BVH geometry ownership.
-- Add optional Basic, Beauty (Three.js SSGI/temporal AA) and MuTracer path-tracing controllers and a render-mode picker.
-- Add reusable stage inspection and viewer controls, consolidating the USD-WG viewer's cameras, purposes, variants and payload tools, with prim inspection and timeline controls.
-- Support MaterialX TSL surfaces and PreviewSurface primvar readers with WebGPURenderer, and correct orthographic camera aperture units. Modern renderer imports stay isolated from the r160-compatible base loader.
-- Added public-viewer Detail controls and smooth/cage variants for the curved MDL vessels, with high-detail defaults and updated native Storm cards for affected fixtures.
-- Added authored `UsdLuxShadowAPI` enable controls for directional, point and spot-light raster shadows, with animated and variant changes.
-- Added world-space points with per-point widths, evaluated Bézier/B-spline/NURBS curves, and optional real OpenVDB density/heat rendering with animated field files.
-- Added HDR dome environments, authored area and shaped spot lights, and gallery controls for USD light-rig and environment variants.
-- Added 174 feature fixtures, including the original subdivision car and playground, rational/multispan NURBS, distinct articulated subjects, MDL approximations, nested MaterialX graphs and bounded media. The Lights section contains 17 HDR/EXR dome, emitter, rig and light-schema examples.
-- Added optional composed-stage UsdPhysics simulation with Rapier, plus simulation, dragging, pause and reset controls in both public viewer modes.
-- Added optional Spark rendering for OpenUSD `ParticleField3DGaussianSplat` prims in both the plain three.js and Needle Engine integrations.
-- Added authored-input approximations for known OmniPBR and glTF MDL materials, including texture factors, UV transforms, color spaces, opacity and normals.
-- Added bounded MaterialX volume materials through WebGPURenderer, including its WebGL2 backend, using the existing volume implementation with recorded source provenance.
+
+- OpenUSD 26.11.1 with MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched Adobe `usdGltf`/Draco plugins.
+- Adaptive subdivision using OpenSubdiv Bfr limit surfaces and crack-free shared-edge tessellation. Curvature-driven CPU rates are camera independent and bounded by the Very high triangle budget; Low through Very high retain uniform refinement.
+- Optional `/renderers` and `/viewer` entry points: Basic, Beauty with SSGI/ambient occlusion/temporal antialiasing, MuTracer and gkjohnson WebGPU path tracing, and configurable samples, bounces and denoising. Tracers load on demand; OIDN supports self-hosted weights.
+- Optional scene-linear HDR bloom in Basic and Beauty, with strength, radius and threshold controls before tone mapping.
+- WebGPURenderer support for mixed surface meshes, Gaussian particle fields and bounded media. MaterialX surfaces use TSL, including custom geometry properties and nested graphs.
+- OpenUSD Gaussian particle fields with full signed/HDR spherical harmonics through degree three. The legacy renderer integration uses optional Spark 2.2.
+- World-space points with varying widths, evaluated Bézier/B-spline/NURBS curves, rational NURBS patches with analytic normals, optional bounded MaterialX media, and OpenVDB density/heat fields with animated file references.
+- Authored HDR/EXR dome lighting, area lights and shaped spotlights. Directional, point and spot raster shadows respect animated and variant `UsdLuxShadowAPI` enable opinions.
+- Authored-input approximations for known OmniPBR and glTF MDL definitions, including textures, factors, UV transforms, color spaces, opacity and normals. Arbitrary MDL compilation and procedural graphs remain unsupported.
+- Optional composed-stage UsdPhysics simulation with injectable/on-demand Rapier loading, pause, reset and dragging controls.
+- Stage inspection and reusable controls for cameras, purposes, variants, payloads, prims, properties, connections, relationships, metadata, provenance and layers.
+- Multi-selection, native/point-instance picking with exact authored point IDs, viewport selection and framing, and navigation to individual properties with Back/Forward history.
+- An embedded JavaScript REPL with top-level await, selection/property context and serialized live stage edits. Edits do not imply automatic undo or rollback.
 
 ### Changed
-- Use Spark 2.2 with an explicitly managed Three Timer instead of deprecated Clock construction.
-- Defer viewer environment loading until the composed stage has been checked for authored lights. Preserve authored dome environments and restore fallback lighting for unlit stages.
-- Make public-viewer physics configurable or fully disabled; reuse Needle's lazy runtime loader when available.
-- Updated the WASM runtime to OpenUSD 26.11.1 and rebuilt USD-dependent glTF/Draco plugins for its ABI.
-- Updated the development viewer to Needle Engine 6, MaterialX 1.8.0 and Rapier 0.21.0. Both viewer modes share the corrected Rapier initializer without its deprecated-parameters warning.
-- Added rectangular area-light integration for generated MaterialX surface closures through MaterialX 1.8.0.
-- Included the package license and third-party notices in npm artifacts.
-- Included asynchronous particle-field creation and MaterialX tangent generation in the existing loader readiness barriers.
-- Recorded an optional Binaryen post-link size pass with input/output hashes and exact optimizer flags.
+
+- Pin the MaterialX runtime to `@needle-tools/materialx@1.8.0`; update the development viewer to Needle Engine 6 and Rapier 0.21.0.
+- Provide Needle Engine's AgX look for WebGPURenderer and MuTracer, with common exposure/background handling. Also expose ACES Filmic, Khronos PBR Neutral and other host tone mappings.
+- Retain Three.js r160 compatibility for the base loader and scene helpers. Modern renderer/viewer integrations require r185 or newer; the tested development renderer is `@needle-tools/three@0.185.2-alpha.6`.
+- Include package licenses, third-party notices, clean native build provenance and a reproducible optional Binaryen optimization pass with input/output hashes.
 
 ### Fixed
-- Composite transparent volumes and splats after opaque SSGI/temporal AA, with explicit screen-space HDR color/depth for bounded media. Retain exit-face volume rendering and skip shadow rays for non-scattering samples.
-- Preserve smooth Gaussian tails and HDR radiance; avoid an undefined axis for circular projected splats.
-- Keep bounded-medium box proxies out of opaque shadow maps so they do not block their own volume lighting; retain surface-caster settings when materials change.
-- Drain asynchronous volume/geometry factories before disposing the driver and scoped files, including when another factory rejects.
-- Supply an orthogonal tangent basis for untextured MaterialX geometry without UVs, preserving authored tangents and UV-based MikkTSpace generation. This fixes black untextured surfaces and their shadow reception.
-- Repair published TypeScript declarations, delegate construction and helper exports; support strict Bundler/NodeNext consumers and check both modes before release.
-- Preserve each mesh's authored display color when Hydra reuses an unbound fallback material across meshes, including all 17 subdivision-playground subjects.
-- Preserve the public sample picker's category, selected card, expanded folders and per-category scroll positions across menu reopening, reloads and renderer switches.
-- Refresh MaterialX's light ordering when authored USD shadow casting, visibility or light topology changes, preserving the correct light-to-shadow-map assignment.
-- Author smooth analytic torus normals and denser geometry in lighting/MDL fixtures; regenerate affected native Storm cards and add shadow variants to Distant sun.
-- Preserved all signed Gaussian spherical-harmonic coefficients without exponent clipping or degree-two RGB stride errors.
-- Evaluated rational NURBS patches with derivative normals and respected knots, ranges, weights, animation and refinement complexity. Trimmed patches report unsupported geometry.
-- Initialized native collision-group filtering defaults to prevent nondeterministic inverted collision filters.
-- Preserved custom MaterialX source assets and recursive implementation definitions through HTTP/package resolution.
-- Preserved constant authored tangents and custom PreviewSurface/MaterialX primvars across topology and material updates.
-- Drew the initial stage start time and awaited asynchronous volume updates on time/variant edits.
-- Stopped pthread workers allocating unused private shared memories; only the host allocates memory, and an explicitly supplied host memory is preserved.
-- Shared one module initialization across concurrent first calls to `getUsdModule`, avoiding duplicate memories and worker pools.
-- Preserved browser Forward history when normalizing the viewer URL on document startup.
-- Applied PreviewSurface normal texture scale/bias, including reversed axes and nonstandard Z decoding, while preserving the canonical normal-map path.
-- Preserved authored UV transforms and independent samplers on PreviewSurface roughness, metalness and occlusion textures instead of replacing them with a default-sampled packed texture.
-- Isolated HTTP resolver and imported-file caches per Hydra handle so simultaneous stages with matching filenames load their own geometry and materials; disposal and failed loads release only their own files. Older unscoped runtimes reject overlapping handles before loading.
-- Preserved sidecar texture loading with isolated HTTP cache paths by resolving their original URL before native file reads.
-- Kept geometry visible with diagnostic fallback shading when Hydra cannot create a supported material surface (for example an MDL-only binding).
-- Preserved face-subset material bindings over mesh fallback bindings, including late material assignments and uncovered faces.
-- Added face-varying display colors to fallback shading without tinting authored surfaces.
-- Preserved HalfFloat/16-bit scalar texture channels and independent opacity without mutating shared texture sources.
-- Kept live MDL Material/NodeGraph input edits and animated inputs in sync without repeatedly rebuilding ordinary MaterialX materials.
-- Preserved canonical MaterialX vector input types and zero-light volume absorption/emission.
-- Avoided eagerly clearing unused WASM path-pool reservations, reducing resident memory while preserving the existing pool-handle ABI.
-- Applied OpenUSD particle-field array truncation and default-value rules before creating Spark splat buffers.
-- Reused a single scene-level Spark renderer across USD handles and existing Needle Engine splat integrations.
+
+- Preserve authored hole faces and coarse-face identity during uniform subdivision, including material subsets and uniform primvars.
+- Update time-sampled crease indices, lengths and sharpness, plus corner indices and sharpness, independently of mesh-point or hole changes. Playback and backward seeks update both uniform and adaptive subdivision.
+- Preserve sharp crease normals and face-varying UV seams in adaptive geometry; enforce actual tessellation budgets and recompute rates after point deformation.
+- Reuse uniform refinement, triangulation and adjacency during points-only animation; avoid duplicate point refinement and unchanged JavaScript attribute expansion. Refresh adaptive material subsets when deformation changes tessellation, and retain crease/corner tags after material refetches.
+- Generate uniform subdivision normals from refined geometry, preserving flat creased faces and correct shading through deformation instead of interpolating coarse-cage normals.
+- Convert UsdLux sphere/distant emission and area normalization to Three light units, including transformed emitter dimensions and cylinder length. Light examples use authored intensity without per-fixture brightness overrides; disk/cylinder transport remains approximate.
+- Keep emissive surfaces independent of Beauty ambient occlusion, and preserve the host camera's aspect and view offset across temporal antialiasing.
+- Restore purpose-filtered meshes, curves, points, splats and volumes correctly on repeated purpose changes without overwriting authored visibility.
+- Preserve mesh display colors, custom vertex/face-varying geometry properties, constant tangents and face-subset material bindings, including fallback shading and late material assignment.
+- Preserve custom MaterialX source assets and recursive implementation definitions. Add a normal-derived tangent basis for untextured materials while retaining authored tangents and UV-based MikkTSpace generation.
+- Preserve PreviewSurface normal scale/bias, independent UV transforms/samplers, packed texture factors, 16-bit channels and shared texture ownership.
+- Keep unsupported MDL-bound geometry visible with diagnostic fallback shading; update live and animated MDL inputs without rebuilding unrelated MaterialX materials.
+- Composite transparent volumes and splats after opaque Beauty passes; preserve exit-face volume rendering, Gaussian tails, HDR radiance and directional SH ordering/precision.
+- Keep bounded-medium proxies out of opaque shadow maps and preserve light-to-shadow-map ordering after authored light changes.
+- Isolate resolver/imported files per Hydra handle, including HTTP sublayers, nested packages and sidecar textures. Release only owned files on disposal/failure and drain asynchronous factories before releasing native readers.
+- Share concurrent module initialization, preserve supplied shared memories and stop pthread workers allocating unused private memories. Avoid eagerly touching unused WASM path-pool reservations.
+- Draw the authored stage start time and await asynchronous fields/materials/geometry where required by readiness and edit operations.
+- Keep environment lighting separate from viewport clear colors across rendering modes. Avoid repeated tracer resets from duplicate OrbitControls updates or imperceptible damping drift.
+- Repair TypeScript declaration entry points, helper exports and strict Bundler/NodeNext consumers.
+
+### Viewer and examples
+
+- Use WebGPURenderer throughout the public Three.js viewer. Fresh settings default to Beauty and Adaptive; explicit URL and saved render/detail choices take precedence.
+- Add a Needle-branded light/dark workspace with dockable, resizable panels. Preserve user-chosen timeline placement and open/closed state when changing files.
+- Move render/display settings into View menus; add standard menu navigation, thin scrollbars, stage visibility/activation icons, hover/selection outlines, viewport picking and focus shortcuts.
+- Add an adjustable Examples panel with persisted library/category/selection/scroll state and an adaptive horizontal/vertical category divider.
+- Add 187 coverage fixtures, 63 distinct executable JavaScript lessons and native Storm thumbnails. New scenes include lighting rigs, weighted/rigid skinning, Gaussian fields, layered compositions, complex subdivision/splines/NURBS, and animated creases/holes in Pip and Pop.
+- Expand Pip and Pop into a seamless animated magic trick with expressive hole-based faces, crease-driven morphing, spring motion and native Storm previews.
+- Keep the 14 NVIDIA SimReady assets in their own sample library. Fixtures demonstrate specific supported features; they are not a claim of complete USD or API conformance.
 
 ## [1.1.2] - 2026-07-17
 ### Changed

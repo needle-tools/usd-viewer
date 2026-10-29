@@ -1339,6 +1339,110 @@
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-light-linking.png",
       "sha256": "1a5d5a1466948591b07a393b6addba26d6ab99939dd18033bb8e245e2ec02161"
+    },
+    {
+      "id": "curved-studio-pierced-lantern",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-pierced-lantern.png",
+      "sha256": "412f6219f72318d493d48cca1b2807ce4fea4767c450af783159eb4ced3b428c"
+    },
+    {
+      "id": "curved-studio-instrument-housing",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-instrument-housing.png",
+      "sha256": "e56a5aa8fd2fbcef276a8cef43f69369f327143af1cfdf62b6e59c12d72f9ef5"
+    },
+    {
+      "id": "curved-studio-fluted-vase",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-fluted-vase.png",
+      "sha256": "34235dd13341dd7b5f526fba38aceaffa688d60b68d82611901c917d06bc53b1"
+    },
+    {
+      "id": "curved-studio-loop-trefoil",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-loop-trefoil.png",
+      "sha256": "a6c6ff709627b4e95432ff26b15e091e414cadd59a00451563ec81be0357a48e"
+    },
+    {
+      "id": "curved-studio-braided-rope",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-braided-rope.png",
+      "sha256": "0bd2443090b56862ec843059276f1c900726a3996cbaf4fd7881dbaa8498a96d"
+    },
+    {
+      "id": "curved-studio-armillary",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-armillary.png",
+      "sha256": "f3d9e685756bb16febb57ff71271114511f0bfa6516c7a4e287a9e3e340a75b1"
+    },
+    {
+      "id": "curved-studio-ribbon-rosette",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-studio-ribbon-rosette.png",
+      "sha256": "d4d5d148e5997ab20d3202bd1b8c73b965c42736fc88091768783b2f1ecda519"
+    },
+    {
+      "id": "curved-studio-rational-aqueduct",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-studio-rational-aqueduct.png",
+      "sha256": "324e6b9b5662dafb1f41abe8d2696037ba03f21269292840218c44f9eebef5a1"
+    },
+    {
+      "id": "curved-studio-rational-amphora",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-studio-rational-amphora.png",
+      "sha256": "5c66b55a174a27a834c0a490eddadd5d65a719f8f05d7c715846fe7559bd4090"
+    },
+    {
+      "id": "curved-studio-shell-canopy",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-studio-shell-canopy.png",
+      "sha256": "06f687332d2ca77e98903a2fb1ad236a1e9675b057006546e4623c3a2a5aef8e"
+    },
+    {
+      "id": "curved-studio-lacquered-canoe",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-studio-lacquered-canoe.png",
+      "sha256": "c9a3f4be24c7f6d9a299d34d26b481a2cd980793027483264d4de36be57a0cf3"
+    },
+    {
+      "id": "curved-studio-ruffled-lampshade",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "evaluated NURBS; native Storm rendering of rational mesh/curve proxy",
+      "image": "thumbnails/curved-studio-ruffled-lampshade.png",
+      "sha256": "3c4ce41cb356dce3a21ff26b61af039352c5020ae915ea12b8aa7538d43a405c"
+    },
+    {
+      "id": "curved-animated-subdivision-buddies",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface",
+      "image": "thumbnails/curved-animated-subdivision-buddies.png",
+      "sha256": "fb3bcef90fb92c4c601ef34021d859bfe18a72bac0dfcc9305002cbeec01f0ab"
     }
   ]
 }

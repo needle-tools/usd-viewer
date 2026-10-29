@@ -11,11 +11,10 @@ export type PluginContext = {
      */
     waitForMaterials?: boolean,
     /**
-     * OpenUSD refinement complexity for subdivision surfaces.
-     * Accepts OpenUSD's standard names ("low", "medium", "high", "veryhigh")
-     * or a numeric UsdImagingGL complexity value. Defaults to "low" (1.0).
+     * OpenUSD refinement complexity for subdivision surfaces; see
+     * createThreeHydraConfig.complexity (includes "adaptive"). Defaults to "low" (1.0).
      */
-    complexity?: "low" | "medium" | "high" | "veryhigh" | number,
+    complexity?: import("./create.three.js").createThreeHydraConfig["complexity"],
     /**
      * Start USD timeline playback after loading. Defaults to false; applications
      * such as viewers should opt in when they want autoplay behavior.
@@ -25,7 +24,7 @@ export type PluginContext = {
     scenePrimitiveLightIntensityScale?: number,
     /** Read the current source's light preview scale for every load. */
     getScenePrimitiveLightIntensityScale?: (url: string) => number | undefined,
-    getComplexity?: (url: string) => "low" | "medium" | "high" | "veryhigh" | number | undefined,
+    getComplexity?: (url: string) => import("./create.three.js").createThreeHydraConfig["complexity"] | undefined,
 }
 
 

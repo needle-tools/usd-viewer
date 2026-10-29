@@ -55,6 +55,36 @@ function normalizeComplexity(value) {
     }
 }
 
+/** Uniform refine level 3 bounds adaptive cost (edge rate <= 16, triangles <= Very high). */
+const ADAPTIVE_COMPLEXITY = 1.3;
+
+/**
+ * @param {unknown} value
+ */
+function isAdaptiveDetail(value) {
+    return typeof value === "string" && value.toLowerCase() === "adaptive";
+}
+
+/**
+ * Apply a detail selection. "adaptive" enables native Bfr limit-surface
+ * tessellation; every other value selects uniform refinement.
+ * @param {import(".").HdWebSyncDriver} driver
+ * @param {unknown} value
+ * @returns {boolean} whether a detail value was applied
+ */
+function applyDetail(driver, value) {
+    const adaptive = isAdaptiveDetail(value);
+    const complexity = adaptive ? ADAPTIVE_COMPLEXITY : normalizeComplexity(value);
+    if (complexity === undefined || typeof driver.SetComplexity !== "function") return false;
+    const supportsAdaptive = typeof driver.SetAdaptiveSubdivision === "function";
+    if (adaptive && !supportsAdaptive) {
+        console.warn("Adaptive subdivision is unavailable in this USD runtime; using uniform very-high refinement.");
+    }
+    if (supportsAdaptive) driver.SetAdaptiveSubdivision(adaptive);
+    driver.SetComplexity(complexity);
+    return true;
+}
+
 /**
  * @param {string} url
  */
@@ -403,10 +433,7 @@ async function createScopedThreeHydra(config, lifetime) {
     if (typeof driver.SetIncludedPurposes === "function") {
         driver.SetIncludedPurposes(config.includedPurposes ?? ["default", "render"]);
     }
-    const complexity = normalizeComplexity(config.complexity);
-    if (complexity !== undefined && typeof driver.SetComplexity === "function") {
-        driver.SetComplexity(complexity);
-    }
+    applyDetail(driver, config.complexity);
 
     if (debug) console.log("DRIVER", driver);
 
@@ -658,12 +685,13 @@ async function createScopedThreeHydra(config, lifetime) {
             return draw(true);
         },
         setComplexity: async (complexity) => {
-            const normalizedComplexity = normalizeComplexity(complexity);
-            if (normalizedComplexity === undefined || disposed || driver.isDeleted() || typeof driver.SetComplexity !== "function") {
+            const valid = isAdaptiveDetail(complexity) || normalizeComplexity(complexity) !== undefined;
+            if (!valid || disposed || driver.isDeleted() || typeof driver.SetComplexity !== "function") {
                 return Promise.resolve();
             }
             await waitForDrawCompletion();
-            driver.SetComplexity(normalizedComplexity);
+            applyDetail(driver, complexity);
+            sceneRevision++;
             return draw(true);
         },
         editStage: (callback) => {

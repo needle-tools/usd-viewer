@@ -14,6 +14,7 @@ import { createDomeTexture, updateDomeEnvironment, removeDomeEnvironment } from 
 import { VdbVolumeRprim } from './vdbVolumeRprim.js';
 import { hasMaterialXVolume } from './materialxVolumeSupport.js';
 import { materialXDefinitionsFor } from './materialxDefinitions.js';
+import { lightIntensity } from './lightIntensity.js';
 
 const {
   TextureLoader,
@@ -743,11 +744,12 @@ class HydraScenePrimitive {
       Number(colorValue[1]) || 0,
       Number(colorValue[2]) || 0);
     const scale = this._interface.config.scenePrimitiveLightIntensityScale ?? defaultScenePrimitiveLightIntensityScale;
-    if (this._object.isLight) this._object.intensity = (Number(state?.intensity) || 0) * scale;
+    const photometry = lightIntensity(state || {}, typeId, shaped);
+    if (this._object.isLight) this._object.intensity = photometry.intensity * scale;
     if (area && !shaped) {
       RectAreaLightUniformsLib.init();
-      this._object.width = typeId === 'diskLight' ? Math.max(Number(state?.radius) || .5, .001) * 2 : Math.max(Number(state?.width) || 1, .001);
-      this._object.height = typeId === 'diskLight' ? this._object.width : Math.max(Number(state?.height) || 1, .001);
+      this._object.width = Math.max(photometry.width, .001);
+      this._object.height = Math.max(photometry.height, .001);
     }
     if (this._object.isSpotLight) {
       this._object.angle = MathUtils.degToRad(Math.max(.01, Math.min(90, Number(state.coneAngle))));
@@ -1335,6 +1337,17 @@ class HydraMesh {
   updateIndices(indices) {
     return timeHydraUpdate(`Hydra updateIndices ${this.usdPath}`, () => {
       if (debugMeshes) console.log("updateIndices", indices);
+      let unchanged = this._indices && this._indices.length === indices?.length;
+      for (let i = 0; unchanged && i < indices.length; i++) unchanged = this._indices[i] === indices[i];
+      if (unchanged) {
+        // updatePoints already refreshes positions/normals. Keep unchanged UV,
+        // color and custom-primvar buffers across deforming animation frames.
+        // Tangent preparation and wire overlays still depend on the new points.
+        this._interface.prepareMeshMaterialGeometry(this._mesh);
+        this._refreshWireObject();
+        this._applyVisibilityState();
+        return;
+      }
       this._invalidateGeneratedTangents();
       this._indices = copyIndexArray(indices);
       if (!this._indices) {

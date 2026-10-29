@@ -6,8 +6,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "b5699e92caffd83bda541920324d08a564b3ae36cc2b1a00ac1f11fa8b9966f4",
-      "imageSha256": "4ff330805b506f4c5971f984fff41c973b666d06a5bffd9b3bbab5adc1139727"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "c2805fdcd474d017176968496a88d4fd12de10bb2b5ec00f0e3d81fb01d9b514",
+      "imageSha256": "c17fb448b58d5438a05ab0fc8e7b626820cb377d2a22fd191b0349a77e36ca99"
     },
     {
       "id": "api-stage-metadata",
@@ -15,8 +17,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "0e59d9688aa8c91fa213fe3fe44cc9bcf7e45f844f085d58cc564d5f92e8c41b",
-      "imageSha256": "9b6aa5d0640bc5d5409d7e38af24f6846ac8050857cff6f5b28bda4c29803c58"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "9517797604e5e12bddae4589f5d23e45fb5869e539fd7f0f893dc451c35f7484",
+      "imageSha256": "18cbf761ed7f72d921e8f595377dc6277e2ef09414d2c57e50b19714d743638c"
     },
     {
       "id": "api-generic-prims",
@@ -24,8 +28,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "5e77bc0376493ccd204186290b74cba3806b5a9686f09115e6c288fbe845eaed",
-      "imageSha256": "fe573d7090e5928652544e80d7755687cca73e73ba7553d7a3bac28d1cbd5b8f"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "4ee551d1e74ca9871ded94dd7c5ad76bcae62308cc27db2d1ccef143267c61ed",
+      "imageSha256": "7bf978fd72d4fffe9e9c99ab9eb47ca5adb6e0014313ae9ae2ab86d9de8a3c2e"
     },
     {
       "id": "api-schema-shapes",
@@ -33,8 +39,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "18885043bfd7a5e47f9a6589b6b6dcdcddc7315fea43da626584f7d19c6b85a0",
-      "imageSha256": "e71fb1937c8e6d84c80114aafa79ddf500edea7771556b72bbb769cbb27ab13d"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "a38983966733782a06abec487c07195978c5984a9664dbde8dd007e6d3491b04",
+      "imageSha256": "0e330cbee9b5b3fbe808bc546a6359965e943c99d02403128a3c5133ea69e087"
     },
     {
       "id": "api-mesh-from-arrays",
@@ -42,8 +50,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "446e1aa320f010fd9b0fa6b4e77320f6c3f5fe342aae57b852d4169c30525395",
-      "imageSha256": "b066d97adc2f0b04a1e0cc68a6f1bdd96cad40c5af439bf95de4b0c03fbd7d1d"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "62561bf95bf6949aa283725de778ea397b37413c54e20ccb24650760fdba4b29",
+      "imageSha256": "58452b702781db1202908d05a8cf3ee39b60f40e032250fbc10fa531f46842ea"
     },
     {
       "id": "api-xform-ops",
@@ -51,8 +61,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "77bb707e0f352780ecbbaf67763173fcee57c7d269f31796a53d5ed8ba4a581b",
-      "imageSha256": "3b0ca107f99086e6882378a03b9e04345be827bcd404994d79d64e288996b527"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "874cf2af2ed560ee52ff0f93097ea87f2e2fad3fb0a876f2df6100669e50763a",
+      "imageSha256": "d737ea30cba75a38cd8c99141c093b819696d2a27027f27633140b98be936b01"
     },
     {
       "id": "api-xform-common-api",
@@ -60,8 +72,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "074b2e01bcd08dd0794b1b830fcd737d9d8d864e4e5f2301992fa6199a84a398",
-      "imageSha256": "c5f0b5dd6a63716c718bd89cb8526e3c76ddf1232914b963898fa34282afdb0a"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "ed4e4ecd3e8158cc15087475fd44bd31bd00b3a4ef075d44eb4dfa957a4ffe43",
+      "imageSha256": "d104e3d64a76adc6726d5bfbde40b4e812347c044d75f7d6a2c4fa177274e4bf"
     },
     {
       "id": "api-matrix-transform",
@@ -69,8 +83,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "f9d8b2646770f78d398a39caf80910be7c0791238b16643bb51b579abd6053cc",
-      "imageSha256": "7966e7c09cd3499114518bcaf71ffc955c6b962577d32f3af6e1e08b5dbd4c88"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "16587e059afeec25606f6e078c58b9f1199c0d66b23bb1b399ff4b3c69aff4b7",
+      "imageSha256": "76b887711b832e8df36b22e772ce22bce2b5b4bc44ba20ac35ff2e1c8051c92a"
     },
     {
       "id": "api-animated-radius",
@@ -78,8 +94,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "68e4541e830b4215a894e1584d8960ecce308f1571fc6950552e2b4693ab8bf1",
-      "imageSha256": "7417770b851c2586e727643b69c451620b2d4cf6070ba78d9d5baaba333e4ded"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "425ed749a98581b8c7d4aee2ac67b656f4fee9287a8c6a67d7d49e2c722ad30e",
+      "imageSha256": "4f114960091e6fc94dc79df286ada90018fd8f934c8ba6eebc7086638e0bf8c9"
     },
     {
       "id": "api-animated-transform",
@@ -87,8 +105,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "57fe7466ded2b56fc51c2011f58631955fe12736b5a6ffd988bd56f100ccebab",
-      "imageSha256": "83cd01f3899b2e7161933c4e2d596c4d16d4ff7a1485cb424af478460108fdc0"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "c76cafe33ddd26dfda92701683eac2248fdbe5c41a561a77fbaab00ec2045a91",
+      "imageSha256": "c464c4f156d386a05354a465a18e36582b3acb73eebd7f4fede3a10449160f76"
     },
     {
       "id": "api-shader-color-inputs",
@@ -96,8 +116,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "94a10813203cf2957974e0278a5f37576247731322f15fa53c44d43dd7368e78",
-      "imageSha256": "3acd3cc810d1b15dee1ecd4ee68110c22819e68e8a3598ce67747df35b904d53"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "b4342077dbf106b4e144d585dbfd538caa5685e87576274c6d81f065d3a817a3",
+      "imageSha256": "54a124f966db93259624ed1c31b04134b49963d847a519d4dbd4354b2181e4d0"
     },
     {
       "id": "api-visibility",
@@ -105,8 +127,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "a598774453ca3764a44cfe5bad46e15d3de73d8fb540bd03a4b8ce72d07e7861",
-      "imageSha256": "f3c879f804a6c67990eedc24a71bef9a8fee36239e474b2e69a869328dc3b156"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "1001cc3e1e142e3db5041b90da4d04d61d16d935a9cf32feb1707109fde9a525",
+      "imageSha256": "59261f0650ce6c78ab83e91d326f4dd04a4fcf20df9494945e81c62081f58b0f"
     },
     {
       "id": "api-purpose",
@@ -114,7 +138,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "298ad1c08da564db9919175ad8901607c175bc685717ab84f3ece9f7cdc259cc",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "42034ee491b93cc7ba30858d23bd90f703e3807e2a48d4aefaaa23a03e5d7641",
       "imageSha256": "9721b650123e534a7b4208ed1fd19a91b62e09d879d5cb0aa2d929f044b8f579"
     },
     {
@@ -123,8 +149,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "7316a6506e632c5d6b3e7e2081e5a37c9177e74602eebae28cc93503643a5bc5",
-      "imageSha256": "ac7a2f7bc6f6c8f4042f6a5a1d62c9f4876a627478728fc8c92e830e28eaf325"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "f9932190291ec368575211aef04ba1c32ea8cabe607fd0ab0aa004ab6994fa20",
+      "imageSha256": "edfd66df7bbfc8889247c46bef5675770600cb8f0f5ac7199edc0f9658d4c686"
     },
     {
       "id": "api-relationships",
@@ -132,8 +160,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "439445f514912f1a71fedd9c2d9dbfd9d8422c4cee86875a6d7e0107ce5f66a8",
-      "imageSha256": "5d0a8a6a337aa3c450646daf704079ad5b72df4b765bca731a475d258ed613ef"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "4d4ea632e45f6f47b69751ed5a87cfc1c8dfaf2f4b5c56e1b3978dd1b383e94f",
+      "imageSha256": "2c92d4765a72e2240ee159040a990d843e708d7231003b863df20dad2004db64"
     },
     {
       "id": "api-preview-material",
@@ -141,8 +171,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "14237fd01efeb2e2fbc96cd4c822d59132a0ea65f3671b0fa07632bc60012c51",
-      "imageSha256": "47399030e844f2b14d4865bf560b2982fcc0f5543fa9fc70ce0293bf5cd1bb88"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "2996895a80eed9aa93af9fe098f2a9144338cb6918d5f1c77c63e1d6ed814bf5",
+      "imageSha256": "4f2676409e40b313ebac9b56c8d30ea9e8d67ec562ca3aab5f8a65a7f1e828ef"
     },
     {
       "id": "api-bind-material",
@@ -150,8 +182,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "c08dfdf72e5f914df7284b1abd24ffa3553d676171db66a98ae8631511612a47",
-      "imageSha256": "8ff438547a4f7cb0e527fb565bb126eb2286a331d4eda6d0e7bb7b70542b40e0"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "c2f2afcd2a0059f44c13b4b71e13d3d696d077ec203ede76e2844270b954e36b",
+      "imageSha256": "a1c7fca7a723eaf2a07a6b75cd691d68470a694306164acfe7bf06093efd8d0f"
     },
     {
       "id": "api-texture-shader-network",
@@ -159,7 +193,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "1df01223c665d4293ae94191dcb7e1bb1ecff0f07df9d0e411abea624e226763",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "a7f7cf9d6f3545cae29090f594b92948b38093864fb0c01d1a80476ad18fd7b1",
       "imageSha256": "15afbfb919673bfd0ccbdd8bbbe23edecdbd198905add791208d5d0386e66678"
     },
     {
@@ -168,8 +204,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "2b8f655559e022096a3610955023b28ff3d9a383d30937c5b30196517345ad8e",
-      "imageSha256": "856b4ce43f1aba6231952eb3a0be000fd034ac812fb5a37284b2990aa488ab83"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "5ce9eb8eec20b4589c66f6216c270fb0c273c706a81ab789ecb5c28b69d68c3d",
+      "imageSha256": "617e2d158605a6bdcde70dbe2768e1753556e0eda99a3c09602a9eab0cfc67e9"
     },
     {
       "id": "api-variant-switch",
@@ -177,8 +215,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "ce68c7e6a17ea5b11eeb39577ee6c544ff02674f860508dc0ec667d54a68bc7c",
-      "imageSha256": "ab0bb426a3596d48e536202b3a13887d3ac7a0bcdd68535e094a81f75b2d2ff1"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "0d028de72f36aa92115a0078b4e55f3a68d0a9db2b6b077266089b1b38bc65b9",
+      "imageSha256": "62cf42a7aeff12541e69f57c896a616f0ec62190074b8444ae15eaddf34b4069"
     },
     {
       "id": "api-payload",
@@ -186,8 +226,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "3ee2f013397b4df73a274237d1d5fa45ec43a81b8dbbdbbb775f19b0e68c68e5",
-      "imageSha256": "00cfbea61e9494052119d2f026cb9a6075069e3225f7d9e505f7a562be450612"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "16ff43491c57d2aa0bd566c35ce495d7b492e871a36fe56366ebc335ee44bd4b",
+      "imageSha256": "d7318fbcd973757c16f2b574a9f96f14cd09d2d13659be3e4c757cee7dab45dc"
     },
     {
       "id": "api-payload-load-state",
@@ -195,8 +237,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "74bc017b6e2558a5212b64e3f54c36bf8c1cbdcb8efc098b112acd7a8ad005be",
-      "imageSha256": "259a57b4d1987dee55be20ab39e5f483b079b62dec09e5ce0189b204a3763f30"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "92971c2a80886198328f5217aa3189fe3c33b3b6671d29302a97222cebd7e458",
+      "imageSha256": "c9f26a7c7a8d0d402a380af2c60692b82a56d524d996b33cb37bbb3336e14e95"
     },
     {
       "id": "api-open-text-layer",
@@ -204,7 +248,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "e2f6c78a0f2ff728d4f493edf99d5ecd3ad78bddab7db9bc5f4d8bcc5d94af68",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "fceb99015e272a825ad6960e61b69a12b40b49eaa0250cc79b3611ad8cfd890f",
       "imageSha256": "b9abb8c3e5a70c7209b77e90e3b2dd9fbe1f6a377a39c9f6c17203f3be440fb0"
     },
     {
@@ -213,8 +259,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "cd7536bafef6b62e4cce1f84c5e415261cf78182cf8b066e6b54b471802e2aa2",
-      "imageSha256": "3dcefa2e1a068cc1a0bf20183c42ae162b2cead68b0bab4a30c085644819abef"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "f6ff4876c895bfe446a58320e918a68fbd2553f65939de12ba656fefb7ddacd3",
+      "imageSha256": "96a2dfcd2d90be7b7c6ff8eb43e982a0208a02e0fbbd3f0d2a5d3545a14bb190"
     },
     {
       "id": "api-layer-stack",
@@ -222,8 +270,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "b2d02a75b0a02fc45fa8d09e282badf49757b02ae202c240c7a386e24cb47b6d",
-      "imageSha256": "6d41aabaa7b6eee4e2772b35129180d530ea360ee9639d0da88b1d705b5a48c9"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "b43ed74dfb2a01b14b08a302841430dcb0216c36007cffb9b4f61c49323a8b73",
+      "imageSha256": "dd5317676e9f9edbe0387f480c34c13f20a94084467efa943319c19677f2ed3a"
     },
     {
       "id": "api-used-layers",
@@ -231,7 +281,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "6c2015e080b37c5c869ffd870e6f1d14be673b9cb37eee062979e7589ba8d5a3",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "90014b3d5490fbf23a7cc70e01444cd9af4ee5d141f2b0c2129bb25193d83560",
       "imageSha256": "9bc0541ea25b33728214b2eb306de504d64471f01914b2329247361b070f5de9"
     },
     {
@@ -240,8 +292,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "d414a04c97996d24fa9efe6b22a60495920145cbddfefb0d6d2b33ff99acd9fa",
-      "imageSha256": "3d925fd342847d9ad8ab3caeef864773bf65da5b8a0f0ea55e8392da95ae3397"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "71be9e4a02a161b3882153f52d073285a6c9bdeaf1362cb72a35e73da54906e1",
+      "imageSha256": "5c93aa162d5cf187e40d26e477e9291f1a58d2cd6c5951d313b8e45204c80e64"
     },
     {
       "id": "api-property-names",
@@ -249,8 +303,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "77f05300ea4cb72357337d10068815264014c29c5823e6266140d0b9c1417fd5",
-      "imageSha256": "43b92fe4c531ef40c666693ae241be1a944b08456e54270707909f72e403abbe"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "148c6859c8ef36b8605c298c313b92c8c4632c5d9092081d4de6a307e69cd573",
+      "imageSha256": "efb977268b24d175908b10223d79cf2bd7a9563d2b163fcd1c2e63bc3ab73753"
     },
     {
       "id": "api-attribute-resolve-info",
@@ -258,7 +314,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "b1c7f47d98630691682df74510792211d7c813d113bde78d119b43d398807ef3",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "7d039ee7aee335c9319d0e31a7c0c40d148e3af14f67d046057ad20fa3719794",
       "imageSha256": "dbde7ea5a8e2d1e872df4d6904d036405a87a4983a81fe0d6d5dbb377d875129"
     },
     {
@@ -267,8 +325,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "d13083c73bcd2e8279928ac65eaabc0818824aa30df3cce7ea5c7d3a7ff6ad8e",
-      "imageSha256": "91be3f80e302017ab79fa689652c6dc6e2ffef70ad814b2b9e0212870c48acfe"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "5dc20d0668a05e28b74d5f9803823b1dee23d55fb0182540021042d8471c842e",
+      "imageSha256": "87711f55957b277799d139209295c6bb39248787e733a032d824cf90f976d4bd"
     },
     {
       "id": "api-composition-arcs",
@@ -276,8 +336,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "4bf29231047a47ecced9590808b0127af0155e48991ac8331d15af7726f0a564",
-      "imageSha256": "69005ddbbe976572b8715534d8dd70025c4690e343a56efb42cab8dce0884183"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "a9f726154201778ab9fc5856216f6fb43feeeb79577e53bdd11b4ad6d2dd44a4",
+      "imageSha256": "05eb2ec9c740d787b67fa041672223fd04f32a48077c13ca2581c5d0965a9831"
     },
     {
       "id": "api-fixture-unmaterialed-empty-subset",
@@ -285,8 +347,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "3355df796c15150fc25bb15d9da6d03ebdd36b5d4b3e993fa338c35434a8f7f4",
-      "imageSha256": "a8ce63d540eec201ab4f65c3937bfd7029075670eb47903b806af63442b7063e"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "de6e14a6978424e753c9708488ff15527004f79df15d050fc47f7b5db124d725",
+      "imageSha256": "e13b660a5d0e6822de6c5b81bf81f0af16cb96a6332c13c8f5a17d3b9a5c3d19"
     },
     {
       "id": "api-fixture-face-varying-normals-matrix",
@@ -294,7 +358,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "101c04d1b346ca8c80fd5e6df74cd5325a76d6f8d87f71f632d4cec5d8e2c4c9",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "f88965187576998906e56e3408a2de01b457c1591befd3fe3c710cf66b4da39b",
       "imageSha256": "5d7fd7fcbef9d1c28936e835fa7c15cf3309bb2da25a88ef623fd0600edbef71"
     },
     {
@@ -303,7 +369,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "90069a276b323fcdd58cd1303d53a4ddbf3a082f3db6cd19079780f47bd07142",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "a058d79c52fa6cd0336e0995d67a590e6728ccc64632df4df0a9bbc493b6825a",
       "imageSha256": "37109e4670ab4f17494a0418171be299a97e6dc2dedf48acf63c56e1fb2d2424"
     },
     {
@@ -312,8 +380,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "9b18ab55dce57d4829c746a1c8d099c9f29c63a7181e4b59a2b12c26c5c6e1f6",
-      "imageSha256": "437c8a42a4023581583810db2430d2d80ed42b2bc119369d4bf2fee8179a25b9"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "3e408942719b8aff2cb524b084d1dead495818a8f3f00dee56eef8406cd70443",
+      "imageSha256": "06ac9a055a345695d4ea78ef95efa3b951eedceedeb47f1790ac943dac18953a"
     },
     {
       "id": "api-fixture-native-instances",
@@ -321,8 +391,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "4637bff8113d3f736716d9c9783ec5b77a7ff2784300c6aee42835e1f36ca565",
-      "imageSha256": "3a41701002c947b3cebd7ababacbfea763a83a50913dce8e2c221bddd3c33e84"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "9da28cbde95056bd6e0e63289ab2ae3f4a7b9c85047ea1897cbf333a2ca9f851",
+      "imageSha256": "e57160977ec9c68eed89d89d3a0584c6394d17c02b3b69dbc482870ce8528064"
     },
     {
       "id": "api-fixture-point-instancer",
@@ -330,8 +402,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "34befea348b616fe59425f717dfdec4595c9ff66f5ef20f9cc3475076de72002",
-      "imageSha256": "620f091e1c6ce5bfe65e12041bb97785c3349a17383ffa771ff0fdc10f3e3005"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "62a128df6b2bd0b7e3b9fb15916515a1925de84e1bfcf132eb44ec54b7a9753b",
+      "imageSha256": "2a40eb8180de2a488882056d74bb31fceadeab9e63ae30ac543ff79c52d320a4"
     },
     {
       "id": "api-fixture-camera-light",
@@ -339,7 +413,9 @@
       "renderer": "Storm",
       "camera": "/Root/World/ShotCam",
       "exitCode": 0,
-      "sourceFingerprint": "a6b050f98cb0da07b0dcc6b9a1123903845742fc04b8d519609449d16e57f9e3",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "9e0d798fb303e91fe790cb190f205801f9c71ecee96d38af2c1a58b8e2fc260a",
       "imageSha256": "82a1c1196e69f7d328c74051c0c6250dde141d792945fccc4ed53e94ccba21b7"
     },
     {
@@ -348,7 +424,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "0497aded8d43daaf5fca8b9f631038205edfe9e4b62ba8facb36846ea1fa1727",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "97e3fac271d71a4f7b8a4403288b25377ea1dda396df2c524f63fd89ab434009",
       "imageSha256": "0bc96b2787c1cbc490876107d27eee030e32a9c2ac3507bc801db29e067e37e4"
     },
     {
@@ -357,7 +435,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "3d3ce7eb5616a64d5b21ae956d1288d24719e2c753eb94fb83f43a18e6ff988d",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "70a0a6a1de7721a8d6eed5e627fcd329d8f284be53160f636e236bb1ff273337",
       "imageSha256": "79b3dc11119b93fd45186d5c983366ed9548c29dfbde76e84a48871b7faa9482"
     },
     {
@@ -366,8 +446,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "7e888fba9fe805c0cce1dc624eba13d6a5d336b255a7456420abe7d1cea31cdb",
-      "imageSha256": "5adad592321c9bfba9a4ff5df5235372466a0135401b63e1d5b31b6f2bd7085d"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "4d30b0cb455d4d9d6b43777b5552b43008a71f61b8527c745a987213e1e54105",
+      "imageSha256": "6c1ff296a0ff4bdec2bf158a82a7f9e93fe269fd951d256591b5306b280ce756"
     },
     {
       "id": "api-apply-api-schema",
@@ -375,7 +457,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "3f53935517351c28f39228145b0356de3eeaf796541ca1d84fa88c55300c1dfa",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "6312ed73bd4ea570608b071e717097a526c18cee5e01bd067b8fa498f4e94383",
       "imageSha256": "39ac9a6b47ec007a4acfa7dd36809012ea948b7ebdbb45cdd579535ff061767c"
     },
     {
@@ -384,7 +468,9 @@
       "renderer": "Storm",
       "camera": "/World/Camera",
       "exitCode": 0,
-      "sourceFingerprint": "b81be1bc3a200169c5ed73dd378bc52881e65fa2efa817d2e9fcdf831371a9b9",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "91b0d75ff5e49744cdfbfcc2a60f44ae7a40d0eb5624f78a31085a90c0aef662",
       "imageSha256": "9cfa3dc199d7c4edcf47d39694c2c85903e7da31e9500528e99169a3c9490aba"
     },
     {
@@ -393,7 +479,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "59fd9c4fb8a675aa346b023c9b76f1d5a108ea2b21612d08a1a50addf5c9c248",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "3a9053dfcfa0458968bd84c8f56f708bce4081d21a1b6b157ee6971e0bd9f440",
       "imageSha256": "e5924b2274df44ffdc3a250dd138577fd4950b65bdb8f785c13a127593db89c6"
     },
     {
@@ -402,7 +490,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "41be9ed040220ffcb1e3528b33775b85fc7ef0dd04a6f636d3a73ebff5ed3d2e",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "5dd2e47b2d67c7134cb7a10dacc5ee50ff5174e9bf3a5b7105bd4279bbc1edee",
       "imageSha256": "10b22488fc64b52939ae6ff2a9e5dde27e522cfa194ede36f37a975a28ddfa7e"
     },
     {
@@ -411,7 +501,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "6b37eb744d877771a80f3c4837c21bfa854ff96e20b440a292380f0ff5c0debb",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "84d94de228e56b9e68d041c03853d659c9de4b1e12cfeb9075877ccd3dee7697",
       "imageSha256": "2bec0a8bebbe59af214c9aaf4e5f4164c54d43c44fd454965c81558face87439"
     },
     {
@@ -420,7 +512,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "904b9bcd0c1b0cf8727891c4aeecef6fffdbf704edb120b3899b03a7f3f51e40",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "47da4492ad16b7b0a0389c1d1de0187e68b9488c08dc5b68c1385d54d4af73f4",
       "imageSha256": "63741ee39964e53927257094c26ad09bf49042b8c9b38d0c8289a21f6ef0b75f"
     },
     {
@@ -429,8 +523,149 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "436d3d4035f314dcf441ee1433f2ec18265385f51d298f6073a7e20a0b993312",
-      "imageSha256": "8d5e1d67be3e61dc64e5bf2c2c5cb1e2a2818b3b9753e135a1ac383dba127f80"
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "2f8dd88b26c10b943ef2d8487cb5f1606a1c532e1b09a7cf36b6ddf2f87824fc",
+      "imageSha256": "6e9ead4d38eb6de5d28bd0c85cbc0910f2dccdd1900216001d338b43849eb207"
+    },
+    {
+      "id": "api-three-point-light-rig",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "c75acbf8c7729483d402c488cb1f911b2e7665a7dbcb2db6730396f20eda09fc",
+      "imageSha256": "7a2e1260f6e0d9ace84a7597a77e71d78d8aea3d14be5d744d3fac981bf06511"
+    },
+    {
+      "id": "api-shaped-spotlights",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "3ff7b53f0e1d15b634e3545560a3a2144caad83307d4c18e686b3a927c3294fa",
+      "imageSha256": "3866b1be2c69b9e4d8e2c93703bed6dd189611f4bfad76ea6955c29167ff2da4"
+    },
+    {
+      "id": "api-sun-cycle",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "331f6bc5c77c1d7fddfd39dcda1eae97213f33d68e745343547c61b5169db13f",
+      "imageSha256": "b7b5a70df56b2fd1193d5809d0becb9d47285f9dea9af16a862fcfa8ef260e51"
+    },
+    {
+      "id": "api-weighted-skinning",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "223c96296d522b33be61af013e9d20c65aa2fd081b76aabc11bb343ffecd9e28",
+      "imageSha256": "bb50e5641125633a3f8aa03f3067ae44acbd160e322ef417f927b9a2fb4259df"
+    },
+    {
+      "id": "api-rigid-skinning",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "23b5b887a65cf590c358554b5d00721edfab2c8d506b742f2018be493840cddf",
+      "imageSha256": "4b72dfb1ce866dd83100263b6fad7bb5c78732957e44271482645d1d62610868"
+    },
+    {
+      "id": "api-splat-galaxy",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "native Storm covariance-ellipsoid preview; not Gaussian density rendering",
+      "particleFields": [
+        {
+          "path": "/World/Galaxy",
+          "count": 410,
+          "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
+        }
+      ],
+      "sourceFingerprint": "9e851cffe355c23f446d211a2f8c95333b847039a53443cfc4332d7791b0accc",
+      "imageSha256": "d3faaeaf5d17c87d205ae5cf3de477205e208c214ab3a96a52ebc5d830898b9f"
+    },
+    {
+      "id": "api-splat-blossom-tree",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "native Storm covariance-ellipsoid preview; not Gaussian density rendering",
+      "particleFields": [
+        {
+          "path": "/World/Tree/Blossoms",
+          "count": 550,
+          "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
+        }
+      ],
+      "sourceFingerprint": "1df8af0d56e03d854991ddb3322386bdf141ca2f6b060bb3daad30f3635ad5c8",
+      "imageSha256": "03ad8ce6f1d879269f73897e1c15f72c8d6ee4aa58738ab573537d5f75e23cef"
+    },
+    {
+      "id": "api-view-dependent-splats",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "native Storm covariance-ellipsoid preview; not Gaussian density rendering",
+      "particleFields": [
+        {
+          "path": "/World/Orb",
+          "count": 420,
+          "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
+        }
+      ],
+      "sourceFingerprint": "57a25af08332665f828d8057a1520dcc0284ff0b4e72caa038851e23cc7b135c",
+      "imageSha256": "0c22540a402fc5c470728ccb26fa88e77175336ae00c0a077fd0ae24493d46fa"
+    },
+    {
+      "id": "api-payload-variant-assembly",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "8039eb113ede0ebf64ae2fa15f627e0f07c9d23fdc53dc89a8a2feb6b1a27476",
+      "imageSha256": "3c725b8acd01254383ba7b4d7ffa919d3e07890c852945127c2208577e09beb4"
+    },
+    {
+      "id": "api-department-layers",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "8c6983ee56465c98ff2cd486a6b8bb653fa3f40f2af52cccc62eb81aea92c630",
+      "imageSha256": "4a5f28274f4f57fc7c9f125204c4665173487c08c4ab4999bdfbf5abbb6deb23"
+    },
+    {
+      "id": "api-instanced-grove",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "MainCamera",
+      "exitCode": 0,
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "bab61c602f2255a16b4bc56281ec439ed455dd58766a582a9b36da915f41378e",
+      "imageSha256": "eaddd08f9b1d79392c1dac6abb3867b545532adc57c5bb9f77ae993e28f7dc03"
     },
     {
       "id": "api-api-preview-surface",
@@ -438,7 +673,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "5a80f7bd85b0f1d283d558749420017095e495cf8a798fac9b100e264ccab10f",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "56e9fdef9c0bfd22604ca951ab426a2e9809180e5cf898270cc889ed6ff9373c",
       "imageSha256": "533a0425b2a06d34e4ea41ef2e9f0b904e096d8724f0910bccc35a452c7ef4b6"
     },
     {
@@ -447,7 +684,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "a32c557b727f504c52faf388a9e611a2737e1d591d808c989a825556a2ea7510",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "c6718fc0da1af43aba1a53bb1744449b85ba39ffbb1c9d2d3cf647b41b9d8e14",
       "imageSha256": "53c21d66e30a4202e088292b474b4b252640ecc913baf960b3d028d473004725"
     },
     {
@@ -456,7 +695,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "401755f24c75d8bdd2377499b75b514a0395678f02a9b1a74754f516edd8330d",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "a9c92fd60aa0625bfb0df35e57814d34a3c1d9c275d24dd53e9b8f44e90cedc6",
       "imageSha256": "f7957b7f05645d4261b573b66db0a49ae9bc34dcbc5d6aab52cd1c2728b73501"
     },
     {
@@ -465,7 +706,9 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "sourceFingerprint": "b1613633ea84a394f65d1bda80cff1ebbf7dc32b08af02acb76781859e954cce",
+      "capture": "surface",
+      "particleFields": [],
+      "sourceFingerprint": "9c9eeb445c583840ddebb5dfaaa218c59dd9ba9b37e910de23fb0dc81862076d",
       "imageSha256": "feed1285c8a124d0584a5b5a2a06550f189337d97fb87af1676dec1b55986550"
     }
   ]

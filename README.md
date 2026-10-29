@@ -18,8 +18,10 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
 - Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the modern OpenUSD 26.11.1 wasm bundle.
-- Render OpenUSD 26.11.1 Gaussian particle fields through the optional Spark integration.
-- Inspect stages with usdview-style stage, prim, property, layer-stack, composition, notices, and timeline UI in the development viewer.
+- Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty, MuTracer or gkjohnson path tracing; optional tracers load when selected.
+- Evaluate uniform or adaptive OpenSubdiv surfaces, including animated creases, corners and holes.
+- Inspect and follow individual properties, pick native/point instances, select multiple objects and run the embedded JavaScript REPL.
+- Arrange Stage, Examples, Properties, Layers, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
@@ -42,11 +44,35 @@ origin for this app because `SharedArrayBuffer` requires a secure isolated
 context.
 
 The public viewer entrypoint lives in `public/`. The package and the three.js
-Hydra bridge live under `usd-wasm/`.
+Hydra bridge live under `usd-wasm/`. Node.js 22.12 or newer is required for local
+development. The npm package version is maintained in `usd-wasm/package.json`;
+the private server has its own version.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 
+## Examples and render settings
+
+Use **Examples** to browse local Needle fixtures, the 14 NVIDIA SimReady assets,
+USD Working Group assets and glTF samples. Needle includes 187 coverage fixtures
+and 63 executable JavaScript lessons with distinct native Storm previews.
+**Subdivision → Pip and Pop** demonstrates animated hole faces and crease/corner
+sharpness in a five-second loop.
+
+Fresh viewer settings select Beauty and Adaptive. Render mode, quality and detail
+choices are remembered; an explicit URL overrides them. Scene background and UI
+light/dark theme are separate settings. The Examples panel preserves selection,
+category and scroll position, and its divider/width can be adjusted.
+
+Adaptive uses camera-independent curvature rates with a bounded triangle budget.
+MDL materials use documented authored-input approximations. Path-tracer, volume,
+physics and NURBS limitations are described in the [SDK README](usd-wasm/README.md).
+
 ## Viewer URL Options
+
+The main options are `viewer=three|needle`,
+`render=basic|beauty|pathtraced|pathtraced-gk`,
+`complexity=adaptive|low|medium|high|very-high` and `background=light|dark`.
+Use `file=` for a USD URL; relative dependencies resolve from its source.
 
 The viewer environment can be selected with `?environment=` or `?env=`.
 Supported values include:
@@ -81,6 +107,23 @@ npm run test:bindings
 npm run test:three-matrix
 npm run test:viewer-visual
 ```
+
+For release preparation, run the package checks and exact-tarball consumer tests:
+
+```sh
+cd usd-wasm
+npm run test:release
+npm run test:package
+npm publish --dry-run --ignore-scripts --json
+```
+
+`test:package` packs the SDK, installs that artifact through npm in fresh modern
+and legacy Three.js consumers, builds them for production and exercises the
+modern viewer/renderers in Chrome. Install Chrome for Playwright first with
+`npx playwright install chrome`. It preserves the tarball, hashes, logs and
+captures under `usd-wasm/.cache/package-validation/`. These commands do not
+publish the package. The release workflow performs these checks before its
+existing publication steps.
 
 `test:three-matrix` runs a representative compatibility set. To regenerate the
 full cross-version renderer status matrix, run:

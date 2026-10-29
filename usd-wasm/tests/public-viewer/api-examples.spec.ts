@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { stageReady, openSamples } from './workbench-menus';
+import {apiExampleAssets} from '../fixtures/api/examples.js';
 
 for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute into the viewport and restore from their URL`, async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(`/?viewer=${viewer}`); await openSamples(page);
   await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
-  await expect(page.locator('.gallery-card')).toHaveCount(52);
-  await expect.poll(() => page.locator('.gallery-card .gallery-thumb').count()).toBe(52);
+  await expect(page.locator('.gallery-card')).toHaveCount(apiExampleAssets.length);
+  await expect.poll(() => page.locator('.gallery-card .gallery-thumb').count()).toBe(apiExampleAssets.length);
   await page.locator('.gallery-card[data-name="Schema Shapes"]').click(); await stageReady(page);
   await expect.poll(() => page.evaluate(() => {
     const w = window as any, paths: string[] = [];

@@ -137,10 +137,14 @@ def Points "Points" {
         const file = Object.assign(new File([source], 'opacity.usda'), { path: 'opacity.usda' });
         w.opacityHandle = await createThreeHydra({ USD: await getUsdModule(), scene: root, renderScene: w.scene, renderer: w.renderer, files: [file], webGpuSupport: w.usdWebGpuSupport });
         await w.opacityHandle.ready();
+        await w.opacityHandle.materialsReady();
         w._controls.enableDamping = false; w.camera.position.set(0,0,5); w._controls.target.set(0,0,0); w._controls.update();
+        w.camera.fov = 45; w.camera.zoom = 1;
+        w.camera.updateProjectionMatrix();
         w.camera.updateMatrixWorld();
         return [...[-1,0,1].map(x => { const v = new T.Vector3(x,0,0).project(w.camera); return [Math.round((v.x+1)*w.renderer.domElement.clientWidth/2), Math.round((1-v.y)*w.renderer.domElement.clientHeight/2)]; }), [10, Math.round(w.renderer.domElement.clientHeight / 2)]];
     });
+    await page.waitForTimeout(500);
     const screenshot = await page.locator('canvas.usd-viewer-three-canvas').screenshot();
     const pixels = await page.evaluate(async ({ encoded, samples }) => {
         const bitmap = await createImageBitmap(await (await fetch('data:image/png;base64,' + encoded)).blob());
@@ -166,6 +170,7 @@ test('Beauty supports the WebGL backend and authored orthographic cameras', asyn
     await page.goto('/?viewer=three&backend=webgl&render=beauty&file=/test-fixtures/coverage/core/orthographic-camera.usda', { waitUntil: 'domcontentloaded' });
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes?.mode)).toBe('beauty');
     await stageReady(page);
+    await openSettings(page);
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('/World/Camera');
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => { const w = window as any; return { backend: w.renderer.backend.isWebGLBackend, ortho: w.usdRenderCamera.isOrthographicCamera, width: w.usdRenderCamera.right - w.usdRenderCamera.left }; })).toEqual({ backend: true, ortho: true, width: 7.5 });
@@ -223,6 +228,10 @@ test('gkjohnson traces on the shared renderer, resets on edits and releases priv
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
     await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
     await page.locator('select[data-stage-variant=lighting]').selectOption('nightNeon');
+    await expect(page.locator('select[data-stage-variant=lighting]')).toBeEnabled();
+    // At this compact width Properties replaces the viewport; hidden views
+    // intentionally stop accumulating samples until the viewport is opened.
+    await page.evaluate(() => (window as any).usdWorkbench.openPanel('viewport'));
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);
     await page.setViewportSize({ width: 800, height: 600 });
     await expect.poll(() => page.evaluate(() => (window as any).usdRenderModes.samples), { timeout: 90_000 }).toBeGreaterThan(2);

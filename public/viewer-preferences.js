@@ -17,7 +17,7 @@ export function preferredRenderMode(params) {
 function detailLevel(value) {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   const level = String(value).trim().toLowerCase();
-  if (['low', 'medium', 'high', 'very-high'].includes(level)) return level;
+  if (['low', 'medium', 'high', 'very-high', 'adaptive'].includes(level)) return level;
   if (['veryhigh', 'very_high'].includes(level)) return 'very-high';
   if (level && Number.isFinite(Number(level))) return level;
 }

@@ -43,6 +43,9 @@ await configureNeedleAgx(new WebGLRenderer());
 const modes: RenderModes = await createRenderModes({ renderer: new WebGLRenderer(), scene, camera: new PerspectiveCamera(), configurePathTracer: configureNeedleAgxDisplay, onStatus(status) { status.samples.toFixed(); } });
 await modes.setMode('beauty');
 await modes.setSettings({maxSamples:256,bounces:4,denoiser:null});
+await modes.setSettings({bloom:true,bloomStrength:0.5,bloomRadius:0.5,bloomThreshold:1});
+// @ts-expect-error Bloom is a boolean, not a menu label.
+await modes.setSettings({bloom:'on'});
 const sampleCap: number = modes.settings.maxSamples;
 // @ts-expect-error Only supported denoisers can be configured.
 await modes.setSettings({denoiser:'unknown'});

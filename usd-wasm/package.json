@@ -1,6 +1,7 @@
 {
   "name": "@needle-tools/usd",
   "version": "1.2.0",
+  "description": "OpenUSD WebAssembly runtime, Three.js Hydra delegate, MaterialX and WebGPU viewer tools",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
@@ -56,8 +57,13 @@
   "keywords": [
     "needle",
     "usd",
+    "usdz",
     "openusd",
+    "wasm",
     "threejs",
+    "hydra",
+    "materialx",
+    "webgpu",
     "webgl"
   ],
   "homepage": "https://needle.tools",
@@ -69,7 +75,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/needle-tools/usd-viewer.git"
+    "url": "git+https://github.com/needle-tools/usd-viewer.git",
+    "directory": "usd-wasm"
   },
   "bugs": {
     "url": "https://github.com/needle-tools/usd-viewer/issues"
@@ -111,7 +118,9 @@
     "test:public-viewer-lifecycle": "playwright test -c tests/public-viewer/playwright.config.ts",
     "test:three-matrix": "node scripts/run-three-matrix.mjs",
     "test:three-matrix:full": "node scripts/run-three-matrix.mjs --full",
-    "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts"
+    "test:viewer-visual": "playwright test -c tests/viewer-visual/playwright.config.ts",
+    "test:release": "npm run test:bindings && npm run test:hydra && npm run test:types",
+    "test:package": "node scripts/validate-renderers-package.mjs"
   },
   "devDependencies": {
     "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",

@@ -86,5 +86,19 @@ export function createSceneKit(USD) {
     },rgb,64,(profile.length-1)*4);
   }
   function group(stage,path,position=[0,0,0],rotate=[0,0,0]) { return pose(stage,stage.DefinePrim(path,'Xform'),position,[1,1,1],rotate); }
-  return { colors, attr, point, pose, color, bind, material, box, sphere, mesh, surface, torus, beam, lathe, group };
+  // USD lights and cameras face down their local -Z axis. lookAt returns the
+  // xformOp:rotateXYZ angles (degrees, Y-up) that turn -Z from `from` toward `to`.
+  function lookAt(from, to) {
+    const d = unit(sub(to, from)), degrees = 180 / Math.PI;
+    return [Math.asin(Math.max(-1, Math.min(1, d[1]))) * degrees, Math.atan2(-d[0], -d[2]) * degrees, 0];
+  }
+  function aim(stage, value, from, to) { return pose(stage, value, from, [1, 1, 1], lookAt(from, to)); }
+  // The helpers above only call stage.DefinePrim and stage.GetUpAxis, so this
+  // stand-in lets them define prims inside one variant of a variant set.
+  // Only prim definitions are scoped: use distinct child paths per variant,
+  // since subsequent attribute writes use the stage's ordinary edit target.
+  function inVariant(stage, variantSet, variantName) {
+    return { DefinePrim: (path, type) => variantSet.DefinePrim(variantName, path, type), GetUpAxis: () => stage.GetUpAxis() };
+  }
+  return { colors, attr, point, pose, color, bind, material, box, sphere, mesh, surface, torus, beam, lathe, group, lookAt, aim, inVariant };
 }

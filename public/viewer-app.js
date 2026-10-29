@@ -670,6 +670,8 @@ let hostEnvironmentTexture = null;
 let hostEnvironmentPromise = null;
 let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
 let complexity = preferredDetail(params);
+// Limit-surface tessellation, bounded by the Very high triangle count.
+const DEFAULT_DETAIL = 'adaptive';
 let backgroundChoice = params.get('background') === 'dark' ? 'dark' : 'light';
 const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
@@ -1509,8 +1511,13 @@ function showUsdDetail(stage, handle) {
   const label = document.createElement('label'); label.className='usd-settings-row'; label.textContent = 'Detail ';
   const select = document.createElement('select'); select.setAttribute('aria-label', 'USD detail');
   const levels = [['low', 'Low', 1], ['medium', 'Medium', 1.1], ['high', 'High', 1.2], ['very-high', 'Very high', 1.3]];
+  // Only offer Adaptive when the runtime implements limit-surface tessellation.
+  const supportsAdaptive = typeof handle.driver.GetAdaptiveSubdivision === 'function';
+  if (supportsAdaptive) levels.push(['adaptive', 'Adaptive', null]);
   const current = handle.driver.GetComplexity();
-  let selected = levels.find(([, , value]) => Math.abs(current - value) < 1e-5)?.[0];
+  let selected = supportsAdaptive && handle.driver.GetAdaptiveSubdivision()
+    ? 'adaptive'
+    : levels.find(([, , value]) => value !== null && Math.abs(current - value) < 1e-5)?.[0];
   if (!selected) { selected = String(current); levels.push([selected, selected, current]); }
   for (const [value, title] of levels) {
     const option = document.createElement('option'); option.value = value; option.textContent = title;
@@ -1735,11 +1742,11 @@ async function ensureNeedleEngineLoader() {
   if (!removeNeedleEngineUsdPlugin) {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
       waitForMaterials,
-      complexity: complexity ?? activeCatalogAsset?.complexity ?? 'medium',
+      complexity: complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
       autoPlay: true,
       getFiles: () => needleLoaderFiles,
       getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale,
-      getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? 'medium',
+      getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
     });
   }
   if (!needleEngineElement) {
@@ -2050,7 +2057,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         files: filesForHydra,
         autoPlay: true,
         waitForMaterials,
-        complexity: complexity ?? activeCatalogAsset?.complexity ?? 'medium',
+        complexity: complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
         scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale,
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,

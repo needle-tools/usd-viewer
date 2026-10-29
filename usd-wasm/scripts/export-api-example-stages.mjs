@@ -49,6 +49,7 @@ if (!isolated) {
     await mkdir(dirname(destination), { recursive: true }); await writeFile(destination, file.bytes);
   }
   process.send({ id: `api-${asset.executable}`, example: asset.executable,
+    ...(example.group === 'Lighting' ? { thumbnailCameraLight: false } : {}),
     sourceFingerprint: createHash('sha256').update(JSON.stringify([example.code, sceneKitSource, authoringSource])).digest('hex'),
     hasGeometry: result.hasGeometry, root: resolve(directory, result.files[0].path) });
   process.exit(0);

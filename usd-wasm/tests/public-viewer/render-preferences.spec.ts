@@ -3,16 +3,18 @@ import {openSettings,stageReady} from './workbench-menus';
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const url=(viewer='three')=>`/?viewer=${viewer}&file=${asset}`;
 
-for(const viewer of ['three','needle'])test(`${viewer}: Medium defaults and selected detail survive a fresh URL`,async({page})=>{
+for(const viewer of ['three','needle'])test(`${viewer}: Adaptive defaults and selected detail survive a fresh URL`,async({page})=>{
   await page.goto(url(viewer));await stageReady(page);await openSettings(page);
-  await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('medium');
-  expect(await page.evaluate(()=>(window as any).usdHydra.driver.GetComplexity())).toBeCloseTo(1.1);
+  await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('adaptive');
+  expect(await page.evaluate(()=>(window as any).usdHydra.driver.GetComplexity())).toBeCloseTo(1.3);
+  expect(await page.evaluate(()=>(window as any).usdHydra.driver.GetAdaptiveSubdivision())).toBe(true);
   if(viewer==='three')await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('beauty');
   await page.getByRole('combobox',{name:'USD detail',exact:true}).selectOption('high');
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')||'{}').detail)).toBe('high');
   await page.goto(url(viewer));await stageReady(page);await openSettings(page);
   await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('high');
   expect(await page.evaluate(()=>(window as any).usdHydra.driver.GetComplexity())).toBeCloseTo(1.2);
+  expect(await page.evaluate(()=>(window as any).usdHydra.driver.GetAdaptiveSubdivision())).toBe(false);
 });
 
 test('render mode and tracer quality survive fresh URLs, including Basic',async({page})=>{
@@ -49,7 +51,7 @@ test('explicit URL render/detail overrides remembered preferences',async({page})
 for(const blocked of [false,true])test(`${blocked?'blocked':'invalid'} storage leaves defaults and controls usable`,async({page})=>{
   await page.addInitScript(blocked=>{if(blocked)Object.defineProperty(Storage.prototype,'getItem',{value(){throw new Error('blocked');}});else localStorage.setItem('needle-usd-render-settings','{invalid');},blocked);
   await page.goto(url());await stageReady(page);await openSettings(page);
-  const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('beauty');await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('medium');
+  const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('beauty');await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('adaptive');
   await mode.selectOption('basic');await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('basic');
   await page.getByRole('combobox',{name:'USD detail',exact:true}).selectOption('low');await expect.poll(()=>page.evaluate(()=>(window as any).usdHydra.driver.GetComplexity())).toBe(1);
   if(!blocked)expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')!))).toMatchObject({mode:'basic',detail:'low'});

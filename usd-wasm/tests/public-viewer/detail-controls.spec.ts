@@ -1,4 +1,4 @@
-import {clearStage} from './workbench-menus';
+import {clearStage,openSettings,stageReady} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 
 for (const viewer of ['three', 'needle']) {
@@ -6,6 +6,7 @@ for (const viewer of ['three', 'needle']) {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`/?viewer=${viewer}&complexity=low&file=/test-fixtures/coverage/lighting-mdl/mdl-metal.usda`);
+    await stageReady(page); await openSettings(page);
     const detail = page.getByRole('combobox', { name: 'USD detail', exact: true });
     await expect(detail).toHaveValue('low');
     const state = () => page.evaluate(async () => {
@@ -29,7 +30,7 @@ for (const viewer of ['three', 'needle']) {
     expect(high.camera).toEqual(low.camera);
     expect(await page.evaluate(() => (window as any).originalDriver === (window as any).usdHydra.driver)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('high-detail.png') });
-    await page.reload();
+    await page.reload(); await stageReady(page); await openSettings(page);
     await expect(detail).toHaveValue('high');
     expect((await state()).vertices).toBe(high.vertices);
     await clearStage(page);

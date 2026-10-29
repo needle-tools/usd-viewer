@@ -554,6 +554,9 @@ declare type HdWebSyncDriver = {
     SetRefineLevelFallback(level: number): void,
     GetComplexity(): number,
     SetComplexity(complexity: number): void,
+    /** Whether refined meshes use Bfr limit-surface tessellation. */
+    GetAdaptiveSubdivision(): boolean,
+    SetAdaptiveSubdivision(enabled: boolean): void,
     SetTime(timecode: number): void,
     GetTime(): number,
     Draw(): MaybePromise<void>,

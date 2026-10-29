@@ -10,7 +10,7 @@ test('Hugging Face test set is a separate top-level catalog', async ({ page }) =
     await page.goto('/?viewer=three');
     await openSamples(page);
     await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
-    await expect(page.locator('#gallery-title')).toHaveText('Needle');
+    await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Needle examples');
     await expect(page.locator('#gallery-grid .gallery-card').first()).toBeVisible();
     await expect(page.locator('#needle-group-tree [data-sample-group="needle:remote-usd-assets"]')).toHaveCount(0);
     const original = await page.evaluate(async () => (await (await fetch('/data/usd-samples.json')).json()).map((x: any) => x.url));
@@ -24,7 +24,7 @@ test('Hugging Face test set is a separate top-level catalog', async ({ page }) =
     }
     await expect(page.locator('#example-library option[value=usd-assets]')).toHaveText('Hugging Face test set');
     await page.getByRole('combobox',{name:'Example library'}).selectOption('usd-assets');
-    await expect(page.locator('#gallery-title')).toHaveText('Hugging Face test set');
+    await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Hugging Face test set examples');
     await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(14);
     const displayed = await page.locator('#gallery-grid .gallery-card').evaluateAll(nodes => nodes.map(node => new URL((node as HTMLAnchorElement).href).searchParams.get('file')));
     expect(displayed).toEqual(original);

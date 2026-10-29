@@ -73,9 +73,12 @@ export declare type createThreeHydraConfig = {
     /**
      * OpenUSD refinement complexity for subdivision surfaces.
      * Accepts OpenUSD's standard names ("low", "medium", "high", "veryhigh")
-     * or a numeric UsdImagingGL complexity value. Defaults to "low" (1.0).
+     * or a numeric UsdImagingGL complexity value for uniform refinement.
+     * "adaptive" evaluates the exact limit surface with per-edge,
+     * curvature-driven (camera-independent) tessellation, crack-free across
+     * faces and bounded by the "veryhigh" triangle count. Defaults to "low" (1.0).
      */
-    complexity?: "low" | "medium" | "high" | "veryhigh" | number,
+    complexity?: "low" | "medium" | "high" | "veryhigh" | "very-high" | "adaptive" | number,
 
     /**
      * Add Three.js helper objects for USD cameras and lights.

@@ -2,13 +2,14 @@
 
 `examples.js` is the source for the standalone REPL, binding tests, and
 **Examples → Needle test assets → JavaScript API** in the public viewer.
-It includes the 48 original REPL examples and four API authoring demos.
+It includes 63 examples, including weighted and rigid skinning, Gaussian fields,
+light rigs, animated lighting, payload variants, layer composition and instancing.
 `create-api-stage.js` also supplies the standalone API test buttons.
 
 Selecting an example runs its JavaScript in a disposable worker with the same
 OpenUSD wasm build as the viewer. The resulting root layer and dependencies load
 through the normal viewer pipeline. Variants, references and payloads remain
-authored; the result is not flattened. All 52 examples author visible scenes,
+authored; the result is not flattened. All examples author visible scenes,
 including inspection and runtime examples. Printed values are available in
 Window → Console. These are bundled executable
 fixtures; ordinary remote JavaScript URLs are not executed as samples.
@@ -48,6 +49,7 @@ The exporter uses an isolated process per example, matching browser worker
 isolation and avoiding edits retained in USD's layer registry between cases.
 Captures use high complexity and validate native bounds and asset resolution.
 Source fingerprints and image hashes prevent stale or duplicate previews.
+Lighting lessons use their authored rigs with the native camera headlight disabled.
 The viewer executes source code when selected, not the preview snapshots.
 
 `python3 scripts/audit-api-previews.py` produces review contact sheets in
@@ -55,3 +57,10 @@ The viewer executes source code when selected, not the preview snapshots.
 The fixture scene kit handles native lowercase up-axis codes; its primitive
 and parametric mesh helpers keep original Z-up fixtures aligned with their
 added geometry. Parametric surfaces carry smooth vertex normals.
+
+On a native USD installation older than 26.11, API Gaussian previews use an
+independent capture layer of opaque 2-sigma covariance ellipsoids with authored
+positions, scales, orientations and degree-zero radiance. These native Storm
+cards show the authored field shape; they are not density-rendering references.
+The capture record preserves that scope. Executing the sample still loads the
+original Gaussian schema through the viewer.

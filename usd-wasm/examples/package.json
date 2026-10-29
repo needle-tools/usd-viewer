@@ -16,15 +16,16 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
-    "@needle-tools/engine": "^5.1.2-canary.1782735768.reasonable-ramen.4c74c99",
-    "@needle-tools/materialx": "1.7.0",
+    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@needle-tools/materialx": "1.8.0",
     "@needle-tools/usd": "file:..",
-    "@types/three": "^0.165.0",
-    "three": "npm:@needle-tools/three@^0.169.19",
+    "@types/three": "^0.185.4",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
     "vite-plugin-top-level-await": "1.2.2",
     "vite-plugin-wasm": "^3.3.0"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.7.0"
+    "@needle-tools/materialx": "1.8.0",
+    "three": "$three"
   }
 }

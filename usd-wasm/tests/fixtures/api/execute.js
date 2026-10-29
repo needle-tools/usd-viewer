@@ -53,7 +53,7 @@ export async function executeExample(USD, example, { fixtureCatalog, readFixture
   try { await run(context, example.code); }
   finally { onExecute(false); }
   if (!context.stage) return { output, files: [], hasGeometry: false };
-  const geometryTypes = new Set(['Mesh', 'Sphere', 'Cube', 'Cone', 'Cylinder', 'Capsule', 'Points', 'BasisCurves', 'NurbsCurves', 'NurbsPatch', 'PointInstancer', 'Volume']);
+  const geometryTypes = new Set(['Mesh', 'Sphere', 'Cube', 'Cone', 'Cylinder', 'Capsule', 'Points', 'BasisCurves', 'NurbsCurves', 'NurbsPatch', 'PointInstancer', 'Volume', 'ParticleField3DGaussianSplat']);
   const hasGeometry = pxr.vectorToArray(context.stage.TraverseAll()).some(prim => geometryTypes.has(prim.GetTypeName()) && prim.IsActive());
   // Preserve authored composition/variants, not just the flattened appearance.
   // Collect script-created payload/reference layers as well as fetched assets.

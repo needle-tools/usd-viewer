@@ -6,7 +6,20 @@ export function configureNeedleAgx(renderer: PresentationRenderer): Promise<bool
 export function configureNeedleAgxDisplay(engine: unknown, getToneMapping?: () => number): () => void;
 import type { Camera, Material, Light, Scene, Vector2, Color } from 'three';
 export type RenderMode = 'basic' | 'beauty' | 'pathtraced' | 'pathtraced-gk';
-export interface RenderSettings { maxSamples: number; bounces: number; denoiser: 'jnlm' | 'oidn' | 'oidn-fast' | null; gkDenoiser: 'oidn' | 'oidn-fast' | null; }
+export interface RenderSettings {
+  maxSamples: number;
+  bounces: number;
+  denoiser: 'jnlm' | 'oidn' | 'oidn-fast' | null;
+  gkDenoiser: 'oidn' | 'oidn-fast' | null;
+  /** Optional HDR bloom in Basic and Beauty on WebGPURenderer. Default false. */
+  bloom: boolean;
+  /** 0–10; default 0.5. */
+  bloomStrength: number;
+  /** 0–1; default 0.5. */
+  bloomRadius: number;
+  /** Scene-linear luminance, 0–100; default 1. */
+  bloomThreshold: number;
+}
 export interface RenderModeStatus { mode: RenderMode; requestedMode?: RenderMode; status: string; samples: number; maxSamples?: number; error?: string; }
 export interface PresentationRenderer {
   domElement: HTMLCanvasElement;

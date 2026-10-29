@@ -264,7 +264,8 @@ def light_case(name,label,mode):
         l=rect(s,'Animated',(2,4,4),(1,.4,.2),220);l.GetIntensityAttr().Set(100,1);l.GetIntensityAttr().Set(600,48);checks.append(('Light intensity has time samples',lambda st:len(st.GetPrimAtPath('/World/Lights/Animated').GetAttribute('inputs:intensity').GetTimeSamples())==2))
     checks.append(('Scene contains a stage and authored lights',lambda st:bool(st.GetPrimAtPath('/World/Stage')) and len(list(st.GetPrimAtPath('/World/Lights').GetChildren()))>0))
     finish(name,label,'Lights',s,p,['UsdLux',mode]+(['ShadowAPI','shadow:enable'] if mode=='distant' else []),checks,files,environment='none')
-    entries[-1]['scenePrimitiveLightIntensityScale'] = .4 if mode=='rect' else .1 if mode in ('rigs','sphere','spot','animated','disk','cylinder','temperature') else .01
+    # Use the authored UsdLux luminance, without per-fixture brightness overrides.
+    entries[-1]['scenePrimitiveLightIntensityScale'] = 1
     if mode in ('portal','meshlight','geometry','volumelight'):
         entries[-1]['expected']['needle']='The EXR dome provides illumination. The authored '+mode+' schema requires delegate-specific support; its light transport is not established by this fixture.'
     if mode=='linking': entries[-1]['expected']['needle']='Light and shadow linking collections and cached light lists are authored; selective linking requires delegate support.'

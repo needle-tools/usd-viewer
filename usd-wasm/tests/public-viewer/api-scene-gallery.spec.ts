@@ -37,6 +37,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: every API fixture pro
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await page.locator('#usd-viewport').screenshot({ path: info.outputPath(`${asset.executable}.png`) });
       results.push({ id: asset.executable, ...result });
+      console.info(`${viewer}: ${asset.executable} (${result.positions} vertices)`);
     });
   }
   await info.attach('API scene geometry', { body: JSON.stringify(results, null, 2), contentType: 'application/json' });

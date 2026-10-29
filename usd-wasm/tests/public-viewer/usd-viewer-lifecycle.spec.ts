@@ -2769,7 +2769,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await openSamples(page);
 
         await expect(page.locator('#example-library option')).toHaveText(['glTF → USD conversions','USD Working Group Assets','Hugging Face test set','Needle']);
-        await expect(page.locator('#gallery-title')).toHaveText(/glTF.*USD conversions/);
+        await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label',/glTF.*USD conversions examples/);
         await expect(page.getByRole('combobox',{name:'Example library'})).toHaveValue('gltf');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
         await expect(page.locator('#needle-group-tree')).toBeHidden();
@@ -2824,7 +2824,7 @@ test.describe('public usd-viewer lifecycle', () => {
         });
 
         await page.click('[data-sample-group="needle:Subdivision"]');
-        await expect(page.locator('#gallery-title')).toHaveText('Subdivision');
+        await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Subdivision examples');
         await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/catmull_clark_cube.usda');
         await expect(page.locator('.gallery-card[data-name="Loop Non-Triangle Fallback"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/loop_non_triangle_fallback.usda');
 

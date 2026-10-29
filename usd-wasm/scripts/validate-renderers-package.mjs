@@ -48,12 +48,24 @@ try {
     await page.screenshot({ path: join(output, 'basic.png') });
     await page.evaluate(() => window.packed.modes.setMode('beauty'));
     await page.waitForTimeout(700); await page.screenshot({ path: join(output, 'beauty.png') });
+    const beforeBloom = await page.screenshot();
+    await page.evaluate(() => window.packed.modes.setSettings({bloom:true,bloomThreshold:0,bloomStrength:1}));
+    await page.waitForTimeout(400);
+    const withBloom = await page.screenshot({path:join(output,'beauty-bloom.png')});
+    result.bloomPixels = await page.evaluate(async ([a,b]) => {
+      async function pixels(encoded) {const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+encoded)).blob());const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const ctx=c.getContext('2d');ctx.drawImage(bitmap,0,0);return ctx.getImageData(0,0,c.width,c.height).data;}
+      const left=await pixels(a),right=await pixels(b);let changed=0;
+      for(let i=0;i<left.length;i+=4)if(Math.abs(left[i]-right[i])+Math.abs(left[i+1]-right[i+1])+Math.abs(left[i+2]-right[i+2])>15)changed++;
+      return changed;
+    },[beforeBloom.toString('base64'),withBloom.toString('base64')]);
+    assert.ok(result.bloomPixels>500,'packed HDR bloom changes the rendered image');
+    await page.evaluate(() => window.packed.modes.setSettings({bloom:false,bloomStrength:0.5,bloomThreshold:1}));
     await page.evaluate(() => window.packed.modes.setMode('pathtraced'));
     await page.waitForFunction(() => window.packed.modes.samples > 3, null, { timeout: 90_000 });
     await page.waitForFunction(() => window.packed.modes.samples === 32, null, { timeout: 90_000 });
     result.samples = await page.evaluate(() => window.packed.modes.samples);
     result.settings = await page.evaluate(() => window.packed.modes.settings);
-    assert.deepEqual(result.settings, {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null});
+    assert.deepEqual(result.settings, {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null,bloom:false,bloomStrength:0.5,bloomRadius:0.5,bloomThreshold:1});
     await page.screenshot({ path: join(output, 'pathtraced.png') });
     await page.evaluate(() => window.packed.modes.setMode('pathtraced-gk'));
     await page.waitForFunction(() => window.packed.modes.samples > 3, null, { timeout: 90_000 });

@@ -10,6 +10,7 @@ import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from pxr import Usd, UsdGeom
+from particle_preview import particle_preview
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('coverage_capture', ROOT / 'scripts/render-coverage-thumbnails.py')
@@ -20,6 +21,9 @@ spec.loader.exec_module(capture)
 def render(entry):
     entry = {**entry, 'thumbnailComplexity': 'high'}
     stage = Usd.Stage.Open(entry['root'])
+    stage, particle_records = particle_preview(stage, Path(entry['root']).parent / 'native-particle-preview.usda')
+    if particle_records:
+        entry['root'] = stage.GetRootLayer().identifier
     bounds = UsdGeom.BBoxCache(Usd.TimeCode.Default(), ['default', 'render', 'proxy']).ComputeWorldBound(stage.GetPseudoRoot()).ComputeAlignedRange()
     if bounds.IsEmpty():
         raise RuntimeError(f"{entry['example']}: scene has no native render bounds")
@@ -29,10 +33,14 @@ def render(entry):
                 value = attribute.Get()
                 if value and value.path and not value.resolvedPath:
                     raise RuntimeError(f"{entry['example']}: unresolved native asset {attribute.GetPath()}: {value.path}")
-    return capture.render((entry, SimpleNamespace(
+    result = capture.render((entry, SimpleNamespace(
         helper=str(Path.home() / 'git/usd-thumbnail-generator/generate_thumbnail.py'),
         usdrecord=str(Path.home() / 'OpenUSD-26.05-native/bin/usdrecord'),
         width=448, force=True)))
+    if particle_records:
+        result['capture'] = 'native Storm covariance-ellipsoid preview; not Gaussian density rendering'
+        result['particleFields'] = particle_records
+    return result
 
 
 if __name__ == '__main__':
@@ -46,7 +54,8 @@ if __name__ == '__main__':
             results.append(result)
             print(result['status'], result['id'], flush=True)
     source_fingerprints = {entry['id']: entry['sourceFingerprint'] for entry in entries}
-    records = [{**{key: result[key] for key in ('id', 'status', 'renderer', 'camera', 'exitCode')},
+    records = [{**{key: result[key] for key in ('id', 'status', 'renderer', 'camera', 'exitCode', 'capture')},
+                'particleFields': result.get('particleFields', []),
                 'sourceFingerprint': source_fingerprints[result['id']],
                 'imageSha256': hashlib.sha256((ROOT / 'tests/fixtures/thumbnails' / (result['id'] + '.png')).read_bytes()).hexdigest()
                 if result['status'] == 'rendered' else None} for result in results]

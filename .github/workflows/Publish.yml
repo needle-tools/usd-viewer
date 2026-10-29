@@ -36,18 +36,20 @@ jobs:
       - name: Install package dependencies
         run: npm ci --prefix usd-wasm
 
-      - name: Validate bindings
-        run: npm run --prefix usd-wasm test:bindings
+      - name: Validate package APIs and runtime
+        run: npm run --prefix usd-wasm test:release
 
-      - name: Validate Hydra integration
-        run: npm run --prefix usd-wasm test:hydra
-
-      - name: Validate public TypeScript APIs
-        run: npm run --prefix usd-wasm test:types
-
-      - name: Inspect package contents
+      - name: Install consumer test browser
         working-directory: usd-wasm
-        run: npm pack --dry-run --json
+        run: npx --no-install playwright install --with-deps chrome
+
+      - name: Validate packed production consumers
+        working-directory: usd-wasm
+        run: npm run test:package
+
+      - name: Check publication metadata without publishing
+        working-directory: usd-wasm
+        run: npm publish --dry-run --ignore-scripts --json
 
       - name: Publish to npm (stable branch)
         if: startsWith(github.ref_name, 'release/stable')

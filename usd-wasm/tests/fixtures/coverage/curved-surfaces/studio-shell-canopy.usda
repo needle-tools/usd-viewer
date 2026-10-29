@@ -1,0 +1,154 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "Concrete"
+        {
+            token outputs:surface.connect = </World/Looks/Concrete/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.86, 0.83, 0.78)
+                float inputs:roughness = 0.85
+                token outputs:surface
+            }
+        }
+
+        def Material "Shadow"
+        {
+            token outputs:surface.connect = </World/Looks/Shadow/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.55, 0.53, 0.5)
+                float inputs:roughness = 0.8
+                token outputs:surface
+            }
+        }
+    }
+
+    def NurbsPatch "Petal0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(0.09192, 1.62859, -1.75), (1.75, 2.27, 1.75)]
+        rel material:binding = </World/Looks/Concrete>
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(0.09192, 1.62859, -0.09192), (0.32644, 1.68261, -0.32644), (0.74131, 1.82695, -0.74131), (1.2642, 2.02709, -1.2642), (1.75, 2.07, -1.75), (0.1201, 1.62859, -0.04975), (0.41789, 1.69145, -0.17309), (0.89576, 1.8623, -0.37104), (1.40171, 2.10664, -0.58061), (1.75, 2.21142, -0.72487), (0.13, 1.62859, 0), (0.45, 1.69511, 0), (0.95, 1.87695, 0), (1.45, 2.13959, 0), (1.75, 2.27, 0), (0.1201, 1.62859, 0.04975), (0.41789, 1.69145, 0.17309), (0.89576, 1.8623, 0.37104), (1.40171, 2.10664, 0.58061), (1.75, 2.21142, 0.72487), (0.09192, 1.62859, 0.09192), (0.32644, 1.68261, 0.32644), (0.74131, 1.82695, 0.74131), (1.2642, 2.02709, 1.2642), (1.75, 2.07, 1.75)]
+        uniform token uForm = "open"
+        double[] uKnots = [0, 0, 0, 0, 0.35, 1, 1, 1, 1]
+        int uOrder = 4
+        double2 uRange = (0, 1)
+        int uVertexCount = 5
+        uniform token vForm = "open"
+        double[] vKnots = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+        int vOrder = 4
+        double2 vRange = (0, 1)
+        int vVertexCount = 5
+    }
+
+    def NurbsPatch "Petal1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-1.75, 1.62859, 0.09192), (1.75, 2.27, 1.75)]
+        rel material:binding = </World/Looks/Concrete>
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(0.09192, 1.62859, 0.09192), (0.32644, 1.68261, 0.32644), (0.74131, 1.82695, 0.74131), (1.2642, 2.02709, 1.2642), (1.75, 2.07, 1.75), (0.04975, 1.62859, 0.1201), (0.17309, 1.69145, 0.41789), (0.37104, 1.8623, 0.89576), (0.58061, 2.10664, 1.40171), (0.72487, 2.21142, 1.75), (0, 1.62859, 0.13), (0, 1.69511, 0.45), (0, 1.87695, 0.95), (0, 2.13959, 1.45), (0, 2.27, 1.75), (-0.04975, 1.62859, 0.1201), (-0.17309, 1.69145, 0.41789), (-0.37104, 1.8623, 0.89576), (-0.58061, 2.10664, 1.40171), (-0.72487, 2.21142, 1.75), (-0.09192, 1.62859, 0.09192), (-0.32644, 1.68261, 0.32644), (-0.74131, 1.82695, 0.74131), (-1.2642, 2.02709, 1.2642), (-1.75, 2.07, 1.75)]
+        uniform token uForm = "open"
+        double[] uKnots = [0, 0, 0, 0, 0.35, 1, 1, 1, 1]
+        int uOrder = 4
+        double2 uRange = (0, 1)
+        int uVertexCount = 5
+        uniform token vForm = "open"
+        double[] vKnots = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+        int vOrder = 4
+        double2 vRange = (0, 1)
+        int vVertexCount = 5
+    }
+
+    def NurbsPatch "Petal2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-1.75, 1.62859, -1.75), (-0.09192, 2.27, 1.75)]
+        rel material:binding = </World/Looks/Concrete>
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-0.09192, 1.62859, 0.09192), (-0.32644, 1.68261, 0.32644), (-0.74131, 1.82695, 0.74131), (-1.2642, 2.02709, 1.2642), (-1.75, 2.07, 1.75), (-0.1201, 1.62859, 0.04975), (-0.41789, 1.69145, 0.17309), (-0.89576, 1.8623, 0.37104), (-1.40171, 2.10664, 0.58061), (-1.75, 2.21142, 0.72487), (-0.13, 1.62859, 0), (-0.45, 1.69511, 0), (-0.95, 1.87695, 0), (-1.45, 2.13959, 0), (-1.75, 2.27, 0), (-0.1201, 1.62859, -0.04975), (-0.41789, 1.69145, -0.17309), (-0.89576, 1.8623, -0.37104), (-1.40171, 2.10664, -0.58061), (-1.75, 2.21142, -0.72487), (-0.09192, 1.62859, -0.09192), (-0.32644, 1.68261, -0.32644), (-0.74131, 1.82695, -0.74131), (-1.2642, 2.02709, -1.2642), (-1.75, 2.07, -1.75)]
+        uniform token uForm = "open"
+        double[] uKnots = [0, 0, 0, 0, 0.35, 1, 1, 1, 1]
+        int uOrder = 4
+        double2 uRange = (0, 1)
+        int uVertexCount = 5
+        uniform token vForm = "open"
+        double[] vKnots = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+        int vOrder = 4
+        double2 vRange = (0, 1)
+        int vVertexCount = 5
+    }
+
+    def NurbsPatch "Petal3" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-1.75, 1.62859, -1.75), (1.75, 2.27, -0.09192)]
+        rel material:binding = </World/Looks/Concrete>
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-0.09192, 1.62859, -0.09192), (-0.32644, 1.68261, -0.32644), (-0.74131, 1.82695, -0.74131), (-1.2642, 2.02709, -1.2642), (-1.75, 2.07, -1.75), (-0.04975, 1.62859, -0.1201), (-0.17309, 1.69145, -0.41789), (-0.37104, 1.8623, -0.89576), (-0.58061, 2.10664, -1.40171), (-0.72487, 2.21142, -1.75), (0, 1.62859, -0.13), (0, 1.69511, -0.45), (0, 1.87695, -0.95), (0, 2.13959, -1.45), (0, 2.27, -1.75), (0.04975, 1.62859, -0.1201), (0.17309, 1.69145, -0.41789), (0.37104, 1.8623, -0.89576), (0.58061, 2.10664, -1.40171), (0.72487, 2.21142, -1.75), (0.09192, 1.62859, -0.09192), (0.32644, 1.68261, -0.32644), (0.74131, 1.82695, -0.74131), (1.2642, 2.02709, -1.2642), (1.75, 2.07, -1.75)]
+        uniform token uForm = "open"
+        double[] uKnots = [0, 0, 0, 0, 0.35, 1, 1, 1, 1]
+        int uOrder = 4
+        double2 uRange = (0, 1)
+        int uVertexCount = 5
+        uniform token vForm = "open"
+        double[] vKnots = [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+        int vOrder = 4
+        double2 vRange = (0, 1)
+        int vVertexCount = 5
+    }
+
+    def NurbsPatch "Column" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.13, 0, -0.13), (0.13, 1.62, 0.13)]
+        rel material:binding = </World/Looks/Shadow>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(0.07, 0, 0), (0.07, 0, -0.07), (0, 0, -0.07), (-0.07, 0, -0.07), (-0.07, 0, 0), (-0.07, 0, 0.07), (0, 0, 0.07), (0.07, 0, 0.07), (0.07, 0, 0), (0.07, 0.9, 0), (0.07, 0.9, -0.07), (0, 0.9, -0.07), (-0.07, 0.9, -0.07), (-0.07, 0.9, 0), (-0.07, 0.9, 0.07), (0, 0.9, 0.07), (0.07, 0.9, 0.07), (0.07, 0.9, 0), (0.09, 1.45, 0), (0.09, 1.45, -0.09), (0, 1.45, -0.09), (-0.09, 1.45, -0.09), (-0.09, 1.45, 0), (-0.09, 1.45, 0.09), (0, 1.45, 0.09), (0.09, 1.45, 0.09), (0.09, 1.45, 0), (0.13, 1.62, 0), (0.13, 1.62, -0.13), (0, 1.62, -0.13), (-0.13, 1.62, -0.13), (-0.13, 1.62, 0), (-0.13, 1.62, 0.13), (0, 1.62, 0.13), (0.13, 1.62, 0.13), (0.13, 1.62, 0)]
+        double[] pointWeights = [1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1, 0.7071068, 1]
+        uniform token uForm = "closed"
+        double[] uKnots = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        int uOrder = 3
+        double2 uRange = (0, 4)
+        int uVertexCount = 9
+        uniform token vForm = "open"
+        double[] vKnots = [0, 0, 0, 0, 1, 1, 1, 1]
+        int vOrder = 4
+        double2 vRange = (0, 1)
+        int vVertexCount = 4
+    }
+
+    def Camera "Camera"
+    {
+        float2 clippingRange = (0.1596, 79.812)
+        float focalLength = 50
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.792624, 0, -0.609711, 0), (-0.081058, 0.991123, -0.105376, 0), (0.604299, 0.132946, 0.785588, 0), (4.786226, 2.218674, 6.383191, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}

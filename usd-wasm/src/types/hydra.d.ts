@@ -63,6 +63,7 @@ export type threeJsRenderDelegateConfig = {
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,
     showLightHelpers?: boolean,
+    /** Overall light multiplier after UsdLux unit conversion. Legacy default 0.01; use 1 for authored luminance. Dome environments use their authored intensity independently. */
     scenePrimitiveLightIntensityScale?: number,
     rootFile?: string,
     /** Paths for resolving textures */

@@ -1812,6 +1812,302 @@ export const coverageAssetLibrary = [
     "thumbnail": "thumbnails/curved-nurbs-curve-weighted.png"
   },
   {
+    "id": "curved-studio-pierced-lantern",
+    "label": "Pierced brass lantern",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-pierced-lantern.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-pierced-lantern.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "hole faces",
+      "crease chains",
+      "triangle subdivision rule",
+      "corner sharpness",
+      "emission"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Sixteen staggered hole faces must open onto the emissive core; filled windows mean holes are ignored."
+    },
+    "thumbnail": "thumbnails/curved-studio-pierced-lantern.png"
+  },
+  {
+    "id": "curved-studio-instrument-housing",
+    "label": "Creased instrument housing",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-instrument-housing.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-instrument-housing.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "semi-sharp creases",
+      "corner sharpness",
+      "indexed face-varying color",
+      "primvar reader"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Panel colours stay crisp along their face-varying seams; fillets soften with refinement while base edges stay sharp."
+    },
+    "thumbnail": "thumbnails/curved-studio-instrument-housing.png"
+  },
+  {
+    "id": "curved-studio-fluted-vase",
+    "label": "Fluted UV-seamed vase",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-fluted-vase.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-fluted-vase.usda",
+      "coverage/curved-surfaces/textures/studio-uv-grid.png"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "edgeOnly boundary",
+      "indexed face-varying UVs",
+      "UV seams",
+      "textured"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "The repeating grid stays continuous across the vertical UV seam; a smeared column means seam indices were dropped."
+    },
+    "thumbnail": "thumbnails/curved-studio-fluted-vase.png"
+  },
+  {
+    "id": "curved-studio-loop-trefoil",
+    "label": "Loop trefoil knot",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-loop-trefoil.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-loop-trefoil.usda"
+    ],
+    "features": [
+      "Loop",
+      "triangle cage",
+      "closed crease chain",
+      "genus one"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "The faceted six-sided cage becomes a round tube with a spiral ridge when Loop refinement is applied."
+    },
+    "thumbnail": "thumbnails/curved-studio-loop-trefoil.png"
+  },
+  {
+    "id": "curved-studio-braided-rope",
+    "label": "Braided rope and coiled cord",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-braided-rope.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-braided-rope.usda"
+    ],
+    "features": [
+      "cubic B-spline",
+      "vertex widths",
+      "uniform displayColor",
+      "variable twist"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Strands taper toward their ends and pass over and under without intersecting."
+    },
+    "thumbnail": "thumbnails/curved-studio-braided-rope.png"
+  },
+  {
+    "id": "curved-studio-armillary",
+    "label": "Spline armillary sphere",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-armillary.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-armillary.usda"
+    ],
+    "features": [
+      "periodic Catmull-Rom",
+      "pinned B-spline",
+      "linear curves",
+      "uniform widths",
+      "transformed curves"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Rings close without seams; the ecliptic band is visibly wider than the other rings."
+    },
+    "thumbnail": "thumbnails/curved-studio-armillary.png"
+  },
+  {
+    "id": "curved-studio-ribbon-rosette",
+    "label": "Bezier ribbon rosette",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-ribbon-rosette.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-ribbon-rosette.usda"
+    ],
+    "features": [
+      "cubic Bezier",
+      "oriented ribbons",
+      "vertex normals",
+      "varying widths"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Loops render as flat, twisted ribbons oriented by authored normals; round tubes mean normals were ignored."
+    },
+    "thumbnail": "thumbnails/curved-studio-ribbon-rosette.png"
+  },
+  {
+    "id": "curved-studio-rational-aqueduct",
+    "label": "Rational aqueduct arcades",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/studio-rational-aqueduct.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-rational-aqueduct.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "rational weights",
+      "repeated knots",
+      "mixed order",
+      "multiple spans"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Arches are exact semicircles with sharp springing joins; cubic-looking or overshooting arches mean weights or knots were ignored."
+    },
+    "thumbnail": "thumbnails/curved-studio-rational-aqueduct.png"
+  },
+  {
+    "id": "curved-studio-rational-amphora",
+    "label": "Rational amphora",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-rational-amphora.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-rational-amphora.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "rational weights",
+      "closed form",
+      "orientation",
+      "degenerate pole"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Cross-sections are exact circles; both handles shade outward even though one is leftHanded."
+    },
+    "thumbnail": "thumbnails/curved-studio-rational-amphora.png"
+  },
+  {
+    "id": "curved-studio-shell-canopy",
+    "label": "Folded shell canopy",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-shell-canopy.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-shell-canopy.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "multiple patches",
+      "shared seams",
+      "nonuniform knots",
+      "rational weights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Four petals meet without cracks along shared control rows above a flared rational column."
+    },
+    "thumbnail": "thumbnails/curved-studio-shell-canopy.png"
+  },
+  {
+    "id": "curved-studio-lacquered-canoe",
+    "label": "Lacquered canoe",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-lacquered-canoe.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-lacquered-canoe.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "degenerate edges",
+      "nonuniform knots",
+      "mixed order"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Bow and stern pinch to clean stems without shading spikes; thwarts sit on the evaluated gunwale."
+    },
+    "thumbnail": "thumbnails/curved-studio-lacquered-canoe.png"
+  },
+  {
+    "id": "curved-studio-ruffled-lampshade",
+    "label": "Ruffled periodic lampshade",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-ruffled-lampshade.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-ruffled-lampshade.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "periodic form",
+      "unclamped knots",
+      "cubic multispan"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Twelve swirling ruffles close seamlessly; a gap or overlap means periodic knots were treated as clamped."
+    },
+    "thumbnail": "thumbnails/curved-studio-ruffled-lampshade.png"
+  },
+  {
+    "id": "curved-animated-subdivision-buddies",
+    "label": "Pip and Pop",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/animated-subdivision-buddies.usda",
+    "files": [
+      "coverage/curved-surfaces/animated-subdivision-buddies.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "animated hole faces",
+      "animated crease sharpness",
+      "animated corner sharpness",
+      "held topology samples"
+    ],
+    "complexity": "adaptive",
+    "thumbnailComplexity": "veryhigh",
+    "expected": {
+      "native": "Time-sampled mesh tags and holes resolve at authored frames.",
+      "needle": "Pip winks, gasps and laughs through hole faces and stiffens in shock; Pop somersaults off its spring, sharpens from a smooth pebble into a cube (corners first) and melts back."
+    },
+    "thumbnail": "thumbnails/curved-animated-subdivision-buddies.png"
+  },
+  {
     "id": "lighting-mdl-studio-variants",
     "label": "Studio light rig variants",
     "group": "Lights",
@@ -1829,7 +2125,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-studio-variants.png"
   },
   {
@@ -1854,7 +2150,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-hdr-variants.png"
   },
   {
@@ -1878,7 +2174,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-exr-dome.png"
   },
   {
@@ -1899,7 +2195,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.4,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-area-softboxes.png"
   },
   {
@@ -1920,7 +2216,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-disk-light.png"
   },
   {
@@ -1941,7 +2237,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-cylinder-light.png"
   },
   {
@@ -1964,7 +2260,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-temperature-lights.png"
   },
   {
@@ -1985,7 +2281,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-colored-spheres.png"
   },
   {
@@ -2006,7 +2302,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-shaped-spot.png"
   },
   {
@@ -2029,7 +2325,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-distant-sun.png"
   },
   {
@@ -2052,7 +2348,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.1,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-animated-light.png"
   },
   {
@@ -2074,7 +2370,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-portal-light.png"
   },
   {
@@ -2096,7 +2392,7 @@ export const coverageAssetLibrary = [
     },
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-mesh-light.png"
   },
   {
@@ -2120,7 +2416,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-geometry-light.png"
   },
   {
@@ -2145,7 +2441,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "renderer": "bounded-volume",
     "thumbnail": "thumbnails/lighting-mdl-volume-light.png"
   },
@@ -2169,7 +2465,7 @@ export const coverageAssetLibrary = [
     "thumbnailComplexity": "high",
     "thumbnailCameraLight": false,
     "environment": "none",
-    "scenePrimitiveLightIntensityScale": 0.01,
+    "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/lighting-mdl-light-linking.png"
   },
   {

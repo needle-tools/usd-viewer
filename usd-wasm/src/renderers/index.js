@@ -9,17 +9,22 @@ import { createOrbitControlUpdater } from './orbitControls.js';
 
 /** Optional presentation modes. The caller retains ownership of the Three renderer and scene. */
 export async function createRenderModes({ renderer, scene, camera, canvas, controls, settings: initialSettings = {}, onStatus = () => {}, loadPathTracer, loadGkPathTracer, loadDenoiser, denoiserWeightsBaseUrl, configurePathTracer, convertMaterial, convertLight }) {
-  const settings = { maxSamples: 512, bounces: 8, denoiser: 'jnlm', gkDenoiser: loadDenoiser ? 'oidn-fast' : null, ...initialSettings };
+  const settings = { maxSamples: 512, bounces: 8, denoiser: 'jnlm', gkDenoiser: loadDenoiser ? 'oidn-fast' : null, bloom: false, bloomStrength: 0.5, bloomRadius: 0.5, bloomThreshold: 1, ...initialSettings };
   const muDenoiser = type => !type ? null : type === 'jnlm' ? {type, schedule:'progressive'} : {type:'oidn', model:type === 'oidn-fast' ? 'small' : 'standard', schedule:'progressive', ...(denoiserWeightsBaseUrl ? {weightsBaseUrl:denoiserWeightsBaseUrl} : {})};
   function validateSettings(values) {
     if (!Number.isInteger(values.maxSamples) || values.maxSamples < 1 || values.maxSamples > 65536) throw new Error('Samples must be an integer from 1 to 65536.');
     if (!Number.isInteger(values.bounces) || values.bounces < 1 || values.bounces > 20) throw new Error('Bounces must be an integer from 1 to 20.');
     if (![null, 'jnlm', 'oidn', 'oidn-fast'].includes(values.denoiser) || ![null,'oidn','oidn-fast'].includes(values.gkDenoiser)) throw new Error('Unknown denoiser.');
+    if (typeof values.bloom !== 'boolean') throw new Error('Bloom must be a boolean.');
+    for (const [key, max] of [['bloomStrength', 10], ['bloomRadius', 1], ['bloomThreshold', 100]]) {
+      if (!Number.isFinite(values[key]) || values[key] < 0 || values[key] > max) throw new Error(`${key} must be between 0 and ${max}.`);
+    }
+    if (values.bloom && !renderer.isWebGPURenderer) throw new Error('Bloom requires WebGPURenderer.');
   }
   validateSettings(settings);
   const orbit = controls ? createOrbitControlUpdater(controls) : null; let lastControlTime = performance.now();
   let mode = 'basic', disposed = false, revision = 0;
-  let beauty, beautyPending, tracer, loop, sync, sourceCamera;
+  let beauty, beautyPending, basic, basicPending, tracer, loop, sync, sourceCamera;
   let gk, pathDisplayDispose;
   let lastStatus = '';
   const pathCanvas = canvas || document.createElement('canvas');
@@ -45,6 +50,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
     beauty?.dispose();
     beauty = undefined;
   }
+  function releaseBasic() { basic?.dispose(); basic = undefined; }
   function validatePath(gkjohnson = false) {
     const issues = new Set();
     scene.traverseVisible(object => {
@@ -69,7 +75,11 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
   async function prepareBeauty(activeCamera = camera) {
     if (!renderer.isWebGPURenderer) throw new Error('Beauty requires WebGPURenderer.');
     const { createBeauty } = await import('./beauty.js');
-    return createBeauty({ renderer, scene, camera: activeCamera });
+    return createBeauty({ renderer, scene, camera: activeCamera, settings });
+  }
+  async function prepareBasic(activeCamera = camera) {
+    const { createBasic } = await import('./basic.js');
+    return createBasic({ renderer, scene, camera: activeCamera, settings });
   }
 
   function createSync(api, engine, activeCamera) {
@@ -109,7 +119,16 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
       validateSettings(values);
       if (loop && values.denoiser !== settings.denoiser) await loop.final.setDenoiser(muDenoiser(values.denoiser));
       await gk?.setSettings(values);
+      if (mode === 'basic' && values.bloom && !basic) {
+        const request = revision;
+        const candidate = await prepareBasic();
+        if (disposed) { candidate.dispose(); return; }
+        if (mode === 'basic' && request === revision) { releaseBasic(); basic = candidate; }
+        else candidate.dispose();
+      }
       Object.assign(settings, values);
+      beauty?.setSettings(settings); basic?.setSettings(settings);
+      if (!settings.bloom) releaseBasic();
       if (loop) { loop.final.maxSamples = settings.maxSamples; loop.final.bounces = settings.bounces; }
       notify();
     },
@@ -120,7 +139,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
       if (!['basic', 'beauty', 'pathtraced', 'pathtraced-gk'].includes(next)) throw new Error(`Unknown render mode: ${next}`);
       if (disposed) throw new Error('Render modes have been disposed.');
       const request = ++revision;
-      if (next === mode) return;
+      if (next === mode && !(next === 'basic' && settings.bloom && !basic)) return;
       if (next.startsWith('pathtraced')) validatePath(next === 'pathtraced-gk');
       notify({ status: 'loading', requestedMode: next });
       try {
@@ -128,6 +147,11 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
           const candidate = await prepareBeauty();
           if (disposed || request !== revision) { candidate.dispose(); return; }
           beauty = candidate;
+        }
+        if (next === 'basic' && settings.bloom && !basic) {
+          const candidate = await prepareBasic();
+          if (disposed || request !== revision) { candidate.dispose(); return; }
+          basic = candidate;
         }
         let nextGk;
         if (next === 'pathtraced-gk') {
@@ -163,6 +187,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
         } else releasePath();
         gk?.dispose(); gk = nextGk;
         if (next !== 'beauty') releaseBeauty();
+        if (next !== 'basic') releaseBasic();
         mode = next; showPath(mode === 'pathtraced'); notify();
       } catch (error) { notify({ error: error.message, status: 'error' }); throw error; }
     },
@@ -197,8 +222,19 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
           renderer.render(scene, activeCamera); return;
         }
         beauty.render();
+      } else if (settings.bloom) {
+        if (basic?.camera !== activeCamera) {
+          if (!basicPending) {
+            releaseBasic(); const request = revision;
+            basicPending = prepareBasic(activeCamera).then(candidate => {
+              if (disposed || request !== revision || !settings.bloom) candidate.dispose();
+              else basic = candidate;
+            }).catch(error => notify({ error: error.message, status: 'error' })).finally(() => { basicPending = undefined; });
+          }
+          renderer.render(scene, activeCamera);
+        } else basic.render();
       } else renderer.render(scene, activeCamera);
     },
-    dispose() { if (disposed) return; disposed = true; revision++; orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
+    dispose() { if (disposed) return; disposed = true; revision++; orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); releaseBasic(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
   };
 }

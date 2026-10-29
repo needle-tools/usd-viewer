@@ -2,7 +2,7 @@
   "name": "usd-viewer",
   "version": "0.1.0",
   "private": true,
-  "description": "Basic USD viewer",
+  "description": "OpenUSD viewer with MaterialX, WebGPU rendering, stage inspection and authoring tools",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -29,7 +29,7 @@
     "three": "$three"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">=22.12.0"
   },
   "repository": {
     "type": "git",

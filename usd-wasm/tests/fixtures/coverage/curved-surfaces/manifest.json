@@ -504,5 +504,409 @@
       "multipleSpans": true,
       "rationalWeights": true
     }
+  },
+  {
+    "id": "curved-studio-pierced-lantern",
+    "label": "Pierced brass lantern",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-pierced-lantern.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-pierced-lantern.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "hole faces",
+      "crease chains",
+      "triangle subdivision rule",
+      "corner sharpness",
+      "emission"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Sixteen staggered hole faces must open onto the emissive core; filled windows mean holes are ignored."
+    },
+    "assertions": {
+      "vertices": 225,
+      "faces": 225,
+      "holes": 16,
+      "creaseChains": 4,
+      "ngonFaces": 1,
+      "triangleFaces": 16,
+      "cornerSharpness": 10.0
+    }
+  },
+  {
+    "id": "curved-studio-instrument-housing",
+    "label": "Creased instrument housing",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-instrument-housing.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-instrument-housing.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "semi-sharp creases",
+      "corner sharpness",
+      "indexed face-varying color",
+      "primvar reader"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Panel colours stay crisp along their face-varying seams; fillets soften with refinement while base edges stay sharp."
+    },
+    "assertions": {
+      "vertices": 352,
+      "faces": 350,
+      "edgeCreases": 140,
+      "corners": 4,
+      "faceVaryingColorIndices": 1400,
+      "faceVaryingLinearInterpolation": "all",
+      "knobs": 2
+    }
+  },
+  {
+    "id": "curved-studio-fluted-vase",
+    "label": "Fluted UV-seamed vase",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-fluted-vase.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-fluted-vase.usda",
+      "coverage/curved-surfaces/textures/studio-uv-grid.png"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "edgeOnly boundary",
+      "indexed face-varying UVs",
+      "UV seams",
+      "textured"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "The repeating grid stays continuous across the vertical UV seam; a smeared column means seam indices were dropped."
+    },
+    "assertions": {
+      "vertices": 264,
+      "faces": 241,
+      "boundary": "edgeOnly",
+      "creaseChains": 13,
+      "stValues": 299,
+      "stIndices": 984,
+      "uvSeams": 2
+    }
+  },
+  {
+    "id": "curved-studio-loop-trefoil",
+    "label": "Loop trefoil knot",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/studio-loop-trefoil.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-loop-trefoil.usda"
+    ],
+    "features": [
+      "Loop",
+      "triangle cage",
+      "closed crease chain",
+      "genus one"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "The faceted six-sided cage becomes a round tube with a spiral ridge when Loop refinement is applied."
+    },
+    "assertions": {
+      "vertices": 252,
+      "triangles": 504,
+      "scheme": "loop",
+      "creaseChainLength": 43
+    }
+  },
+  {
+    "id": "curved-studio-braided-rope",
+    "label": "Braided rope and coiled cord",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-braided-rope.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-braided-rope.usda"
+    ],
+    "features": [
+      "cubic B-spline",
+      "vertex widths",
+      "uniform displayColor",
+      "variable twist"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Strands taper toward their ends and pass over and under without intersecting."
+    },
+    "assertions": {
+      "braidStrands": 3,
+      "braidControlPoints": 108,
+      "cordPlies": 2,
+      "cordControlPoints": 322,
+      "basis": "bspline",
+      "widthInterpolation": "vertex"
+    }
+  },
+  {
+    "id": "curved-studio-armillary",
+    "label": "Spline armillary sphere",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-armillary.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-armillary.usda"
+    ],
+    "features": [
+      "periodic Catmull-Rom",
+      "pinned B-spline",
+      "linear curves",
+      "uniform widths",
+      "transformed curves"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Rings close without seams; the ecliptic band is visibly wider than the other rings."
+    },
+    "assertions": {
+      "ringCurves": 8,
+      "frameCurves": 3,
+      "periodicCatmullRom": true,
+      "pinnedBspline": 3,
+      "linearAxis": 1,
+      "widthInterpolation": "uniform"
+    }
+  },
+  {
+    "id": "curved-studio-ribbon-rosette",
+    "label": "Bezier ribbon rosette",
+    "group": "Curves and points",
+    "root": "coverage/curved-surfaces/studio-ribbon-rosette.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-ribbon-rosette.usda"
+    ],
+    "features": [
+      "cubic Bezier",
+      "oriented ribbons",
+      "vertex normals",
+      "varying widths"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Loops render as flat, twisted ribbons oriented by authored normals; round tubes mean normals were ignored."
+    },
+    "assertions": {
+      "curves": 16,
+      "controlPoints": 112,
+      "basis": "bezier",
+      "segmentsPerCurve": 2,
+      "normals": 112,
+      "widthInterpolation": "varying"
+    }
+  },
+  {
+    "id": "curved-studio-rational-aqueduct",
+    "label": "Rational aqueduct arcades",
+    "group": "NURBS Curves",
+    "root": "coverage/curved-surfaces/studio-rational-aqueduct.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-rational-aqueduct.usda"
+    ],
+    "features": [
+      "NURBS curves",
+      "rational weights",
+      "repeated knots",
+      "mixed order",
+      "multiple spans"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Arches are exact semicircles with sharp springing joins; cubic-looking or overshooting arches mean weights or knots were ignored."
+    },
+    "assertions": {
+      "curves": 12,
+      "controlPoints": 418,
+      "orders": [
+        2,
+        3
+      ],
+      "knots": 448,
+      "rationalWeights": true,
+      "arches": 40
+    }
+  },
+  {
+    "id": "curved-studio-rational-amphora",
+    "label": "Rational amphora",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-rational-amphora.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-rational-amphora.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "rational weights",
+      "closed form",
+      "orientation",
+      "degenerate pole"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Cross-sections are exact circles; both handles shade outward even though one is leftHanded."
+    },
+    "assertions": {
+      "patches": 3,
+      "controlPoints": 243,
+      "rationalWeights": true,
+      "uForm": "closed",
+      "orientations": [
+        "rightHanded",
+        "rightHanded",
+        "leftHanded"
+      ],
+      "degeneratePole": true,
+      "handleSweepDegrees": 218
+    }
+  },
+  {
+    "id": "curved-studio-shell-canopy",
+    "label": "Folded shell canopy",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-shell-canopy.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-shell-canopy.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "multiple patches",
+      "shared seams",
+      "nonuniform knots",
+      "rational weights"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Four petals meet without cracks along shared control rows above a flared rational column."
+    },
+    "assertions": {
+      "patches": 5,
+      "petalControlGrid": [
+        5,
+        5
+      ],
+      "sharedSeams": 4,
+      "nonuniformKnots": true,
+      "rationalColumn": true
+    }
+  },
+  {
+    "id": "curved-studio-lacquered-canoe",
+    "label": "Lacquered canoe",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-lacquered-canoe.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-lacquered-canoe.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "degenerate edges",
+      "nonuniform knots",
+      "mixed order"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Bow and stern pinch to clean stems without shading spikes; thwarts sit on the evaluated gunwale."
+    },
+    "assertions": {
+      "patches": 3,
+      "hullControlGrid": [
+        7,
+        7
+      ],
+      "pinchedEnds": 2,
+      "thwartOrders": [
+        3,
+        2
+      ],
+      "nonuniformKnots": true
+    }
+  },
+  {
+    "id": "curved-studio-ruffled-lampshade",
+    "label": "Ruffled periodic lampshade",
+    "group": "NURBS Surfaces",
+    "root": "coverage/curved-surfaces/studio-ruffled-lampshade.usda",
+    "files": [
+      "coverage/curved-surfaces/studio-ruffled-lampshade.usda"
+    ],
+    "features": [
+      "NURBS patch",
+      "periodic form",
+      "unclamped knots",
+      "cubic multispan"
+    ],
+    "complexity": "high",
+    "thumbnailComplexity": "high",
+    "expected": {
+      "native": "USD geometry and authored topology are valid; Storm support for NURBS may vary.",
+      "needle": "Twelve swirling ruffles close seamlessly; a gap or overlap means periodic knots were treated as clamped."
+    },
+    "assertions": {
+      "uVertexCount": 27,
+      "vVertexCount": 6,
+      "uForm": "periodic",
+      "wrappedColumns": 3,
+      "uKnots": 31
+    }
+  },
+  {
+    "id": "curved-animated-subdivision-buddies",
+    "label": "Pip and Pop",
+    "group": "Subdivision",
+    "root": "coverage/curved-surfaces/animated-subdivision-buddies.usda",
+    "files": [
+      "coverage/curved-surfaces/animated-subdivision-buddies.usda"
+    ],
+    "features": [
+      "Catmull-Clark",
+      "animated hole faces",
+      "animated crease sharpness",
+      "animated corner sharpness",
+      "held topology samples"
+    ],
+    "complexity": "adaptive",
+    "thumbnailComplexity": "veryhigh",
+    "expected": {
+      "native": "Time-sampled mesh tags and holes resolve at authored frames.",
+      "needle": "Pip winks, gasps and laughs through hole faces and stiffens in shock; Pop somersaults off its spring, sharpens from a smooth pebble into a cube (corners first) and melts back."
+    },
+    "assertions": {
+      "timeRange": [
+        1,
+        121
+      ],
+      "framesPerSecond": 24,
+      "holeSamples": 17,
+      "creaseSamples": 25,
+      "stationaryControlCage": "/World/Pop/Morph"
+    }
   }
 ]

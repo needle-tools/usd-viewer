@@ -1,0 +1,150 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Scope "Looks"
+    {
+        def Material "Brass"
+        {
+            token outputs:surface.connect = </World/Looks/Brass/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.8, 0.6, 0.26)
+                color3f inputs:diffuseColor.connect = </World/Looks/Brass/Color.outputs:result>
+                float inputs:metallic = 0.85
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+
+            def Shader "Color"
+            {
+                uniform token info:id = "UsdPrimvarReader_float3"
+                float3 inputs:fallback = (0.8, 0.6, 0.26)
+                string inputs:varname = "displayColor"
+                float3 outputs:result
+            }
+        }
+
+        def Material "Lapis"
+        {
+            token outputs:surface.connect = </World/Looks/Lapis/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                float inputs:clearcoat = 0.8
+                float inputs:clearcoatRoughness = 0.06
+                color3f inputs:diffuseColor = (0.12, 0.25, 0.5)
+                float inputs:roughness = 0.25
+                token outputs:surface
+            }
+        }
+    }
+
+    def Xform "Sphere"
+    {
+        float xformOp:rotateZ = -38
+        uniform token[] xformOpOrder = ["xformOp:rotateZ"]
+
+        def BasisCurves "Rings" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform token basis = "catmullRom"
+            int[] curveVertexCounts = [12, 12, 12, 8, 8, 12, 12, 16]
+            float3[] extent = [(-1.0425, -1.0425, -1.0425), (1.0425, 1.0425, 1.0425)]
+            rel material:binding = </World/Looks/Brass>
+            point3f[] points = [(1, 0, 0), (0.86603, 0, 0.5), (0.5, 0, 0.86603), (0, 0, 1), (-0.5, 0, 0.86603), (-0.86603, 0, 0.5), (-1, 0, 0), (-0.86603, 0, -0.5), (-0.5, 0, -0.86603), (0, 0, -1), (0.5, 0, -0.86603), (0.86603, 0, -0.5), (0.91748, 0.39779, 0), (0.79456, 0.39779, 0.45874), (0.45874, 0.39779, 0.79456), (0, 0.39779, 0.91748), (-0.45874, 0.39779, 0.79456), (-0.79456, 0.39779, 0.45874), (-0.91748, 0.39779, 0), (-0.79456, 0.39779, -0.45874), (-0.45874, 0.39779, -0.79456), (0, 0.39779, -0.91748), (0.45874, 0.39779, -0.79456), (0.79456, 0.39779, -0.45874), (0.91748, -0.39779, 0), (0.79456, -0.39779, 0.45874), (0.45874, -0.39779, 0.79456), (0, -0.39779, 0.91748), (-0.45874, -0.39779, 0.79456), (-0.79456, -0.39779, 0.45874), (-0.91748, -0.39779, 0), (-0.79456, -0.39779, -0.45874), (-0.45874, -0.39779, -0.79456), (0, -0.39779, -0.91748), (0.45874, -0.39779, -0.79456), (0.79456, -0.39779, -0.45874), (0.39779, 0.91748, 0), (0.28128, 0.91748, 0.28128), (0, 0.91748, 0.39779), (-0.28128, 0.91748, 0.28128), (-0.39779, 0.91748, 0), (-0.28128, 0.91748, -0.28128), (0, 0.91748, -0.39779), (0.28128, 0.91748, -0.28128), (0.39779, -0.91748, 0), (0.28128, -0.91748, 0.28128), (0, -0.91748, 0.39779), (-0.28128, -0.91748, 0.28128), (-0.39779, -0.91748, 0), (-0.28128, -0.91748, -0.28128), (0, -0.91748, -0.39779), (0.28128, -0.91748, -0.28128), (1, 0, 0), (0.86603, 0.5, 0), (0.5, 0.86603, 0), (0, 1, 0), (-0.5, 0.86603, 0), (-0.86603, 0.5, 0), (-1, 0, 0), (-0.86603, -0.5, 0), (-0.5, -0.86603, 0), (0, -1, 0), (0.5, -0.86603, 0), (0.86603, -0.5, 0), (0, 0, 1), (0, 0.5, 0.86603), (0, 0.86603, 0.5), (0, 1, 0), (0, 0.86603, -0.5), (0, 0.5, -0.86603), (0, 0, -1), (0, -0.5, -0.86603), (0, -0.86603, -0.5), (0, -1, 0), (0, -0.86603, 0.5), (0, -0.5, 0.86603), (1, 0, 0), (0.92388, 0.15223, 0.3511), (0.70711, 0.28128, 0.64875), (0.38268, 0.36751, 0.84764), (0, 0.39779, 0.91748), (-0.38268, 0.36751, 0.84764), (-0.70711, 0.28128, 0.64875), (-0.92388, 0.15223, 0.3511), (-1, 0, 0), (-0.92388, -0.15223, -0.3511), (-0.70711, -0.28128, -0.64875), (-0.38268, -0.36751, -0.84764), (0, -0.39779, -0.91748), (0.38268, -0.36751, -0.84764), (0.70711, -0.28128, -0.64875), (0.92388, -0.15223, -0.3511)]
+            color3f[] primvars:displayColor = [(0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.82, 0.62, 0.28), (0.25, 0.52, 0.48)] (
+                interpolation = "uniform"
+            )
+            uniform token type = "cubic"
+            float[] widths = [0.04, 0.025, 0.025, 0.025, 0.025, 0.04, 0.04, 0.085] (
+                interpolation = "uniform"
+            )
+            uniform token wrap = "periodic"
+        }
+
+        def BasisCurves "Axis" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            int[] curveVertexCounts = [2]
+            float3[] extent = [(-0.015, -1.175, -0.015), (0.015, 1.175, 0.015)]
+            rel material:binding = </World/Looks/Brass>
+            point3f[] points = [(0, -1.16, 0), (0, 1.16, 0)]
+            color3f[] primvars:displayColor = [(0.62, 0.45, 0.2)] (
+                interpolation = "constant"
+            )
+            uniform token type = "linear"
+            float[] widths = [0.03] (
+                interpolation = "constant"
+            )
+            uniform token wrap = "nonperiodic"
+        }
+
+        def Sphere "Globe" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float3[] extent = [(-0.2, -0.2, -0.2), (0.2, 0.2, 0.2)]
+            rel material:binding = </World/Looks/Lapis>
+            double radius = 0.2
+        }
+    }
+
+    def BasisCurves "Frame" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token basis = "catmullRom"
+        int[] curveVertexCounts = [12, 12, 16]
+        float3[] extent = [(-1.3349999, -1.395, -1.3349999), (1.3349999, 1.1949999, 1.3349999)]
+        rel material:binding = </World/Looks/Brass>
+        point3f[] points = [(1.16, 0, 0), (1.00459, 0.58, 0), (0.58, 1.00459, 0), (0, 1.16, 0), (-0.58, 1.00459, 0), (-1.00459, 0.58, 0), (-1.16, 0, 0), (-1.00459, -0.58, 0), (-0.58, -1.00459, 0), (0, -1.16, 0), (0.58, -1.00459, 0), (1.00459, -0.58, 0), (1.16, 0, 0), (1.00459, 0, 0.58), (0.58, 0, 1.00459), (0, 0, 1.16), (-0.58, 0, 1.00459), (-1.00459, 0, 0.58), (-1.16, 0, 0), (-1.00459, 0, -0.58), (-0.58, 0, -1.00459), (0, 0, -1.16), (0.58, 0, -1.00459), (1.00459, 0, -0.58), (1.3, -1.36, 0), (1.20104, -1.36, 0.49749), (0.91924, -1.36, 0.91924), (0.49749, -1.36, 1.20104), (0, -1.36, 1.3), (-0.49749, -1.36, 1.20104), (-0.91924, -1.36, 0.91924), (-1.20104, -1.36, 0.49749), (-1.3, -1.36, 0), (-1.20104, -1.36, -0.49749), (-0.91924, -1.36, -0.91924), (-0.49749, -1.36, -1.20104), (0, -1.36, -1.3), (0.49749, -1.36, -1.20104), (0.91924, -1.36, -0.91924), (1.20104, -1.36, -0.49749)]
+        color3f[] primvars:displayColor = [(0.7, 0.52, 0.22), (0.7, 0.52, 0.22), (0.7, 0.52, 0.22)] (
+            interpolation = "uniform"
+        )
+        uniform token type = "cubic"
+        float[] widths = [0.07, 0.07, 0.05] (
+            interpolation = "uniform"
+        )
+        uniform token wrap = "periodic"
+    }
+
+    def BasisCurves "Legs" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token basis = "bspline"
+        int[] curveVertexCounts = [8, 8, 8]
+        float3[] extent = [(-1.24244, -1.41, -0.72999996), (1.24244, 0.03, 1.43)]
+        rel material:binding = </World/Looks/Brass>
+        point3f[] points = [(0, 0, 1.16), (0, -0.35, 1.22), (0, -0.8, 1.05), (0, -1.15, 0.9), (0, -1.38, 1.1), (0, -1.32, 1.36), (0, -1.18, 1.4), (0, -1.12, 1.29), (-1.00459, 0, -0.58), (-1.05655, -0.35, -0.61), (-0.90933, -0.8, -0.525), (-0.77942, -1.15, -0.45), (-0.95263, -1.38, -0.55), (-1.17779, -1.32, -0.68), (-1.21244, -1.18, -0.7), (-1.11717, -1.12, -0.645), (1.00459, 0, -0.58), (1.05655, -0.35, -0.61), (0.90933, -0.8, -0.525), (0.77942, -1.15, -0.45), (0.95263, -1.38, -0.55), (1.17779, -1.32, -0.68), (1.21244, -1.18, -0.7), (1.11717, -1.12, -0.645)]
+        color3f[] primvars:displayColor = [(0.3, 0.22, 0.14)] (
+            interpolation = "constant"
+        )
+        uniform token type = "cubic"
+        float[] widths = [0.06] (
+            interpolation = "constant"
+        )
+        uniform token wrap = "pinned"
+    }
+
+    def Camera "Camera"
+    {
+        float2 clippingRange = (0.1344, 67.216)
+        float focalLength = 50
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.780869, 0, -0.624695, 0), (-0.133433, 0.976922, -0.166792, 0), (0.610278, 0.213597, 0.762848, 0), (4.154115, 1.113545, 5.102526, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}

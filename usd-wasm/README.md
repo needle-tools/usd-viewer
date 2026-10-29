@@ -23,9 +23,13 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 - **Cameras & lights** — USD cameras and UsdLux lights.
 - **Materials** — UsdPreviewSurface and MaterialX via Hydra material documents,
   including environment and authored direct lighting.
-- **Geometry** — OpenSubdiv smooth subdivision surfaces and creases, world-space
-  points with varying widths, and evaluated Bézier/B-spline/NURBS curves.
+- **Geometry** — OpenSubdiv uniform/adaptive subdivision, animated creases, corners and
+  holes, world-space points with varying widths, evaluated Bézier/B-spline/NURBS
+  curves, and rational NURBS patches.
 - **Volumes** — optional bounded MaterialX media and OpenVDB density/heat visualization.
+- **Rendering** — WebGPURenderer with Basic, Beauty, MuTracer and gkjohnson modes.
+- **Inspection and authoring** — stage/property navigation, multi-selection,
+  instance picking, JavaScript REPL and serialized in-memory edits.
 - **glTF-in-USD** — Adobe `usdGltf` file format plugin loads glTF/GLB directly
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
@@ -33,10 +37,10 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.2.0 three
+npm install @needle-tools/usd@1.2.0 three@npm:@needle-tools/three@0.185.2-alpha.6
 ```
 
-This development checkout uses upstream OpenUSD 26.11.1 and ships a Hydra imaging bridge for
+Version 1.2.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
 three.js. The wasm bundle includes Adobe `usdGltf` with Draco-compressed
 glTF/GLB import, native `usdDraco` mesh payloads, MaterialX, and OpenSubdiv
 support.
@@ -101,9 +105,9 @@ served package paths.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/engine": "^5.1.2",
+    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
     "@needle-tools/usd": "1.2.0",
-    "three": "npm:@needle-tools/three@^0.169.19",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
     "vite": "^8.1.0"
   }
 }
@@ -196,7 +200,7 @@ property so USD references can resolve.
   },
   "dependencies": {
     "@needle-tools/usd": "1.2.0",
-    "three": "^0.185.0",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
     "vite": "^8.1.0"
   }
 }
@@ -209,15 +213,20 @@ property so USD references can resolve.
 <html>
   <body style="margin:0">
     <script type="module">
-      import * as THREE from "three";
+      import * as THREE from "three/webgpu";
       import { getUsdModule } from "@needle-tools/usd";
       import { createThreeHydra } from "@needle-tools/usd/three";
+      import { createWebGpuSupport, configureNeedleAgx } from "@needle-tools/usd/renderers";
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 1000);
       camera.position.set(0, 1.5, 4);
+      camera.lookAt(0, 0, 0);
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const renderer = new THREE.WebGPURenderer({ antialias: false });
+      await renderer.init();
+      await configureNeedleAgx(renderer);
+      renderer.toneMapping = THREE.AgXToneMapping;
       renderer.setSize(innerWidth, innerHeight);
       document.body.append(renderer.domElement);
 
@@ -225,9 +234,23 @@ property so USD references can resolve.
       const handle = await createThreeHydra({
         USD: usd,
         scene,
-        url: "./model.usdz"
+        url: "./model.usdz",
+        renderer,
+        webGpuSupport: await createWebGpuSupport(),
+        complexity: "adaptive",
+        autoPlay: true
       });
       await handle.ready();
+      await handle.materialsReady();
+
+      let authoredLights = false;
+      scene.traverse(object => { if (object.isLight) authoredLights = true; });
+      if (!authoredLights && !scene.environment) {
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7480, 2));
+        const key = new THREE.DirectionalLight(0xffffff, 3);
+        key.position.set(3, 5, 4);
+        scene.add(key);
+      }
 
       let last = performance.now();
       renderer.setAnimationLoop((time) => {
@@ -257,23 +280,31 @@ required COOP/COEP headers.
       {
         "imports": {
           "three": "/vendor/three/build/three.module.js",
+          "three/webgpu": "/vendor/three/build/three.webgpu.js",
+          "three/tsl": "/vendor/three/build/three.tsl.js",
           "three/addons/": "/vendor/three/examples/jsm/",
           "@needle-tools/materialx": "/vendor/@needle-tools/materialx/index.js",
           "@needle-tools/usd": "/vendor/@needle-tools/usd/src/index.js",
-          "@needle-tools/usd/three": "/vendor/@needle-tools/usd/src/create.three.js"
+          "@needle-tools/usd/three": "/vendor/@needle-tools/usd/src/create.three.js",
+          "@needle-tools/usd/renderers": "/vendor/@needle-tools/usd/src/renderers/index.js"
         }
       }
     </script>
     <script type="module">
-      import * as THREE from "three";
+      import * as THREE from "three/webgpu";
       import { getUsdModule } from "@needle-tools/usd";
       import { createThreeHydra } from "@needle-tools/usd/three";
+      import { createWebGpuSupport, configureNeedleAgx } from "@needle-tools/usd/renderers";
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 1000);
       camera.position.set(0, 1.5, 4);
+      camera.lookAt(0, 0, 0);
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const renderer = new THREE.WebGPURenderer({ antialias: false });
+      await renderer.init();
+      await configureNeedleAgx(renderer);
+      renderer.toneMapping = THREE.AgXToneMapping;
       renderer.setSize(innerWidth, innerHeight);
       document.body.append(renderer.domElement);
 
@@ -281,12 +312,23 @@ required COOP/COEP headers.
       const handle = await createThreeHydra({
         USD: usd,
         scene,
-        url: "./model.usdz"
+        url: "./model.usdz",
+        renderer,
+        webGpuSupport: await createWebGpuSupport(),
+        complexity: "adaptive",
+        autoPlay: true
       });
       await handle.ready();
-      // By default ready() waits for the stage and first Hydra draw, but not for
-      // async material generation. Pass waitForMaterials: true when correctness
-      // requires a material/texture barrier, or await handle.materialsReady().
+      await handle.materialsReady();
+
+      let authoredLights = false;
+      scene.traverse(object => { if (object.isLight) authoredLights = true; });
+      if (!authoredLights && !scene.environment) {
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7480, 2));
+        const key = new THREE.DirectionalLight(0xffffff, 3);
+        key.position.set(3, 5, 4);
+        scene.add(key);
+      }
 
       let last = performance.now();
       renderer.setAnimationLoop((time) => {
@@ -299,6 +341,37 @@ required COOP/COEP headers.
   </body>
 </html>
 ```
+
+### Subdivision detail and animation
+
+`createThreeHydra({ complexity: 'adaptive', ... })` and
+`await handle.setComplexity('adaptive')` evaluate OpenSubdiv limit surfaces with
+shared-edge, curvature-driven CPU tessellation. Catmull-Clark, Loop and bilinear
+meshes preserve holes, sharp normals, face-varying UV seams and material subsets.
+Rates change with geometry, not camera distance, and the triangle budget is
+bounded by uniform Very high. Unsupported Bfr topology warns and falls back to
+uniform refinement.
+
+`low`, `medium`, `high`, `veryhigh` (also `very-high`) and numeric OpenUSD
+complexity values select uniform refinement. The SDK default remains `low`;
+the public viewer defaults to Adaptive and remembers user choices. Earlier
+runtimes without `SetAdaptiveSubdivision` report a warning and use Very high.
+
+Time-sampled hole indices are held between samples; crease/corner sharpness can
+interpolate. Animated crease indices, crease lengths, corner indices and point
+deformation also update on playback and seeking:
+
+```js
+handle.setPlaying(false);
+await handle.setTime(61); // USD time codes, not seconds; waits for geometry sync.
+await handle.setTime(1);  // Backward seeking restores subdivision and holes.
+handle.setPlaying(true);
+```
+
+The public viewer's **Examples → Needle → Subdivision → Pip and Pop** demonstrates
+winking hole faces and a stationary cage morphing between round and sharp shapes.
+The repository also includes 63 executable JavaScript lessons under
+**Examples → Needle → JavaScript API**, with native preview captures.
 
 ### Gaussian Splats
 
@@ -313,7 +386,7 @@ Legacy WebGLRenderer and Needle Engine integrations continue to use Spark.
 Install Spark alongside Three.js 0.180 or newer and pass the host renderer:
 
 ```sh
-npm install @sparkjsdev/spark@^2.1.0 three@^0.185.0
+npm install @sparkjsdev/spark@2.2.0 three@npm:@needle-tools/three@0.185.2-alpha.6
 ```
 
 Spark is an optional peer dependency; scenes without `particleField` prims do
@@ -342,7 +415,7 @@ Shadow bounds follow the composed USD scene, and the owning handle releases
 the shadow maps and attribute handles on disposal. Stages without active
 shadow lights skip shadow-bound traversal.
 
-**Load Sample → Needle → Lights → Distant sun** has `shadows` variants for
+**Examples → Needle → Lights → Distant sun** has `shadows` variants for
 enabling and disabling its authored shadow.
 
 Bounded-medium proxy boxes do not cast opaque surface shadows. Their material
@@ -577,11 +650,15 @@ To match Needle Engine's AgX look, call `await configureNeedleAgx(renderer)` bef
 
 Basic renders directly. Beauty adds Three.js SSGI, ambient occlusion and temporal antialiasing. Path traced uses MuTracer with 512 samples, eight bounces and JNLM denoising; scene and camera edits reset accumulation. MuTracer is an optional peer and must be supplied with `loadPathTracer` when path tracing is enabled. It loads only when selected. A separate output canvas keeps the existing orbit controls connected; an application may supply its own `canvas` for embedded layouts.
 
+Basic and Beauty support optional HDR bloom on `WebGPURenderer`, including its WebGL fallback. It is off by default. Enable it with `await modes.setSettings({ bloom: true, bloomStrength: 0.5, bloomRadius: 0.5, bloomThreshold: 1 })`. Strength ranges from 0 to 10, radius from 0 to 1, and the scene-linear luminance threshold from 0 to 100. Bloom runs after transparent compositing and before the selected tone mapping, retaining Needle AgX. Basic adds an offscreen pass only while bloom is enabled. The settings picker exposes these controls for Basic/Beauty; the two path tracers do not apply this effect.
+
+UsdLux light conversion respects luminance, angular size and [area normalization](https://openusd.org/release/user_guides/schemas/usdLux/LightAPI.html). `scenePrimitiveLightIntensityScale` is an additional overall multiplier; the loader retains its legacy default of `0.01`. Pass `1` to use authored luminance without that multiplier, as the public viewer's light examples do. Dome environments retain their authored intensity independently. Disk and cylinder lights remain geometric approximations, and native Storm thumbnails can differ in area-light transport and display transform. Preview Surface emissive colors remain linear HDR values; Beauty's ambient occlusion does not attenuate their emission.
+
 WebGPU support translates MaterialX surfaces through the bundled TSL loader, including textures, nested graphs and geometry properties. Bounded MaterialX and VDB volumes additionally require the factories from `/volumes`. Gaussian splats use the same WebGPURenderer through the particle-field factory in `createWebGpuSupport()`.
 
 `pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
 
-`configureNeedleAgxDisplay(engine, () => renderer.toneMapping)` follows changes to the host's AgX (Needle), Linear, Reinhard or NoToneMapping choice. Needle AgX remains the default when no callback is supplied. NoToneMapping ignores exposure, matching Three's presentation.
+`configureNeedleAgxDisplay(engine, () => renderer.toneMapping)` follows changes to the host's AgX (Needle), ACES Filmic, Khronos PBR Neutral, Linear, Reinhard or NoToneMapping choice. Needle AgX remains the default when no callback is supplied. NoToneMapping ignores exposure, matching Three's presentation.
 
 The `/scene` entry also exports `setPrimVisible(handle, path, visible)` and `setPrimActive(handle, path, active)`. They synchronize through `handle.editStage`; activation recomposes descendants. Visibility edits the authored default for static visibility, or the current time for animated visibility. These are in-memory stage edits, like variants; the host decides whether to export them.
 
@@ -628,8 +705,9 @@ second `handle.editStage` inside the callback.
 
 Embedded panels do not add a second Stage button. `inspectStage().time` is null
 for static content, including files that only declare frame bounds; otherwise it
-reports the composed animation range. The timeline follows that information after
-variant and payload edits, with regularly spaced frame ticks.
+reports the composed animation range. Timeline contents refresh after variant and
+payload edits, with regularly spaced frame ticks. In the public viewer, changing
+files never reopens or redocks a timeline the user closed or arranged.
 
 The development viewer uses Dockview Core for resizable, dockable, floating and
 popout panels, saved workspace layouts and viewport maximization. Its local
