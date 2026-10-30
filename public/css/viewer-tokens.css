@@ -54,6 +54,10 @@
   --usd-gallery-results-min-width: 180px;
   --usd-gallery-results-min-height: 128px;
   --usd-splitter-size: 5px;
+  --usd-code-sidebar-breakpoint: 480px;
+  --usd-code-files-width: 180px;
+  --usd-code-files-min-width: 144px;
+  --usd-code-reader-min-width: 240px;
   --usd-gallery-card-width: 128px;
   --usd-examples-width: 360px;
   --usd-examples-min-width: 240px;

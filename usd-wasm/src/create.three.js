@@ -400,6 +400,7 @@ async function createScopedThreeHydra(config, lifetime) {
         usdVolumeFactory: config.usdVolumeFactory,
         requestRender: config.requestRender,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
+        ktx2TranscoderPath: config.ktx2TranscoderPath,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
         showCameraHelpers: config.showCameraHelpers,
         showLightHelpers: config.showLightHelpers,

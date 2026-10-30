@@ -28,7 +28,7 @@ const selection = createSelection();
 const downloadHost = document.createElement('div'); downloadHost.style.cssText='position:fixed;top:8px;left:8px;z-index:100';document.body.append(downloadHost);
 const exportProgress = [];
 const downloads = mountDownloadButton({container:downloadHost,getSource:()=>current?{handle,filename:'scene.usda'}:null,stateKey:'packed-download-format',onProgress:value=>exportProgress.push(value)});
-let maskHandle, maskRoot;
+let maskHandle, maskRoot, ktxHandle, ktxRoot;
 window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, downloads, exportProgress, setPrimActive, setPrimVisible, get status(){return status;},
   async cutout(value) {
     if (!maskHandle) {
@@ -42,13 +42,24 @@ window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selec
     const values=[];maskRoot.traverse(object=>{if(object.isMesh&&object.material.userData.usdMdlApproximation)values.push({alphaTest:object.material.alphaTest,sideCopy:!!object.material.userData.usdHydraSideCloneOf});});
     return values;
   },
+  async ktx2(readable = false) {
+    if (!ktxHandle) {
+      scene.remove(maskRoot); await maskHandle?.dispose();
+      ktxRoot = new Group(); scene.add(ktxRoot);
+      ktxHandle = await createThreeHydra({USD,scene:ktxRoot,renderScene:scene,renderer,url:'/textures/ktx2-mosaic.usda',webGpuSupport:await createWebGpuSupport(),scenePrimitiveLightIntensityScale:1});
+      await ktxHandle.ready();
+    }
+    if (readable) await ktxHandle.editStage(stage=>stage.GetPrimAtPath('/World/Looks/Mosaic/Surface').GetAttribute('inputs:roughness').AddConnection('/World/Looks/Mosaic/Texture.outputs:r'));
+    await ktxHandle.materialsReady();await renderer.compileAsync(scene,activeCamera);
+    const values=[];ktxRoot.traverse(o=>{const m=o.material;if(m?.map?.name.endsWith('.ktx2'))values.push({compressed:!!m.map.isCompressedTexture,colorSpace:m.map.colorSpace,width:m.map.image.width,readable:!!m.roughnessMap?.isDataTexture});});return values;
+  },
   async dispose(){
     current=false;stopped=true;cancelAnimationFrame(renderFrame);
     // The consumer owns scene membership and GPU submissions. Remove the
     // textured stage and flush its last frame before releasing loader textures.
-    scene.remove(root);if(maskRoot)scene.remove(maskRoot);
+    scene.remove(root);if(maskRoot)scene.remove(maskRoot);if(ktxRoot)scene.remove(ktxRoot);
     await renderer.compileAsync(scene,activeCamera);renderer.render(scene,activeCamera);await renderer.backend.device?.queue.onSubmittedWorkDone();
-    downloads.dispose();downloadHost.remove();repl.dispose();panel.dispose();picker.modes.dispose();await maskHandle?.dispose();await handle.dispose();controls.dispose();renderer.dispose();
+    downloads.dispose();downloadHost.remove();repl.dispose();panel.dispose();picker.modes.dispose();await ktxHandle?.dispose();await maskHandle?.dispose();await handle.dispose();controls.dispose();renderer.dispose();
   }
 };
 function render() { if(stopped)return;picker.modes.render(activeCamera);renderFrame=requestAnimationFrame(render); } render();

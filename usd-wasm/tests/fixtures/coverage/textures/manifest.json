@@ -1,0 +1,67 @@
+[
+  {
+    "id": "textures-ktx2-mosaic",
+    "label": "KTX2 Mosaic",
+    "group": "Texture Formats",
+    "root": "coverage/textures/ktx2-mosaic.usda",
+    "files": [
+      "coverage/textures/ktx2-mosaic.usda",
+      "coverage/textures/mosaic.ktx2"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "KTX2 UASTC"
+    ],
+    "assertions": [
+      "Native composition has no errors",
+      "All layer and texture dependencies resolve"
+    ]
+  },
+  {
+    "id": "textures-image-formats",
+    "label": "PNG, JPEG and TGA",
+    "group": "Texture Formats",
+    "root": "coverage/textures/image-formats.usda",
+    "files": [
+      "coverage/textures/fabric.jpg",
+      "coverage/textures/image-formats.usda",
+      "coverage/textures/mosaic.png",
+      "coverage/textures/signal.tga"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "PNG JPEG TGA"
+    ],
+    "assertions": [
+      "Native composition has no errors",
+      "All layer and texture dependencies resolve"
+    ]
+  },
+  {
+    "id": "textures-exr-neon",
+    "label": "EXR Neon",
+    "group": "Texture Formats",
+    "root": "coverage/textures/exr-neon.usda",
+    "files": [
+      "coverage/textures/exr-neon.usda",
+      "coverage/textures/neon.exr"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "linear OpenEXR HDR"
+    ],
+    "assertions": [
+      "Native composition has no errors",
+      "All layer and texture dependencies resolve"
+    ]
+  }
+]

@@ -767,3 +767,24 @@ The development viewer uses Dockview Core for resizable, dockable, floating and
 popout panels, saved workspace layouts and viewport maximization. Its local
 Needle brand assets support system, light and dark UI themes independently of
 the scene background.
+
+## KTX2 material textures
+
+UsdUVTexture and MaterialX image inputs can load 2D KTX2 textures. Basis workers
+load on demand. Color maps retain GPU compression where supported; scalar-channel
+or normal-value remapping requests a separate RGBA decode without changing the
+shared color map. Authored color-space settings override container metadata.
+
+Modern Three.js resolves its bundled Basis decoder assets by default. To host
+them yourself (required with Three r160), pass the matching decoder directory:
+
+```js
+const handle = await createThreeHydra({
+  USD, scene: usdRoot, renderScene: scene, renderer, url: '/model.usda',
+  ktx2TranscoderPath: '/basis/', // basis_transcoder.js and basis_transcoder.wasm
+});
+```
+
+Needle Engine's USD plugin accepts the same `ktx2TranscoderPath` option. The
+loader owns its workers and drains active decodes before terminating them.
+Dome environment images currently use HDR or EXR.

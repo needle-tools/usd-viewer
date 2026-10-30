@@ -2867,6 +2867,50 @@ export const coverageAssetLibrary = [
     "thumbnail": "thumbnails/materialx-explicit-version.png"
   },
   {
+    "id": "production-shot",
+    "label": "Workshop Shot",
+    "group": "Production",
+    "root": "coverage/production/shot.usda",
+    "files": [
+      "coverage/production/geometry.usda",
+      "coverage/production/layout.usda",
+      "coverage/production/lighting.usda",
+      "coverage/production/looks.usda",
+      "coverage/production/model.usda",
+      "coverage/production/shot.usda"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "layered composition",
+      "payload",
+      "material variants"
+    ],
+    "thumbnail": "thumbnails/production-shot.png"
+  },
+  {
+    "id": "production-lookdev",
+    "label": "Workshop Asset",
+    "group": "Production",
+    "root": "coverage/production/lookdev.usda",
+    "files": [
+      "coverage/production/geometry.usda",
+      "coverage/production/lookdev.usda",
+      "coverage/production/looks.usda",
+      "coverage/production/model.usda"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "layered composition",
+      "payload",
+      "material variants"
+    ],
+    "thumbnail": "thumbnails/production-lookdev.png"
+  },
+  {
     "id": "shading-mx_noise_marble",
     "label": "Noise marble",
     "group": "MaterialX",
@@ -3804,5 +3848,61 @@ export const coverageAssetLibrary = [
     },
     "scenePrimitiveLightIntensityScale": 1,
     "thumbnail": "thumbnails/shading-shade_specular_workflow.png"
+  },
+  {
+    "id": "textures-ktx2-mosaic",
+    "label": "KTX2 Mosaic",
+    "group": "Texture Formats",
+    "root": "coverage/textures/ktx2-mosaic.usda",
+    "files": [
+      "coverage/textures/ktx2-mosaic.usda",
+      "coverage/textures/mosaic.ktx2"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "KTX2 UASTC"
+    ],
+    "thumbnail": "thumbnails/textures-ktx2-mosaic.png"
+  },
+  {
+    "id": "textures-image-formats",
+    "label": "PNG, JPEG and TGA",
+    "group": "Texture Formats",
+    "root": "coverage/textures/image-formats.usda",
+    "files": [
+      "coverage/textures/fabric.jpg",
+      "coverage/textures/image-formats.usda",
+      "coverage/textures/mosaic.png",
+      "coverage/textures/signal.tga"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "PNG JPEG TGA"
+    ],
+    "thumbnail": "thumbnails/textures-image-formats.png"
+  },
+  {
+    "id": "textures-exr-neon",
+    "label": "EXR Neon",
+    "group": "Texture Formats",
+    "root": "coverage/textures/exr-neon.usda",
+    "files": [
+      "coverage/textures/exr-neon.usda",
+      "coverage/textures/neon.exr"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "UsdUVTexture",
+      "linear OpenEXR HDR"
+    ],
+    "thumbnail": "thumbnails/textures-exr-neon.png"
   }
 ];

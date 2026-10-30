@@ -21,7 +21,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty, MuTracer or gkjohnson path tracing; optional tracers load when selected.
 - Evaluate uniform or adaptive OpenSubdiv surfaces, including animated creases, corners and holes.
 - Inspect and follow individual properties, pick native/point instances, select multiple objects and run the embedded JavaScript REPL.
-- Arrange Stage, Examples, Properties, Layers, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
+- Arrange Stage, Examples, Properties, Layers, Code, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
@@ -53,10 +53,23 @@ Minimal package usage examples for plain three.js and Needle Engine live in
 ## Examples and render settings
 
 Use **Examples** to browse local Needle fixtures, the 14 NVIDIA SimReady assets,
-USD Working Group assets and glTF samples. Needle includes 187 coverage fixtures
+USD Working Group assets and glTF samples. Needle includes 192 coverage fixtures
 and 63 executable JavaScript lessons with distinct native Storm previews.
 **Subdivision → Pip and Pop** demonstrates animated hole faces and crease/corner
 sharpness in a five-second loop.
+
+**Window → Code** shows the current JavaScript lesson or USDA for any composed
+layer. Layer text comes from the USD API, includes unsaved authored edits and
+updates when the stage changes. A filterable file tree appears when the pane
+is wide enough, with an adjustable sidebar; narrow panes use a source picker.
+Supplied files, JS helpers, material source and loaded textures are available
+alongside the layers. Text can be copied, raster images can be previewed, and
+other binary files show metadata. File inspection is read-only and preserves
+the loaded root. Selection and sidebar preferences are remembered.
+
+**Production → Workshop Shot / Workshop Asset** demonstrates relative references,
+a geometry payload, separate material layers, finish variants and shot lighting.
+**Texture Formats** contains real KTX2 UASTC, linear EXR, PNG, JPEG and TGA inputs.
 
 Fresh viewer settings select Beauty and Adaptive. Render mode, quality and detail
 choices are remembered; an explicit URL overrides them. Scene background and UI

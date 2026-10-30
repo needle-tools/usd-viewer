@@ -1453,6 +1453,46 @@
       "capture": "surface",
       "image": "thumbnails/curved-animated-subdivision-buddies.png",
       "sha256": "ccf5088ca25ce636189934a3daa5d8d026a5df39977ad88d9679141df5ca0366"
+    },
+    {
+      "id": "textures-ktx2-mosaic",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface; KTX2 decoded with Khronos ktx for native Storm; solid dome emitted via equivalent constant HDR texture",
+      "image": "thumbnails/textures-ktx2-mosaic.png",
+      "sha256": "5a2cf9c676f1ae7383b7cf0a77e0ce651bcc5305deb2a460d69a7c7e7368c09e"
+    },
+    {
+      "id": "textures-image-formats",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "image": "thumbnails/textures-image-formats.png",
+      "sha256": "ea291f6f917fc80dc6e1e795a99d523653a77145d4ae268c09f590e48b83dc7a"
+    },
+    {
+      "id": "textures-exr-neon",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "image": "thumbnails/textures-exr-neon.png",
+      "sha256": "c4ac3ee8a11b6f132e3746162f81643a39cda3e33ac40f382358ddb83d5e88df"
+    },
+    {
+      "id": "production-shot",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "image": "thumbnails/production-shot.png",
+      "sha256": "f6e65cf5f44261c4c869b568463197a2fe9ebb26b592480c069b7e32ae9e1b88"
+    },
+    {
+      "id": "production-lookdev",
+      "renderer": "Storm",
+      "camera": "/World/Camera",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "image": "thumbnails/production-lookdev.png",
+      "sha256": "7a3bc288872ea20d8a71a70d8d7e1e77d9919f0bb705ac083b2ad37596eb7155"
     }
   ]
 }

@@ -34,6 +34,8 @@ try {
     await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     if (name === 'modern') await cp(join(sdk,'tests/fixtures/coverage/lighting-mdl'),join(root,'public/mdl'),{recursive:true});
+    await cp(join(sdk,'tests/fixtures/coverage/textures'),join(root,'public/textures'),{recursive:true});
+    if (name === 'legacy') await cp(join(root,'node_modules/three/examples/jsm/libs/basis'),join(root,'public/basis'),{recursive:true});
     await command(`${name}-build`, root, 'npm', ['run', 'build']);
   }
   const root = result.consumers[0].root;
@@ -138,6 +140,13 @@ try {
       result.mdlCutouts.push({value,materials});await page.waitForTimeout(300);
       await page.screenshot({path:join(output,`mdl-cutout-${value}.png`)});
     }
+    result.phase='KTX2 compressed color';
+    result.ktx2 = await page.evaluate(()=>window.packed.ktx2());
+    assert.ok(result.ktx2.length>=2&&result.ktx2.every(t=>t.compressed&&t.colorSpace==='srgb'&&t.width===256),'packed KTX2 color maps decode with container color space');
+    await page.screenshot({path:join(output,'ktx2.png')});
+    result.phase='KTX2 readable channels';
+    result.ktx2Readable = await page.evaluate(()=>window.packed.ktx2(true));
+    assert.ok(result.ktx2Readable.every(t=>t.compressed&&t.readable),'packed KTX2 scalar remaps retain the compressed color map');
     result.phase='modern disposal';
     await page.evaluate(async () => { await window.packed.dispose(); });
     const legacyRoot = result.consumers[1].root;
@@ -182,6 +191,23 @@ try {
           if (!(center[0] > 80 && center[0] > center[1] * 1.2 && center[1] > center[2])) throw new Error('Solid dome lost its metal reflections: ' + center);
           return {center, reflected:true};
         } finally { scene.remove(root); renderer.render(scene,camera); await handle.dispose(); target.dispose(); renderer.dispose(); }
+      });
+      result.legacyKtx2 = await page.evaluate(async () => {
+        const {getUsdModule,createThreeHydra,Group,Scene,WebGLRenderer,WebGLRenderTarget,PerspectiveCamera} = window.baseSdk;
+        const USD=await getUsdModule(),scene=new Scene(),root=new Group();scene.add(root);
+        const renderer=new WebGLRenderer(),target=new WebGLRenderTarget(64,64),camera=new PerspectiveCamera(40,1,.1,100);camera.position.set(0,1.1,6);camera.lookAt(0,1,0);
+        const handle=await createThreeHydra({USD,scene:root,renderScene:scene,renderer,url:'/textures/ktx2-mosaic.usda',ktx2TranscoderPath:'/basis/',scenePrimitiveLightIntensityScale:1});
+        try {
+          await handle.ready();await handle.materialsReady();renderer.setRenderTarget(target);renderer.render(scene,camera);
+          const maps=[];root.traverse(o=>{if(o.material?.map)maps.push({compressed:!!o.material.map.isCompressedTexture,colorSpace:o.material.map.colorSpace,width:o.material.map.image.width});});
+          if(maps.length!==2||!maps.every(t=>t.compressed&&t.colorSpace==='srgb'&&t.width===256))throw new Error('Legacy KTX2 material textures failed: '+JSON.stringify(maps));
+          await handle.editStage(stage=>stage.GetPrimAtPath('/World/Looks/Mosaic/Surface').GetAttribute('inputs:roughness').AddConnection('/World/Looks/Mosaic/Texture.outputs:r'));await handle.materialsReady();renderer.render(scene,camera);
+          const readable=[];root.traverse(o=>{if(o.material?.map)readable.push(!!o.material.roughnessMap?.isDataTexture);});
+          if(!readable.length||!readable.every(Boolean))throw new Error('Legacy KTX2 scalar remapping failed');
+          const pixels=new Uint8Array(64*64*4);renderer.readRenderTargetPixels(target,0,0,64,64,pixels);let colored=0;
+          for(let i=0;i<pixels.length;i+=4)if(Math.max(pixels[i],pixels[i+1],pixels[i+2])-Math.min(pixels[i],pixels[i+1],pixels[i+2])>30)colored++;
+          if(colored<30)throw new Error('Legacy KTX2 produced no colored render');return {maps,colored,readable};
+        }finally{scene.remove(root);renderer.render(scene,camera);await handle.dispose();target.dispose();renderer.dispose();}
       });
     } finally { await new Promise(resolve => legacyServer.httpServer.close(resolve)); }
     await page.waitForTimeout(100);

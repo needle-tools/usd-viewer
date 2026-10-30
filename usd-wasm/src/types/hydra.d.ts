@@ -65,6 +65,8 @@ export type threeJsRenderDelegateConfig = {
     showLightHelpers?: boolean,
     /** Overall light multiplier after UsdLux unit conversion. Legacy default 0.01; use 1 for authored luminance. Dome environments use their authored intensity independently. */
     scenePrimitiveLightIntensityScale?: number,
+    /** Self-hosted Three Basis decoder directory, with trailing slash. Required for KTX2 with Three r160; modern Three defaults to its bundled decoder assets. */
+    ktx2TranscoderPath?: string,
     rootFile?: string,
     /** Paths for resolving textures */
     paths?: string[],

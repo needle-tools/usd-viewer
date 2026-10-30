@@ -69,3 +69,10 @@ test('HTTP textures use resolver-owned URLs before any native byte read', async 
     } finally { delegate.dispose(); }
   }
 });
+
+test('KTX2 container signatures override misleading image suffixes', () => {
+  const magic = new Uint8Array([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]);
+  assert.equal(textureFileType('jpg', magic), 'image/ktx2');
+  assert.equal(textureFileType('ktx2'), 'image/ktx2');
+  assert.notEqual(textureFileType('png', magic.subarray(0, 11)), 'image/ktx2');
+});

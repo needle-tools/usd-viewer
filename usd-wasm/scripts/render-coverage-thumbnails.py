@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdSkel
 from nurbs_reference import evaluated_reference
 from native_dome_reference import textured_dome_reference
+from native_texture_reference import decoded_texture_reference
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures'
@@ -83,6 +84,10 @@ def render(task):
         proxy.GetRootLayer().Save()
         stage, source = proxy, str(work / 'particle-bounds.usda')
         capture = 'bounds-only; native Storm 26.05 predates particle-field rendering'
+    stage, decoded_textures = decoded_texture_reference(stage, work / 'decoded-textures.usda')
+    if decoded_textures:
+        source = stage.GetRootLayer().identifier
+        capture += '; KTX2 decoded with Khronos ktx for native Storm'
     stage, textured_domes = textured_dome_reference(stage, work / 'textured-domes.usda')
     if textured_domes:
         source = stage.GetRootLayer().identifier

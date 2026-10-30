@@ -35,6 +35,8 @@ import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
 import { fixtureNavigation } from './viewer-fixture-routing.js';
 import { runApiExample } from './viewer-api-examples.js';
+import { createSourceFiles } from './viewer-source-files.js';
+import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { setupViewerPhysics } from './viewer-physics.js';
 import { createViewerLighting } from './viewer-lighting.js';
@@ -1609,6 +1611,8 @@ async function showUsdVariants(stage, handle) {
 async function clearStage({ clearNeedleEngine = false } = {}) {
   apiExampleAbort?.abort(); apiExampleAbort = null;
   loadGeneration++;
+  // Revoke the Code pane's stage listener before the Hydra handle is disposed.
+  window.usdWorkbench?.code.show(null);
   viewportInteraction?.clear();
   suiteControls?.dispose(); suiteControls = null; window.usdStagePanel = null;
   ready = false;
@@ -1742,6 +1746,7 @@ async function ensureNeedleEngineLoader() {
       autoPlay: true,
       getFiles: () => needleLoaderFiles,
       getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+      ktx2TranscoderPath: "/three/examples/jsm/libs/basis/",
       getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
     });
   }
@@ -2055,6 +2060,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         waitForMaterials,
         complexity: complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
         scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+        ktx2TranscoderPath: "/three/examples/jsm/libs/basis/",
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
       });
@@ -2134,6 +2140,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
     window.usdStagePanel = suiteControls;
+    window.usdWorkbench?.code.show({ stage, usd: USD, handle, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     viewportInteraction?.select(suiteControls.selection);
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
@@ -2255,6 +2262,11 @@ async function loadCatalogAssetBundle(asset, displayName) {
   }
 }
 
+function apiExampleSource(asset) {
+  const index = asset?.executable ? apiExampleAssets.findIndex(candidate => candidate.executable === asset.executable) : -1;
+  return index < 0 ? null : { title: asset.label, path: "api/examples.js", code: replExamples[index].code };
+}
+
 async function loadApiExample(asset) {
   const generation = loadGeneration;
   const controller = new AbortController(); apiExampleAbort = controller;
@@ -2274,6 +2286,7 @@ async function loadApiExample(asset) {
     } else {
       // Runtime/inspection examples can legitimately produce output alone.
       ready = true;
+      window.usdWorkbench?.code.show({ example: apiExampleSource(asset), getFiles: createSourceFiles({asset}) });
       window.setViewerLoading?.(false); window.hideLoadingOverlay?.();
     }
     if (generation !== loadGeneration || controller.signal.aborted) return;
@@ -2291,6 +2304,7 @@ async function loadApiExample(asset) {
   } catch (error) {
     if (controller.signal.aborted || generation !== loadGeneration) return;
     ready = false; console.error('API example failed:', error);
+    if (!currentHydraHandle) window.usdWorkbench?.code.show({ example: apiExampleSource(asset), getFiles: createSourceFiles({asset}) });
     window.setViewerLoading?.(false); window.hideLoadingOverlay?.();
     window.showLoadError?.(error.message || String(error));
   } finally {

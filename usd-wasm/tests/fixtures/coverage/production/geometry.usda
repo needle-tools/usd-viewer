@@ -1,0 +1,307 @@
+#usda 1.0
+(
+    defaultPrim = "Robot"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Robot"
+{
+    def Mesh "Body" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Teal>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.035, 0.54, 0.5)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.85, 0.95, 0.6)
+        double3 xformOp:translate = (0, 0.95, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Head" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Teal>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.035, 0.54, 0.5)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (1.15, 0.8, 0.72)
+        double3 xformOp:translate = (0, 1.75, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Eye0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Ink>
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        double radius = 0.15
+        float3 xformOp:scale = (1, 1, 0.5)
+        double3 xformOp:translate = (-0.27, 1.83, 0.34)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Glint0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Cream>
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        double radius = 0.035
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (-0.30500000000000005, 1.87, 0.415)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Foot0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Ink>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.32, 0.3, 0.58)
+        double3 xformOp:translate = (-0.27, 0.15, 0.12)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Leg0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Cream>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.19, 0.48, 0.22)
+        double3 xformOp:translate = (-0.27, 0.42, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Eye1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Ink>
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        double radius = 0.15
+        float3 xformOp:scale = (1, 1, 0.5)
+        double3 xformOp:translate = (0.27, 1.83, 0.34)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Glint1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Cream>
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        double radius = 0.035
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0.23500000000000001, 1.87, 0.415)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Foot1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Ink>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.32, 0.3, 0.58)
+        double3 xformOp:translate = (0.27, 0.15, 0.12)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Leg1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Cream>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.19, 0.48, 0.22)
+        double3 xformOp:translate = (0.27, 0.42, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Shoulder0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Gold>
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        double radius = 0.19
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (-0.62, 1.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Arm0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Cream>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.24, 0.6, 0.28)
+        double3 xformOp:translate = (-0.62, 0.85, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Hand0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Ink>
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        double radius = 0.17
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (-0.62, 0.55, 0.04)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Shoulder1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Gold>
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        double radius = 0.19
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0.62, 1.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Arm1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Cream>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.24, 0.6, 0.28)
+        double3 xformOp:translate = (0.62, 0.85, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Hand1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Ink>
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        double radius = 0.17
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0.62, 0.55, 0.04)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Mouth" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Ink>
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        double size = 1
+        float3 xformOp:scale = (0.35, 0.055, 0.04)
+        double3 xformOp:translate = (0, 1.53, 0.36)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "Antenna" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Cream>
+        color3f[] primvars:displayColor = [(0.85, 0.8, 0.65)]
+        double size = 1
+        float3 xformOp:scale = (0.06, 0.45, 0.06)
+        double3 xformOp:translate = (0, 2.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Sphere "Tip" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </Robot/Looks/Gold>
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        double radius = 0.13
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 2.45, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Chest0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Gold>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.1, 0.1, 0.05)
+        double3 xformOp:translate = (-0.2, 1.02, 0.31)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Chest1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Gold>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.1, 0.1, 0.05)
+        double3 xformOp:translate = (0, 1.02, 0.31)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Mesh "Chest2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </Robot/Looks/Gold>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.95, 0.62, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (0.1, 0.1, 0.05)
+        double3 xformOp:translate = (0.2, 1.02, 0.31)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+

@@ -1,0 +1,86 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Xform "Robot" (
+        prepend references = @model.usda@</Robot>
+        variants = {
+            string finish = "Coral"
+        }
+    )
+    {
+    }
+
+    def "Lights"
+    {
+        def DistantLight "Key"
+        {
+            color3f inputs:color = (1, 0.93, 0.82)
+            float inputs:intensity = 3
+            bool inputs:normalize = 1
+            float3 xformOp:rotateXYZ = (-35, -35, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DistantLight "Fill"
+        {
+            color3f inputs:color = (0.65, 0.8, 1)
+            float inputs:intensity = 0.8
+            bool inputs:normalize = 1
+            float3 xformOp:rotateXYZ = (-15, 125, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DomeLight "Sky"
+        {
+            float inputs:intensity = 0.45
+        }
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 42
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.7808688094430304, -2.775557561562892e-17, -0.6246950475544242, 0), (-0.1514412236495574, 0.9701703390049772, -0.1893015295619468, 0), (0.6060606060606061, 0.2424242424242425, 0.7575757575757578, -0), (3.999999999999999, 2.8, 5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def "Looks"
+    {
+        def Material "Pedestal"
+        {
+            token outputs:surface.connect = </World/Looks/Pedestal/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.055, 0.09, 0.12)
+                float inputs:metallic = 0.2
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+    }
+
+    def Mesh "Pedestal" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 3, 2, 1, 4, 5, 6, 7, 0, 4, 7, 3, 1, 2, 6, 5, 3, 7, 6, 2, 0, 1, 5, 4]
+        rel material:binding = </World/Looks/Pedestal>
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        color3f[] primvars:displayColor = [(0.055, 0.09, 0.12)]
+        uniform token subdivisionScheme = "catmullClark"
+        float3 xformOp:scale = (2.2, 0.2, 1.8)
+        double3 xformOp:translate = (0, -0.12, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+}
+

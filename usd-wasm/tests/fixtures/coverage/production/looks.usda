@@ -1,0 +1,83 @@
+#usda 1.0
+(
+    defaultPrim = "Robot"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Robot"
+{
+    def "Looks"
+    {
+        def Material "Teal"
+        {
+            token outputs:surface.connect = </Robot/Looks/Teal/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.035, 0.54, 0.5)
+                float inputs:metallic = 0.15
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+
+        def Material "Coral"
+        {
+            token outputs:surface.connect = </Robot/Looks/Coral/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.9, 0.22, 0.12)
+                float inputs:metallic = 0.15
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+
+        def Material "Gold"
+        {
+            token outputs:surface.connect = </Robot/Looks/Gold/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.95, 0.62, 0.12)
+                float inputs:metallic = 0.15
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+
+        def Material "Ink"
+        {
+            token outputs:surface.connect = </Robot/Looks/Ink/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.055, 0.09, 0.12)
+                float inputs:metallic = 0.15
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+
+        def Material "Cream"
+        {
+            token outputs:surface.connect = </Robot/Looks/Cream/Surface.outputs:surface>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.85, 0.8, 0.65)
+                float inputs:metallic = 0.15
+                float inputs:roughness = 0.3
+                token outputs:surface
+            }
+        }
+    }
+}
+

@@ -22,6 +22,8 @@ export type PluginContext = {
     autoPlay?: boolean,
     getFiles: () => Array<import("./create.three.js").HydraFile>,
     scenePrimitiveLightIntensityScale?: number,
+    /** Self-hosted Three Basis decoder directory, with trailing slash. Required for KTX2 with Three r160; modern Three defaults to its bundled decoder assets. */
+    ktx2TranscoderPath?: string,
     /** Read the current source's light preview scale for every load. */
     getScenePrimitiveLightIntensityScale?: (url: string) => number | undefined,
     getComplexity?: (url: string) => import("./create.three.js").createThreeHydraConfig["complexity"] | undefined,

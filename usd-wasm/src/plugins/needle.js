@@ -135,6 +135,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 waitForMaterials: opts.waitForMaterials,
                 complexity: opts.getComplexity?.(url) ?? opts.complexity,
                 scenePrimitiveLightIntensityScale: opts.getScenePrimitiveLightIntensityScale?.(url) ?? opts.scenePrimitiveLightIntensityScale,
+                ktx2TranscoderPath: opts.ktx2TranscoderPath,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);

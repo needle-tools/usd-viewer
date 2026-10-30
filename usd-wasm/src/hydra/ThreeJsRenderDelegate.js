@@ -6,6 +6,7 @@ import { mdlToPreview } from './mdlPreview.js';
 import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPrimvars, configureMaterialXPrimvars, prepareMaterialXPrimvars } from './materialPrimvars.js';
 import { remapNormalTextureSamples, remapTextureSamples } from './textureChannels.js';
 import { textureFileType } from './textureFileType.js';
+import { Ktx2Textures } from './ktx2Textures.js';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
@@ -328,6 +329,7 @@ class TextureRegistry {
     this.tgaLoader = new TGALoader();
     this.exrLoader = new EXRLoader();
     this.driverFileQueue = Promise.resolve();
+    this.ktx2Textures = null;
 
   }
 
@@ -532,15 +534,16 @@ class TextureRegistry {
     return candidates[0];
   }
 
-  getTexture(resourcePath) {
+  getTexture(resourcePath, readable = false) {
     resourcePath = this.resolveResourcePath(resourcePath);
+    const cacheKey = resourcePath + (readable ? "#usd-readable" : "");
     if (debugTextures) console.log("get texture", resourcePath);
-    if (this.textures[resourcePath]) {
-      return this.textures[resourcePath];
+    if (this.textures[cacheKey]) {
+      return this.textures[cacheKey];
     }
 
     let textureResolve, textureReject;
-    this.textures[resourcePath] = new Promise((resolve, reject) => {
+    this.textures[cacheKey] = new Promise((resolve, reject) => {
       textureResolve = resolve;
       textureReject = reject;
     });
@@ -553,6 +556,16 @@ class TextureRegistry {
     let filetype = textureFileType(extension);
 
     const loadFromUrl = (url, revokeOnLoad = false) => {
+      if (filetype === 'image/ktx2') {
+        this.ktx2Textures ??= new Ktx2Textures(this.config.renderer, this.config.ktx2TranscoderPath);
+        const releaseUrl = () => { if (revokeOnLoad) { URL.revokeObjectURL(url); this.objectUrls.delete(url); } };
+        this.ktx2Textures.load(url, readable).then(texture => {
+          releaseUrl(); texture.name = resourcePath; texture.userData.usdKtx2 = true;
+          if (this.disposed) texture.dispose(); else this.loadedTextures.add(texture);
+          textureResolve(texture);
+        }, error => { releaseUrl(); textureReject(error); });
+        return;
+      }
       const loader = filetype === 'image/tga' ? this.tgaLoader : filetype === 'image/x-exr' ? this.exrLoader
         : filetype === 'image/vnd.radiance' ? (this.hdrLoader ??= new RGBELoader()) : this.loader;
       if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "resourcePath", resourcePath);
@@ -607,13 +620,13 @@ class TextureRegistry {
 
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(resourcePath)) {
       loadFromUrl(resourcePath);
-      return this.textures[resourcePath];
+      return this.textures[cacheKey];
     }
 
     const httpResourceUrl = this.resolveHttpResourceUrl(resourcePath);
     if (httpResourceUrl) {
       loadFromUrl(httpResourceUrl);
-      return this.textures[resourcePath];
+      return this.textures[cacheKey];
     }
 
     // URL resolution must precede ReadFile: a missing HTTP-backed file can
@@ -621,7 +634,7 @@ class TextureRegistry {
     const resolvedFile = this.readResolvedResource(resourcePath);
     if (resolvedFile) {
       loadFromFile(resolvedFile);
-      return this.textures[resourcePath];
+      return this.textures[cacheKey];
     }
 
     const loadFromDriverFile = () => {
@@ -640,7 +653,7 @@ class TextureRegistry {
 
     loadFromDriverFile();
 
-    return this.textures[resourcePath];
+    return this.textures[cacheKey];
   }
 
   dispose() {
@@ -650,6 +663,7 @@ class TextureRegistry {
     }
     this.objectUrls.clear();
     this.materialXDefinitionCache.clear();
+    this.ktx2Textures?.dispose();
 
     for (const texture of this.loadedTextures) {
       texture.dispose();
@@ -2304,9 +2318,15 @@ class HydraMaterial {
     const file = this._resolveMaterialTexturePath(node.resolvedPath || node.resolvedUrl || node.file);
     if (!file) return;
     try {
-      const texture = await this._interface.registry.getTexture(file);
-      if (!texture || !this._material) return;
       const channel = node.ignoreAlpha ? 'one' : connection.inputName;
+      const targetChannel = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
+      const remapScalar = targetChannel !== undefined && (channel !== ['r', 'g', 'b', 'a'][targetChannel] || node.sampleTransform);
+      const normalScale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
+      const normalBias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
+      const remapNormal = slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)
+        && (normalScale.some(value => value !== 2) || normalBias.some(value => value !== -1));
+      const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal));
+      if (!texture || !this._material) return;
       // The base-color map already contributes its alpha; adding an alphaMap
       // here would square it. Resolve by authored source, independent of load order.
       if (slot === 'alphaMap' && channel === 'a' && !mainMaterial.diffuseColor?.nodeIn?.ignoreAlpha && node.file === mainMaterial.diffuseColor?.nodeIn?.file) {
@@ -2316,7 +2336,7 @@ class HydraMaterial {
       }
       let cloned = texture.clone();
       const target = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
-      if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || texture.format !== RGBAFormat)) {
+      if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || (!texture.isCompressedTexture && texture.format !== RGBAFormat))) {
         // A clone initially shares its Source with the cached texture. Replacing
         // source avoids corrupting other maps that use a different channel.
         cloned.source = new THREE.Source(remapTextureSamples(texture.image, channel, target, node.sampleTransform,
@@ -2338,8 +2358,9 @@ class HydraMaterial {
       const authoredColorSpace = String(node.sourceColorSpace || '').toLowerCase();
       cloned.colorSpace = authoredColorSpace === 'srgb' ? SRGBColorSpace
         : ['raw', 'linear', 'lin_rec709'].includes(authoredColorSpace) ? LinearSRGBColorSpace
+        : texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
         : HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
-      if (target !== undefined) cloned.format = RGBAFormat;
+      if (target !== undefined && !cloned.isCompressedTexture) cloned.format = RGBAFormat;
       const uv = node.mdlUV || node.st?.nodeIn;
       if (uv) {
         const rotation = node.mdlUV ? uv.rotation : (uv.rotation || 0) / 180 * Math.PI;

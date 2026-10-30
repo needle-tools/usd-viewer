@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- On-demand KTX2 surface textures with renderer capability detection, configurable self-hosted Basis decoders, preserved container color space, and separate readable decoding for scalar/normal remapping.
 - Non-blocking stage export: native OpenUSD packaging on a scoped WASM thread, bounded archive readback, and ZIP compression in a browser worker. The reusable Download control shows an accessible animated export spinner, real per-phase progress and reduced-motion support; `exportUsdz({onProgress})` also exposes progress to hosts.
 - Reusable `mountDownloadButton()` from `/viewer/download` (also exported by `/viewer`): split button, ZIP/USDZ settings, keyboard navigation, optional remembered format and standalone themeable styles. The viewer app uses this same component. Downloads include dependency-localized archives and unsaved authored edits; `handle.exportUsdz()` provides packaging without UI.
 - OpenUSD 26.11.1 with MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched Adobe `usdGltf`/Draco plugins.
@@ -61,11 +62,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Viewer and examples
 
+- Add a dockable Code pane for the active JavaScript lesson and live USDA layer text, including session/referenced layers, source selection and copying.
+- Correct authored lighting in the API/geomprop examples, clarify shared grove instances and contrast the unmaterialed triangle against its plinth; regenerate native Storm cards. Add two production assemblies and three texture-format scenes with real EXR, KTX2, PNG, JPEG and TGA inputs.
 - Use WebGPURenderer throughout the public Three.js viewer. Fresh settings default to Beauty and Adaptive; explicit URL and saved render/detail choices take precedence.
 - Add a Needle-branded light/dark workspace with dockable, resizable panels. Preserve user-chosen timeline placement and open/closed state when changing files.
 - Move render/display settings into View menus; add standard menu navigation, thin scrollbars, stage visibility/activation icons, hover/selection outlines, viewport picking and focus shortcuts.
 - Add an adjustable Examples panel with persisted library/category/selection/scroll state and an adaptive horizontal/vertical category divider.
-- Add 187 coverage fixtures, 63 distinct executable JavaScript lessons and native Storm thumbnails. New scenes include lighting rigs, weighted/rigid skinning, Gaussian fields, layered compositions, complex subdivision/splines/NURBS, and animated creases/holes in Pip and Pop.
+- Add 192 coverage fixtures, 63 distinct executable JavaScript lessons and native Storm thumbnails. New scenes include lighting rigs, weighted/rigid skinning, Gaussian fields, layered compositions, complex subdivision/splines/NURBS, and animated creases/holes in Pip and Pop.
 - Expand Pip and Pop into a seamless animated magic trick with expressive hole-based faces, crease-driven morphing, spring motion and native Storm previews.
 - Keep the 14 NVIDIA SimReady assets in their own sample library. Fixtures demonstrate specific supported features; they are not a claim of complete USD or API conformance.
 

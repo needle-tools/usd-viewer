@@ -1,0 +1,137 @@
+import {test,expect,type Page} from '@playwright/test';
+import {openAppMenu,stageReady} from './workbench-menus';
+
+const sample = (path:string) => `/?viewer=three&render=beauty&assetCache=0&file=${encodeURIComponent('/test-fixtures/'+path)}`;
+const text = (page:Page) => page.evaluate(()=>(window as any).usdWorkbench.code.text);
+const sources = (page:Page) => page.evaluate(()=>(window as any).usdWorkbench.code.sources);
+async function openCode(page:Page) {
+  await openAppMenu(page,'window'); await page.getByRole('checkbox',{name:'Show Code'}).check();
+}
+async function wide(page:Page) {
+  await page.evaluate(()=>(window as any).usdWorkbench.dock.getPanel('code').api.maximize());
+  await expect(page.locator('.usd-code')).toHaveAttribute('data-sidebar','true');
+}
+async function choose(page:Page,suffix:string) {
+  const entry = (await sources(page)).find((source:any)=>source.path.endsWith(suffix));
+  expect(entry, suffix).toBeTruthy();
+  await page.evaluate(key=>(window as any).usdWorkbench.code.select(key),entry.key);
+  return entry;
+}
+
+test.beforeEach(async({page})=>{
+  const errors:string[]=[];(page as any).errors=errors;
+  page.on('pageerror',error=>errors.push(error.message));
+});
+test.afterEach(async({page})=>expect((page as any).errors).toEqual([]));
+
+test('files sidebar adjusts, persists and falls back to a picker without changing the stage',async({page},info)=>{
+  await page.addInitScript(()=>localStorage.setItem('needle-usd-theme',JSON.stringify('dark')));
+  await page.goto(sample('api/examples.js#referenced-layer'));await stageReady(page);await openCode(page);await wide(page);
+  const root=await page.evaluate(()=>(window as any).usdWorkbench.code.sources.find((s:any)=>s.role==='root').identifier);
+  await expect(page.getByRole('tree',{name:'Sample files'})).toBeVisible();
+  await page.getByRole('treeitem',{name:'scene-kit.js',exact:true}).click();
+  await expect.poll(()=>text(page)).toContain('export function createSceneKit');
+  expect(await page.evaluate(()=>(window as any).usdWorkbench.code.sources.find((s:any)=>s.role==='root').identifier)).toBe(root);
+  const divider=page.getByRole('separator',{name:'Files width'});
+  await divider.focus();const before=Number(await divider.getAttribute('aria-valuenow'));
+  await page.keyboard.press('Shift+ArrowRight');await expect(divider).toHaveAttribute('aria-valuenow',String(before+40));
+  const box=(await divider.boundingBox())!;await page.mouse.move(box.x+2,box.y+40);await page.mouse.down();await page.mouse.move(box.x+62,box.y+40);await page.mouse.up();
+  const width=Number(await divider.getAttribute('aria-valuenow'));expect(width).toBe(before+100);
+  await page.getByRole('searchbox',{name:'Filter files'}).fill('scene-kit');
+  await expect(page.locator('.usd-code-files [data-source-key]')).toHaveCount(1);
+  await page.screenshot({path:info.outputPath('files-wide-dark.png')});
+  await page.evaluate(()=>{const panel=(window as any).usdWorkbench.dock.getPanel('code');panel.api.exitMaximized();panel.api.setSize({width:420});});
+  await expect(page.locator('.usd-code')).toHaveAttribute('data-sidebar','false');
+  await expect(page.getByRole('combobox',{name:'Source'})).toBeVisible();
+  await expect.poll(()=>text(page)).toContain('export function createSceneKit');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:info.outputPath('files-narrow.png')});
+  await wide(page);
+  await expect(divider).toHaveAttribute('aria-valuenow',String(width));
+  await page.reload();await stageReady(page);await wide(page);
+  await expect(page.getByRole('searchbox',{name:'Filter files'})).toHaveValue('scene-kit');
+  await expect(divider).toHaveAttribute('aria-valuenow',String(width));
+  await expect.poll(()=>text(page)).toContain('export function createSceneKit');
+  await page.getByRole('searchbox',{name:'Filter files'}).clear();
+  // Tree keyboard focus roves and does not trigger global viewport shortcuts.
+  const row=page.getByRole('treeitem',{name:'scene-kit.js',exact:true});await row.focus();await page.keyboard.press('ArrowUp');
+  expect(await row.evaluate(el=>document.activeElement!==el)).toBe(true);
+  expect(await page.locator('.usd-code-files [tabindex="0"]').count()).toBe(1);
+  const folder=page.getByRole('treeitem',{name:'api',exact:true});await folder.focus();
+  await page.keyboard.press('ArrowLeft');await expect(folder).toHaveAttribute('aria-expanded','false');
+  await page.keyboard.press('ArrowRight');await expect(folder).toHaveAttribute('aria-expanded','true');
+});
+
+test('production files deduplicate composed layers and export their live USDA in light theme',async({page},info)=>{
+  await page.addInitScript(()=>localStorage.setItem('needle-usd-theme',JSON.stringify('light')));
+  await page.goto(sample('coverage/production/shot.usda'));await stageReady(page);await openCode(page);await wide(page);
+  const entries=await sources(page);
+  for(const name of ['shot.usda','layout.usda','geometry.usda','looks.usda','model.usda','lighting.usda']) {
+    expect(entries.filter((entry:any)=>entry.path.endsWith('/'+name)),name).toHaveLength(1);
+  }
+  await page.getByRole('treeitem',{name:'looks.usda',exact:true}).click();
+  await expect.poll(()=>text(page)).toContain('#usda 1.0');
+  expect(await text(page)).toContain('Material');
+  await page.screenshot({path:info.outputPath('files-production-light.png')});
+  const root=entries.find((entry:any)=>entry.role==='root');
+  await page.evaluate(key=>(window as any).usdWorkbench.code.select(key),root.key);
+  await page.evaluate(()=>(window as any).usdStagePanel.edit((stage:any)=>stage.DefinePrim('/World/FileBrowserProbe','Xform')));
+  await expect.poll(()=>text(page)).toContain('FileBrowserProbe');
+});
+
+test('MDL sidecar text and texture previews are inspectable; compressed images stay metadata-only',async({page})=>{
+  await page.goto(sample('coverage/lighting-mdl/mdl-normal-texture.usda'));await stageReady(page);await openCode(page);await wide(page);
+  const entries=await sources(page),mdl=entries.find((entry:any)=>entry.path.endsWith('.mdl')),png=entries.find((entry:any)=>entry.path.endsWith('.png'));
+  expect(mdl).toBeTruthy();expect(png).toBeTruthy();
+  await choose(page,mdl.path);await expect.poll(()=>text(page)).toContain('mdl 1.');
+  await choose(page,png.path);await expect(page.locator('.usd-code-preview img')).toBeVisible();
+  await expect.poll(()=>page.locator('.usd-code-preview img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByRole('button',{name:'Copy source'})).toBeDisabled();
+  const oldImage=await page.locator('.usd-code-preview img').getAttribute('src');
+  await page.evaluate(()=>(window as any).usdWorkbench.code.invalidate());
+  await expect(page.locator('.usd-code-preview img')).not.toHaveAttribute('src',oldImage!);
+  // Switching away and back recreates the preview, including its object URL.
+  await choose(page,mdl.path);await choose(page,png.path);await expect(page.locator('.usd-code-preview img')).toBeVisible();
+  await page.goto(sample('coverage/textures/ktx2-mosaic.usda'));await stageReady(page);await wide(page);
+  await choose(page,'.ktx2');await expect(page.locator('.usd-code-file-info')).toContainText('KTX2');
+  expect(await sources(page)).not.toEqual(expect.arrayContaining([expect.objectContaining({path:mdl.path})]));
+  expect(await text(page)).toBe('');
+});
+
+test('slow sidecar reads cannot overwrite a newer selection',async({page})=>{
+  await page.goto(sample('api/examples.js#hello-world'));await stageReady(page);await openCode(page);await wide(page);
+  let intercepted!:()=>void;const reading=new Promise<void>(resolve=>intercepted=resolve);
+  let release!:()=>void;const held=new Promise<void>(resolve=>release=resolve);
+  await page.route('**/test-fixtures/api/scene-kit.js',async route=>{intercepted();await held;await route.fulfill({contentType:'text/javascript',body:'// OLD SLOW FILE'}).catch(()=>{});});
+  await choose(page,'scene-kit.js');await reading;
+  await page.evaluate(()=>(window as any).usdWorkbench.code.select('example'));
+  await expect.poll(()=>text(page)).toContain('The smallest useful stage');
+  release();await page.waitForTimeout(200);
+  expect(await text(page)).not.toContain('OLD SLOW FILE');
+});
+
+test('dropped projects retain unused root files and same-named sidecars without loading them as the stage',async({page})=>{
+  await page.goto(sample('api/examples.js#hello-world'));await stageReady(page);await openCode(page);await wide(page);
+  await page.evaluate(()=>{
+    const data=[
+      ['/root.usda','#usda 1.0\n def Cube "Original" {}'],
+      ['/alternates/other.usda','#usda 1.0\n def Sphere "Alternate" {}'],
+      ['/geo/note.txt','geometry note'],['/looks/note.txt','material note'],
+    ];
+    const items=data.map(([fullPath,content])=>{
+      const name=fullPath.split('/').pop()!,file=new File([content],name);
+      return {kind:'file',webkitGetAsEntry:()=>({isFile:true,isDirectory:false,name,fullPath,file:(done:any)=>done(file)})};
+    });
+    const event=new Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{items}});
+    window.dispatchEvent(event);
+  });
+  await stageReady(page);await expect.poll(()=>page.evaluate(()=>!!(window as any).usdStage?.GetPrimAtPath('/Original').IsValid())).toBe(true);
+  await wide(page);
+  const entries=await sources(page);expect(entries.filter((entry:any)=>entry.path.endsWith('note.txt'))).toHaveLength(2);
+  await choose(page,'geo/note.txt');await expect.poll(()=>text(page)).toBe('geometry note');
+  await choose(page,'looks/note.txt');await expect.poll(()=>text(page)).toBe('material note');
+  const alternate=await choose(page,'alternates/other.usda');expect(alternate.canOpenAsRoot).toBe(true);
+  await expect.poll(()=>text(page)).toContain('def Sphere "Alternate"');
+  expect(await page.evaluate(()=>(window as any).usdStage.GetPrimAtPath('/Original').IsValid())).toBe(true);
+  expect(await page.evaluate(()=>(window as any).usdStage.GetPrimAtPath('/Alternate').IsValid())).toBe(false);
+});

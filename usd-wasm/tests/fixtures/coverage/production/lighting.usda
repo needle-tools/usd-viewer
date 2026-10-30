@@ -1,0 +1,45 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def "Lights"
+    {
+        def DistantLight "Key"
+        {
+            color3f inputs:color = (1, 0.93, 0.82)
+            float inputs:intensity = 3
+            bool inputs:normalize = 1
+            float3 xformOp:rotateXYZ = (-35, -35, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DistantLight "Fill"
+        {
+            color3f inputs:color = (0.65, 0.8, 1)
+            float inputs:intensity = 0.8
+            bool inputs:normalize = 1
+            float3 xformOp:rotateXYZ = (-15, 125, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DomeLight "Sky"
+        {
+            float inputs:intensity = 0.45
+        }
+    }
+
+    def Camera "Camera"
+    {
+        float focalLength = 42
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        matrix4d xformOp:transform = ( (0.7999999999999999, 0, -0.5999999999999999, 0), (-0.1931416399432214, 0.9467727448197127, -0.2575221865909619, 0), (0.5680636468918278, 0.3219027332387024, 0.7574181958557703, -0), (6.000000000000001, 5, 8.000000000000002, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

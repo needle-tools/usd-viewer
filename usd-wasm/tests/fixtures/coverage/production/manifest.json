@@ -1,0 +1,54 @@
+[
+  {
+    "id": "production-shot",
+    "label": "Workshop Shot",
+    "group": "Production",
+    "root": "coverage/production/shot.usda",
+    "files": [
+      "coverage/production/geometry.usda",
+      "coverage/production/layout.usda",
+      "coverage/production/lighting.usda",
+      "coverage/production/looks.usda",
+      "coverage/production/model.usda",
+      "coverage/production/shot.usda"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "layered composition",
+      "payload",
+      "material variants"
+    ],
+    "assertions": [
+      "Native composition has no errors",
+      "All layer and texture dependencies resolve",
+      "Coral variant binds the Coral material"
+    ]
+  },
+  {
+    "id": "production-lookdev",
+    "label": "Workshop Asset",
+    "group": "Production",
+    "root": "coverage/production/lookdev.usda",
+    "files": [
+      "coverage/production/geometry.usda",
+      "coverage/production/lookdev.usda",
+      "coverage/production/looks.usda",
+      "coverage/production/model.usda"
+    ],
+    "scenePrimitiveLightIntensityScale": 1,
+    "environment": "none",
+    "thumbnailCameraLight": false,
+    "features": [
+      "layered composition",
+      "payload",
+      "material variants"
+    ],
+    "assertions": [
+      "Native composition has no errors",
+      "All layer and texture dependencies resolve",
+      "Coral variant binds the Coral material"
+    ]
+  }
+]

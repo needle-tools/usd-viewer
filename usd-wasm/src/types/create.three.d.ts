@@ -110,6 +110,8 @@ export declare type createThreeHydraConfig = {
      * only controls the helper/demo Three light brightness.
      */
     scenePrimitiveLightIntensityScale?: number,
+    /** Self-hosted Three Basis decoder directory, with trailing slash. Required for KTX2 with Three r160; modern Three defaults to its bundled decoder assets. */
+    ktx2TranscoderPath?: string,
 
     /**
      * Include asynchronous material generation and texture assignment in ready().
