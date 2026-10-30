@@ -156,6 +156,11 @@ declare type UsdGeomXformCommonAPI = {
     delete(): void,
 }
 
+declare type USDEditTarget = {
+    IsValid(): boolean,
+    delete(): void,
+}
+
 declare type USDLayer = {
     GetIdentifier(): string,
     GetDisplayName(): string,
@@ -163,6 +168,8 @@ declare type USDLayer = {
     ExportToString(): string,
     Export(path: string): boolean,
     Save(): boolean,
+    GetSubLayerPaths(): string[],
+    SetSubLayerPaths(paths: string[]): MaybePromise<void>,
 }
 
 declare type USDAttribute = {
@@ -195,6 +202,8 @@ declare type USDAttribute = {
     SetVec3f(x: number, y: number, z: number, timeCode: number): boolean,
     SetVec3d(x: number, y: number, z: number, timeCode: number): boolean,
     SetMatrix4d(m00: number, m01: number, m02: number, m03: number, m10: number, m11: number, m12: number, m13: number, m20: number, m21: number, m22: number, m23: number, m30: number, m31: number, m32: number, m33: number, timeCode: number): boolean,
+    SetMetadata(key: string, value: unknown): boolean,
+    Get(timeCode: number): MaybePromise<unknown>,
 }
 
 declare type USDRelationship = {
@@ -209,6 +218,7 @@ declare type USDRelationship = {
     GetTargets(): StringVector,
     AddTarget(path: string): boolean,
     ClearTargets(removeSpec: boolean): boolean,
+    SetMetadata(key: string, value: unknown): boolean,
 }
 
 declare type USDPrim = {
@@ -222,7 +232,7 @@ declare type USDPrim = {
     HasAuthoredMetadata(key: string): boolean,
     GetSpecifier(): string,
     IsActive(): boolean,
-    SetActive(active: boolean): boolean,
+    SetActive(active: boolean): MaybePromise<boolean>,
     ApplyAPI(schemaIdentifier: string): boolean,
     IsDefined(): boolean,
     IsAbstract(): boolean,
@@ -259,9 +269,14 @@ declare type USDPrim = {
     GetVariantSetNames(): StringVector,
     GetVariantNames(variantSetName: string): StringVector,
     DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): USDPrim,
+    SetMetadata(key: string, value: unknown): MaybePromise<boolean>,
+    AddReference(assetPath: string, primPath: string): MaybePromise<boolean>,
+    SetInstanceable(instanceable: boolean): MaybePromise<boolean>,
+    GetVariantEditTarget(variantSetName: string): USDEditTarget,
 }
 
 declare type USDStage = {
+    OpenLayerStage(identifier: string): MaybePromise<USDStage | null>,
     GetRootLayer(): USDLayer,
     GetPseudoRoot(): USDPrim,
     GetPrimAtPath(path: string): USDPrim,
@@ -283,6 +298,8 @@ declare type USDStage = {
     SetUpAxis(upAxis: string): boolean,
     Export(path: string): boolean,
     ExportToString(): string,
+    GetEditTarget(): USDEditTarget,
+    SetEditTarget(target: USDEditTarget): void,
 }
 
 declare type UsdGeomXform = {

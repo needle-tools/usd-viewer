@@ -3,12 +3,14 @@ import { replExamples, apiExampleAssets } from './examples.js';
 import { testAssetLibrary, fixtureUrl } from '../test-asset-library.js';
 import { executeExample } from './execute.js';
 
-self.onmessage = async ({ data: id }) => {
+self.onmessage = async ({ data }) => {
+  const id=typeof data==='string'?data:data.id;
+  const source=typeof data==='object'?data.source:undefined;
   try {
     const index = apiExampleAssets.findIndex(asset => asset.executable === id);
     if (index < 0) throw new Error(`Unknown API example: ${id}`);
     const USD = await getUsdModule({ print() {}, printErr: message => console.warn(message), setStatus() {} });
-    const result = await executeExample(USD, replExamples[index], {
+    const result = await executeExample(USD, source===undefined?replExamples[index]:{...replExamples[index],code:String(source)}, {
       fixtureCatalog: testAssetLibrary,
       async readFixture(path) {
         const response = await fetch(fixtureUrl(path));

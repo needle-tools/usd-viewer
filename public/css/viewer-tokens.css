@@ -43,6 +43,7 @@
   --usd-row-selected-hover-background: color-mix(in srgb, var(--accent-brand) 28%, var(--surface-panel));
   --usd-row-selected-color: var(--text-primary);
   --usd-icon-color: var(--text-secondary);
+  --usd-focus-color: color-mix(in srgb, var(--text-primary) 45%, var(--border-subtle));
   --usd-outline-width: 1.5px;
   --usd-outline-hidden-opacity: .45;
   --usd-outline-dash-length: 4px;
@@ -54,8 +55,14 @@
   --usd-gallery-results-min-width: 180px;
   --usd-gallery-results-min-height: 128px;
   --usd-splitter-size: 5px;
+  --usd-array-editor-height: 360px;
+  --usd-array-cell-width: 56px;
+  --usd-array-row-height: 26px;
   --usd-code-sidebar-breakpoint: 480px;
   --usd-code-files-width: 180px;
+  --usd-code-array-width: 340px;
+  --usd-code-array-min-width: 240px;
+  --usd-code-source-min-width: 200px;
   --usd-code-files-min-width: 144px;
   --usd-code-reader-min-width: 240px;
   --usd-gallery-card-width: 128px;

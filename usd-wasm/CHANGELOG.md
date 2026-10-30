@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Structured literal-array tables in Code’s resizable right sidebar and the JavaScript REPL: paged rows, vector/color columns, matrix grids, spreadsheet paste, validation and draft undo/redo. Code can apply typed USD array edits with reversible commands or run edited JavaScript lessons in the isolated worker.
+- Native authoring for UV, four-component color/vector, integer-vector and boolean arrays, with numeric shape and range validation.
+
+- Typed `Attribute.Get(timeCode)` readback returns owned JavaScript values and awaits remote value clips, without parsing USD display strings.
+- Core WASM authoring for matrix4d and quaternion arrays, half3 scales, schema-typed metadata, references, instanceability and ordered sublayers. Variant edit targets scope definitions and attribute values together, with typed handle cleanup and asynchronous composition results.
 - On-demand KTX2 surface textures with renderer capability detection, configurable self-hosted Basis decoders, preserved container color space, and separate readable decoding for scalar/normal remapping.
 - Non-blocking stage export: native OpenUSD packaging on a scoped WASM thread, bounded archive readback, and ZIP compression in a browser worker. The reusable Download control shows an accessible animated export spinner, real per-phase progress and reduced-motion support; `exportUsdz({onProgress})` also exposes progress to hosts.
 - Reusable `mountDownloadButton()` from `/viewer/download` (also exported by `/viewer`): split button, ZIP/USDZ settings, keyboard navigation, optional remembered format and standalone themeable styles. The viewer app uses this same component. Downloads include dependency-localized archives and unsaved authored edits; `handle.exportUsdz()` provides packaging without UI.

@@ -19,6 +19,11 @@ const TYPE_NAMES = {
   Vector3d: "vector3d",
   Vector3dArray: "vector3d[]",
   Matrix4d: "matrix4d",
+  Matrix4dArray: "matrix4d[]",
+  QuatfArray: "quatf[]",
+  QuathArray: "quath[]",
+  QuatdArray: "quatd[]",
+  Half3Array: "half3[]",
   FloatArray: "float[]",
   DoubleArray: "double[]",
   StringArray: "string[]",
@@ -75,8 +80,9 @@ function installAttributeShape(USD) {
   USD.Attribute.prototype.Set = function Set(value, timeCode = DEFAULT_TIME) {
     return attrSet.call(this, value, timeCode);
   };
-  USD.Attribute.prototype.Get ??= function Get(timeCode = DEFAULT_TIME) {
-    return Number.isNaN(timeCode) ? this.GetValueString() : this.GetValueStringAtTime(timeCode);
+  const attrGet = USD.Attribute.prototype.Get;
+  USD.Attribute.prototype.Get = function Get(timeCode = DEFAULT_TIME) {
+    return attrGet.call(this, timeCode);
   };
 
   const xformOpSet = USD.UsdGeomXformOp.prototype.Set;
@@ -86,6 +92,11 @@ function installAttributeShape(USD) {
 }
 
 function installPrimShape(USD) {
+  USD.Prim.prototype.GetReferences ??= function GetReferences() {
+    const prim = this;
+    return { AddReference: (assetPath, primPath = "") => prim.AddReference(String(assetPath), pathString(primPath)) };
+  };
+
   USD.Prim.prototype.GetPayloads ??= function GetPayloads() {
     const prim = this;
     return {
@@ -198,6 +209,7 @@ function variantSet(prim, name) {
     SetVariantSelection(variantName) {
       return prim.SetVariantSelection(setName, String(variantName));
     },
+    GetVariantEditTarget() { return prim.GetVariantEditTarget(setName); },
     GetVariantSelection() {
       return prim.GetVariantSelection(setName);
     },

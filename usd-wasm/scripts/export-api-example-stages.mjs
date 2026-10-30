@@ -41,7 +41,7 @@ if (!isolated) {
   if (index < 0) throw new Error('Unknown API example');
   const example = replExamples[index], asset = apiExampleAssets[index], directory = resolve(out, asset.executable);
   const USD = await getUsdModule({ print() {}, printErr: message => console.warn(message) });
-  const sceneKitSource = await readFile(resolve(root, 'tests/fixtures/api/scene-kit.js'), 'utf8');
+  const sceneHelpersSource = await readFile(resolve(root, 'tests/fixtures/api/scene-helpers.js'), 'utf8');
   const authoringSource = await readFile(resolve(root, 'tests/fixtures/api/create-api-stage.js'), 'utf8');
   const result = await executeExample(USD, example, {
     fixtureCatalog: testAssetLibrary,
@@ -54,7 +54,7 @@ if (!isolated) {
   }
   process.send({ id: `api-${asset.executable}`, example: asset.executable,
     ...(hasAuthoredLighting(example) ? { thumbnailCameraLight: false } : {}),
-    sourceFingerprint: createHash('sha256').update(JSON.stringify([example.code, sceneKitSource, authoringSource])).digest('hex'),
+    sourceFingerprint: createHash('sha256').update(JSON.stringify([example.code, sceneHelpersSource, authoringSource])).digest('hex'),
     hasGeometry: result.hasGeometry, root: resolve(directory, result.files[0].path) });
   process.exit(0);
 }

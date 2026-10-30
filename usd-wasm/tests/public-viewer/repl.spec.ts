@@ -173,3 +173,32 @@ test('history is bounded and storage reads may be disabled', async ({ page }) =>
   });
   expect(await run(page, '42')).toBe(42);
 });
+
+test('array input creates typed data and edits existing literals with paste and undo',async({page})=>{
+  await page.addStyleTag({url:'/usd/viewer/style.css'});
+  const input=page.getByRole('textbox',{name:'JavaScript input'});
+  await input.fill('scratch.points = ');await input.press('End');await page.getByRole('button',{name:'Array',exact:true}).click();
+  const editor=page.locator('.usd-array-editor');await editor.getByRole('combobox',{name:'Array type'}).selectOption('point3f');
+  await editor.getByRole('spinbutton',{name:'Initial rows'}).fill('3');await editor.getByRole('spinbutton',{name:'Initial rows'}).press('Tab');
+  const first=editor.getByRole('textbox',{name:'Row 0 X',exact:true});
+  await first.evaluate((el:HTMLInputElement)=>{
+    const data=new DataTransfer();data.setData('text/plain','1\t2\t3\n4\t5\t6');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await expect(editor.getByRole('textbox',{name:'Row 1 Y',exact:true})).toHaveValue('5');
+  await editor.getByRole('button',{name:'Undo',exact:true}).click();await expect(editor.getByRole('textbox',{name:'Row 1 Y',exact:true})).toHaveValue('0');
+  await editor.getByRole('button',{name:'Redo',exact:true}).click();
+  await editor.getByRole('button',{name:'Apply',exact:true}).click();await expect(input).toHaveValue('scratch.points = [[1, 2, 3], [4, 5, 6], [0, 0, 0]]');
+  await input.press('Control+Enter');expect(await run(page,'scratch.points')).toEqual([[1,2,3],[4,5,6],[0,0,0]]);
+  await input.fill('const positions = [[1,2,3],[4,5,6],[7,8,9]];');await input.evaluate((el:HTMLTextAreaElement)=>el.setSelectionRange(25,25));
+  await page.getByRole('button',{name:'Array',exact:true}).click();await expect(editor.getByRole('textbox',{name:'Row 0 X',exact:true})).toHaveValue('1');
+  await editor.getByRole('button',{name:'Raw',exact:true}).click();await editor.getByRole('textbox',{name:'Array source'}).fill('[[1,2],[3]]');await editor.getByRole('button',{name:'Apply',exact:true}).click();await expect(editor.getByRole('status')).toContainText('rectangular');
+  await editor.getByRole('textbox',{name:'Array source'}).fill('[[9,2,3],[4,5,6],[7,8,9]]');await editor.getByRole('button',{name:'Apply',exact:true}).click();await expect(input).toHaveValue('const positions = [[9, 2, 3], [4, 5, 6], [7, 8, 9]];');
+});
+
+test('new empty point arrays keep XYZ columns when their first row is added',async({page})=>{
+ await page.addStyleTag({url:'/usd/viewer/style.css'});const input=page.getByRole('textbox',{name:'JavaScript input'});
+ await input.fill('scratch.points = ');await input.press('End');await page.getByRole('button',{name:'Array',exact:true}).click();const editor=page.locator('.usd-array-editor');
+ await editor.getByRole('spinbutton',{name:'Initial rows'}).fill('0');await editor.getByRole('spinbutton',{name:'Initial rows'}).press('Tab');
+ await editor.getByRole('button',{name:'Add row',exact:true}).click();await expect(editor.getByRole('textbox',{name:'Row 0 Z',exact:true})).toHaveValue('0');
+ await editor.getByRole('button',{name:'Apply',exact:true}).click();await expect(input).toHaveValue('scratch.points = [[0, 0, 0]]');
+});

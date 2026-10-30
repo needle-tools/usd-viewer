@@ -72,3 +72,25 @@ stagePanel.dispose();
 void mountRenderModePicker;
 
 import '@needle-tools/usd/viewer/style.css';
+
+// Low-level authoring stays typed in installed consumers as well as the REPL.
+const authored=USD.CreateStage('/tmp/typed-authoring.usda');
+const root=authored.DefinePrim('/World','Xform');
+await root.AddReference('asset.usda','/Asset');
+await root.SetInstanceable(true);
+await root.SetMetadata('kind','component');
+const rotations=root.CreateAttribute('rotations','quatf[]',true);
+rotations.Set([[1,0,0,0]],Number.NaN);
+rotations.SetMetadata('interpolation','vertex');
+await authored.GetRootLayer().SetSubLayerPaths(['looks.usda','layout.usda']);
+const paths:string[]=authored.GetRootLayer().GetSubLayerPaths();
+const previousTarget=authored.GetEditTarget();
+const variantTarget=root.GetVariantEditTarget('look');
+if(variantTarget.IsValid())authored.SetEditTarget(variantTarget);
+authored.SetEditTarget(previousTarget);variantTarget.delete();previousTarget.delete();
+void paths;
+
+const typedRotations: unknown = rotations.Get(Number.NaN); void typedRotations;
+
+const layerView=await authored.OpenLayerStage(authored.GetRootLayer().GetIdentifier());
+if(layerView)USD.ReleaseStage(layerView);

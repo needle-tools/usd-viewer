@@ -1,4 +1,4 @@
-import { createSceneKit } from './scene-kit.js';
+import { createSceneHelpers } from './scene-helpers.js';
 
 // Shared native authoring source for the fixture catalog and standalone buttons.
 export async function createApiStage(usd, kind, path) {
@@ -7,20 +7,28 @@ export async function createApiStage(usd, kind, path) {
   stage.SetStartTimeCode(1);
   stage.SetEndTimeCode(48);
   stage.SetTimeCodesPerSecond(24);
-  const k = createSceneKit(usd), c = k.colors;
+  const k = createSceneHelpers(usd), c = k.colors;
   const world = stage.DefinePrim('/World', 'Xform');
   const material = k.material(stage, '/Looks/ApiPreview', kind === 'animated' ? c.blue : c.coral, 0.25, 0.28, '/Looks/ApiPreview/Shader');
   k.bind(world, material);
 
   if (kind.startsWith('variant')) {
-    world.AddVariant('shape', 'sphere');
-    world.AddVariant('shape', 'cube');
-    world.DefinePrimInVariant('shape', 'sphere', '/World/Shape', 'Sphere')
-      .CreateAttribute('radius', 'double', false).SetDouble(0.95, Number.NaN);
-    world.DefinePrimInVariant('shape', 'cube', '/World/Shape', 'Cube')
-      .CreateAttribute('size', 'double', false).SetDouble(1.5, Number.NaN);
-    world.SetVariantSelection('shape', kind === 'variant-cube' ? 'cube' : 'sphere');
-    // Same switchable schema path, two genuinely different presentation designs.
+    const previous = stage.GetEditTarget();
+    try {
+      for (const [name, type, attribute, value] of [
+        ['sphere', 'Sphere', 'radius', 0.95], ['cube', 'Cube', 'size', 1.5],
+      ]) {
+        world.AddVariant('shape', name);
+        await world.SetVariantSelection('shape', name);
+        const target = world.GetVariantEditTarget('shape');
+        try {
+          stage.SetEditTarget(target);
+          stage.DefinePrim('/World/Shape', type).GetAttribute(attribute).Set(value, Number.NaN);
+        } finally { stage.SetEditTarget(previous); target.delete(); }
+      }
+    } finally { previous.delete(); }
+    await world.SetVariantSelection('shape', kind === 'variant-cube' ? 'cube' : 'sphere');
+    // The sphere gets an orbital cage; the cube sits on a stepped stand.
     if (kind === 'variant-sphere') {
       k.torus(stage, '/World/OrbitalCage/Equator', [0,0,0], 1.45, 0.055, c.gold, 'y');
       k.torus(stage, '/World/OrbitalCage/Meridian', [0,0,0], 1.45, 0.055, c.teal);
@@ -60,8 +68,7 @@ export async function createApiStage(usd, kind, path) {
   for(let i=0;i<descendants.size();i++) {
     const p=descendants.get(i), path=p.GetPath();
     if(!['Mesh','Sphere','Cube'].includes(p.GetTypeName()) || ['/World/Shape','/World/ApiSphere','/World/GlazeBody','/World/ColorRibbon'].includes(path)) continue;
-    const value=p.GetAttribute('primvars:displayColor').GetValueString();
-    const rgb=value.match(/[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi)?.map(Number);
+    const rgb=p.GetAttribute('primvars:displayColor').Get(Number.NaN)?.[0];
     if(rgb?.length===3) k.bind(p,k.material(stage,'/Looks/Details'+i,rgb,0.1,0.4));
   }
   return stage;

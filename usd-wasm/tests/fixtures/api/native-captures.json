@@ -8,7 +8,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "c2805fdcd474d017176968496a88d4fd12de10bb2b5ec00f0e3d81fb01d9b514",
+      "sourceFingerprint": "b9644cf078bf8fa18cc79af2105eb0fa7720410ea282442b4be6dad267d8653f",
       "imageSha256": "c17fb448b58d5438a05ab0fc8e7b626820cb377d2a22fd191b0349a77e36ca99"
     },
     {
@@ -19,7 +19,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "9517797604e5e12bddae4589f5d23e45fb5869e539fd7f0f893dc451c35f7484",
+      "sourceFingerprint": "dc55d33911c2f1821d4c90c25d1d2c8d6587d150b070f101b909446a6691bcf7",
       "imageSha256": "18cbf761ed7f72d921e8f595377dc6277e2ef09414d2c57e50b19714d743638c"
     },
     {
@@ -30,7 +30,7 @@
       "exitCode": 0,
       "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "fc46664a0a1344f84ac229d62bcb03c690651b365ea64180d7a338a992fc10dd",
+      "sourceFingerprint": "122b0f7f2d833c84b26fd1a51e5275884096040f2e6e2774be821f91a4828a69",
       "imageSha256": "20182d1ed669f0ae71f654a006553a3fc8b83dcf29c86329787a7d0b43755c40"
     },
     {
@@ -41,7 +41,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "a38983966733782a06abec487c07195978c5984a9664dbde8dd007e6d3491b04",
+      "sourceFingerprint": "98cfc691417b211aa2c981f7b62c4c93d4b512d2b6ede4ffda9349e9861a25cb",
       "imageSha256": "0e330cbee9b5b3fbe808bc546a6359965e943c99d02403128a3c5133ea69e087"
     },
     {
@@ -52,7 +52,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "62561bf95bf6949aa283725de778ea397b37413c54e20ccb24650760fdba4b29",
+      "sourceFingerprint": "faeefa65b18532cfdc277b4e397bc771402b1f22d2abd6c4d47504f1f1d0926c",
       "imageSha256": "58452b702781db1202908d05a8cf3ee39b60f40e032250fbc10fa531f46842ea"
     },
     {
@@ -63,7 +63,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "874cf2af2ed560ee52ff0f93097ea87f2e2fad3fb0a876f2df6100669e50763a",
+      "sourceFingerprint": "17c6189082b6bfe16ba874f2f45976541f33bb75fc4e37f60fe1f5762d86271d",
       "imageSha256": "d737ea30cba75a38cd8c99141c093b819696d2a27027f27633140b98be936b01"
     },
     {
@@ -74,8 +74,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "ed4e4ecd3e8158cc15087475fd44bd31bd00b3a4ef075d44eb4dfa957a4ffe43",
-      "imageSha256": "d104e3d64a76adc6726d5bfbde40b4e812347c044d75f7d6a2c4fa177274e4bf"
+      "sourceFingerprint": "0f26ba84b30e8c1b6c34a0106de51f0cfeaefccd2fde7a5c94267f516f9f1b3e",
+      "imageSha256": "fcbdfde9b0610fa26057ad702f51c15160bf1d7458093922ffdee861fde7fe57"
     },
     {
       "id": "api-matrix-transform",
@@ -85,7 +85,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "16587e059afeec25606f6e078c58b9f1199c0d66b23bb1b399ff4b3c69aff4b7",
+      "sourceFingerprint": "8090b7273788315d3533926fca872b4ae74239d758ce26df0464e15cfc9ea57f",
       "imageSha256": "76b887711b832e8df36b22e772ce22bce2b5b4bc44ba20ac35ff2e1c8051c92a"
     },
     {
@@ -96,7 +96,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "425ed749a98581b8c7d4aee2ac67b656f4fee9287a8c6a67d7d49e2c722ad30e",
+      "sourceFingerprint": "75375114f279d51b3bb1e007f5781f983ab039ef8d2ab872ddb41f4f3d8cc76d",
       "imageSha256": "4f114960091e6fc94dc79df286ada90018fd8f934c8ba6eebc7086638e0bf8c9"
     },
     {
@@ -107,8 +107,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "c76cafe33ddd26dfda92701683eac2248fdbe5c41a561a77fbaab00ec2045a91",
-      "imageSha256": "c464c4f156d386a05354a465a18e36582b3acb73eebd7f4fede3a10449160f76"
+      "sourceFingerprint": "047ca9f38c8f0061fbd828e1acb332aa544618d0079fb94034cd6fe7e1650ddf",
+      "imageSha256": "ff57976e28cb286c306b66e1dd3f2807290aa9e56c75a82b3897f493632ae54a"
     },
     {
       "id": "api-shader-color-inputs",
@@ -118,7 +118,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "b4342077dbf106b4e144d585dbfd538caa5685e87576274c6d81f065d3a817a3",
+      "sourceFingerprint": "7211b1e8e128c2818da53ce4d8e71ac9bbc324f74756c9637554a61fac53e225",
       "imageSha256": "54a124f966db93259624ed1c31b04134b49963d847a519d4dbd4354b2181e4d0"
     },
     {
@@ -129,7 +129,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "1001cc3e1e142e3db5041b90da4d04d61d16d935a9cf32feb1707109fde9a525",
+      "sourceFingerprint": "b28af8d2f87fb0392edd59201e54791f49439ec5af5b4ed31caff17907f6a2bf",
       "imageSha256": "59261f0650ce6c78ab83e91d326f4dd04a4fcf20df9494945e81c62081f58b0f"
     },
     {
@@ -140,7 +140,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "42034ee491b93cc7ba30858d23bd90f703e3807e2a48d4aefaaa23a03e5d7641",
+      "sourceFingerprint": "50c9cf50cf3bbd6a5e7759f4a6557919c3e34813129ac378fa13d3975a452408",
       "imageSha256": "9721b650123e534a7b4208ed1fd19a91b62e09d879d5cb0aa2d929f044b8f579"
     },
     {
@@ -151,7 +151,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "f9932190291ec368575211aef04ba1c32ea8cabe607fd0ab0aa004ab6994fa20",
+      "sourceFingerprint": "4730548aba1147c463d0db6a79061100a97efe035ef5c894bf3c4884678e98df",
       "imageSha256": "edfd66df7bbfc8889247c46bef5675770600cb8f0f5ac7199edc0f9658d4c686"
     },
     {
@@ -162,7 +162,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "4d4ea632e45f6f47b69751ed5a87cfc1c8dfaf2f4b5c56e1b3978dd1b383e94f",
+      "sourceFingerprint": "254f0205d51260c77e50f28101d7b70eb9fadead403ebd119ae098df7b5831dc",
       "imageSha256": "2c92d4765a72e2240ee159040a990d843e708d7231003b863df20dad2004db64"
     },
     {
@@ -173,7 +173,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "2996895a80eed9aa93af9fe098f2a9144338cb6918d5f1c77c63e1d6ed814bf5",
+      "sourceFingerprint": "e7331530f41d095567b57a372a2d84a2e03952513d888f72b7ea28a8785fb739",
       "imageSha256": "4f2676409e40b313ebac9b56c8d30ea9e8d67ec562ca3aab5f8a65a7f1e828ef"
     },
     {
@@ -184,7 +184,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "c2f2afcd2a0059f44c13b4b71e13d3d696d077ec203ede76e2844270b954e36b",
+      "sourceFingerprint": "e434285c921cd2606e0724725eded693121c2240ae9491bcf936ce57772329b4",
       "imageSha256": "a1c7fca7a723eaf2a07a6b75cd691d68470a694306164acfe7bf06093efd8d0f"
     },
     {
@@ -195,7 +195,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "a7f7cf9d6f3545cae29090f594b92948b38093864fb0c01d1a80476ad18fd7b1",
+      "sourceFingerprint": "c89cfda16120b889e3b94d69baa3594955dd3940922e5a0c70ff5001d74bcaa0",
       "imageSha256": "15afbfb919673bfd0ccbdd8bbbe23edecdbd198905add791208d5d0386e66678"
     },
     {
@@ -206,7 +206,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "5ce9eb8eec20b4589c66f6216c270fb0c273c706a81ab789ecb5c28b69d68c3d",
+      "sourceFingerprint": "7891dc5d66ae1a6c013a585a07c32a9c307dc43f3cf5c7400f3495628111b164",
       "imageSha256": "617e2d158605a6bdcde70dbe2768e1753556e0eda99a3c09602a9eab0cfc67e9"
     },
     {
@@ -217,7 +217,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "0d028de72f36aa92115a0078b4e55f3a68d0a9db2b6b077266089b1b38bc65b9",
+      "sourceFingerprint": "512f057fe4e76e72f8fba8e92581d859ccb26d0739d52b88bac3dba7be590904",
       "imageSha256": "62cf42a7aeff12541e69f57c896a616f0ec62190074b8444ae15eaddf34b4069"
     },
     {
@@ -228,8 +228,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "16ff43491c57d2aa0bd566c35ce495d7b492e871a36fe56366ebc335ee44bd4b",
-      "imageSha256": "d7318fbcd973757c16f2b574a9f96f14cd09d2d13659be3e4c757cee7dab45dc"
+      "sourceFingerprint": "88b1ebf622b65a6f8436542a2d3d638b018057f91dace2ee2ce3171171a8b050",
+      "imageSha256": "461385ac941e776aab5ca0a49fcebdf3ed91e2f51f7d71521fed8776b5258a63"
     },
     {
       "id": "api-payload-load-state",
@@ -239,7 +239,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "92971c2a80886198328f5217aa3189fe3c33b3b6671d29302a97222cebd7e458",
+      "sourceFingerprint": "553b2f1990597b56b485a76ec735c81aa8de8a4e081e1c1efb0b97594cfae250",
       "imageSha256": "c9f26a7c7a8d0d402a380af2c60692b82a56d524d996b33cb37bbb3336e14e95"
     },
     {
@@ -250,7 +250,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "fceb99015e272a825ad6960e61b69a12b40b49eaa0250cc79b3611ad8cfd890f",
+      "sourceFingerprint": "67fd866d3d6be26a4a11b134da427d302e48a1e5f516e8e1bdc09d4aebd66733",
       "imageSha256": "b9abb8c3e5a70c7209b77e90e3b2dd9fbe1f6a377a39c9f6c17203f3be440fb0"
     },
     {
@@ -261,7 +261,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "f6ff4876c895bfe446a58320e918a68fbd2553f65939de12ba656fefb7ddacd3",
+      "sourceFingerprint": "4634e3f1469d07914e9358b1f3261fd2d83592dd6a0ab74d16ba5c18636cdf7d",
       "imageSha256": "96a2dfcd2d90be7b7c6ff8eb43e982a0208a02e0fbbd3f0d2a5d3545a14bb190"
     },
     {
@@ -272,7 +272,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "b43ed74dfb2a01b14b08a302841430dcb0216c36007cffb9b4f61c49323a8b73",
+      "sourceFingerprint": "ca3a71f714d89c239997c7ad8b00b0663f4fd7b38e488bc922105815c2273ff4",
       "imageSha256": "dd5317676e9f9edbe0387f480c34c13f20a94084467efa943319c19677f2ed3a"
     },
     {
@@ -283,7 +283,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "90014b3d5490fbf23a7cc70e01444cd9af4ee5d141f2b0c2129bb25193d83560",
+      "sourceFingerprint": "015eb0d9c9e92b751d70f81320a13602cdab72621bbe5f6dbc000b8910cd23d2",
       "imageSha256": "9bc0541ea25b33728214b2eb306de504d64471f01914b2329247361b070f5de9"
     },
     {
@@ -294,7 +294,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "71be9e4a02a161b3882153f52d073285a6c9bdeaf1362cb72a35e73da54906e1",
+      "sourceFingerprint": "3912a28c366f3917366500b5327dd15c221c2d9d3f3be426bf784b9a62e25dbe",
       "imageSha256": "5c93aa162d5cf187e40d26e477e9291f1a58d2cd6c5951d313b8e45204c80e64"
     },
     {
@@ -305,7 +305,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "148c6859c8ef36b8605c298c313b92c8c4632c5d9092081d4de6a307e69cd573",
+      "sourceFingerprint": "de87edb5dc048c4925c6de1a15d0009c7859d94bf86ba7e480899ef5f4f2bf89",
       "imageSha256": "efb977268b24d175908b10223d79cf2bd7a9563d2b163fcd1c2e63bc3ab73753"
     },
     {
@@ -316,8 +316,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "7d039ee7aee335c9319d0e31a7c0c40d148e3af14f67d046057ad20fa3719794",
-      "imageSha256": "dbde7ea5a8e2d1e872df4d6904d036405a87a4983a81fe0d6d5dbb377d875129"
+      "sourceFingerprint": "9e082d7d4dbc558630bdb7bc3c02664958cf982f95d799e48d7dea639ba29625",
+      "imageSha256": "0a7b2b0c450b987316d5a70e0d9261ef452a5c6672a23293c219e0de256a2109"
     },
     {
       "id": "api-prim-stack",
@@ -327,7 +327,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "5dc20d0668a05e28b74d5f9803823b1dee23d55fb0182540021042d8471c842e",
+      "sourceFingerprint": "8b26b88ae1a026de9c8623d13e1b909b8c436f72163f77b9ffdb2bd877a71bbe",
       "imageSha256": "87711f55957b277799d139209295c6bb39248787e733a032d824cf90f976d4bd"
     },
     {
@@ -338,7 +338,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "a9f726154201778ab9fc5856216f6fb43feeeb79577e53bdd11b4ad6d2dd44a4",
+      "sourceFingerprint": "fe4d885a3e787268c0a8729e14831977fc5974d0023edf7ba0a66b29b7908b7f",
       "imageSha256": "05eb2ec9c740d787b67fa041672223fd04f32a48077c13ca2581c5d0965a9831"
     },
     {
@@ -349,7 +349,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "65a51b3bdf53b9fe00b56383bb81786bb649c39c97aabeac5b8816b650a3b1f2",
+      "sourceFingerprint": "abcc3ffd5b679098993ba48fcb220dd52d5763c5c4e3bd18aa13b4152a6ac794",
       "imageSha256": "4f4543c0ec198a33b2e7685690bed90789770c8724c4a7f616775bb41657f50c"
     },
     {
@@ -360,7 +360,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "f88965187576998906e56e3408a2de01b457c1591befd3fe3c710cf66b4da39b",
+      "sourceFingerprint": "662183dfc993f3f8e5ee0a9b3b28c53c3816efcfb28ff07304013e60a65c85b9",
       "imageSha256": "5d7fd7fcbef9d1c28936e835fa7c15cf3309bb2da25a88ef623fd0600edbef71"
     },
     {
@@ -371,7 +371,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "a058d79c52fa6cd0336e0995d67a590e6728ccc64632df4df0a9bbc493b6825a",
+      "sourceFingerprint": "2161d26b8cb1e34e8ad3cbefe7c182ea26c45c836766fbdb4515316a688f2269",
       "imageSha256": "37109e4670ab4f17494a0418171be299a97e6dc2dedf48acf63c56e1fb2d2424"
     },
     {
@@ -382,7 +382,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "3e408942719b8aff2cb524b084d1dead495818a8f3f00dee56eef8406cd70443",
+      "sourceFingerprint": "2eadde88af2bafd2b1f3c6cbddf5eebd8b1bb6651df25da0e89710993ccf5033",
       "imageSha256": "06ac9a055a345695d4ea78ef95efa3b951eedceedeb47f1790ac943dac18953a"
     },
     {
@@ -393,7 +393,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "9da28cbde95056bd6e0e63289ab2ae3f4a7b9c85047ea1897cbf333a2ca9f851",
+      "sourceFingerprint": "112407acb72138a1d178671d0c9f603201e35bc54142bacb60ca5bec04e50b23",
       "imageSha256": "e57160977ec9c68eed89d89d3a0584c6394d17c02b3b69dbc482870ce8528064"
     },
     {
@@ -404,7 +404,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "62a128df6b2bd0b7e3b9fb15916515a1925de84e1bfcf132eb44ec54b7a9753b",
+      "sourceFingerprint": "c410afa411a8801db5de04675526c649e859f6d91c25b9c562572f4f4c2a2e79",
       "imageSha256": "2a40eb8180de2a488882056d74bb31fceadeab9e63ae30ac543ff79c52d320a4"
     },
     {
@@ -415,7 +415,7 @@
       "exitCode": 0,
       "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "3fab787e30807cd412b2b1b82e890f78f178f885b443e73f44a16f8d7a267618",
+      "sourceFingerprint": "ad155d3df05c8aa75adff632778dc980dacf13fde58ff5ca4ea431d76de1bef4",
       "imageSha256": "d0b985ddea8d849519100054e9f8f2c6a302b1229fe5d19445913f20081aee17"
     },
     {
@@ -426,7 +426,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "97e3fac271d71a4f7b8a4403288b25377ea1dda396df2c524f63fd89ab434009",
+      "sourceFingerprint": "941fff1f0c4ac463672cc963735d733f9748e1e9eb4429969374533913b96433",
       "imageSha256": "0bc96b2787c1cbc490876107d27eee030e32a9c2ac3507bc801db29e067e37e4"
     },
     {
@@ -437,7 +437,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "70a0a6a1de7721a8d6eed5e627fcd329d8f284be53160f636e236bb1ff273337",
+      "sourceFingerprint": "f753345dbeddec991f6cba60004fbeece78ba6b659c2dba3830866cec8a5c8de",
       "imageSha256": "79b3dc11119b93fd45186d5c983366ed9548c29dfbde76e84a48871b7faa9482"
     },
     {
@@ -448,7 +448,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "4d30b0cb455d4d9d6b43777b5552b43008a71f61b8527c745a987213e1e54105",
+      "sourceFingerprint": "68f56994da7b238db7a7fcdc166b44a4281ebf51b2692270e8a5b9915966e3f0",
       "imageSha256": "6c1ff296a0ff4bdec2bf158a82a7f9e93fe269fd951d256591b5306b280ce756"
     },
     {
@@ -459,7 +459,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "6312ed73bd4ea570608b071e717097a526c18cee5e01bd067b8fa498f4e94383",
+      "sourceFingerprint": "d70444d03caf5f4279110c2ba242fb48c9267603c6bc9103c8b338a6c42c9113",
       "imageSha256": "39ac9a6b47ec007a4acfa7dd36809012ea948b7ebdbb45cdd579535ff061767c"
     },
     {
@@ -470,7 +470,7 @@
       "exitCode": 0,
       "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "704f0b8bc2e569ad4e044121443cd0967e5ff19ee52c3768a1257863fb9a718e",
+      "sourceFingerprint": "b221e61f15b8a9ab83f81c168f7bb2896eb4a4bb79e2dc5a82527297ad098102",
       "imageSha256": "ce59bc0737f8c2f2c77f28e690eca2937b58cb35d29f87b2abcbf8e911591b00"
     },
     {
@@ -481,7 +481,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "3a9053dfcfa0458968bd84c8f56f708bce4081d21a1b6b157ee6971e0bd9f440",
+      "sourceFingerprint": "0725f2058f456cb5cfc14cac1d39cbfb62fa304f9620ca58cc5d10ef9b0608ae",
       "imageSha256": "e5924b2274df44ffdc3a250dd138577fd4950b65bdb8f785c13a127593db89c6"
     },
     {
@@ -492,7 +492,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "5dd2e47b2d67c7134cb7a10dacc5ee50ff5174e9bf3a5b7105bd4279bbc1edee",
+      "sourceFingerprint": "24d814f3b01565f88350f931b7a4d53309e713c238d57e6fb1de47bfc987c7d8",
       "imageSha256": "10b22488fc64b52939ae6ff2a9e5dde27e522cfa194ede36f37a975a28ddfa7e"
     },
     {
@@ -503,7 +503,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "84d94de228e56b9e68d041c03853d659c9de4b1e12cfeb9075877ccd3dee7697",
+      "sourceFingerprint": "5e2fcf9f2820b9ce2d1c378baea0984c7dc698105915e37b7546576220f0ccfe",
       "imageSha256": "2bec0a8bebbe59af214c9aaf4e5f4164c54d43c44fd454965c81558face87439"
     },
     {
@@ -514,7 +514,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "47da4492ad16b7b0a0389c1d1de0187e68b9488c08dc5b68c1385d54d4af73f4",
+      "sourceFingerprint": "ed830dad098685a1f86f3f89791083b9b6a7806615684b73e23c86a84430c46d",
       "imageSha256": "63741ee39964e53927257094c26ad09bf49042b8c9b38d0c8289a21f6ef0b75f"
     },
     {
@@ -525,7 +525,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "2f8dd88b26c10b943ef2d8487cb5f1606a1c532e1b09a7cf36b6ddf2f87824fc",
+      "sourceFingerprint": "1abc69a931eb5295aa24244a5bfe726321112054f04c049d5edcc3c4d6a437e5",
       "imageSha256": "6e9ead4d38eb6de5d28bd0c85cbc0910f2dccdd1900216001d338b43849eb207"
     },
     {
@@ -534,10 +534,10 @@
       "renderer": "Storm",
       "camera": "/World/Camera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "c75acbf8c7729483d402c488cb1f911b2e7665a7dbcb2db6730396f20eda09fc",
-      "imageSha256": "7a2e1260f6e0d9ace84a7597a77e71d78d8aea3d14be5d744d3fac981bf06511"
+      "sourceFingerprint": "0d50d45ed0a578d86b8c4305bb237b3889db458af1d2360f27f0775d0484223e",
+      "imageSha256": "54de0fe257418f2db0dce24437c8611d92ee8592271267671190a4b723aa642f"
     },
     {
       "id": "api-shaped-spotlights",
@@ -547,7 +547,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "3ff7b53f0e1d15b634e3545560a3a2144caad83307d4c18e686b3a927c3294fa",
+      "sourceFingerprint": "7e0a468442529331e70a552fc76f52123af810fd633e90a15d9ecf24e6cfa5ed",
       "imageSha256": "3866b1be2c69b9e4d8e2c93703bed6dd189611f4bfad76ea6955c29167ff2da4"
     },
     {
@@ -556,10 +556,10 @@
       "renderer": "Storm",
       "camera": "/World/Camera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "331f6bc5c77c1d7fddfd39dcda1eae97213f33d68e745343547c61b5169db13f",
-      "imageSha256": "b7b5a70df56b2fd1193d5809d0becb9d47285f9dea9af16a862fcfa8ef260e51"
+      "sourceFingerprint": "22e9c98d1bc236dcba5d311b5d3ce992004641c310d2f46d2fa9b6b63013a3c4",
+      "imageSha256": "fb678c8ebab044c793efd20a81fa8cea0943b37b4d64dc0f6160a820e892905b"
     },
     {
       "id": "api-weighted-skinning",
@@ -567,11 +567,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "capture": "native UsdSkel.BakeSkinning; Storm",
-      "timeCode": 13,
+      "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "554edcdf1ffaf3852b7fb769a582a9d0573fa57a98709bd1bdc95abdbdd1bbe6",
-      "imageSha256": "b2caba2f0b1134cadb36069c8f6790d994be670ce4d4ca3a1ee4c8cfedb5d3ba"
+      "sourceFingerprint": "c07a79ce1b1754af7287bce90634223956be8ae85b120a812645a272361a4a79",
+      "imageSha256": "7c5a8ac134dd4941115da8ecad1a184a6fead7146bcd930ac2ee902d48913f98"
     },
     {
       "id": "api-rigid-skinning",
@@ -579,11 +578,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "capture": "native UsdSkel.BakeSkinning; Storm",
-      "timeCode": 13,
+      "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "df3c34756070966a58bf3edeb071e1712f8d0ec7bcc7cb0cee64e057952b3031",
-      "imageSha256": "2fc49ac3c0c1e196bd0015958a610bb7b39073d30961675b313393bd8536e4ad"
+      "sourceFingerprint": "462d2458b1cd07180fce01eee260565ae5b70bd53f8ab751404fb7e12b9c07b9",
+      "imageSha256": "4b72dfb1ce866dd83100263b6fad7bb5c78732957e44271482645d1d62610868"
     },
     {
       "id": "api-splat-galaxy",
@@ -599,8 +597,8 @@
           "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
         }
       ],
-      "sourceFingerprint": "9e851cffe355c23f446d211a2f8c95333b847039a53443cfc4332d7791b0accc",
-      "imageSha256": "d3faaeaf5d17c87d205ae5cf3de477205e208c214ab3a96a52ebc5d830898b9f"
+      "sourceFingerprint": "bddcddce9439555381b9a0203c8fe71f7d12337312367e8af6b3e333688148c6",
+      "imageSha256": "1abdd1a3e379d83e7eb38b4b08764ad86701d280fdd619840db1812aa278bf77"
     },
     {
       "id": "api-splat-blossom-tree",
@@ -616,8 +614,8 @@
           "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
         }
       ],
-      "sourceFingerprint": "1df8af0d56e03d854991ddb3322386bdf141ca2f6b060bb3daad30f3635ad5c8",
-      "imageSha256": "03ad8ce6f1d879269f73897e1c15f72c8d6ee4aa58738ab573537d5f75e23cef"
+      "sourceFingerprint": "9587d3d2d1e65be622a458ab0456993ee44119b656138a7ecaea5a138117e396",
+      "imageSha256": "502d7322ced8a7b8fed1ed8c897a47456f3f2c6a4ac8c0e650054a85454fb736"
     },
     {
       "id": "api-view-dependent-splats",
@@ -633,8 +631,8 @@
           "representation": "opaque 2-sigma covariance ellipsoids; degree-zero radiance"
         }
       ],
-      "sourceFingerprint": "57a25af08332665f828d8057a1520dcc0284ff0b4e72caa038851e23cc7b135c",
-      "imageSha256": "0c22540a402fc5c470728ccb26fa88e77175336ae00c0a077fd0ae24493d46fa"
+      "sourceFingerprint": "611486d2e06a59e657ffa1cbccb0025925cda4b68d2eb0b3abc92f3f01719cbc",
+      "imageSha256": "335a00e99b3a4182cea813d17f91c38d06d83e023b4471c073e58ad6009f10a9"
     },
     {
       "id": "api-payload-variant-assembly",
@@ -644,7 +642,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "8039eb113ede0ebf64ae2fa15f627e0f07c9d23fdc53dc89a8a2feb6b1a27476",
+      "sourceFingerprint": "a396d124e33f3503cf1c72aac36fa9f44761077fb7f689a0549b55cea5ea83a3",
       "imageSha256": "3c725b8acd01254383ba7b4d7ffa919d3e07890c852945127c2208577e09beb4"
     },
     {
@@ -655,7 +653,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "8c6983ee56465c98ff2cd486a6b8bb653fa3f40f2af52cccc62eb81aea92c630",
+      "sourceFingerprint": "d387584c9226b6999b23c34377e9bf2cb062560f7cceb933efd80640531ac786",
       "imageSha256": "4a5f28274f4f57fc7c9f125204c4665173487c08c4ab4999bdfbf5abbb6deb23"
     },
     {
@@ -666,7 +664,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "86aafc9e08f4efd0b82d49e0fa14059955629bcff277ea94cef1685ed013cbae",
+      "sourceFingerprint": "55891e023da1c3bb870e2dea960d6bc0c570f89bf9f8934ab4ab1bc00d53d422",
       "imageSha256": "74c69d2da399ccebaba9c78ef1f93774abf40a7da553ec95648731472f31d33f"
     },
     {
@@ -677,7 +675,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "56e9fdef9c0bfd22604ca951ab426a2e9809180e5cf898270cc889ed6ff9373c",
+      "sourceFingerprint": "87a37e54710dceb97cde08b12d06c2b60c4946abcf388d5b82980fbc085b467d",
       "imageSha256": "533a0425b2a06d34e4ea41ef2e9f0b904e096d8724f0910bccc35a452c7ef4b6"
     },
     {
@@ -688,7 +686,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "c6718fc0da1af43aba1a53bb1744449b85ba39ffbb1c9d2d3cf647b41b9d8e14",
+      "sourceFingerprint": "b9a11b1f333045628af5bae78d180cbedaa2fef8bb0f0781a31a86eb54b7e112",
       "imageSha256": "53c21d66e30a4202e088292b474b4b252640ecc913baf960b3d028d473004725"
     },
     {
@@ -699,7 +697,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "a9c92fd60aa0625bfb0df35e57814d34a3c1d9c275d24dd53e9b8f44e90cedc6",
+      "sourceFingerprint": "da19d6b1699178a004ae717002ef8a3a0fb2a2b23bc1548bb965ca39605a7a1d",
       "imageSha256": "f7957b7f05645d4261b573b66db0a49ae9bc34dcbc5d6aab52cd1c2728b73501"
     },
     {
@@ -710,7 +708,7 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "9c9eeb445c583840ddebb5dfaaa218c59dd9ba9b37e910de23fb0dc81862076d",
+      "sourceFingerprint": "8af3d26320ac46bdc1ebd195fcf7ffa77ca14ce23c04e0275e4fce98ff410342",
       "imageSha256": "feed1285c8a124d0584a5b5a2a06550f189337d97fb87af1676dec1b55986550"
     }
   ]

@@ -1,5 +1,5 @@
-/** Execute a curated API fixture without modifying the viewer's native module. */
-export function runApiExample(id, signal) {
+/** Execute a curated lesson or an explicitly edited draft in its own worker. */
+export function runApiExample(id, signal, source) {
   return new Promise((resolve, reject) => {
     if (signal.aborted) { reject(signal.reason); return; }
     const worker = new Worker('/test-fixtures/api/worker.js', { type: 'module', name: 'usd-api-example' });
@@ -12,6 +12,6 @@ export function runApiExample(id, signal) {
     signal.addEventListener('abort', abort, { once: true });
     worker.onmessage = ({ data }) => finish(data.error ? new Error(data.error) : null, data.result);
     worker.onerror = event => finish(new Error(event.message || 'API example worker failed.'));
-    worker.postMessage(id);
+    worker.postMessage(source===undefined?id:{id,source});
   });
 }

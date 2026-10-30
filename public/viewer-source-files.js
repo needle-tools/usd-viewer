@@ -5,7 +5,7 @@ export function createSourceFiles({files = [], asset, handle, usd}) {
   const add = entry => { if (entry.path && !entries.has(entry.path)) entries.set(entry.path, entry); };
   for (const file of files) add({path:file.path || file.name, file, size:file.size});
   for (const path of asset?.files || []) add({path, url:new URL('/test-fixtures/' + path, location.href).href});
-  if (asset?.executable) for (const name of ['scene-kit.js','pxr.js','execute.js','create-api-stage.js','worker.js']) {
+  if (asset?.executable) for (const name of ['scene-helpers.js','pxr.js','execute.js','create-api-stage.js','worker.js']) {
     add({path:'api/' + name, url:new URL('/test-fixtures/api/' + name, location.href).href});
   }
   // Preserve local relative folder paths; HTTP resolver IDs are translated back
@@ -35,7 +35,8 @@ export function createSourceFiles({files = [], asset, handle, usd}) {
     });
     readQueue = pending; const blob = await pending; signal?.throwIfAborted(); return blob;
   }
-  return ({includeResources = true} = {}) => {
+  const describe=entry=>({...entry, read:signal=>read(entry,signal),canOpenAsRoot:/\.(?:usd[acz]?|usdz)(?:[?#]|$)/i.test(entry.path)});
+  const getFiles=({includeResources = true} = {}) => {
     const current = new Map(entries);
     if (includeResources) handle?.scene.traverse(object => {
       for (const material of [object.material].flat()) if (material) for (const value of Object.values(material)) {
@@ -44,10 +45,9 @@ export function createSourceFiles({files = [], asset, handle, usd}) {
         if (!current.has(path)) current.set(path,{path,url});
       }
     });
-    return [...current.values()].map(entry => ({...entry,
-      // read() returns a Blob; the pane chooses text/image/binary presentation.
-      read: signal => read(entry,signal),
-      canOpenAsRoot: /\.(?:usd[acz]?|usdz)(?:[?#]|$)/i.test(entry.path),
-    }));
+    return [...current.values()].map(describe);
   };
+  // Explicit source navigation can request a dependency not yet loaded by Hydra.
+  getFiles.resolve=path=>{const entry={path,identifier:path,url:urlFor(path)};add(entry);return describe(entry);};
+  return getFiles;
 }

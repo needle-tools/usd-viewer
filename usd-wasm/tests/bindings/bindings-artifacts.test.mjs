@@ -601,6 +601,128 @@ def Scope "Looks"
         USD.ReleaseStage(reopened);
         USD.ReleaseStage(stage);
     });
+    it("authors rig arrays, metadata, references and sublayers without USDA text rewriting", async () => {
+        const USD = await loadUsdModuleFromTempCopy(), time = Number.NaN;
+        USD.FS_createPath('/', 'tmp', true, true);
+        const base = USD.CreateStage('/tmp/authoring-base.usda');
+        const tree = base.DefinePrim('/Tree', 'Xform');
+        base.DefinePrim('/Tree/Leaf', 'Sphere');
+        assert.equal(base.GetRootLayer().Export('/tmp/authoring-base.usda'), true);
+        const stage = USD.CreateStage('/tmp/authoring-root.usda');
+        const root = stage.DefinePrim('/World', 'Xform');
+        const copy = stage.DefinePrim('/World/Copy', 'Xform');
+        assert.equal(copy.AddReference('authoring-base.usda', '/Tree'), true);
+        assert.equal(copy.SetInstanceable(true), true);
+        assert.equal(copy.IsInstance(), true);
+        assert.equal(stage.GetPrimAtPath('/World/Copy/Leaf').IsValid(), true);
+        const matrix = USD.GfMatrix4d.Identity().SetTranslate(new USD.GfVec3d(0, 1.1, 0));
+        const transforms = root.CreateAttribute('bindTransforms', 'matrix4d[]', false);
+        assert.equal(transforms.Set([matrix, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,2.2,0,1]], time), true);
+        assert.match(transforms.GetValueString(), /2.2/);
+        for (const type of ['quatf', 'quatd', 'quath']) {
+            const rotations = root.CreateAttribute(type, type + '[]', true);
+            assert.equal(rotations.Set([[1,0,0,0], [0.70710678,0,0,0.70710678]], time), true);
+            assert.equal(rotations.Set([[1,0,0,0], [1,0,0,0]], 49), true);
+            assert.match(rotations.GetValueString(), /0.707/);
+            assert.equal(rotations.GetNumTimeSamples(), 1);
+        }
+        const scales = root.CreateAttribute('scales', 'half3[]', false);
+        assert.equal(scales.Set([[1,1,1],[0.5,1,1]], time), true);
+        const weights = root.CreateAttribute('primvars:skel:jointWeights', 'float[]', false);
+        assert.equal(weights.SetMetadata('interpolation', 'vertex'), true);
+        assert.equal(weights.SetMetadata('elementSize', 3), true);
+        assert.equal(weights.GetMetadataString('interpolation'), 'vertex');
+        assert.equal(weights.GetMetadataString('elementSize'), '3');
+        stage.GetRootLayer().SetSubLayerPaths(['authoring-base.usda']);
+        assert.deepEqual(stage.GetRootLayer().GetSubLayerPaths(), ['authoring-base.usda']);
+        assert.equal(stage.GetPrimAtPath('/Tree/Leaf').IsValid(), true);
+        const text = stage.GetRootLayer().ExportToString();
+        assert.match(text, /matrix4d\[\] bindTransforms/);
+        assert.match(text, /instanceable = true/);
+        assert.equal(stage.GetRootLayer().Export('/tmp/authoring-root.usda'), true);
+        USD.ReleaseStage(stage);
+        const reopened = await USD.OpenStage('/tmp/authoring-root.usda');
+        assert.equal(reopened.GetPrimAtPath('/World/Copy').IsInstance(), true);
+        assert.equal(reopened.GetPrimAtPath('/World').GetAttribute('primvars:skel:jointWeights').GetMetadataString('elementSize'), '3');
+        USD.ReleaseStage(reopened);USD.ReleaseStage(base);
+    });
+
+    it("scopes variant values with edit targets and rejects malformed rig arrays", async () => {
+        const USD = await loadUsdModuleFromTempCopy();
+        USD.FS_createPath('/', 'tmp', true, true);
+        const stage = USD.CreateStage('/tmp/edit-targets.usda'), model = stage.DefinePrim('/Model','Xform');
+        const previous = stage.GetEditTarget();
+        for (const [name,size] of [['small',1],['large',3]]) {
+            model.AddVariant('size',name);await model.SetVariantSelection('size',name);
+            const target = model.GetVariantEditTarget('size');
+            assert.equal(target.IsValid(),true);
+            stage.SetEditTarget(target);
+            try { stage.DefinePrim('/Model/Cube','Cube').GetAttribute('size').Set(size,Number.NaN); }
+            finally { stage.SetEditTarget(previous);target.delete(); }
+        }
+        await model.SetVariantSelection('size','small');
+        assert.equal(stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'1');
+        await model.SetVariantSelection('size','large');
+        assert.equal(stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'3');
+        const rotations=model.CreateAttribute('rotations','quatf[]',true);
+        assert.throws(()=>rotations.Set([[1,0,0]],Number.NaN),/quaternions use/);
+        assert.throws(()=>rotations.Set([[1,'bad',0,0]],Number.NaN),/finite numbers/);
+        assert.throws(()=>rotations.Set([[1,Infinity,0,0]],Number.NaN),/finite numbers/);
+        assert.equal(rotations.Set([[1,0,0,0]],Number.NaN),true);
+        const matrices=model.CreateAttribute('matrices','matrix4d[]',true);
+        assert.throws(()=>matrices.Set([[1,0,0]],Number.NaN),/matrices need/);
+        assert.throws(()=>matrices.Set([[1,0,0,0, 0,1,0,0, 0,0,1,0, 0,'bad',0,1]],Number.NaN),/finite numbers/);
+        const scales=model.CreateAttribute('scales','half3[]',true);
+        assert.throws(()=>scales.Set([[1,2]],Number.NaN),/three components/);
+        assert.throws(()=>scales.Set([[1,2,NaN]],Number.NaN),/finite numbers/);
+        assert.equal(matrices.Set([[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,2,0,1]]],Number.NaN),true);
+        assert.match(matrices.GetValueString(),/\(0, 2, 0, 1\)/);
+        previous.delete();USD.ReleaseStage(stage);
+    });
+
+    it("authors UV, color4, integer vector and boolean arrays with typed validation", async()=>{
+        const USD=await loadUsdModuleFromTempCopy();USD.FS_createPath('/','tmp',true,true);
+        const stage=USD.CreateStage('/tmp/vector-authoring.usda'),prim=stage.DefinePrim('/Mesh','Mesh');
+        for(const [type,value] of [
+            ['texCoord2f[]',[[0,0],[1,0],[1,1],[0,1]]],['texCoord2d[]',[[0.125,0.25]]],
+            ['color4f[]',[[1,0,0,0.5]]],['color4d[]',[[0.5,0.25,0.125,1]]],
+            ['int2[]',[[1,2]]],['int3[]',[[1,2,3]]],['int4[]',[[1,2,3,4]]],['bool[]',[true,false,true]],
+        ]){const attribute=prim.CreateAttribute('test:'+type.replace(/[^a-z0-9]/g,''),type,true);assert.equal(attribute.Set(value,NaN),true);assert.deepEqual(await attribute.Get(NaN),value);}
+        const uv=prim.CreateAttribute('primvars:st','texCoord2f[]',false);
+        assert.throws(()=>uv.Set([[1,2,3]],NaN),/wrong number/);assert.throws(()=>uv.Set([[1,NaN]],NaN),/finite/);assert.throws(()=>uv.Set([[1,1e100]],NaN),/out of range/);
+        const ints=prim.CreateAttribute('test:integer','int2[]',true);assert.throws(()=>ints.Set([[1.5,2]],NaN),/out of range/);assert.throws(()=>ints.Set([[1,2147483648]],NaN),/out of range/);
+        assert.equal(uv.Set([[0,0],[1,1]],NaN),true);USD.ReleaseStage(stage);
+    });
+
+    it("opens actual composed layer views without copying referenced data", async()=>{
+        const USD=await loadUsdModuleFromTempCopy();USD.FS_createPath('/','tmp',true,true);
+        const asset=USD.CreateStage('/tmp/layer-source.usda'),mesh=asset.DefinePrim('/Asset','Mesh');mesh.GetAttribute('points').Set([[0,0,0],[1,0,0],[0,1,0]],NaN);asset.GetRootLayer().Export('/tmp/layer-source.usda');
+        const root=USD.CreateStage('/tmp/layer-root.usda');await root.DefinePrim('/World/Imported','Xform').AddReference('layer-source.usda','/Asset');
+        const source=await root.OpenLayerStage(asset.GetRootLayer().GetIdentifier());assert.ok(source);
+        source.GetPrimAtPath('/Asset').GetAttribute('points').Set([[2,3,4]],NaN);
+        assert.deepEqual(await root.GetPrimAtPath('/World/Imported').GetAttribute('points').Get(NaN),[[2,3,4]]);
+        USD.ReleaseStage(source);assert.deepEqual(await mesh.GetAttribute('points').Get(NaN),[[2,3,4]]);
+        assert.equal(await root.OpenLayerStage('/tmp/not-used.usda'),null);USD.ReleaseStage(root);USD.ReleaseStage(asset);
+    });
+
+    it("reads owned typed attribute values without parsing display strings", async () => {
+        const USD=await loadUsdModuleFromTempCopy();USD.FS_createPath('/','tmp',true,true);
+        const stage=USD.CreateStage('/tmp/typed-values.usda'), prim=stage.DefinePrim('/World','Xform');
+        const points=prim.CreateAttribute('points','point3f[]',true);
+        points.Set([[1,2,3],[-4,5,6]],Number.NaN);
+        const first=points.Get(Number.NaN);
+        assert.deepEqual(first,[[1,2,3],[-4,5,6]]);
+        points.Set([[7,8,9]],Number.NaN);
+        assert.deepEqual(first,[[1,2,3],[-4,5,6]],'read arrays own their values');
+        const approved=prim.CreateAttribute('approved','bool',true);approved.Set(true,Number.NaN);assert.equal(approved.Get(Number.NaN),true);
+        const radius=prim.CreateAttribute('radius','double',true);radius.Set(2,1);radius.Set(4,3);assert.equal(radius.Get(2),3);
+        const unset=prim.CreateAttribute('unset','float',true);assert.equal(unset.Get(Number.NaN),undefined);
+        const quats=prim.CreateAttribute('rotations','quatf[]',true);quats.Set([[1,0,0,0]],Number.NaN);assert.deepEqual(quats.Get(Number.NaN),[[1,0,0,0]]);
+        const matrices=prim.CreateAttribute('matrices','matrix4d[]',true), identity=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
+        matrices.Set([identity],Number.NaN);assert.deepEqual(matrices.Get(Number.NaN),[identity]);
+        USD.ReleaseStage(stage);
+    });
+
 });
 
 function vectorToArray(vector) {

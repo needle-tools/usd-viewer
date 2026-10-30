@@ -49,6 +49,40 @@ try {
     page.on('response', response => result.requests.push({ url: response.url(), status: response.status() }));
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(() => !!window.packed, null, { timeout: 120_000 });
+    result.authoring = await page.evaluate(async () => {
+      const USD=window.packed.USD;
+      if(!USD.FS_analyzePath('/tmp').exists)USD.FS_createPath('/','tmp',true,true);
+      const stage=USD.CreateStage('/tmp/packed-authoring.usda');
+      try {
+        const prototype=stage.DefinePrim('/Asset','Xform');stage.DefinePrim('/Asset/Child','Sphere');
+        const copy=stage.DefinePrim('/Copy','Xform');
+        await copy.AddReference('','/Asset');await copy.SetInstanceable(true);
+        const matrices=prototype.CreateAttribute('bindTransforms','matrix4d[]',true);
+        matrices.Set([[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,2,0,1]]],Number.NaN);
+        const rotations=prototype.CreateAttribute('rotations','quatf[]',true);
+        rotations.Set([[1,0,0,0]],Number.NaN);
+        const weights=prototype.CreateAttribute('primvars:weights','float[]',false);
+        weights.SetMetadata('interpolation','vertex');weights.SetMetadata('elementSize',3);
+        await stage.GetRootLayer().SetSubLayerPaths([]);
+        const previous=stage.GetEditTarget();
+        prototype.AddVariant('look','warm');await prototype.SetVariantSelection('look','warm');
+        const target=prototype.GetVariantEditTarget('look');
+        try { stage.SetEditTarget(target);stage.DefinePrim('/Asset/InVariant','Cube'); }
+        finally { stage.SetEditTarget(previous);target.delete();previous.delete(); }
+        const layerView=await stage.OpenLayerStage(stage.GetRootLayer().GetIdentifier());
+        try{layerView.GetPrimAtPath('/Asset').CreateAttribute('uvs','texCoord2f[]',true).Set([[0.25,0.5]],NaN);}
+        finally{USD.ReleaseStage(layerView);}
+        return {uvs:prototype.GetAttribute('uvs').Get(NaN),instance:copy.IsInstance(),child:stage.GetPrimAtPath('/Copy/Child').IsValid(),
+          interpolation:weights.GetMetadataString('interpolation'),elementSize:weights.GetMetadataString('elementSize'),
+          matrices:matrices.GetValueString(),typedMatrices:matrices.Get(Number.NaN),typedRotations:rotations.Get(Number.NaN),rotations:rotations.GetValueString(),variant:stage.GetPrimAtPath('/Asset/InVariant').IsValid()};
+      } finally { USD.ReleaseStage(stage); }
+    });
+    assert.deepEqual(result.authoring.uvs,[[0.25,0.5]]);assert.equal(result.authoring.instance,true);assert.equal(result.authoring.child,true);
+    assert.equal(result.authoring.interpolation,'vertex');assert.equal(result.authoring.elementSize,'3');
+    assert.match(result.authoring.matrices,/\(0, 2, 0, 1\)/);assert.match(result.authoring.rotations,/1/);assert.equal(result.authoring.variant,true);
+    assert.deepEqual(result.authoring.typedMatrices,[[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,2,0,1]]]);
+    assert.deepEqual(result.authoring.typedRotations,[[1,0,0,0]]);
+
     await page.screenshot({ path: join(output, 'basic.png') });
     await page.evaluate(() => window.packed.modes.setMode('beauty'));
     await page.waitForTimeout(700); await page.screenshot({ path: join(output, 'beauty.png') });
@@ -99,6 +133,13 @@ try {
       if(p.panel.selection[0]?.path!=='/World/Sphere1')throw new Error('Packed edit lost selection');
     });
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.usd-repl')).display==='flex');
+    const replInput=page.getByRole('textbox',{name:'JavaScript input'});
+    await replInput.fill('scratch.packedArray = ');await replInput.press('End');await page.getByRole('button',{name:'Array',exact:true}).click();
+    const arrayEditor=page.locator('.usd-array-editor');await arrayEditor.getByRole('combobox',{name:'Array type'}).selectOption('point3f');
+    await arrayEditor.getByRole('textbox',{name:'Row 0 X',exact:true}).fill('7');await arrayEditor.getByRole('button',{name:'Apply',exact:true}).click();
+    await replInput.press('Control+Enter');await page.waitForFunction(()=>window.packed.repl.run('scratch.packedArray[0][0]').then(value=>value===7));
+    result.arrayEditor={inserted:await page.evaluate(()=>window.packed.repl.run('scratch.packedArray')),stylesheet:await page.locator('.usd-repl').evaluate(el=>getComputedStyle(el).display)};
+    assert.deepEqual(result.arrayEditor.inserted,[[7,0,0],[0,0,0],[0,0,0],[0,0,0]]);await page.evaluate(()=>scrollTo(0,0));
     await page.screenshot({path:join(output,'inspection-repl.png')});
     result.inspection='Packed public exports: multi-selection, exact property navigation, REPL await, serialized authored edits and default SDK console styles';
     result.archive = await page.evaluate(async () => {

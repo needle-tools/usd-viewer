@@ -6,6 +6,16 @@ It includes 63 examples, including weighted and rigid skinning, Gaussian fields,
 light rigs, animated lighting, payload variants, layer composition and instancing.
 `create-api-stage.js` also supplies the standalone API test buttons.
 
+Rigs author matrix and quaternion arrays through `Attribute.Set`; primvar metadata,
+references, instanceability and sublayers also use native bindings. Variants use
+real edit targets so both definitions and values belong to the selected branch.
+`Attribute.Get` returns typed JavaScript values rather than a parsed display string.
+Only the Open Text Layer and Virtual Filesystem lessons mount handwritten text.
+
+Repeated decorative parts share geometry: clock ticks, windows, sleepers and
+frame edges are batched meshes, while repeated markers use PointInstancer.
+Separate lesson objects stay independently selectable.
+
 The two Rigging lessons loop over frames 1–49 at 24 fps, with matching endpoints
 and samples every two frames. Weighted Skinning uses a periodic sway with tip
 follow-through; Rigid Skinning eases the rover mast up, holds, then retracts.
@@ -40,7 +50,7 @@ node scripts/audit-api-example-calls.mjs
 ```
 
 The report goes to `.cache/api-example-call-audit.json`. This is call-entry
-measurement for five core binding classes and five functions, excluding preview
+measurement for six core binding classes and five functions, excluding preview
 serialization. It is not whole-SDK coverage or proof that results were asserted.
 
 Regenerate preview inputs and images using the local native OpenUSD environment:

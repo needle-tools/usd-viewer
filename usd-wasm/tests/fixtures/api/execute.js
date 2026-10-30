@@ -1,6 +1,6 @@
 import { createPxrFacade } from './pxr.js';
 import { createApiStage } from './create-api-stage.js';
-import { createSceneKit } from './scene-kit.js';
+import { createSceneHelpers } from './scene-helpers.js';
 
 // Runs only the bundled examples. The browser host owns an isolated worker for
 // each execution so prototype adapters, authored layers and native handles never
@@ -27,7 +27,7 @@ export async function executeExample(USD, example, { fixtureCatalog, readFixture
   const findFixture = query => fixtureCatalog.find(asset => !asset.executable &&
     [asset.label, asset.root].some(value => value.toLowerCase() === String(query).toLowerCase()));
   const context = {
-    USD, ...pxr, stage: null, print, createApiStage, sceneKit: createSceneKit(USD), vectorToArray: pxr.vectorToArray,
+    USD, ...pxr, stage: null, print, createApiStage, sceneHelpers: createSceneHelpers(USD), vectorToArray: pxr.vectorToArray,
     listPrims: (stage = context.stage) => stage ? pxr.vectorToArray(stage.TraverseAll()).map(prim => prim.GetPath()) : [],
     inspectPrim: prim => !prim?.IsValid?.() ? null : ({
       path: prim.GetPath(), typeName: prim.GetTypeName(),
@@ -44,6 +44,8 @@ export async function executeExample(USD, example, { fixtureCatalog, readFixture
       return context.stage = await pxr.Usd.Stage.Open(`/tmp/repl-fixtures/${root}`);
     },
   };
+  // Keep saved drafts from before the helper rename executable.
+  Object.defineProperty(context, 'sceneKit', { value: context.sceneHelpers });
   const run = new Function('context', 'code', `
     return (async () => { with (context) {
       return await eval('(async () => {\\n' + code + '\\n})()');

@@ -29,10 +29,49 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 - **Volumes** — optional bounded MaterialX media and OpenVDB density/heat visualization.
 - **Rendering** — WebGPURenderer with Basic, Beauty, MuTracer and gkjohnson modes.
 - **Inspection and authoring** — stage/property navigation, multi-selection,
-  instance picking, JavaScript REPL and serialized in-memory edits.
+  instance picking, JavaScript REPL with a paged array table, and serialized in-memory edits.
+  The app’s Code pane opens arrays beside the source in a resizable sidebar, with its width remembered.
 - **glTF-in-USD** — Adobe `usdGltf` file format plugin loads glTF/GLB directly
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
+
+## Core authoring
+
+The low-level API returned by `getUsdModule()` authors rig data directly through
+`Attribute.Set(value, timeCode)`. Use `Number.NaN` for the default value, or a
+frame number for a time sample. Matrix arrays accept `GfMatrix4d` objects,
+16-number row-major arrays, or four rows of four numbers. Quaternion arrays use
+`[real, x, y, z]` order and support `quatf`, `quatd` and `quath`; skeleton scales
+support `half3[]`. Malformed rig components throw `TypeError`.
+
+UV arrays (`texCoord2f[]`, `texCoord2d[]`), four-component color/vector arrays,
+integer vectors and boolean arrays also support typed authoring. Numeric vector
+components are validated for dimension, finiteness and target-type range.
+
+`await attribute.Get(timeCode)` reads numbers, booleans, strings and owned
+JavaScript arrays directly. Vectors are component arrays, matrices are four rows,
+and quaternions use `[real, x, y, z]`. Unset values return `undefined`. Await reads
+when a value may come from a remote value clip; `GetValueString()` remains useful
+for display and debugging.
+
+`attribute.SetMetadata("interpolation", "vertex")` and
+`attribute.SetMetadata("elementSize", 3)` author primvar metadata with the USD
+field's proper type. `await prim.AddReference(assetPath, primPath)`,
+`await prim.SetInstanceable(true)` and
+`await layer.SetSubLayerPaths(["looks.usda", "layout.usda"])` author composition
+without generating or rewriting USDA text. Earlier sublayers are stronger.
+
+`await stage.OpenLayerStage(identifier)` returns an owned stage view over an
+actual composed layer, preserving layer identity and the resolver context. Use it
+to edit that file in its authored prim namespace; reopening a URL can produce a
+separate layer. Unknown layer identifiers return `null`. Payloads start unloaded.
+Release the view with `USD.ReleaseStage(view)` when finished.
+
+For variant authoring, select the variant, save `stage.GetEditTarget()`, set the
+selected variant's `prim.GetVariantEditTarget(setName)`, then author both prims
+and values. Restore the previous target in `finally`, and call `delete()` on
+both owned target handles. Complete examples are in
+[`tests/fixtures/api`](tests/fixtures/api).
 
 ## Install
 

@@ -2124,10 +2124,11 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     showUsdBackground();
     await suiteControls?.dispose();
     const { mountUsdSuite } = await import('./viewer-suite.js');
+    let followingSource=false;
     suiteControls = await mountUsdSuite({ handle, stage,
       containers: window.usdWorkbench?.containers,
       stateKey: 'needle-usd-stage:' + (path || filename),
-      onSelect: (selected, items) => { viewportInteraction?.select(items || selected); window.usdWorkbench?.selectPrim(selected); },
+      onSelect: (selected, items) => { viewportInteraction?.select(items || selected); if(!followingSource)window.usdWorkbench?.selectPrim(selected); },
       onPickModeChange: mode => viewportInteraction?.setPickMode(mode),
       onOpen: () => window.usdWorkbench?.openPanel('stage'),
       onStage: info => window.usdWorkbench?.setStage(info),
@@ -2140,7 +2141,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
     window.usdStagePanel = suiteControls;
-    window.usdWorkbench?.code.show({ stage, usd: USD, handle, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
+    window.usdWorkbench?.code.show({ stage, usd: USD, handle, edit:callback=>suiteControls.edit(callback), navigate:target=>{followingSource=true;try{return suiteControls.navigate(target);}finally{followingSource=false;}}, runExample:activeCatalogAsset?.executable?source=>runEditedApiExample(activeCatalogAsset,source):undefined, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     viewportInteraction?.select(suiteControls.selection);
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
@@ -2262,17 +2263,29 @@ async function loadCatalogAssetBundle(asset, displayName) {
   }
 }
 
-function apiExampleSource(asset) {
-  const index = asset?.executable ? apiExampleAssets.findIndex(candidate => candidate.executable === asset.executable) : -1;
-  return index < 0 ? null : { title: asset.label, path: "api/examples.js", code: replExamples[index].code };
+const apiExampleDrafts=new Map();
+async function runEditedApiExample(asset,source){
+  if(!asset?.executable)throw new Error('No API example is selected.');
+  const generation=loadGeneration,controller=new AbortController();apiExampleAbort?.abort();apiExampleAbort=controller;
+  try {
+    const result=await runApiExample(asset.executable,controller.signal,source);
+    if(generation!==loadGeneration||controller.signal.aborted)throw new Error('Example changed.');
+    await clearStage();apiExampleDrafts.set(asset.executable,source);
+    await loadApiExample(asset,result);
+  }finally{if(apiExampleAbort===controller)apiExampleAbort=null;}
 }
 
-async function loadApiExample(asset) {
+function apiExampleSource(asset) {
+  const index = asset?.executable ? apiExampleAssets.findIndex(candidate => candidate.executable === asset.executable) : -1;
+  return index < 0 ? null : { title: asset.label, path: "api/examples.js", code: apiExampleDrafts.get(asset.executable)??replExamples[index].code };
+}
+
+async function loadApiExample(asset, prepared) {
   const generation = loadGeneration;
   const controller = new AbortController(); apiExampleAbort = controller;
   if (window.showLoadingOverlay) window.showLoadingOverlay(asset.label);
   try {
-    const result = await runApiExample(asset.executable, controller.signal);
+    const result = prepared??await runApiExample(asset.executable, controller.signal,apiExampleDrafts.get(asset.executable));
     if (generation !== loadGeneration || controller.signal.aborted) return;
     activeCatalogAsset = asset;
     for (const file of result.files.slice(1)) {

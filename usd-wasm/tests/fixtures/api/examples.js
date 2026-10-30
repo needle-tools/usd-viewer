@@ -1,18 +1,20 @@
 import { apiPreviewIds } from './previews.js';
 
 // Every example authors a small, visible scene with the OpenUSD bindings.
-// `sceneKit` (scene-kit.js) supplies short helpers for the decorative geometry,
+// `sceneHelpers` (scene-helpers.js) supplies short helpers for the decorative geometry,
 // so each example's own API calls stay in the foreground.
 export const replExamples = [
   {
     title: "Hello World",
     group: "Scene Building",
-    code: `// The smallest useful stage: an Xform with one Sphere child.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Put a sphere under /hello, then add an orbit as a sibling. Moving /hello
+// moves the whole model because the children inherit its transform.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/hello-world.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
-// Schema classes define typed prims and offer schema-aware attribute creators.
+// A Sphere schema supplies a radius attribute with the correct USD type.
+// Change 1.0 below to resize the planet without scaling its orbit.
 UsdGeom.Xform.Define(stage, "/hello");
 const planet = UsdGeom.Sphere.Define(stage, "/hello/world");
 planet.CreateRadiusAttr(1.0);
@@ -28,8 +30,9 @@ print(stage.GetRootLayer().ExportToString());`,
   {
     title: "Stage Metadata",
     group: "Scene Building",
-    code: `// Stage metadata lives on the root layer: up axis, time range and frame rate.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Describe a 40-frame shot at 24 frames per second. The clock below reads
+// those settings back: its ticks represent frames and its hand marks the duration.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/stage-metadata.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 stage.SetStartTimeCode(1001);
@@ -47,10 +50,13 @@ function onDial(turns, radius, depth = 0) {
 }
 
 kit.torus(stage, "/World/Clock/Rim", center, 1.45, 0.09, colors.teal);
+const ticks = [];
 for (let frame = 0; frame < fps; frame++) {
   const inner = frame % 6 === 0 ? 1.02 : 1.18;      // quarter-second ticks are longer
-  kit.beam(stage, "/World/Clock/Tick" + frame, onDial(frame / fps, inner), onDial(frame / fps, 1.32), 0.03, colors.gold);
+  ticks.push([onDial(frame / fps, inner), onDial(frame / fps, 1.32)]);
 }
+// One mesh holds the gold tick marks; the coral hand has its own colour.
+kit.beams(stage, "/World/Clock/Ticks", ticks, 0.03, colors.gold);
 kit.beam(stage, "/World/Clock/Hand", onDial(0, 0, 0.08), onDial(frameCount / fps, 0.95, 0.08), 0.05, colors.coral);
 kit.sphere(stage, "/World/Clock/Axle", [center[0], center[1], 0.1], 0.12, colors.cream);
 kit.box(stage, "/World/Clock/Base", [0, 0.05, 0], [1.4, 0.1, 0.6], colors.ink);
@@ -66,8 +72,9 @@ print({
   {
     title: "Generic Prims",
     group: "Scene Building",
-    code: `// Stage.DefinePrim accepts any registered type name, even without a JS schema class.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Build a hanging mobile with ordinary prims and two lights. DefinePrim takes
+// a USD type name, so the same authoring pattern works for shapes and lights.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/generic-prims.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 const world = stage.DefinePrim("/World", "Xform");
@@ -117,8 +124,9 @@ print([world.GetTypeName(), props.GetTypeName(), light.GetTypeName(), sky.GetTyp
   {
     title: "Schema Shapes",
     group: "Scene Building",
-    code: `// Typed schemas carry their own attributes: Sphere.radius and Cube.size.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Balance a sphere and a cube on a seesaw. Radius and size change the shapes
+// themselves; the parent transform tips the whole assembly together.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/schema-shapes.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 UsdGeom.Xform.Define(stage, "/World");
@@ -151,7 +159,7 @@ print(listPrims(stage));`,
     group: "Scene Building",
     code: `// A mesh is three arrays: points, the vertex count of each face, and the
 // point indices each face uses, in order.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/mesh-arrays.usda");
 stage.SetUpAxis("Y");
 const mesh = UsdGeom.Mesh.Define(stage, "/World/Triangle");
@@ -183,8 +191,9 @@ print(stage.ExportToString());`,
   {
     title: "Xform Ops",
     group: "Transforms",
-    code: `// Xform ops apply in their authored order: translate, then rotate, then scale.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Place the plane with separate translate, rotate and scale operations. In
+// this stack, scaling and rotation happen around its local origin before placement.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/xform-ops.usda");
 stage.SetUpAxis("Y");
 const model = UsdGeom.Xform.Define(stage, "/World/Model");
@@ -210,8 +219,9 @@ print(inspectPrim(model.GetPrim()));`,
   {
     title: "Xform Common API",
     group: "Transforms",
-    code: `// XformCommonAPI authors the standard translate/rotate/scale stack, one call each.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Lean and stretch a tower as one object. Its windows are built in the
+// tower's local space, so they inherit the same translation, rotation and scale.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/xform-common.usda");
 stage.SetUpAxis("Y");
 const tower = UsdGeom.Cube.Define(stage, "/World/Tower");
@@ -224,11 +234,14 @@ xform.SetRotate(Gf.Vec3f(0, 0, 8));
 xform.SetScale(Gf.Vec3f(0.55, 3, 0.55));
 
 // Children live in the tower's unit-cube space and inherit its lean and stretch.
+const cornices = [], windows = [];
 for (let floor = 1; floor < 7; floor++) {
   const y = -0.5 + floor / 7;
-  kit.box(stage, "/World/Tower/Cornice" + floor, [0, y, 0], [1.12, 0.012, 1.12], colors.gold);
-  kit.box(stage, "/World/Tower/Window" + floor, [0, y + 0.07, 0.505], [0.3, 0.05, 0.02], colors.ink);
+  cornices.push([[0, y, 0], [1.12, 0.012, 1.12]]);
+  windows.push([[0, y + 0.07, 0.505], [0.3, 0.05, 0.02]]);
 }
+kit.boxes(stage, "/World/Tower/Cornices", cornices, colors.gold);
+kit.boxes(stage, "/World/Tower/Windows", windows, colors.ink);
 kit.box(stage, "/World/Tower/Belfry", [0, 0.56, 0], [0.8, 0.12, 0.8], colors.coral);
 
 // A plinth and a true vertical make the 8 degree lean readable.
@@ -240,8 +253,9 @@ print(stage.ExportToString());`,
   {
     title: "Matrix Transform",
     group: "Transforms",
-    code: `// One matrix op can carry a whole transform; this one only translates.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Move a desk lamp by setting one transform matrix on its parent. The lamp
+// is modelled around that parent's origin; the three coloured axes mark its new location.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/matrix-transform.usda");
 stage.SetUpAxis("Y");
 const rig = UsdGeom.Xform.Define(stage, "/World/Rig");
@@ -268,8 +282,9 @@ print(rig.GetPrim().GetAttribute("xformOp:transform").GetValueString());`,
   {
     title: "Animated Radius",
     group: "Animation",
-    code: `// Time samples let one attribute hold different values at different frames.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Pulse a sphere by keying its radius. The points behind it plot the keyed
+// values; USD interpolates the radius between them as the timeline plays.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/animated-radius.usda");
 stage.SetUpAxis("Y");
 stage.SetStartTimeCode(1);
@@ -296,8 +311,9 @@ print(sphere.GetPrim().GetAttribute("radius").GetValueStringAtTime(24));`,
   {
     title: "Animated Transform",
     group: "Animation",
-    code: `// Animate a translate op with two keyframes; USD interpolates the frames between.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Send a cube along the track by keying its translation at the endpoints.
+// Intermediate positions come from USD's interpolation, not a JavaScript render loop.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/animated-transform.usda");
 stage.SetUpAxis("Y");
 stage.SetStartTimeCode(1);
@@ -313,9 +329,8 @@ translate.Set(Gf.Vec3d(-2, 0, 0));   // default value for still previews: the st
 
 // A short rail track, ending in a gate the cube drives through.
 kit.box(stage, "/World/Track/Bed", [0, -0.55, 0], [5.5, 0.1, 1.1], colors.ink);
-for (let i = 0; i < 9; i++) {
-  kit.box(stage, "/World/Track/Sleeper" + i, [-2.4 + i * 0.6, -0.47, 0], [0.09, 0.05, 1], colors.cream);
-}
+const sleepers = Array.from({length: 9}, (_, i) => [[-2.4 + i * 0.6, -0.47, 0], [0.09, 0.05, 1]]);
+kit.boxes(stage, "/World/Track/Sleepers", sleepers, colors.cream);
 for (const side of [-1, 1]) {
   kit.beam(stage, "/World/Track/Rail" + (side < 0 ? "Left" : "Right"), [-2.6, -0.43, side * 0.4], [2.6, -0.43, side * 0.4], 0.03, colors.gold);
 }
@@ -327,8 +342,9 @@ print(cube.GetPrim().GetAttribute("xformOp:translate").GetTimeSamples().size());
   {
     title: "Shader Color Inputs",
     group: "Scene Building",
-    code: `// UsdPreviewSurface shaders expose typed inputs such as diffuseColor.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Give two links separate surface colours, then read their shader inputs back.
+// A Material connects each link to its shader through the surface output.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/shader-color-inputs.usda");
 stage.SetUpAxis("Y");
 const red = UsdShade.Shader.Define(stage, "/World/Looks/Red/PreviewSurface");
@@ -359,7 +375,7 @@ print(stage.ExportToString());`,
     title: "Visibility",
     group: "Inspection",
     code: `// visibility is inherited: "invisible" hides a prim and all of its descendants.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/visibility.usda");
 stage.SetUpAxis("Y");
 const shown = UsdGeom.Cube.Define(stage, "/World/VisibleCube");
@@ -374,10 +390,11 @@ kit.pose(stage, hidden, [0.95, 0.75, 0], [0.75, 0.75, 0.75]);
 kit.color(hidden, colors.coral);
 
 // A dotted outline marks where the hidden sphere still exists in the scene graph.
-for (let i = 0; i < 16; i++) {
-  const angle = i / 16 * 2 * Math.PI;
-  kit.sphere(stage, "/World/HiddenOutline/Dot" + i, [0.95 + 0.75 * Math.cos(angle), 0.75 + 0.75 * Math.sin(angle), 0], 0.045, colors.gold);
-}
+const dots = Array.from({length: 16}, (_, i) => {
+  const angle = i * 2 * Math.PI / 16;
+  return [0.95 + 0.75 * Math.cos(angle), 0.75 + 0.75 * Math.sin(angle), 0];
+});
+kit.spheres(stage, "/World/HiddenOutline", dots, 0.045, colors.gold);
 kit.box(stage, "/World/Stage", [0, -0.06, 0], [3.8, 0.12, 1.4], colors.ink);
 
 print(listPrims(stage).map((path) => inspectPrim(stage.GetPrimAtPath(path))));`,
@@ -385,7 +402,7 @@ print(listPrims(stage).map((path) => inspectPrim(stage.GetPrimAtPath(path))));`,
   {
     title: "Purpose",
     group: "Inspection",
-    code: `const k = sceneKit, c = k.colors;
+    code: `const k = sceneHelpers, c = k.colors;
 stage = Usd.Stage.CreateNew("/tmp/purpose.usda");
 stage.SetUpAxis("Y");
 const renderMesh = UsdGeom.Cube.Define(stage, "/World/RenderMesh");
@@ -398,7 +415,12 @@ k.pose(stage,renderMesh,[-0.9,0,0],[0.5,0.7,0.5]);
 k.pose(stage,proxyMesh,[0.9,0,0],[0.6,0.8,0.6]);
 k.color(renderMesh,c.coral); k.color(proxyMesh,c.teal);
 // Default-purpose silhouette stays visible when viewers omit render/proxy purposes.
-for(const x of [-0.9,0.9]) for(let i=0;i<4;i++) {const a=i*Math.PI/2+Math.PI/4,b=a+Math.PI/2; k.beam(stage,"/World/Bounds"+(x<0?"R":"P")+i,[x+0.8*Math.cos(a),0.8*Math.sin(a),0.65],[x+0.8*Math.cos(b),0.8*Math.sin(b),0.65],0.035,c.gold);}
+const bounds = [];
+for (const x of [-0.9, 0.9]) for (let i = 0; i < 4; i++) {
+  const a = i * Math.PI / 2 + Math.PI / 4, b = a + Math.PI / 2;
+  bounds.push([[x + 0.8 * Math.cos(a), 0.8 * Math.sin(a), 0.65], [x + 0.8 * Math.cos(b), 0.8 * Math.sin(b), 0.65]]);
+}
+k.beams(stage, "/World/Bounds", bounds, 0.035, c.gold);
 k.sphere(stage,"/World/PurposeKey",[0,1.4,0],0.25,c.cream);
 
 print(stage.ExportToString());`,
@@ -406,8 +428,9 @@ print(stage.ExportToString());`,
   {
     title: "Custom Properties",
     group: "Authoring",
-    code: `// userProperties: is the conventional namespace for pipeline data on a prim.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Store an approval flag on a tool case and use it to choose the status-lamp
+// colour. The userProperties: namespace keeps this pipeline data separate from geometry.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/custom-properties.usda");
 stage.SetUpAxis("Y");
 const prim = stage.DefinePrim("/World/Asset", "Xform");
@@ -416,8 +439,8 @@ prim.CreateAttribute("userProperties:assetId", Sdf.ValueTypeNames.String, true).
 prim.CreateAttribute("userProperties:massKg", Sdf.ValueTypeNames.Float, true).Set(12.5);
 prim.CreateAttribute("userProperties:approved", Sdf.ValueTypeNames.Bool, true).Set(true);
 
-// Values read back as strings ("1" for true). Let the approval drive the status lamp.
-const approved = prim.GetAttribute("userProperties:approved").GetValueString() === "1";
+// Read the approval as a boolean and use it to choose the status-lamp colour.
+const approved = prim.GetAttribute("userProperties:approved").Get();
 
 // A tool case; its parts are children of /World/Asset and share its turn.
 kit.pose(stage, prim, [0, 0, 0], [1, 1, 1], [0, 15, 0]);
@@ -434,8 +457,9 @@ print(inspectPrim(prim));`,
   {
     title: "Relationships",
     group: "Authoring",
-    code: `// A relationship stores paths to other prims. Here a controller targets two receivers.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Link a controller to two receivers with a relationship. Reading its targets
+// back tells us which receivers need a visible cable, without duplicating that list.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/relationships.usda");
 stage.SetUpAxis("Y");
 const controller = stage.DefinePrim("/World/Controller", "Xform");
@@ -466,8 +490,9 @@ print(vectorToArray(rel.GetTargets()));`,
   {
     title: "Preview Material",
     group: "Materials",
-    code: `// A Material's surface output connects to a UsdPreviewSurface shader.
-const kit = sceneKit, colors = kit.colors;
+    code: `// A polished pitcher and a matte slate need different surfaces. Each Material
+// exposes a surface output connected to the shader that computes that appearance.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/preview-material.usda");
 stage.SetUpAxis("Y");
 const material = UsdShade.Material.Define(stage, "/World/Looks/Gold");
@@ -491,8 +516,9 @@ print(stage.ExportToString());`,
   {
     title: "Bind Material",
     group: "Materials",
-    code: `// MaterialBindingAPI connects geometry to a material through material:binding.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Bind a painted box and the paint inside its can to the same Material.
+// Updating that material changes both surfaces while their geometry stays independent.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/bind-material.usda");
 stage.SetUpAxis("Y");
 const cube = UsdGeom.Cube.Define(stage, "/World/Box");
@@ -522,7 +548,7 @@ print(cube.GetPrim().GetRelationship("material:binding").GetTargets().get(0));`,
     group: "Materials",
     code: `// A textured material is a small shader network:
 // primvar reader (UVs) -> UsdUVTexture -> UsdPreviewSurface -> Material.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("MaterialX Texture + Noise");
 const material = UsdShade.Material.Define(stage, "/World/Looks/Textured");
 const surface = UsdShade.Shader.Define(stage, "/World/Looks/Textured/PreviewSurface");
@@ -560,8 +586,9 @@ print(stage.ExportToString());`,
   {
     title: "Variant Set",
     group: "Composition",
-    code: `// A variant set stores alternative opinions; exactly one variant is selected.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Offer a sphere and a cube at the same prim path. The selected shape variant
+// determines its type and size; switching variants keeps the surrounding stand.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/variant-set.usda");
 stage.SetUpAxis("Y");
 const model = UsdGeom.Xform.Define(stage, "/World/Model").GetPrim();
@@ -570,8 +597,12 @@ const variants = model.GetVariantSets().AddVariantSet("shape");
 variants.AddVariant("sphere");
 variants.AddVariant("cube");
 // Both variants define /World/Model/Geom, each with a different schema type.
-variants.DefinePrim("sphere", "/World/Model/Geom", "Sphere").CreateAttribute("radius", Sdf.ValueTypeNames.Double, false).Set(0.9);
-variants.DefinePrim("cube", "/World/Model/Geom", "Cube").CreateAttribute("size", Sdf.ValueTypeNames.Double, false).Set(1.4);
+await kit.withVariant(stage, variants, "sphere", () => {
+  UsdGeom.Sphere.Define(stage, "/World/Model/Geom").CreateRadiusAttr(0.9);
+});
+await kit.withVariant(stage, variants, "cube", () => {
+  UsdGeom.Cube.Define(stage, "/World/Model/Geom").CreateSizeAttr(1.4);
+});
 await variants.SetVariantSelection("cube");
 
 // The chosen shape rests in a socket between the two option tokens.
@@ -587,26 +618,27 @@ print({ selection: variants.GetVariantSelection(), names: variants.GetVariantNam
   {
     title: "Variant Switch",
     group: "Composition",
-    code: `const kit = sceneKit;
+    code: `const kit = sceneHelpers;
 const colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/variant-switch.usda");
 stage.SetUpAxis("Y");
 const product = stage.DefinePrim("/World/Product", "Xform");
 const look = product.GetVariantSets().AddVariantSet("look");
 
-// Each variant defines its own child. DefinePrim selects that variant while
-// defining the prim; subsequent attribute writes use the stage's edit target.
-// Distinct child paths keep those values from overriding the other look.
+// Author each look inside its variant edit target. Definitions, colours and
+// transforms then switch together, without leaving stronger values on the root.
 for (const [name, color, scale] of [
   ["warm", colors.coral, [0.9, 1.25, 0.75]],
   ["cool", colors.blue, [1.05, 0.85, 1.05]],
 ]) {
   look.AddVariant(name);
   const path = "/World/Product/" + (name === "warm" ? "WarmSwatch" : "CoolSwatch");
-  const swatch = look.DefinePrim(name, path, "Sphere");
+  await kit.withVariant(stage, look, name, () => {
+  const swatch = stage.DefinePrim(path, "Sphere");
   swatch.CreateAttribute("userProperties:look", Sdf.ValueTypeNames.Token, true).Set(name);
   kit.color(swatch, color);
   kit.pose(stage, swatch, [0, 0, 0], scale);
+  });
 }
 
 // The collar and crown are shared: they remain outside the variant set.
@@ -623,8 +655,9 @@ print(stage.GetPrimAtPath("/World/Product/WarmSwatch").GetAttribute("userPropert
   {
     title: "Payload",
     group: "Composition",
-    code: `// A payload is a reference that can be loaded or unloaded on demand.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Deliver a sphere into a shipping crate through a payload. The holder owns
+// placement and local overrides; the payload keeps the delivered asset in its own file.
+const kit = sceneHelpers, colors = kit.colors;
 const payloadStage = Usd.Stage.CreateNew("/tmp/payload-asset.usda");
 payloadStage.DefinePrim("/PayloadRoot", "Xform");
 payloadStage.DefinePrim("/PayloadRoot/Sphere", "Sphere");
@@ -640,20 +673,20 @@ kit.color(stage.GetPrimAtPath("/World/PayloadHolder/Sphere"), colors.gold);
 
 // A shipping-crate frame around the delivered content: the cube's 12 edges.
 const s = 1.3;
+const edges = [];
 for (const a of [-s, s]) for (const b of [-s, s]) {
-  const id = (a < 0 ? "N" : "P") + (b < 0 ? "N" : "P");
-  kit.beam(stage, "/World/Crate/EdgeX" + id, [-s, a, b], [s, a, b], 0.07, colors.teal);
-  kit.beam(stage, "/World/Crate/EdgeY" + id, [a, -s, b], [a, s, b], 0.07, colors.teal);
-  kit.beam(stage, "/World/Crate/EdgeZ" + id, [a, b, -s], [a, b, s], 0.07, colors.teal);
+  edges.push([[-s, a, b], [s, a, b]], [[a, -s, b], [a, s, b]], [[a, b, -s], [a, b, s]]);
 }
+kit.beams(stage, "/World/Crate/Edges", edges, 0.07, colors.teal);
 
 print(inspectPrim(holder));`,
   },
   {
     title: "Payload Load State",
     group: "Composition",
-    code: `// Payloads can be unloaded to save memory and loaded again on demand.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Unload the drawer's payload and inspect the remaining holder, then load it
+// again. Unloading removes the payload's composed contents while keeping the arc.
+const kit = sceneHelpers, colors = kit.colors;
 const payloadStage = Usd.Stage.CreateNew("/tmp/payload-load-asset.usda");
 payloadStage.DefinePrim("/PayloadRoot", "Xform");
 payloadStage.DefinePrim("/PayloadRoot/Cube", "Cube");
@@ -682,8 +715,9 @@ print({ loaded: holder.IsLoaded() });`,
   {
     title: "Open Text Layer",
     group: "Composition",
-    code: `// Any .usda text can be written to the virtual filesystem and opened as a stage.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Open a small USDA document from text. This is useful for imported snippets:
+// write the text into the virtual filesystem, then let USD parse and compose it.
+const kit = sceneHelpers, colors = kit.colors;
 mountText("/tmp/from-text.usda", \`#usda 1.0
 
 def Xform "World"
@@ -717,53 +751,27 @@ print(listPrims(stage));`,
   {
     title: "Referenced Layer",
     group: "Composition",
-    code: `// A reference grafts a prim and its children from another layer into this stage.
-const kit = sceneKit, colors = kit.colors;
-mountText("/tmp/reference-base.usda", \`#usda 1.0
-(
-    defaultPrim = "Mushroom"
-    upAxis = "Y"
-)
+    code: `// Author one mushroom asset and reference it twice. Give the smaller copy a
+// different cap colour through a local opinion, leaving the source asset intact.
+const kit = sceneHelpers, colors = kit.colors;
+const asset = Usd.Stage.CreateNew("/tmp/reference-base.usda");
+UsdGeom.SetStageUpAxis(asset, UsdGeom.Tokens.y);
+asset.DefinePrim("/Mushroom", "Xform");
+const stem = asset.DefinePrim("/Mushroom/Stem", "Cylinder");
+kit.attr(stem, "axis", "token", "Y");
+kit.attr(stem, "height", "double", 0.8);
+kit.attr(stem, "radius", "double", 0.16);
+kit.color(stem, colors.cream);
+kit.pose(asset, stem, [0, 0.4, 0]);
+kit.sphere(asset, "/Mushroom/Cap", [0, 0.8, 0], 0.5, colors.coral, [1, 0.55, 1]);
+asset.GetRootLayer().Export("/tmp/reference-base.usda");
 
-def Xform "Mushroom"
-{
-    def Cylinder "Stem"
-    {
-        uniform token axis = "Y"
-        double height = 0.8
-        double radius = 0.16
-        color3f[] primvars:displayColor = [(0.86, 0.83, 0.7)]
-        double3 xformOp:translate = (0, 0.4, 0)
-        uniform token[] xformOpOrder = ["xformOp:translate"]
-    }
-
-    def Sphere "Cap"
-    {
-        double radius = 0.5
-        color3f[] primvars:displayColor = [(0.96, 0.22, 0.12)]
-        double3 xformOp:translate = (0, 0.8, 0)
-        float3 xformOp:scale = (1, 0.55, 1)
-        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
-    }
-}
-\`);
-// The root layer references the mushroom twice: once on /World, once on a child.
-// (The bindings can add payloads but not references, so the arcs are written as text.)
-mountText("/tmp/reference-root.usda", \`#usda 1.0
-def Xform "World" (
-    prepend references = @reference-base.usda@</Mushroom>
-)
-{
-    def Xform "Neighbour" (
-        prepend references = @reference-base.usda@</Mushroom>
-    )
-    {
-    }
-}
-\`);
-
-stage = await Usd.Stage.Open("/tmp/reference-root.usda");
-stage.SetUpAxis("Y");
+// Reference the same mushroom at two paths. Each holder can place its own
+// copy and override properties without changing the source asset.
+stage = Usd.Stage.CreateNew("/tmp/reference-root.usda");
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
+await stage.DefinePrim("/World", "Xform").GetReferences().AddReference("reference-base.usda", "/Mushroom");
+await stage.DefinePrim("/World/Neighbour", "Xform").GetReferences().AddReference("reference-base.usda", "/Mushroom");
 
 // Local opinions in the root layer are stronger than referenced ones: the
 // neighbour gets its own place, size and cap colour without editing the asset.
@@ -776,8 +784,9 @@ print(inspectPrim(stage.GetPrimAtPath("/World")));`,
   {
     title: "Layer Stack",
     group: "Inspection",
-    code: `// A stage's layer stack: its session layer and root layer, plus any sublayers.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Read the stage's local layer stack and draw one slab per layer. The session
+// layer holds temporary opinions above the root; referenced layers are listed separately.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/layer-stack.usda");
 stage.SetUpAxis("Y");
 stage.DefinePrim("/World", "Xform");
@@ -800,21 +809,16 @@ print(stage.GetLayerStack(true).map((layer) => ({
   {
     title: "Used Layers",
     group: "Inspection",
-    code: `// GetUsedLayers lists every layer the composed stage depends on.
-const kit = sceneKit, colors = kit.colors;
-mountText("/tmp/used-base.usda", \`#usda 1.0
-def Scope "Library" {}
-\`);
-mountText("/tmp/used-root.usda", \`#usda 1.0
-def Xform "World" (
-    prepend references = @used-base.usda@</Library>
-)
-{
-}
-\`);
-
-stage = await Usd.Stage.Open("/tmp/used-root.usda");
+    code: `// Reference a library layer, then list the layers used to compose the stage.
+// Each book is labelled with one layer's name, including the referenced file.
+const kit = sceneHelpers, colors = kit.colors;
+const asset = Usd.Stage.CreateNew("/tmp/used-base.usda");
+const base = asset.DefinePrim("/Library", "Scope");
+asset.GetRootLayer().Export("/tmp/used-base.usda");
+stage = Usd.Stage.CreateNew("/tmp/used-root.usda");
 stage.SetUpAxis("Y");
+const world = stage.DefinePrim("/World", "Xform");
+await world.GetReferences().AddReference("used-base.usda", "/Library");
 
 // One book per used layer on a shelf, each tagged with its layer name.
 const used = stage.GetUsedLayers(false);
@@ -833,8 +837,9 @@ print(stage.GetUsedLayers(false).map((layer) => layer.displayName));`,
   {
     title: "Traverse",
     group: "Inspection",
-    code: `// TraverseAll visits every prim depth-first, parents before children.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Draw the prim hierarchy as a tree. Traversal visits parents before children,
+// letting each node find its parent's position before drawing the connecting branch.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/traverse.usda");
 stage.SetUpAxis("Y");
 stage.DefinePrim("/World", "Xform");
@@ -872,8 +877,9 @@ print(order);`,
   {
     title: "Property Names",
     group: "Inspection",
-    code: `// GetPropertyNames lists built-in schema properties as well as authored ones.
-const kit = sceneKit, colors = kit.colors;
+    code: `// A Sphere exposes schema properties even before we write values. The card
+// catalogue lists them alongside authored properties; a listed name alone does not mean a value was authored.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/property-names.usda");
 stage.SetUpAxis("Y");
 const cube = UsdGeom.Cube.Define(stage, "/World/Cabinet");
@@ -899,8 +905,9 @@ print(names);`,
   {
     title: "Attribute Resolve Info",
     group: "Inspection",
-    code: `// GetResolveInfo reports where an attribute's value comes from.
-const kit = sceneKit, colors = kit.colors;
+    code: `// The sphere's radius is an authored default. Resolve info distinguishes it
+// from a time sample or schema fallback when diagnosing where a value came from.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/resolve-info.usda");
 stage.SetUpAxis("Y");
 const sphere = UsdGeom.Sphere.Define(stage, "/World/Sphere");
@@ -915,10 +922,10 @@ for (const x of [-1, 1]) kit.box(stage, "/World/Probe/Column" + (x < 0 ? "Left" 
 kit.box(stage, "/World/Probe/Bridge", [0, 1.1, 0], [2.2, 0.22, 0.5], colors.teal);
 kit.beam(stage, "/World/Probe/Stylus", [0, 0.7, 0], [0, 1.4, 0], 0.06, colors.gold);
 kit.box(stage, "/World/Probe/Readout", [0.7, 1.4, 0], [0.65, 0.48, 0.2], colors.blue);
-const measuredRadius = Number(attr.GetValueString());
-for (let i = 0; i < Math.round(measuredRadius * 8); i++) {
-  kit.box(stage, "/World/Probe/Tick" + i, [-0.8 + i * 0.17, -0.53, 0.35], [0.025, 0.025, i % 2 ? 0.12 : 0.24], colors.cream);
-}
+const measuredRadius = attr.Get();
+const gaugeTicks = Array.from({length: Math.round(measuredRadius * 8)}, (_, i) =>
+  [[-0.8 + i * 0.17, -0.53, 0.35], [0.025, 0.025, i % 2 ? 0.12 : 0.24]]);
+kit.boxes(stage, "/World/Probe/Ticks", gaugeTicks, colors.cream);
 
 print({
   value: attr.GetValueString(),
@@ -928,25 +935,18 @@ print({
   {
     title: "Prim Stack",
     group: "Inspection",
-    code: `// A prim stack lists every spec that contributes to a prim, strongest first.
-const kit = sceneKit, colors = kit.colors;
-mountText("/tmp/stack-base.usda", \`#usda 1.0
-def Xform "Asset"
-{
-    custom string userProperties:source = "base"
-}
-\`);
-mountText("/tmp/stack-root.usda", \`#usda 1.0
-def Xform "World" (
-    prepend references = @stack-base.usda@</Asset>
-)
-{
-    custom string userProperties:source = "root"
-}
-\`);
-
-stage = await Usd.Stage.Open("/tmp/stack-root.usda");
+    code: `// Write a source label in an asset, then override it in the referencing layer.
+// The prim stack shows both specs in strength order, explaining why the root value wins.
+const kit = sceneHelpers, colors = kit.colors;
+const asset = Usd.Stage.CreateNew("/tmp/stack-base.usda");
+const base = asset.DefinePrim("/Asset", "Xform");
+base.CreateAttribute("userProperties:source", Sdf.ValueTypeNames.String, true).Set("base");
+asset.GetRootLayer().Export("/tmp/stack-base.usda");
+stage = Usd.Stage.CreateNew("/tmp/stack-root.usda");
 stage.SetUpAxis("Y");
+const world = stage.DefinePrim("/World", "Xform");
+await world.GetReferences().AddReference("stack-base.usda", "/Asset");
+world.CreateAttribute("userProperties:source", Sdf.ValueTypeNames.String, true).Set("root");
 const specs = stage.GetPrimAtPath("/World").GetPrimStackWithLayerOffsets();
 
 // Stack one disc per spec, weakest at the bottom, with the resolved prim on top.
@@ -963,21 +963,16 @@ print(specs);`,
   {
     title: "Composition Arcs",
     group: "Inspection",
-    code: `// GetCompositionArcs lists the arcs (root, references, payloads...) that build a prim.
-const kit = sceneKit, colors = kit.colors;
-mountText("/tmp/arcs-base.usda", \`#usda 1.0
-def Xform "Asset" {}
-\`);
-mountText("/tmp/arcs-root.usda", \`#usda 1.0
-def Xform "World" (
-    prepend references = @arcs-base.usda@</Asset>
-)
-{
-}
-\`);
-
-stage = await Usd.Stage.Open("/tmp/arcs-root.usda");
+    code: `// Inspect how a reference brings /Asset into /World. Composition arcs record
+// the source layer and prim path; the little aqueduct gives each arc its own arch.
+const kit = sceneHelpers, colors = kit.colors;
+const asset = Usd.Stage.CreateNew("/tmp/arcs-base.usda");
+const base = asset.DefinePrim("/Asset", "Xform");
+asset.GetRootLayer().Export("/tmp/arcs-base.usda");
+stage = Usd.Stage.CreateNew("/tmp/arcs-root.usda");
 stage.SetUpAxis("Y");
+const world = stage.DefinePrim("/World", "Xform");
+await world.GetReferences().AddReference("arcs-base.usda", "/Asset");
 const arcs = stage.GetPrimAtPath("/World").GetCompositionArcs();
 
 // A small aqueduct with one arch per composition arc.
@@ -996,8 +991,9 @@ print(arcs);`,
   {
     title: "Fixture: Unmaterialed Empty Subset",
     group: "Fixture Smoke",
-    code: `// openFixture mounts a packaged test asset and opens it as the stage.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Load a triangle with no material and keep it unbound. A dark plinth makes
+// the renderer's fallback surface visible, so an empty subset cannot hide a missing face.
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("Unmaterialed Empty Subset");
 
 // /World/PlainTriangle has no material binding and no displayColor, so every
@@ -1028,17 +1024,17 @@ print({
     title: "Fixture: Face-Varying Normals Matrix",
     group: "Fixture Smoke",
     code: `// Keep the fixture's authored points and normals; re-arrange its meshes on a rack.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("Face-Varying Normals Matrix");
 
-// Attribute values come back as text, so pull the numbers out of the string.
-const numbersIn = (text) => (text.match(/[-+]?(?:\\d*\\.)?\\d+(?:e[-+]?\\d+)?/gi) ?? []).map(Number);
+// Read points as arrays of [x, y, z]. Their bounds tell us where to centre
+// each authored mesh without changing its points or normal interpolation.
 const cells = vectorToArray(stage.TraverseAll()).filter((prim) => prim.GetTypeName() === "Mesh");
 cells.forEach((cell, i) => {
   // Centre each mesh in its rack slot using the middle of its point bounds.
-  const values = numbersIn(cell.GetAttribute("points").GetValueString());
+  const points = cell.GetAttribute("points").Get();
   const center = [0, 1, 2].map((axis) => {
-    const coords = values.filter((_, j) => j % 3 === axis);
+    const coords = points.map(point => point[axis]);
     return (Math.min(...coords) + Math.max(...coords)) / 2;
   });
   const x = (i % 4 - 1.5) * 1.3, y = Math.floor(i / 4) * 1.4, scale = 0.32;
@@ -1051,7 +1047,7 @@ cells.forEach((cell, i) => {
   }
   // Draw the first authored normal as a short gold needle.
   const normals = cell.GetAttribute("primvars:normals");
-  const normal = normals.IsValid() ? numbersIn(normals.GetValueString()).slice(0, 3) : [];
+  const normal = normals.IsValid() ? (normals.Get()?.[0] ?? []) : [];
   if (normal.length === 3) {
     const length = Math.hypot(...normal) || 1;
     kit.beam(stage, "/World/Rack/Normal" + i, [x, y, 0.15], [x + normal[0] / length * 0.4, y + normal[1] / length * 0.4, 0.15 + normal[2] / length * 0.4], 0.025, colors.gold);
@@ -1066,7 +1062,7 @@ print(listPrims(stage).filter((path) => {
     title: "Fixture: Parent Folder Reference",
     group: "Fixture Smoke",
     code: `// The fixture references a cube through a "../" asset path; it resolves relative to the layer.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("Parent Folder References");
 
 kit.color(stage.GetPrimAtPath("/World/Shape"), colors.teal);
@@ -1086,7 +1082,7 @@ print({
     title: "Fixture: Payload Root",
     group: "Fixture Smoke",
     code: `// Payloads in a fixture load automatically when the stage opens.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("Payload Root");
 const payloadPrim = stage.GetPrimAtPath("/World/PayloadHolder");
 
@@ -1108,27 +1104,16 @@ print({
     group: "Fixture Smoke",
     code: `// Native instancing: instanceable prims that reference the same source share
 // one prototype. The fixture already has two instances of its /Prototype class.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("usd-concepts/native_instances.usda");
 
-// "instanceable" and "references" are prim metadata, which these bindings cannot
-// author. Append seven more instance declarations to the layer text and reopen it.
-const declarations = [];
+// All seven copies reference the same prim in this layer. Marking them
+// instanceable lets USD share the prototype while keeping placement editable.
 for (let i = 0; i < 7; i++) {
-  declarations.push(\`    def Xform "Instance\${i}" (
-        instanceable = true
-        prepend references = </Prototype>
-    )
-    {
-    }\`);
+  const instance = stage.DefinePrim("/Spiral/Instance" + i, "Xform");
+  await instance.GetReferences().AddReference("", "/Prototype");
+  instance.SetInstanceable(true);
 }
-mountText("/tmp/native-instance-sculpture.usda", stage.GetRootLayer().ExportToString() + \`
-def Xform "Spiral"
-{
-\${declarations.join("\\n")}
-}
-\`);
-stage = await Usd.Stage.Open("/tmp/native-instance-sculpture.usda");
 
 // An instance root still takes ordinary local opinions: wind the copies up a spiral.
 for (let i = 0; i < 7; i++) {
@@ -1145,8 +1130,9 @@ print(listPrims(stage).map((path) => {
   {
     title: "Fixture: Point Instancer",
     group: "Fixture Smoke",
-    code: `// A PointInstancer draws prototypes at positions given by parallel per-instance arrays.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Arrange thirty copies along a rising spiral. Positions, prototype indices,
+// scales and rotations use the same instance order; each index chooses a cube or sphere.
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("usd-concepts/point_instancer.usda");
 const scatter = stage.GetPrimAtPath("/World/Scatter");
 
@@ -1163,12 +1149,9 @@ kit.attr(scatter, "positions", "point3f[]", positions);
 kit.attr(scatter, "protoIndices", "int[]", protoIndices);
 kit.attr(scatter, "scales", "float3[]", scales);
 
-// Every per-instance array needs one entry per instance, but quath[] orientations
-// cannot be set through these bindings: rewrite that line with identity rotations.
-const identities = Array(count).fill("(1, 0, 0, 0)").join(", ");
-const layerText = stage.GetRootLayer().ExportToString().replace(/quath\\[\\] orientations = \\[.*?\\]/, "quath[] orientations = [" + identities + "]");
-mountText("/tmp/point-instancer-sculpture.usda", layerText);
-stage = await Usd.Stage.Open("/tmp/point-instancer-sculpture.usda");
+// Keep the rotation array aligned with the new positions. USD quaternions
+// store the real component first; [1, 0, 0, 0] leaves a prototype unrotated.
+scatter.GetAttribute("orientations").Set(Array.from({length: count}, () => [1, 0, 0, 0]));
 kit.torus(stage, "/World/ScatterFoot", [0, -0.3, 0], 1.3, 0.055, colors.teal, "y");
 
 print(inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
@@ -1177,7 +1160,7 @@ print(inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
     title: "Fixture: Camera + Light",
     group: "Fixture Smoke",
     code: `// Re-aim the fixture's shot camera and retune one of its lights.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("Camera + Light");
 
 // Camera prims are xformable and carry lens attributes such as focalLength.
@@ -1215,7 +1198,7 @@ print({
     title: "Fixture: MaterialX Texture + Noise",
     group: "Fixture Smoke",
     code: `// The fixture's MaterialX-bound quad stays as authored: stretch it on a loom.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = await openFixture("MaterialX Texture + Noise");
 
 for (const x of [-1.4, 1.4]) kit.beam(stage, "/World/Loom/Post" + (x < 0 ? "Left" : "Right"), [x, -1.1, 0], [x, 1.1, 0], 0.055, colors.gold);
@@ -1234,8 +1217,9 @@ print({
   {
     title: "Objects Changed",
     group: "Inspection",
-    code: `// ObjectsChanged notices report which paths an edit touched.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Listen for one size edit and inspect the paths in its notice. A real tool
+// can refresh only the affected controls, then revoke the listener when it closes.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/notices.usda");
 stage.SetUpAxis("Y");
 const prim = stage.DefinePrim("/World/Thing", "Xform");
@@ -1260,7 +1244,7 @@ print(notices);`,
     group: "Authoring",
     code: `// Deactivating a prim removes it (and its children) from the composed stage
 // without deleting its data.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/active-state.usda");
 stage.SetUpAxis("Y");
 const keep = stage.DefinePrim("/World/Keep", "Cube");
@@ -1284,8 +1268,9 @@ print({
   {
     title: "Apply API Schema",
     group: "Authoring",
-    code: `// Applied API schemas add behaviour to any prim; MaterialBindingAPI enables material:binding.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Apply MaterialBindingAPI before assigning the band's material. An applied
+// schema adds a capability to a prim without changing its underlying geometry type.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/apply-api.usda");
 stage.SetUpAxis("Y");
 const prim = stage.DefinePrim("/World/BoundThing", "Cube");
@@ -1304,8 +1289,9 @@ print(stage.ExportToString());`,
   {
     title: "Cameras And Lights",
     group: "Scene Building",
-    code: `// Cameras have a schema class; lights are generic prims with "inputs:" attributes.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Frame a ceramic jug and light it with a warm sun, a cool rim and sky fill.
+// Camera lens settings control the shot; light inputs control how the surfaces respond.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/cameras-lights.usda");
 stage.SetUpAxis("Y");
 const camera = UsdGeom.Camera.Define(stage, "/World/Camera");
@@ -1350,8 +1336,9 @@ print(stage.ExportToString());`,
   {
     title: "USDZ Package",
     group: "Export",
-    code: `// CreateUsdzPackage zips a layer and its dependencies into one .usdz file.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Package this scene as USDZ, including its dependencies, and read the bytes
+// back for download. USDZ packaging also applies the archive layout USD readers expect.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/package-source.usda");
 stage.SetUpAxis("Y");
 UsdGeom.Sphere.Define(stage, "/World/Sphere").CreateRadiusAttr(1.5);
@@ -1375,7 +1362,7 @@ print({ ok, byteLength: bytes.byteLength, zipMagic: [bytes[0], bytes[1]] });`,
     title: "Reopen Verification",
     group: "Export",
     code: `// Export a stage, open the file again and check the value survived the round trip.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/reopen.usda");
 stage.SetUpAxis("Y");
 const sphere = UsdGeom.Sphere.Define(stage, "/World/Sphere");
@@ -1401,8 +1388,9 @@ print(reopened.GetPrimAtPath("/World/Sphere").GetAttribute("radius").GetValueStr
   {
     title: "Build Info",
     group: "Runtime",
-    code: `// GetBuildInfoJson describes the OpenUSD build and its optional modules.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Check which optional modules were linked into this runtime. Each chip
+// represents a module; a flat stub marks one that the build reports as unavailable.
+const kit = sceneHelpers, colors = kit.colors;
 const info = JSON.parse(USD.GetBuildInfoJson());
 stage = Usd.Stage.CreateNew("/tmp/build-info.usda");
 stage.SetUpAxis("Y");
@@ -1430,8 +1418,9 @@ print({
   {
     title: "Virtual Filesystem",
     group: "Runtime",
-    code: `// The wasm runtime has an in-memory filesystem; layers and textures live there.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Write a note into the virtual filesystem, read it back and list its folder.
+// The same filesystem holds layers and image bytes that USD resolves by path.
+const kit = sceneHelpers, colors = kit.colors;
 mountText("/tmp/fs-note.txt", "hello from MEMFS");
 
 stage = Usd.Stage.CreateNew("/tmp/virtual-filesystem.usda");
@@ -1456,8 +1445,9 @@ print({
   {
     title: "Sdf Paths",
     group: "Runtime",
-    code: `// Sdf.Path builds prim and property paths without touching a stage.
-const kit = sceneKit, colors = kit.colors;
+    code: `// Start with /World, append a child name, then address that child's translate
+// attribute. Child paths use a slash; property paths use a dot after the prim path.
+const kit = sceneHelpers, colors = kit.colors;
 const root = new Sdf.Path("/World");
 const child = root.AppendChild("Geom");                  // /World/Geom
 const prop = child.AppendProperty("xformOp:translate");  // /World/Geom.xformOp:translate
@@ -1483,7 +1473,7 @@ print({ child: child.GetString(), property: prop.GetString() });`,
     group: "Lighting",
     code: `// A classic three-point rig: warm key, soft cool fill, bright rim from behind.
 // Lights are prims; every setting is an "inputs:" attribute on the light.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/three-point-rig.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
@@ -1525,7 +1515,8 @@ const dome = stage.DefinePrim("/World/Lights/Ambient", "DomeLight");
 dome.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(0.25);
 dome.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(0.6, 0.65, 0.8));
 
-// An authored camera gives the scene a repeatable shot.
+// A 38 mm lens on a 36-by-27 film back keeps all three pieces in the shot.
+// Cameras look along local -Z, so aim rotates that axis toward the pieces.
 const camera = UsdGeom.Camera.Define(stage, "/World/Camera");
 camera.CreateFocalLengthAttr(38);
 kit.attr(camera, "horizontalAperture", "float", 36);
@@ -1539,7 +1530,7 @@ print(vectorToArray(stage.GetPrimAtPath("/World/Lights").GetChildren()).map((lig
     group: "Lighting",
     code: `// ShapingAPI turns a light into a spotlight with a cone angle and a soft edge.
 // Three coloured spots overlap on a white stage and mix additively.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/shaped-spotlights.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
@@ -1571,7 +1562,8 @@ for (const spot of spots) {
   kit.sphere(stage, "/World/Truss/Can" + spot.name, [position[0], 3.5, position[2]], 0.1, spot.color);
 }
 
-// An authored camera gives the scene a repeatable shot.
+// Frame the truss and the overlapping light pools together. Lens and aperture
+// set the field of view; moving the camera changes the perspective.
 const camera = UsdGeom.Camera.Define(stage, "/World/Camera");
 camera.CreateFocalLengthAttr(40);
 kit.attr(camera, "horizontalAperture", "float", 36);
@@ -1585,7 +1577,7 @@ print(spots.map((spot) => inspectPrim(stage.GetPrimAtPath("/World/Spots/" + spot
     group: "Lighting",
     code: `// Lights animate like any other prim: time-sample a sun's rotation, colour
 // and intensity across a day. Still previews show the default (golden hour).
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/sun-cycle.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 stage.SetStartTimeCode(1);
@@ -1637,7 +1629,8 @@ const sky = stage.DefinePrim("/World/Sky/Dome", "DomeLight");
 sky.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(0.3);
 sky.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(0.55, 0.7, 1));
 
-// An authored camera gives the scene a repeatable shot.
+// Keep the island and the sun arc in one shot. The camera stays fixed while
+// the light rotates, making changes in shadows and colour easier to compare.
 const camera = UsdGeom.Camera.Define(stage, "/World/Camera");
 camera.CreateFocalLengthAttr(40);
 kit.attr(camera, "horizontalAperture", "float", 36);
@@ -1651,55 +1644,25 @@ print({ samples: sunColor.GetNumTimeSamples(), noon: sunColor.GetValueStringAtTi
     group: "Rigging",
     code: `// UsdSkel: a Skeleton of joints, a SkelAnimation that moves them, and a mesh
 // whose vertices follow the joints by weight. Here a three-joint sea frond sways.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 
-// The bindings cannot author matrix4d[] and quatf[] arrays or primvar metadata
-// (interpolation, elementSize). This small layer declares only those; everything
-// else (mesh, weights, colours, bindings and the animation) is authored below.
-mountText("/tmp/frond/frond-rig.usda", \`#usda 1.0
-(
-    defaultPrim = "World"
-    endTimeCode = 49
-    startTimeCode = 1
-    upAxis = "Y"
-)
-
-def Xform "World"
-{
-    def SkelRoot "Frond"
-    {
-        def Skeleton "Skeleton"
-        {
-            uniform token[] joints = ["base", "base/mid", "base/mid/tip"]
-            uniform matrix4d[] bindTransforms = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 1.1, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 2.2, 0, 1) )]
-            uniform matrix4d[] restTransforms = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 1.1, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 1.1, 0, 1) )]
-        }
-
-        def SkelAnimation "Sway"
-        {
-            uniform token[] joints = ["base", "base/mid", "base/mid/tip"]
-            quatf[] rotations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
-            half3[] scales = [(1, 1, 1), (1, 1, 1), (1, 1, 1)]
-        }
-
-        def Mesh "Body"
-        {
-            int[] primvars:skel:jointIndices (
-                elementSize = 3
-                interpolation = "vertex"
-            )
-            float[] primvars:skel:jointWeights (
-                elementSize = 3
-                interpolation = "vertex"
-            )
-            color3f[] primvars:displayColor (
-                interpolation = "vertex"
-            )
-        }
-    }
-}
-\`);
-stage = await Usd.Stage.Open("/tmp/frond/frond-rig.usda");
+stage = Usd.Stage.CreateNew("/tmp/frond/frond-rig.usda");
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
+stage.SetStartTimeCode(1);
+stage.SetEndTimeCode(49);
+stage.DefinePrim("/World/Frond", "SkelRoot");
+const skeleton = stage.DefinePrim("/World/Frond/Skeleton", "Skeleton");
+const joints = ["base", "base/mid", "base/mid/tip"];
+skeleton.GetAttribute("joints").Set(joints);
+// Bind transforms place joints in skeleton space; rest transforms place each
+// joint relative to its parent. Both describe the same straight, unposed frond.
+const translated = y => Gf.Matrix4d.Identity().SetTranslate(Gf.Vec3d(0, y, 0));
+skeleton.GetAttribute("bindTransforms").Set([0, 1.1, 2.2].map(translated));
+skeleton.GetAttribute("restTransforms").Set([0, 1.1, 1.1].map(translated));
+const animation = stage.DefinePrim("/World/Frond/Sway", "SkelAnimation");
+animation.GetAttribute("joints").Set(joints);
+animation.GetAttribute("translations").Set([[0, 0, 0], [0, 1.1, 0], [0, 1.1, 0]]);
+animation.GetAttribute("scales").Set(joints.map(() => [1, 1, 1]));
 
 // 1. The mesh: a flattened, tapering tube of rings around the Y axis.
 const rings = 24, sides = 12, height = 3;
@@ -1743,75 +1706,61 @@ for (const [, y] of points) {
 }
 const bodyPrim = body.GetPrim();
 bodyPrim.ApplyAPI("SkelBindingAPI");
-bodyPrim.GetAttribute("primvars:skel:jointIndices").Set(jointIndices);
-bodyPrim.GetAttribute("primvars:skel:jointWeights").Set(jointWeights);
-bodyPrim.GetAttribute("primvars:displayColor").Set(vertexColors);
+const indicesPrimvar = kit.attr(bodyPrim, "primvars:skel:jointIndices", "int[]", jointIndices);
+const weightsPrimvar = kit.attr(bodyPrim, "primvars:skel:jointWeights", "float[]", jointWeights);
+for (const primvar of [indicesPrimvar, weightsPrimvar]) {
+  primvar.SetMetadata("interpolation", "vertex");
+  primvar.SetMetadata("elementSize", 3);   // three influences per vertex
+}
+const tint = kit.attr(bodyPrim, "primvars:displayColor", "color3f[]", vertexColors);
+tint.SetMetadata("interpolation", "vertex");
 bodyPrim.CreateRelationship("skel:skeleton", false).AddTarget("/World/Frond/Skeleton");
 
-// 3. Animation: joint translations are local to the parent joint. Swaying the
-//    mid and tip joints sideways shears the smoothly weighted body.
-//    Full character rigs normally bend with rotations; this lesson uses the
-//    translation arrays that are directly available in the JavaScript bindings.
+// 3. Bend the joints with rotations, letting skin weights blend their effects.
+// Quaternions avoid the axis-order ambiguities of Euler rotations. A later
+// phase at the tip makes the frond trail behind its middle joint.
 const frond = stage.GetPrimAtPath("/World/Frond");
 frond.ApplyAPI("SkelBindingAPI");
 frond.CreateRelationship("skel:animationSource", false).AddTarget("/World/Frond/Sway");
-const translations = stage.GetPrimAtPath("/World/Frond/Sway").CreateAttribute("translations", Sdf.ValueTypeNames.Float3Array, false);
-// A periodic sway, with the tip following the middle joint a little later.
-// Sample every two frames; matching phase at 1 and 49 closes the two-second loop.
-const swayed = (phase) => [[0, 0, 0],
-  [0.32 * Math.sin(phase), 1.1, 0.08 * Math.cos(phase)],
-  [0.68 * Math.sin(phase - 0.4), 1.1, 0.2 * Math.sin(phase)]];
-translations.Set(swayed(Math.PI / 3));   // an expressive still-preview pose
+const rotations = animation.GetAttribute("rotations");
+const aroundZ = radians => [Math.cos(radians / 2), 0, 0, Math.sin(radians / 2)];
+const swayed = phase => [aroundZ(0.08 * Math.sin(phase)),
+  aroundZ(0.32 * Math.sin(phase)), aroundZ(0.45 * Math.sin(phase - 0.4))];
+rotations.Set(swayed(Math.PI / 3));
+// Match the first and last pose so the two-second sway repeats without a snap.
 for (let frame = 1; frame <= 49; frame += 2) {
   const phase = frame === 49 ? 0 : (frame - 1) / 48 * 2 * Math.PI;
-  translations.Set(swayed(phase), frame);
+  rotations.Set(swayed(phase), frame);
 }
 
 // A rock and a sandy seabed to anchor the frond.
 kit.sphere(stage, "/World/Rock", [0, 0.05, 0], 0.5, [0.32, 0.34, 0.42], [1, 0.45, 0.9]);
 kit.lathe(stage, "/World/Seabed", [0, 0, 0], [[0.01, -0.12], [1.9, -0.12], [1.75, 0], [0.01, 0.03]], [0.86, 0.76, 0.56]);
 
-print({ vertices: points.length, faces: counts.length, joints: jointHeights.length, keyframes: translations.GetNumTimeSamples() });`,
+print({ vertices: points.length, faces: counts.length, joints: jointHeights.length, keyframes: rotations.GetNumTimeSamples() });`,
   },
   {
     title: "Rigid Skinning",
     group: "Rigging",
     code: `// Rigid skinning binds a whole mesh to one joint. A telescoping antenna mast
 // on a rover extends by animating its joints' translations.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 
-// The bindings cannot author matrix4d[] or quatf[] arrays, so this layer
-// declares only the skeleton's matrices and the animation's static rotations
-// and scales. Bindings, meshes and the animated translations come from the API.
-mountText("/tmp/rover/rover-rig.usda", \`#usda 1.0
-(
-    defaultPrim = "World"
-    endTimeCode = 49
-    startTimeCode = 1
-    upAxis = "Y"
-)
-
-def Xform "World"
-{
-    def SkelRoot "Mast"
-    {
-        def Skeleton "Skeleton"
-        {
-            uniform token[] joints = ["base", "base/lower", "base/lower/upper"]
-            uniform matrix4d[] bindTransforms = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.3, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.4, 0, 1) )]
-            uniform matrix4d[] restTransforms = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.3, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.1, 0, 1) )]
-        }
-
-        def SkelAnimation "Extend"
-        {
-            uniform token[] joints = ["base", "base/lower", "base/lower/upper"]
-            quatf[] rotations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
-            half3[] scales = [(1, 1, 1), (1, 1, 1), (1, 1, 1)]
-        }
-    }
-}
-\`);
-stage = await Usd.Stage.Open("/tmp/rover/rover-rig.usda");
+stage = Usd.Stage.CreateNew("/tmp/rover/rover-rig.usda");
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
+stage.SetStartTimeCode(1);
+stage.SetEndTimeCode(49);
+stage.DefinePrim("/World/Mast", "SkelRoot");
+const skeleton = stage.DefinePrim("/World/Mast/Skeleton", "Skeleton");
+const joints = ["base", "base/lower", "base/lower/upper"];
+const translated = y => Gf.Matrix4d.Identity().SetTranslate(Gf.Vec3d(0, y, 0));
+skeleton.GetAttribute("joints").Set(joints);
+skeleton.GetAttribute("bindTransforms").Set([0, 0.3, 0.4].map(translated));
+skeleton.GetAttribute("restTransforms").Set([0, 0.3, 0.1].map(translated));
+const animation = stage.DefinePrim("/World/Mast/Extend", "SkelAnimation");
+animation.GetAttribute("joints").Set(joints);
+animation.GetAttribute("rotations").Set(joints.map(() => [1, 0, 0, 0]));
+animation.GetAttribute("scales").Set(joints.map(() => [1, 1, 1]));
 
 // The rover itself is ordinary, unskinned geometry.
 kit.box(stage, "/World/Ground", [0, -0.03, 0], [3.4, 0.06, 2.2], [0.78, 0.5, 0.36]);
@@ -1866,9 +1815,9 @@ print({ samples: translations.GetNumTimeSamples(), extended: translations.GetVal
     title: "Splat Galaxy",
     group: "Gaussian Splats",
     code: `// Gaussian splats are soft ellipsoids stored as parallel arrays on one prim.
-// The bindings have no schema class for them, so define the prim by type name
-// and author each array with CreateAttribute.
-const kit = sceneKit, colors = kit.colors;
+// Keep position, scale, opacity and colour entries in the same order: index i
+// in every array describes the same splat. One prim carries the entire galaxy.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/splat-galaxy.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 const galaxy = stage.DefinePrim("/World/Galaxy", "ParticleField3DGaussianSplat");
@@ -1908,7 +1857,8 @@ galaxy.CreateAttribute("scales", Sdf.ValueTypeNames.Float3Array, false).Set(scal
 galaxy.CreateAttribute("opacities", Sdf.ValueTypeNames.FloatArray, false).Set(opacities);
 galaxy.CreateAttribute("radiance:sphericalHarmonicsDegree", Sdf.ValueTypeNames.Int, false).Set(0);
 galaxy.CreateAttribute("radiance:sphericalHarmonicsCoefficients", Sdf.ValueTypeNames.Float3Array, false).Set(harmonics);
-// orientations (quatf[]) are optional; without them every splat stays axis-aligned.
+// Omit rotations for this round galaxy; all ellipsoids use their local axes.
+// To tilt individual splats, author orientations as [real, x, y, z] quaternions.
 
 // Tilt the field for a three-quarter view and mount it on a display stand.
 kit.pose(stage, galaxy, [0, 1.4, 0], [1, 1, 1], [18, 0, -10]);
@@ -1921,7 +1871,7 @@ print({ splats: positions.length, properties: vectorToArray(galaxy.GetPropertyNa
     group: "Gaussian Splats",
     code: `// Splats and meshes share a stage: mesh trunk and branches carry a canopy of
 // blossom splats, with translucent edges and flat petals fallen on the grass.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/splat-blossom-tree.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
@@ -1974,7 +1924,7 @@ print({ splats: positions.length, prims: listPrims(stage) });`,
     code: `// Spherical harmonics of degree 1 make colour depend on the viewing direction.
 // Each splat stores four float3 coefficients: the base colour, then three
 // tints applied when the splat is seen along the Y, Z and X axes.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/view-dependent-splats.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
@@ -2016,7 +1966,7 @@ print({ splats: count, coefficientsPerSplat: harmonics.length / count });`,
     group: "Composition",
     code: `// Assembly: one asset layer with a "style" variant set, payloaded five times.
 // Each holder picks its own variant, and the root layer adds a local override.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 
 // 1. The lantern asset, authored in its own layer.
 const asset = Usd.Stage.CreateNew("/tmp/lanterns/lantern.usda");
@@ -2027,8 +1977,8 @@ kit.beam(asset, "/Lantern/Cord", [0, 0.55, 0], [0, 0, 0], 0.012, colors.ink);
 kit.lathe(asset, "/Lantern/Cap", [0, 0, 0], [[0.01, 0.02], [0.14, 0], [0.2, -0.14], [0.01, -0.16]], colors.gold);
 kit.beam(asset, "/Lantern/Tassel", [0, -1.08, 0], [0, -1.4, 0], 0.035, colors.gold);
 
-// 2. The "style" variant set swaps the paper body. kit.inVariant routes the
-//    helpers' DefinePrim calls into one variant; each style uses its own prim name.
+// 2. Store each paper body in its style variant. The edit target scopes the
+// geometry and its values together, while the frame remains shared.
 const style = lantern.GetVariantSets().AddVariantSet("style");
 const bodies = [
   { variant: "round", prim: "RoundBody", color: colors.coral, profile: [[0.06, -0.12], [0.36, -0.28], [0.46, -0.6], [0.36, -0.92], [0.06, -1.1]] },
@@ -2037,7 +1987,9 @@ const bodies = [
 ];
 for (const body of bodies) {
   style.AddVariant(body.variant);
-  kit.lathe(kit.inVariant(asset, style, body.variant), "/Lantern/" + body.prim, [0, 0, 0], body.profile, body.color);
+  await kit.withVariant(asset, style, body.variant, () => {
+    kit.lathe(asset, "/Lantern/" + body.prim, [0, 0, 0], body.profile, body.color);
+  });
 }
 await style.SetVariantSelection("round");   // the asset's own default
 // Save the layer itself. (Stage.Export writes a flattened copy, which would
@@ -2079,7 +2031,7 @@ print(styles.map((_, i) => {
     group: "Composition",
     code: `// Departments author separate layers; the shot layer sublayers them.
 // Earlier sublayers are stronger, and the shot's own root layer is strongest.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 const houses = [
   { x: -2, width: 0.9, height: 1.1 },
   { x: -1, width: 0.8, height: 1.5 },
@@ -2118,18 +2070,11 @@ houses.forEach((house, i) => {
 kit.color(lookdev.DefinePrim("/World/Street/Road", "Cube"), colors.ink);
 lookdev.GetRootLayer().Export("/tmp/street/lookdev.usda");
 
-// The shot layer declares the sublayer stack, strongest first. Sublayer lists
-// are layer metadata, which these bindings cannot author, so it is text.
-mountText("/tmp/street/shot.usda", \`#usda 1.0
-(
-    subLayers = [
-        @lookdev.usda@,
-        @layout.usda@
-    ]
-    upAxis = "Y"
-)
-\`);
-stage = await Usd.Stage.Open("/tmp/street/shot.usda");
+// Look development wins over layout because it appears first in the stack.
+// Relative layer paths resolve next to the shot, so the assembly can move intact.
+stage = Usd.Stage.CreateNew("/tmp/street/shot.usda");
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
+await stage.GetRootLayer().SetSubLayerPaths(["lookdev.usda", "layout.usda"]);
 
 // A shot-specific fix in the root layer outranks both departments.
 kit.color(stage.GetPrimAtPath("/World/Street/House2/Roof"), colors.coral);
@@ -2143,7 +2088,7 @@ print(stage.GetPrimAtPath("/World/Street/House2/Roof").GetPrimStack().map((spec)
     code: `// References, variants and native instancing together. Every tree references
 // one asset. Instanceable prims that compose identically (same references, same
 // variant selection) share one prototype: the orchard's 15 trees need only 3.
-const kit = sceneKit, colors = kit.colors;
+const kit = sceneHelpers, colors = kit.colors;
 
 // 1. The tree asset, with a "season" variant set that swaps the canopy.
 const bark = [0.4, 0.28, 0.2], snow = [0.95, 0.97, 1];
@@ -2154,51 +2099,38 @@ kit.lathe(asset, "/Tree/Trunk", [0, 0, 0], [[0.11, 0], [0.07, 0.7], [0.04, 1]], 
 const season = tree.GetVariantSets().AddVariantSet("season");
 for (const name of ["summer", "autumn", "winter"]) season.AddVariant(name);
 
-const summer = kit.inVariant(asset, season, "summer");
-kit.sphere(summer, "/Tree/SummerCanopy", [0, 1.05, 0], 0.42, [0.25, 0.55, 0.3]);
-kit.sphere(summer, "/Tree/SummerCrown", [0.08, 1.35, 0.05], 0.28, [0.4, 0.7, 0.35]);
-const autumn = kit.inVariant(asset, season, "autumn");
-kit.sphere(autumn, "/Tree/AutumnCanopy", [0, 1, 0], 0.36, colors.coral);
-kit.sphere(autumn, "/Tree/AutumnCrown", [-0.08, 1.28, 0], 0.24, colors.gold);
-const winter = kit.inVariant(asset, season, "winter");
-for (let i = 0; i < 4; i++) {
-  const angle = i * Math.PI / 2 + 0.4, tip = [0.38 * Math.cos(angle), 1.3, 0.38 * Math.sin(angle)];
-  kit.beam(winter, "/Tree/WinterBranch" + i, [0, 0.75, 0], tip, 0.025, bark);
-  kit.sphere(winter, "/Tree/WinterSnow" + i, tip, 0.07, snow);
-}
+await kit.withVariant(asset, season, "summer", () => {
+  kit.sphere(asset, "/Tree/SummerCanopy", [0, 1.05, 0], 0.42, [0.25, 0.55, 0.3]);
+  kit.sphere(asset, "/Tree/SummerCrown", [0.08, 1.35, 0.05], 0.28, [0.4, 0.7, 0.35]);
+});
+await kit.withVariant(asset, season, "autumn", () => {
+  kit.sphere(asset, "/Tree/AutumnCanopy", [0, 1, 0], 0.36, colors.coral);
+  kit.sphere(asset, "/Tree/AutumnCrown", [-0.08, 1.28, 0], 0.24, colors.gold);
+});
+await kit.withVariant(asset, season, "winter", () => {
+  const branches = [], snowTips = [];
+  for (let i = 0; i < 4; i++) {
+    const angle = i * Math.PI / 2 + 0.4, tip = [0.38 * Math.cos(angle), 1.3, 0.38 * Math.sin(angle)];
+    branches.push([[0, 0.75, 0], tip]); snowTips.push(tip);
+  }
+  kit.beams(asset, "/Tree/WinterBranches", branches, 0.025, bark);
+  kit.spheres(asset, "/Tree/WinterSnow", snowTips, 0.07, snow);
+});
 await season.SetVariantSelection("summer");
 asset.GetRootLayer().Export("/tmp/grove/tree.usda");   // the layer, not a flattened stage
 
-// 2. The orchard layer references the asset once per tree. "instanceable" and
-//    "references" are prim metadata the bindings cannot author, so these
-//    declarations are text; everything else is authored through the API below.
-//    Three rows of five instanceable trees, one row per season, and one hero
-//    tree that references the same asset but is not instanceable.
+// 2. Make three rows of shared trees and an editable hero. A reference keeps
+// the tree asset in its own layer; instanceable copies share composed geometry.
 const rows = [{ season: "summer", z: -1.1 }, { season: "autumn", z: 0 }, { season: "winter", z: 1.1 }];
-const rowName = (season) => season[0].toUpperCase() + season.slice(1);
-const declare = (name, instanceable) => \`    def Xform "\${name}" (
-        instanceable = \${instanceable}
-        prepend references = @tree.usda@</Tree>
-    )
-    {
-    }\`;
-const orchard = rows.flatMap(({ season }) => [0, 1, 2, 3, 4].map((i) => declare(rowName(season) + i, true)));
-mountText("/tmp/grove/orchard.usda", \`#usda 1.0
-(
-    upAxis = "Y"
-)
-
-def Xform "World"
-{
-    def Xform "Orchard"
-    {
-\${orchard.join("\\n")}
-    }
-
-\${declare("HeroTree", false)}
+const rowName = season => season[0].toUpperCase() + season.slice(1);
+stage = Usd.Stage.CreateNew("/tmp/grove/orchard.usda");
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
+for (const {season} of rows) for (let i = 0; i < 5; i++) {
+  const instance = stage.DefinePrim("/World/Orchard/" + rowName(season) + i, "Xform");
+  await instance.GetReferences().AddReference("tree.usda", "/Tree");
+  instance.SetInstanceable(true);
 }
-\`);
-stage = await Usd.Stage.Open("/tmp/grove/orchard.usda");
+await stage.DefinePrim("/World/HeroTree", "Xform").GetReferences().AddReference("tree.usda", "/Tree");
 
 // 3. An instance root still takes local opinions: placement, size and its own
 //    variant selection. Each row selects one season, so each row shares one

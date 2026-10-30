@@ -42,7 +42,7 @@ try {
 }
 const called = new Set(cases.flatMap(example => example.calls));
 const report = {
-  scope: 'Generated Layer, Attribute, Relationship, Prim, Stage methods and five core functions only. Calls entered during example execution (including example helpers); excludes preview/export harness calls.',
+  scope: 'Generated EditTarget, Layer, Attribute, Relationship, Prim, Stage methods and five core functions only. Calls entered during example execution (including example helpers); excludes preview/export harness calls.',
   exclusions: ['Schema wrappers and math/vector types', 'HdWebSyncDriver', 'Emscripten internals/filesystem', 'SDK exports and returned controllers', 'Browser viewer integration', 'Assertions, argument combinations and failure-path coverage'],
   examples: cases.length, callableEntries: entries.length, calledEntries: called.size,
   callEntryPercent: Number((called.size / entries.length * 100).toFixed(1)),

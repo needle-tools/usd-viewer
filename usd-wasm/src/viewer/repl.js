@@ -1,5 +1,6 @@
 import { installViewerStyle } from './style.js';
 import { viewerIcon } from './icons.js';
+import {attachArrayInput} from './arrayEditor.js';
 
 const OUTPUT_LIMIT = 160, TEXT_LIMIT = 8000, HISTORY_LIMIT = 100;
 const HELP = Object.freeze({
@@ -73,8 +74,10 @@ export function mountRepl({ container, getContext, edit, stateKey, style = true 
     const el = node('button', 'usd-repl-action'); el.type = 'button'; el.title = label; el.setAttribute('aria-label', label);
     if (icon) el.append(viewerIcon(icon)); el.append(doc.createTextNode(label)); actions.append(el); return el;
   }
+  const arrayButton=button('Array');
   const runButton = button('Run', 'play_arrow'), clearButton = button('Clear');
   root.append(output, input, actions); container.append(root);
+  const arrayInput=attachArrayInput(input,arrayButton,root);
   let disposed = false, current = null, queue = Promise.resolve(), history = [], cursor = 0, draft = '';
   let scrollFrame = 0, pinned = true;
   function scrollToEnd() {
@@ -245,12 +248,12 @@ export function mountRepl({ container, getContext, edit, stateKey, style = true 
     });
     queue = result.then(() => {}, () => {}); return result;
   }
-  function submit() { const source = input.value; input.value = ''; void run(source).catch(() => {}); }
+  function submit() { arrayInput.close(); const source = input.value; input.value = ''; void run(source).catch(() => {}); }
   function onKey(event) {
     if (event.isComposing) return;
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); submit(); }
     if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
-      event.preventDefault(); if (cursor === history.length) draft = input.value;
+      event.preventDefault(); arrayInput.close(); if (cursor === history.length) draft = input.value;
       cursor = Math.max(0, Math.min(history.length, cursor + (event.key === 'ArrowUp' ? -1 : 1)));
       input.value = cursor === history.length ? draft : history[cursor]; input.setSelectionRange(input.value.length, input.value.length);
     }
@@ -266,7 +269,7 @@ export function mountRepl({ container, getContext, edit, stateKey, style = true 
       doc.defaultView.cancelAnimationFrame(scrollFrame); outputSize.disconnect();
       output.removeEventListener('scroll', onScroll); output.removeEventListener('wheel', readingHistory); output.removeEventListener('pointerdown', readingHistory);
       input.removeEventListener('keydown', onKey); runButton.removeEventListener('click', submit); clearButton.onclick = null;
-      history = []; root.remove();
+      arrayInput.dispose(); history = []; root.remove();
     },
   };
 }

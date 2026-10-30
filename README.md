@@ -64,8 +64,23 @@ updates when the stage changes. A filterable file tree appears when the pane
 is wide enough, with an adjustable sidebar; narrow panes use a source picker.
 Supplied files, JS helpers, material source and loaded textures are available
 alongside the layers. Text can be copied, raster images can be previewed, and
-other binary files show metadata. File inspection is read-only and preserves
-the loaded root. Selection and sidebar preferences are remembered.
+other binary files show metadata. Selecting a file preserves the loaded root.
+Selection and sidebar preferences are remembered. Layer and texture references,
+JavaScript imports and USD prim/property paths are clickable. Relative file
+references resolve from the containing layer, and Back/Forward restores source
+locations. Following a USD target also updates the stage inspector while keeping
+Code visible.
+
+Literal arrays collapse to compact controls. Open one to inspect named columns,
+color swatches or matrix grids in a paged table in the resizable right sidebar.
+The sidebar remembers its width. Cells support spreadsheet paste,
+row insertion/removal, keyboard navigation and a raw view. USD attribute edits
+use the native API and support undo/redo; they are included in stage downloads.
+Variant-source arrays and metadata remain inspectable without guessing an edit
+context. JavaScript lesson edits stay in a draft until **Run**. **Edit source**
+opens the lesson text, and **Array** creates or edits a literal at the cursor.
+The Console uses the same **Array** tool while writing new commands. Computed
+expressions remain source code and are never evaluated for inspection.
 
 **Production → Workshop Shot / Workshop Asset** demonstrates relative references,
 a geometry payload, separate material layers, finish variants and shot lighting.
