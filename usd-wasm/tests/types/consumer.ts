@@ -54,7 +54,16 @@ void sampleCap;
 await modes.setMode('unknown');
 modes.dispose();
 void inspection;
-import { mountStagePanel, mountRenderModePicker } from '@needle-tools/usd/viewer';
+import { mountStagePanel, mountRenderModePicker, mountDownloadButton, type DownloadSource } from '@needle-tools/usd/viewer';
+import {mountDownloadButton as mountDownloadOnly, type DownloadFormat} from '@needle-tools/usd/viewer/download';
+const standaloneDownload: typeof mountDownloadButton = mountDownloadOnly;
+const archiveFormat: DownloadFormat = 'zip'; void [standaloneDownload, archiveFormat];
+const downloadSource: DownloadSource = {handle: stage, filename:'scene.usda', formats:['zip','usdz']};
+const downloadControl = mountDownloadButton({getSource:()=>downloadSource, stateKey:'my-download-format', onFormatChange(format){const selected:'zip'|'usdz'=format;void selected;},onProgress(value){value.completed.toFixed();value.total.toFixed();}});
+downloadControl.setFormat('usdz'); downloadControl.refresh(); await downloadControl.download(); downloadControl.dispose();
+await stage.exportUsdz({onProgress(value){const phase:'preparing'|'dependencies'|'packaging'|'reading'|'compressing'|'complete'=value.phase;void phase;}});
+// @ts-expect-error Unsupported archive format.
+downloadControl.setFormat('rar');
 import { createWebGpuSupport } from '@needle-tools/usd/renderers';
 const support = await createWebGpuSupport();
 await createThreeHydra({ USD, scene, webGpuSupport: support });

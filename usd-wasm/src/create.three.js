@@ -2,6 +2,7 @@ import { UsdSceneShadows } from "./hydra/sceneShadows.js";
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
 import { Object3D } from "three";
+import { packageStage } from "./scene/archive.js";
 
 /**
  * @param {string} url
@@ -271,6 +272,7 @@ async function disposeHydraLifetime(lifetime) {
     if (lifetime.cleanupPromise) return lifetime.cleanupPromise;
     lifetime.cleanupPromise = (async () => {
         try {
+            await lifetime.waitForStageOperations?.().catch(() => {});
             await lifetime.waitForDrawCompletion?.().catch(() => {});
             // Async rprim factories can still read scoped files through the driver
             // after the native draw has finished (e.g. VDB fields or Spark meshes).
@@ -464,6 +466,7 @@ async function createScopedThreeHydra(config, lifetime) {
     let time = 0;
     let currentTimeCode = 0;
     let sceneRevision = 0, completedTimeCode = 0, stageEditQueue = Promise.resolve();
+    let exportSequence = 0;
     let playing = config.autoPlay === true;
     const finishDraw = () => {
         completedTimeCode = currentTimeCode;
@@ -576,6 +579,7 @@ async function createScopedThreeHydra(config, lifetime) {
     driver.SetTime(stageStartTimeCode);
     draw();
     lifetime.waitForDrawCompletion = waitForDrawCompletion;
+    lifetime.waitForStageOperations = () => stageEditQueue;
     const readyPromise = waitForDrawCompletion()
         .then(() => renderInterface.waitForRprimsReady())
         .then(() => config.waitForMaterials
@@ -642,6 +646,7 @@ async function createScopedThreeHydra(config, lifetime) {
             draw();
         },
         setTime: async (timeCode) => {
+            await stageEditQueue;
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }
@@ -675,6 +680,7 @@ async function createScopedThreeHydra(config, lifetime) {
             return indices.flatMap(index => Array.from({length: stride}, (_, point) => index * stride + point)).filter(index => index < count);
         },
         setIncludedPurposes: async (includedPurposes) => {
+            await stageEditQueue;
             if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {
                 return Promise.resolve();
             }
@@ -685,6 +691,7 @@ async function createScopedThreeHydra(config, lifetime) {
             return draw(true);
         },
         setComplexity: async (complexity) => {
+            await stageEditQueue;
             const valid = isAdaptiveDetail(complexity) || normalizeComplexity(complexity) !== undefined;
             if (!valid || disposed || driver.isDeleted() || typeof driver.SetComplexity !== "function") {
                 return Promise.resolve();
@@ -720,7 +727,24 @@ async function createScopedThreeHydra(config, lifetime) {
             stageEditQueue = result.catch(() => {});
             return result;
         },
+        /** Package the authored stage, including dependencies and pending edits. */
+        exportUsdz: (options = {}) => {
+            const result = stageEditQueue.then(async () => {
+                if (disposed || driver.isDeleted()) throw new Error("Cannot download a closed stage");
+                await waitForDrawCompletion();
+                editInFlight = true;
+                try {
+                    let directory;
+                    do { directory = "/" + directoryForFiles + `.needle-export-${++exportSequence}`; }
+                    while (USD.FS_analyzePath(directory).exists);
+                    return await packageStage(USD, stage, directory, driver, options);
+                } finally { editInFlight = false; }
+            });
+            stageEditQueue = result.catch(() => {});
+            return result;
+        },
         repopulate: async () => {
+            await stageEditQueue;
             if (disposed || driver.isDeleted()) {
                 return Promise.resolve();
             }

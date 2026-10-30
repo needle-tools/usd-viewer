@@ -25,7 +25,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 /* Identity, commands, file context: one row, one baseline. */
 #container.usd-app-header {
   --header-tool-title-group-title-size: var(--usd-product-title-size); --header-tool-title-group-title-weight: 400;
-  position: relative; z-index: 110; display: grid; grid-template-columns: auto auto minmax(0,1fr); grid-template-rows: var(--usd-header-height);
+  position: relative; z-index: 110; display: grid; grid-template-columns: auto auto minmax(0,1fr) auto; grid-template-rows: var(--usd-header-height);
   width: 100%; max-width: none; min-height: 0; margin: 0; padding: 0 var(--usd-space-3); gap: var(--usd-space-3);
   border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; box-shadow: none; backdrop-filter: none;
   background: var(--surface-panel); color: var(--text-primary); font: var(--usd-text-size)/1.4 var(--font-family-body);
@@ -36,6 +36,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-app-header .header-tool-title-group { flex: none; }
 .usd-app-header .usd-file-context { grid-row: 1; grid-column: 3; justify-self: end; max-width: 100%; margin-left: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: var(--usd-text-size); }
 .usd-app-header .header-tool-actions { grid-row: 1; grid-column: 2; justify-content: flex-start; flex: none; flex-wrap: nowrap; gap: var(--usd-space-1); }
+.usd-app-header .usd-download { grid-row: 1; grid-column: 4; }
 #container.usd-app-header :is(.header-tool-button,.export-button), .usd-compact-header button {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--usd-space-field); height: var(--usd-menubar-height); min-height: var(--usd-menubar-height); padding: var(--usd-space-small) 9px;
   border: 1px solid transparent; border-radius: var(--usd-radius-control); background: transparent; color: var(--text-primary); font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap;
@@ -272,6 +273,8 @@ body.usd-product .ui-tooltip[data-placement=top]::before { border-top-color: var
 
 @media(max-width:900px) { .usd-app-header .usd-file-context { display: none; } }
 @media(max-width:620px) {
+  #container.usd-app-header .usd-download > button { font-size: 0; gap: 0; }
+  #container.usd-app-header .usd-download > button .usd-icon { width: var(--usd-icon-size); height: var(--usd-icon-size); }
   .usd-app-header .header-tool-title-group { display: none; }
   #container.usd-app-header { padding-inline: var(--usd-space-2); gap: var(--usd-space-2); }
   .usd-app-header .needle-logo { width: var(--usd-logo-compact-width); }

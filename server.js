@@ -13,6 +13,7 @@ function setHeaders(res, path, stat) {
     res.setHeader("Cache-Control", "no-cache");
   }
   const needsHeaders = normalizedPath.includes('/emHd') ||
+    normalizedPath.endsWith('/scene/archiveWorker.js') ||
     normalizedPath.endsWith('/api/worker.js') ||
     normalizedPath.includes('/materialx/') ||
     normalizedPath.includes('/mutracer/') ||

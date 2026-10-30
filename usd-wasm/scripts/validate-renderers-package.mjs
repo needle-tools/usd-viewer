@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
+import { unzipSync } from 'three/addons/libs/fflate.module.js';
 const sdk = fileURLToPath(new URL('..', import.meta.url));
 const output = resolve(process.argv[2] || join(sdk, '.cache/package-validation', `renderers-${Date.now()}`));
 await mkdir(output, { recursive: true });
@@ -29,7 +30,7 @@ try {
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
     if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
-    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage };\n");
+    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, mountDownloadButton };\n");
     await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     await command(`${name}-build`, root, 'npm', ['run', 'build']);
@@ -97,7 +98,64 @@ try {
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.usd-repl')).display==='flex');
     await page.screenshot({path:join(output,'inspection-repl.png')});
     result.inspection='Packed public exports: multi-selection, exact property navigation, REPL await, serialized authored edits and default SDK console styles';
+    result.archive = await page.evaluate(async () => {
+      const {USD, handle} = window.packed, bytes = await handle.exportUsdz();
+      USD.FS_createDataFile('/tmp','packed-download.usdz',bytes,true,true,true);
+      const stage = await USD.OpenStage('/tmp/packed-download.usdz');
+      try {
+        const prim = stage.GetPrimAtPath('/World/Sphere1'), radius = prim.GetAttribute('radius');
+        try {
+          if (radius.GetValueString() !== '0.6') throw new Error('Packed USDZ lost the authored radius edit');
+        } finally { radius.delete(); prim.delete(); }
+        return {bytes: bytes.length, editedRadius: 0.6};
+      } finally { USD.ReleaseStage(stage); USD.FS_unlink('/tmp/packed-download.usdz'); }
+    });
+    const zipEvent = page.waitForEvent('download');
+    await page.getByRole('button', {name:'Download',exact:true}).click();
+    const zipped = await zipEvent;
+    assert.equal(zipped.suggestedFilename(), 'scene.zip');
+    const zippedEntries = unzipSync(new Uint8Array(await readFile(await zipped.path())));
+    assert.ok(Object.keys(zippedEntries).length > 0);
+    await page.getByLabel('Download format', {exact:true}).focus(); await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('End'); await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => window.packed.downloads.format), 'usdz');
+    const usdzEvent = page.waitForEvent('download');
+    await page.getByRole('button', {name:'Download',exact:true}).click();
+    const downloaded = await usdzEvent;
+    assert.equal(downloaded.suggestedFilename(), 'scene.usdz');
+    assert.ok((await readFile(await downloaded.path())).length > 100);
+    result.exportPhases = await page.evaluate(() => [...new Set(window.packed.exportProgress.map(value=>value.phase))]);
+    for(const phase of ['preparing','packaging','reading','compressing','complete']) assert.ok(result.exportPhases.includes(phase),`packed export phase ${phase}`);
+    await page.screenshot({path:join(output,'download-component.png')});
+    result.downloadControl = 'Installed /viewer/download split button: default ZIP, keyboard-selected USDZ, actual downloads and standalone SDK styles';
     await page.evaluate(async () => { await window.packed.dispose(); });
+    const legacyRoot = result.consumers[1].root;
+    const legacyServer = await preview({root:legacyRoot, configFile:join(legacyRoot,'vite.config.js'), preview:{port:0}});
+    try {
+      await page.goto(legacyServer.resolvedUrls.local[0]);
+      await page.waitForFunction(() => !!window.baseSdk);
+      const legacyDownload = page.waitForEvent('download');
+      result.legacyArchive = await page.evaluate(async () => {
+        const {getUsdModule, createThreeHydra, Group, mountDownloadButton} = window.baseSdk, USD = await getUsdModule();
+        const handle = await createThreeHydra({USD, scene:new Group(), url:'source.usda', buffer:new TextEncoder().encode('#usda 1.0\ndef Sphere "Ball" {}\n')});
+        let repack;
+        try {
+          await handle.ready(); const bytes = await handle.exportUsdz();
+          repack = await createThreeHydra({USD, scene:new Group(), url:'reloaded.usdz', buffer:bytes.buffer});
+          await repack.ready(); await repack.editStage(stage => stage.DefinePrim('/Edited','Xform').delete());
+          const edited = await repack.exportUsdz();
+          USD.FS_createDataFile('/tmp','legacy-export.usdz',edited,true,true,true);
+          const stage = await USD.OpenStage('/tmp/legacy-export.usdz');
+          try {
+            if (!stage.GetPrimAtPath('/Edited').IsValid()) throw new Error('Legacy USDZ repackaging lost edits');
+            const control = mountDownloadButton({getSource:()=>({handle:repack,filename:'legacy.usdz'})});
+            try { await control.download(); } finally { control.dispose(); }
+            return {bytes:edited.length, innerEdits:true, downloadControl:true};
+          } finally { USD.ReleaseStage(stage); USD.FS_unlink('/tmp/legacy-export.usdz'); }
+        } finally { await repack?.dispose(); await handle.dispose(); }
+      });
+      assert.equal((await legacyDownload).suggestedFilename(), 'legacy.zip');
+    } finally { await new Promise(resolve => legacyServer.httpServer.close(resolve)); }
     await page.waitForTimeout(100);
     assert.deepEqual(result.errors, []);
     assert.ok(result.requests.some(request => /worker.*\.js|bvh.*\.js/.test(request.url) && request.status === 200), 'bundled worker loads');

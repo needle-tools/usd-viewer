@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Non-blocking stage export: native OpenUSD packaging on a scoped WASM thread, bounded archive readback, and ZIP compression in a browser worker. The reusable Download control shows an accessible animated export spinner, real per-phase progress and reduced-motion support; `exportUsdz({onProgress})` also exposes progress to hosts.
+- Reusable `mountDownloadButton()` from `/viewer/download` (also exported by `/viewer`): split button, ZIP/USDZ settings, keyboard navigation, optional remembered format and standalone themeable styles. The viewer app uses this same component. Downloads include dependency-localized archives and unsaved authored edits; `handle.exportUsdz()` provides packaging without UI.
 - OpenUSD 26.11.1 with MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched Adobe `usdGltf`/Draco plugins.
 - Adaptive subdivision using OpenSubdiv Bfr limit surfaces and crack-free shared-edge tessellation. Curvature-driven CPU rates are camera independent and bounded by the Very high triangle budget; Low through Very high retain uniform refinement.
 - Optional `/renderers` and `/viewer` entry points: Basic, Beauty with SSGI/ambient occlusion/temporal antialiasing, MuTracer and gkjohnson WebGPU path tracing, and configurable samples, bounces and denoising. Tracers load on demand; OIDN supports self-hosted weights.

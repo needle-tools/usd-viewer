@@ -83,6 +83,10 @@ export const ICONS = Object.fromEntries(Object.entries(paths).map(([name, values
   svg: values.map(d => `<path fill="currentColor" stroke="none" transform="translate(0 16) scale(0.016666666667)" d="${d}"/>`).join(''),
 }]));
 Object.assign(ICONS, {
+  "download": {
+    "label": "Download", "group": "menu",
+    "svg": "<path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8 2V10M5 7L8 10L11 7M2 11V14H14V11\"/>"
+  },
   "share": {
     "label": "Share USD",
     "group": "menu",

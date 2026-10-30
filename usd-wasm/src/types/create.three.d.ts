@@ -4,6 +4,14 @@ import { HdWebSyncDriver, USD, USDStage } from "./bindings.js"
 
 export declare type HydraFile = File & { path: string };
 
+export type UsdExportProgress = {
+    phase: 'preparing' | 'dependencies' | 'packaging' | 'reading' | 'compressing' | 'complete';
+    /** Per-phase work, not a fabricated overall percentage. Zero total is indeterminate. */
+    completed: number;
+    total: number;
+};
+export type UsdExportOptions = { onProgress?: (progress: UsdExportProgress) => void };
+
 export declare type NeedleThreeHydraStageMetadata = {
     upAxis: string,
     startTimeCode: number,
@@ -172,6 +180,9 @@ export declare type NeedleThreeHydraHandle = {
      * asynchronous material generation and texture assignment.
      */
     ready: () => Promise<void>,
+    /** Self-contained USDZ with authored layers, variants, animation and unsaved
+     * root/layer edits. Serialized after pending editStage operations. */
+    exportUsdz(options?: UsdExportOptions): Promise<Uint8Array>,
     /** Resolves when asynchronous material generation and texture assignment have settled.
      */
     materialsReady: () => Promise<void>,

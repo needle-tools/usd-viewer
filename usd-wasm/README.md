@@ -662,6 +662,60 @@ WebGPU support translates MaterialX surfaces through the bundled TSL loader, inc
 
 The `/scene` entry also exports `setPrimVisible(handle, path, visible)` and `setPrimActive(handle, path, active)`. They synchronize through `handle.editStage`; activation recomposes descendants. Visibility edits the authored default for static visibility, or the current time for animated visibility. These are in-memory stage edits, like variants; the host decides whether to export them.
 
+`await handle.exportUsdz()` returns a `Uint8Array` containing a self-contained
+USDZ. It waits for pending `editStage` calls and includes unsaved authored layer
+edits, referenced layers, textures and other asset dependencies, including
+inactive variants. Composition and animation remain editable. Repackaging a
+loaded USDZ also retains edits made inside the package. Missing dependencies
+reject the export. The host can download the bytes as a Blob with MIME type
+`model/vnd.usdz+zip`; the viewer's Download button also offers a compressed ZIP
+containing the same localized files. Camera orbit, render settings and physics
+overlays remain viewer state rather than authored USD edits.
+
+With the bundled runtime, native packaging runs on a WASM thread and archive
+readback yields between bounded chunks. ZIP conversion runs in a module worker,
+including decompression, checksums and compression. The viewport and other UI
+controls remain interactive. Authored stage mutations wait for the export to
+finish so the archive captures a consistent stage. The shared button shows an
+animated spinner and an accessible export status, respects reduced motion and
+keeps its width stable. Closing the source discards its export; disposal or source
+replacement also terminates any ZIP compression worker.
+
+`handle.exportUsdz({onProgress})` and `mountDownloadButton({onProgress})` report
+`{phase, completed, total}`. Phases cover preparation, dependency loading,
+packaging, readback and (for ZIP) compression. Counts describe that phase; a zero
+total is indeterminate. The native packaging phase has no fabricated percentage.
+Older custom native modules retain their synchronous packaging fallback.
+
+The split button is also available independently from `/viewer/download`, with its dropdown, keyboard
+navigation, busy state, cancellation and themeable styles:
+
+```js
+import { mountDownloadButton } from '@needle-tools/usd/viewer/download';
+
+const downloads = mountDownloadButton({
+  container: toolbar,
+  getSource: () => currentHandle
+    ? { handle: currentHandle, filename: currentFilename }
+    : null,
+  stateKey: 'my-viewer-download-format', // optional localStorage persistence
+  onError: error => console.error(error),
+});
+// After loading or closing a file:
+downloads.refresh();
+// When removing the toolbar:
+downloads.dispose();
+```
+
+The aggregate `/viewer` entry also exports it; the lightweight entry above avoids
+renderer imports and supports Three r160 consumers. ZIP is the default. `format`, `setFormat()` and `onFormatChange` support host-owned
+preferences; omit `stateKey` to avoid localStorage. Set `style: false` for custom
+styles, or override the shared viewer CSS variables and
+`--usd-download-menu-width`. `getSource` may restrict `formats` and supply
+`isCurrent()` for additional cancellation checks. Hosts with application menus
+can coordinate through `onOpenChange`, `onMenuNavigate`, `openMenu()` and
+`closeMenu()`; no workbench or global app state is required.
+
 MuTracer's built-in conversion supports ordinary Three.js PBR surfaces, including the viewer's MDL input approximations. Arbitrary MaterialX graphs, bounded volumes, custom primvar shaders, per-point/curve opacity, Gaussian splats and PMREM-only environments cannot currently be translated by this integration; selecting path tracing preserves the current mode and reports the unsupported content. Applications can supply `convertMaterial` and `convertLight` for their own MuTracer conversions. Use an equirectangular HDR/EXR environment for path tracing.
 
 For controls, `mountRenderModePicker` from `/viewer` wraps the same render-mode controller. `mountStagePanel({ handle, stage, scene, camera, controls, setCamera })` adds cameras, purposes, variants, payloads, a searchable prim tree, attributes, relationships, metadata, layers and a timeline. `setCamera` receives the selected, fully composed Hydra camera, or the supplied free camera. Use `beforeEdit`/`afterEdit` to coordinate host integrations such as physics. Dispose the panel before disposing its handle. The default stylesheet loads relative to the installed module; pass `style: false` to provide your own styles. `inspectStage`, `inspectPrim`, `setVariant`, `setPayloadLoaded` and `stageCameras` from `/scene` are available without the UI.

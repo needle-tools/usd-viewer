@@ -2,6 +2,7 @@ import { getUsdModule } from '@needle-tools/usd';
 import { createThreeHydra } from '@needle-tools/usd/three';
 import { createWebGpuSupport, configureNeedleAgx, configureNeedleAgxDisplay } from '@needle-tools/usd/renderers';
 import { mountStagePanel, mountRenderModePicker, mountRepl, createSelection } from '@needle-tools/usd/viewer';
+import { mountDownloadButton } from '@needle-tools/usd/viewer/download';
 import { setPrimActive, setPrimVisible } from '@needle-tools/usd/scene';
 import { Scene, Group, PerspectiveCamera, WebGPURenderer, AgXToneMapping, Color } from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -24,7 +25,10 @@ const replHost = document.createElement('section'); replHost.style.cssText='heig
 let current = true, stopped = false, renderFrame;
 const repl = mountRepl({container:replHost,getContext:()=>current?{USD,stage,handle,panel,selection:panel.selection,follow:target=>panel.navigate(target)}:null,edit:callback=>panel.edit(callback)});
 const selection = createSelection();
-window.packed = { renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, setPrimActive, setPrimVisible, get status(){return status;},
-  async dispose(){current=false;stopped=true;cancelAnimationFrame(renderFrame);repl.dispose();panel.dispose();picker.modes.dispose();await handle.dispose();controls.dispose();renderer.dispose();}
+const downloadHost = document.createElement('div'); downloadHost.style.cssText='position:fixed;top:8px;left:8px;z-index:100';document.body.append(downloadHost);
+const exportProgress = [];
+const downloads = mountDownloadButton({container:downloadHost,getSource:()=>current?{handle,filename:'scene.usda'}:null,stateKey:'packed-download-format',onProgress:value=>exportProgress.push(value)});
+window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, downloads, exportProgress, setPrimActive, setPrimVisible, get status(){return status;},
+  async dispose(){current=false;stopped=true;cancelAnimationFrame(renderFrame);downloads.dispose();downloadHost.remove();repl.dispose();panel.dispose();picker.modes.dispose();await handle.dispose();controls.dispose();renderer.dispose();}
 };
 function render() { if(stopped)return;picker.modes.render(activeCamera);renderFrame=requestAnimationFrame(render); } render();

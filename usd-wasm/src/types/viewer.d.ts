@@ -3,6 +3,8 @@ import type { NeedleThreeHydraHandle } from './create.three.js';
 import type { USDStage } from './bindings.js';
 import type { RenderModes, RenderMode, createRenderModes } from './renderers.js';
 export { mountRepl } from './repl.js';
+export {mountDownloadButton} from './downloadButton.js';
+export type {DownloadFormat, DownloadSource} from './downloadButton.js';
 export type {Repl, ReplContext, ReplOptions} from './repl.js';
 export interface SelectionItem {
   readonly path: string;

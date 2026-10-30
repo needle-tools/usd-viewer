@@ -1,0 +1,25 @@
+.usd-download { display: inline-flex; align-items: center; gap: 0; color: var(--text-primary, #202520); font: var(--usd-text-size, 12px)/1.4 var(--font-family-body, sans-serif); }
+.usd-download :is(.usd-download-button, .usd-download-trigger), .usd-download-menu > button { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: var(--usd-space-field, 6px); height: var(--usd-menubar-height, 28px); min-height: 0; padding: var(--usd-space-small, 4px) 9px; border: 1px solid transparent; border-radius: var(--usd-radius-control, 4px); background: transparent; color: inherit; font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.usd-download .usd-icon { width: var(--usd-icon-size, 16px); height: var(--usd-icon-size, 16px); flex: none; }
+.usd-download-glyph, .usd-download-label { display: inline-grid; }
+.usd-download-glyph > *, .usd-download-label > * { grid-area: 1 / 1; }
+.usd-download-busy, .usd-download-spinner { visibility: hidden; }
+.usd-download[data-exporting=true] :is(.usd-download-busy,.usd-download-spinner) { visibility: visible; }
+.usd-download[data-exporting=true] :is(.usd-download-idle,.usd-download-glyph > .usd-icon) { visibility: hidden; }
+.usd-download .usd-download-button[aria-busy=true] { opacity: 1; cursor: progress; }
+.usd-download-spinner { box-sizing: border-box; width: var(--usd-icon-size,16px); height: var(--usd-icon-size,16px); border: 1.5px solid color-mix(in srgb,currentColor 25%,transparent); border-top-color: currentColor; border-radius: 50%; animation: usd-export-spin .8s linear infinite; animation-play-state: paused; }
+.usd-download[data-exporting=true] .usd-download-spinner { animation-play-state: running; }
+.usd-download-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes usd-export-spin { to { transform: rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .usd-download-spinner { animation: none; } }
+.usd-download > .usd-download-button { border-start-end-radius: 0; border-end-end-radius: 0; }
+.usd-download .usd-download-trigger { list-style: none; user-select: none; padding-inline: var(--usd-space-field, 6px); border-start-start-radius: 0; border-end-start-radius: 0; }
+.usd-download-trigger::-webkit-details-marker { display: none; }
+.usd-download :is(.usd-download-button, .usd-download-trigger):hover, .usd-download-format[open] > .usd-download-trigger { background: var(--surface-panel-muted, color-mix(in srgb, var(--text-primary, #202520) 6%, var(--surface-panel, #fff))); }
+.usd-download button:disabled, .usd-download [aria-disabled=true] { opacity: .5; cursor: default; }
+.usd-download :is(button,summary):focus-visible, .usd-download-menu > button:focus-visible { outline: 2px solid var(--accent-brand, #77ae45); outline-offset: -2px; }
+.usd-download-menu { box-sizing: border-box; position: fixed; z-index: 120; inset: auto; margin: 0; width: var(--usd-download-menu-width, 144px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: auto; padding: var(--usd-space-field, 6px); border: 1px solid var(--border-strong, #9ba59b); border-radius: var(--usd-radius-menu, 4px); background: var(--surface-panel, #fff); color: var(--text-primary, #202520); box-shadow: var(--shadow-floating, 0 3px 16px #172e3320); font: var(--usd-text-size, 12px)/1.4 var(--font-family-body, sans-serif); }
+.usd-download-menu > button { display: flex; width: 100%; text-align: left; justify-content: flex-start; padding-inline: var(--usd-space-2, 8px); border-radius: var(--usd-radius-small, 3px); font-weight: 400; }
+.usd-download-menu > button[aria-checked=true] { background: var(--usd-row-selected-background, color-mix(in srgb, var(--accent-brand, #77ae45) 18%, var(--surface-panel, #fff))); }
+.usd-download-menu > button:is(:hover,:focus-visible) { background: var(--surface-panel-muted, color-mix(in srgb, var(--text-primary, #202520) 6%, var(--surface-panel, #fff))); }
+.usd-download-menu > button:disabled { opacity: .5; cursor: default; }

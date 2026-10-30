@@ -1192,11 +1192,6 @@ catch (error) {
   }
 }
 
-const usdzExportBtn = document.getElementById('export-usdz');
-if (usdzExportBtn) usdzExportBtn.addEventListener('click', () => {
-  alert("usdz");
-});
-
 // In-browser glTF export (binary .glb) of the currently loaded scene.
 function doGltfExport() {
   const exporter = new GLTFExporter();
@@ -1628,6 +1623,7 @@ async function clearStage({ clearNeedleEngine = false } = {}) {
   if (backgroundControls) { backgroundControls.replaceChildren(); backgroundControls.hidden = true; }
 
   const handle = currentHydraHandle;
+  window.usdWorkbench?.setDownload(null);
   currentHydraHandle = null;
   window.usdHydra = undefined;
   window.driver = undefined;
@@ -2142,6 +2138,10 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    window.usdWorkbench?.setDownload(() => ({
+      handle, filename: currentDisplayFilename || filename,
+      isCurrent: () => generation === loadGeneration && currentHydraHandle === handle,
+    }));
     messageLog.textContent = "";
 
     if (!diagnosticsMode()) {

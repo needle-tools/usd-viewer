@@ -226,12 +226,13 @@ def cylinder(stage, path, center, radius, height, material, color):
     return prim
 
 
-def sharpness_tags(mesh, chains, corners, crease, corner):
+def sharpness_tags(mesh, chains, corners, crease, corner, fixed_creases=()):
     """Author constant crease/corner topology and bake animated sharpness arrays."""
-    mesh.CreateCreaseIndicesAttr([i for chain in chains for i in chain])
-    mesh.CreateCreaseLengthsAttr([len(chain) for chain in chains])
+    mesh.CreateCreaseIndicesAttr([i for chain in [*chains, *(chain for chain, _ in fixed_creases)] for i in chain])
+    mesh.CreateCreaseLengthsAttr([len(chain) for chain in chains] + [len(chain) for chain, _ in fixed_creases])
     mesh.CreateCornerIndicesAttr(corners)
-    bake(mesh.CreateCreaseSharpnessesAttr(), crease, lambda s: [round(s, 3) + 0.] * len(chains), .01)
+    bake(mesh.CreateCreaseSharpnessesAttr(), crease,
+         lambda s: [round(s, 3) + 0.] * len(chains) + [sharpness for _, sharpness in fixed_creases], .01)
     bake(mesh.CreateCornerSharpnessesAttr(), corner, lambda s: [round(s, 3) + 0.] * len(corners), .01)
 
 
@@ -342,14 +343,24 @@ def build_pip(stage, looks):
           scale=lambda f: (squash(f) ** -.5, squash(f), squash(f) ** -.5))
 
     points, counts, indices, faces, chains, corners, ids = lattice_box(XS, YS, ZS)
-    shell = studio.subd(stage, '/World/Pip/Shell', shape_pip(points, ids), counts, indices)
+    # Allow smooth boundary corners; explicit semi-sharp rims below control the
+    # cutouts independently of the outer silhouette's animated creases.
+    shell = studio.subd(stage, '/World/Pip/Shell', shape_pip(points, ids), counts, indices,
+                        boundary='edgeOnly')
     shell.AddTranslateOp().Set(Gf.Vec3d(0, SHELL_Y, 0))
     shell.CreateDoubleSidedAttr(True)
     studio.finish(shell, looks['teal'], (.03, .55, .52))
+    # Semi-sharp rims pull the hole corners into soft arcs rather than leaving
+    # square face cutouts. Keep these independent of the body's shock pose.
+    front = lambda x, y: ids[x, y, len(ZS) - 1]
+    rims = [[front(x, 4), front(x + 1, 4), front(x + 1, 5), front(x, 5), front(x, 4)] for x in (1, 3)]
+    smile = [front(x, 2) for x in range(1, 5)] + [front(x, 3) for x in range(4, 0, -1)]
+    rims += [smile + [smile[0]], [front(2, 2), front(2, 3)], [front(3, 2), front(3, 3)]]
     # Soft toy by default; the shock at frame 61 stiffens the edges, corners a beat later.
     sharpness_tags(shell, chains, corners,
                    track((1, .25), (57, .25), (61, 3., 'out'), (66, 3.), (76, .25), (121, .25)),
-                   track((1, .25), (58, .25), (63, 4., 'out'), (68, 4.), (80, .25), (121, .25)))
+                   track((1, .25), (58, .25), (63, 4., 'out'), (68, 4.), (80, .25), (121, .25)),
+                   fixed_creases=[(rim, 3.) for rim in rims])
 
     # Integer arrays are held between samples, so each sample is an instant expression.
     eyes, closed = [LEFT_EYE, RIGHT_EYE], []

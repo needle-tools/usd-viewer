@@ -14,7 +14,7 @@ for(const theme of ['light','dark'])test(`${theme}: icons, four navigation state
   await expect(sphere.locator('.usd-tree-icon svg')).toHaveAttribute('data-icon','sphere');
   await expect(page.locator('[data-prim-path="/World/Pedestal0"] .usd-tree-icon svg')).toHaveAttribute('data-icon','view_in_ar');
   await expect(page.locator('[data-prim-path="/World"] .usd-tree-icon svg')).toHaveAttribute('data-icon','transform');
-  const fonts=await sphere.evaluate(el=>({name:getComputedStyle(el.querySelector('.usd-tree-name')!).fontFamily,type:getComputedStyle(el.querySelector('.usd-tree-type')!).fontFamily,path:getComputedStyle(document.querySelector('.usd-stage-section > code')!).fontFamily}));
+  const fonts=await sphere.evaluate(el=>({name:getComputedStyle(el.querySelector('.usd-tree-name')!).fontFamily,type:getComputedStyle(el.querySelector('.usd-tree-type')!).fontFamily,path:getComputedStyle(document.querySelector('.usd-property-address > code')!).fontFamily}));
   expect(fonts.type).toBe(fonts.name);expect(fonts.path).toContain('Monaspace');
   await openAppMenu(page,'file');
   const commands=page.locator('[data-usd-menu=file] .usd-menu-body > :is(button,a)');

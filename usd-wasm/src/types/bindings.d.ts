@@ -561,6 +561,8 @@ declare type HdWebSyncDriver = {
     GetTime(): number,
     Draw(): MaybePromise<void>,
     DrawAsync(resolve: () => void, reject: (error: string) => void): boolean,
+    ExportUsdzAsync(directory: string, resolve: () => void, reject: (error: string) => void,
+        progress: (phase: string, completed: number, total: number) => void): boolean,
     StartDraw(): boolean,
     IsDrawPending(): boolean,
     ConsumeDrawError(): string,

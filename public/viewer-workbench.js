@@ -1,6 +1,7 @@
 import { createDockview } from 'dockview-core';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { mountExamplesBrowser } from './viewer-examples.js';
+import { mountDownloadButton } from './usd/viewer/downloadButton.js';
 
 const STORAGE = 'needle-usd-workspace-v2';
 const THEME = 'needle-usd-theme';
@@ -46,10 +47,14 @@ export async function mountWorkbench() {
   input.onchange = () => { if (!input.files.length) return; const data = new DataTransfer(); for (const file of input.files) data.items.add(file); window.dispatchEvent(new DragEvent('drop', { dataTransfer: data, cancelable: true })); input.value = ''; };
   const open = button('Open…', () => input.click(), 'Open a USD, USDZ or glTF file'); open.disabled = input.disabled = true;
   const menus = [], menuUpdates = new Map();
-  function openMenu(disclosure) { menuUpdates.get(disclosure)?.(); disclosure.open = true; positionMenus(); }
-  function menuIsOpen() { return menus.some(menu => menu.open); }
+  let downloadControl, downloadSource = null;
+  function openMenu(disclosure) {
+    if (disclosure === downloadControl?.menuElement) { downloadControl.openMenu(); return; }
+    downloadControl?.closeMenu(); menuUpdates.get(disclosure)?.(); disclosure.open = true; positionMenus();
+  }
+  function menuIsOpen() { return menus.some(menu => menu.open) || downloadControl?.menuOpen; }
   function followMenu(trigger) {
-    if (!menuIsOpen() || trigger.matches(':disabled')) return;
+    if (!menuIsOpen() || trigger.matches(':disabled,[aria-disabled=true]')) return;
     closeMenus();
     if (trigger.tagName === 'SUMMARY') openMenu(trigger.parentElement);
   }
@@ -63,21 +68,22 @@ export async function mountWorkbench() {
     }
   }
   function nextMenu(trigger, direction, open) {
-    const triggers = [...actions.querySelectorAll(':scope > .usd-menu > summary, :scope > .usd-examples-menu')];
+    const triggers = [...header.querySelectorAll('.usd-menu > summary, .usd-examples-menu, .usd-download-trigger')].filter(item => !item.matches('[aria-disabled=true]'));
     const next = triggers[(triggers.indexOf(trigger) + direction + triggers.length) % triggers.length];
     closeMenus(); next.focus();
     if (open && next.tagName === 'SUMMARY') openMenu(next.parentElement);
   }
-  function createMenu(label) {
+  function createMenu(label, parent = actions) {
     const disclosure = element('details', 'usd-menu'); disclosure.dataset.usdMenu = label.toLowerCase();
     const trigger = element('summary', 'header-tool-button', label);
     const body = element('div', 'usd-menu-body'); body.setAttribute('aria-label', `${label} commands`);
     disclosure.addEventListener('toggle', positionMenus);
-    disclosure.append(trigger, body); actions.append(disclosure); menus.push(disclosure);
+    disclosure.append(trigger, body); parent.append(disclosure); menus.push(disclosure);
     trigger.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') followMenu(trigger); });
-    trigger.addEventListener('click', event => { event.preventDefault(); for (const other of menus) if (other !== disclosure) other.open = false; if (disclosure.open) disclosure.open = false; else openMenu(disclosure); });
+    trigger.addEventListener('click', event => { event.preventDefault(); if (trigger.getAttribute('aria-disabled') === 'true') return; for (const other of menus) if (other !== disclosure) other.open = false; if (disclosure.open) disclosure.open = false; else openMenu(disclosure); });
     disclosure.addEventListener('keydown', event => {
       if (event.target !== trigger || !['ArrowLeft', 'ArrowRight', 'ArrowDown'].includes(event.key)) return;
+      if (trigger.getAttribute('aria-disabled') === 'true') return;
       event.preventDefault();
       if (event.key === 'ArrowDown') { for (const other of menus) if (other !== disclosure) other.open = false; openMenu(disclosure); body.querySelector('button:not(:disabled),a,select,input')?.focus(); }
       else nextMenu(trigger, event.key === 'ArrowRight' ? 1 : -1, disclosure.open);
@@ -102,6 +108,16 @@ export async function mountWorkbench() {
   const [, viewCommands] = createMenu('View');
   const [layoutMenu, menu] = createMenu('Window');
   const [, helpCommands] = createMenu('Help');
+  downloadControl = mountDownloadButton({
+    container: header, getSource: () => downloadSource?.(),
+    stateKey: 'needle-usd-download-format', menuAnchor: header,
+    onOpenChange(open) { if (open) for (const menu of menus) menu.open = false; },
+    onMenuNavigate(direction) { nextMenu(downloadControl.menuTrigger, direction, downloadControl.menuOpen); },
+  });
+  const downloadGroup = downloadControl.element;
+  downloadControl.button.id = 'usd-download';
+  downloadControl.menuTrigger.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') followMenu(downloadControl.menuTrigger); });
+  downloadControl.button.addEventListener('click', closeMenus);
   const samples = button('Examples', () => { closeMenus(); openPanel('examples'); });
   samples.disabled = true; samples.classList.add('usd-examples-menu'); fileMenu.after(samples);
   samples.setAttribute('aria-controls','usd-examples-panel');
@@ -127,7 +143,7 @@ export async function mountWorkbench() {
   theme.onchange = () => { save(THEME, theme.value); applyTheme(); }; media.addEventListener('change', applyTheme); applyTheme();
   const themeRow = element('label', 'usd-menu-row', 'Theme'); themeRow.append(theme); viewCommands.append(themeRow);
   viewCommands.classList.add('usd-view-menu');
-  header.replaceChildren(identity, actions, fileContext, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
+  header.replaceChildren(identity, actions, fileContext, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
   root.append(header);
   const workspace = element('main', 'usd-workspace'); workspace.setAttribute('aria-label', 'USD workspace'); root.append(workspace);
   const dockHost = element('div', 'usd-dock'); workspace.append(dockHost);
@@ -358,8 +374,8 @@ export async function mountWorkbench() {
     button('Reset layout', () => { defaults(); layoutMenu.open = false; }));
   const name = element('input'); name.placeholder = 'Layout name'; name.setAttribute('aria-label', 'Layout name');
   const saveRow = element('div', 'usd-menu-save'); saveRow.append(name, button('Save', () => { const key = name.value.trim(); if (!key) return; awaitingStage = false; state.awaitingStage = false; state.presets ||= {}; state.presets[key] = dock.toJSON(); state.preset = 'saved:' + key; save(STORAGE, state); refreshPresets(); presets.value = 'saved:' + key; name.value = ''; })); menu.append(saveRow);
-  function closeMenus() { for (const disclosure of menus) disclosure.open = false; }
-  const onOutsideMenu = event => { if (!actions.contains(event.target)) closeMenus(); };
+  function closeMenus() { for (const disclosure of menus) disclosure.open = false; downloadControl?.closeMenu(); }
+  const onOutsideMenu = event => { if (!actions.contains(event.target) && !downloadControl.element.contains(event.target)) closeMenus(); };
   const onMenuKey = event => { if (event.key === 'Escape') { const active = menus.find(menu => menu.open); closeMenus(); active?.firstElementChild.focus(); } };
   document.addEventListener('pointerdown', onOutsideMenu);
   document.addEventListener('keydown', onMenuKey);
@@ -401,6 +417,7 @@ export async function mountWorkbench() {
   }); loadedObserver.observe(header, { attributes: true }); loadedObserver.observe(fileBar, { subtree: true, characterData: true, childList: true });
   const api = {
     dock, viewport,
+    setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
     containers: { settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
     openPanel, isPanelVisible, exampleChosen() { if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
     async prepareStage() {
@@ -417,7 +434,7 @@ export async function mountWorkbench() {
       placeholders.get('timeline').hidden = !!info?.time;
     },
     selectPrim(path) { if(path && !isCompact) openPanel('properties'); },
-    dispose() { document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); disposed = true; cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
+    dispose() { downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); disposed = true; cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };
   window.addEventListener('pagehide', () => { state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state); }, { once: true });
   return api;

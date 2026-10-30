@@ -42,6 +42,10 @@
       "types": "./src/types/viewer.d.ts",
       "import": "./src/viewer/index.js"
     },
+    "./viewer/download": {
+      "types": "./src/types/downloadButton.d.ts",
+      "import": "./src/viewer/downloadButton.js"
+    },
     "./viewer/style.css": {
       "types": "./src/types/viewer-style.d.ts",
       "default": "./src/viewer/style.css"
