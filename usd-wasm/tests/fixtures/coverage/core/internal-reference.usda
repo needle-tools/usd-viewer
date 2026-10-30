@@ -1,10 +1,8 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     framesPerSecond = 24
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -86,6 +84,7 @@ def Xform "World"
 
         def Cone "Roof"
         {
+            uniform token axis = "Y"
             double height = 0.75
             color3f[] primvars:displayColor = [(0.8, 0.27, 0.18)]
             double radius = 0.8
@@ -107,7 +106,7 @@ def Xform "World"
             color3f[] primvars:displayColor = [(0.45, 0.28, 0.2)]
             double size = 1
             float3 xformOp:scale = (0.22, 1.4, 0.3)
-            double3 xformOp:translate = (-0.95, 0.04, 0)
+            double3 xformOp:translate = (-0.95, 0.04, 0.95)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         }
 
@@ -116,7 +115,7 @@ def Xform "World"
             color3f[] primvars:displayColor = [(0.45, 0.28, 0.2)]
             double size = 1
             float3 xformOp:scale = (0.22, 1.4, 0.3)
-            double3 xformOp:translate = (0.95, 0.04, 0)
+            double3 xformOp:translate = (0.95, 0.04, 0.95)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         }
 
@@ -125,7 +124,7 @@ def Xform "World"
             color3f[] primvars:displayColor = [(0.9, 0.51, 0.24)]
             double size = 1
             float3 xformOp:scale = (2.1, 0.18, 0.35)
-            double3 xformOp:translate = (0, 0.69, 0)
+            double3 xformOp:translate = (0, 0.69, 0.95)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         }
     }

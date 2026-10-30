@@ -51,24 +51,6 @@ def Xform "Asset"
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
-    def Cone "Roof"
-    {
-        double height = 0.75
-        color3f[] primvars:displayColor = [(0.8, 0.27, 0.18)]
-        double radius = 0.8
-        double3 xformOp:translate = (0, 1.03, 0)
-        uniform token[] xformOpOrder = ["xformOp:translate"]
-    }
-
-    def Cube "Spire"
-    {
-        color3f[] primvars:displayColor = [(0.95, 0.76, 0.3)]
-        double size = 1
-        float3 xformOp:scale = (0.09, 0.45, 0.09)
-        double3 xformOp:translate = (0, 1.52, 0)
-        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
-    }
-
     def Cube "LanternPost0"
     {
         color3f[] primvars:displayColor = [(0.9, 0.65, 0.2)]

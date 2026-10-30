@@ -1,10 +1,8 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     framesPerSecond = 24
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -15,6 +13,9 @@ def Xform "World"
         uniform token basis = "bezier"
         int[] curveVertexCounts = [4, 4]
         point3f[] points = [(-2, 0, 0), (-1, 2, 0), (0, 2, 0), (1, 0, 0), (-2, -1, 0), (-1, 1, 0), (0, 1, 0), (1, -1, 0)]
+        color3f[] primvars:displayColor = [(0.96, 0.62, 0.24), (0.25, 0.7, 0.9)] (
+            interpolation = "uniform"
+        )
         uniform token type = "cubic"
         float[] widths = [0.12] (
             interpolation = "constant"

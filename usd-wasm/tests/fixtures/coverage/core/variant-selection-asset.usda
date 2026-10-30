@@ -53,6 +53,7 @@ def Xform "Asset"
 
     def Cone "Roof"
     {
+        uniform token axis = "Y"
         double height = 0.75
         color3f[] primvars:displayColor = [(0.8, 0.27, 0.18)]
         double radius = 0.8

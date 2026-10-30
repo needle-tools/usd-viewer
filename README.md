@@ -54,9 +54,23 @@ Minimal package usage examples for plain three.js and Needle Engine live in
 
 Use **Examples** to browse local Needle fixtures, the 14 NVIDIA SimReady assets,
 USD Working Group assets and glTF samples. Needle includes 192 coverage fixtures
-and 63 executable JavaScript lessons with distinct native Storm previews.
+and 63 executable JavaScript lessons. The Examples footer switches between
+Beauty previews and the retained native usdview/Storm captures, and remembers
+your choice. Beauty captures use two camera fits in a 4:3 viewport; faint media,
+splats and the unmaterialed triangle use a dark background for contrast.
+The animation collection includes a rolling cube, heartbeat, lighthouse day/night
+cycle, orrery, waving flag, bellows and chasing beacon lights. Continuous loops
+return to their first pose, including the referenced and value-clip examples.
 **Subdivision → Pip and Pop** demonstrates animated hole faces and crease/corner
 sharpness in a five-second loop.
+
+Regenerate Beauty previews against the running app with
+`node usd-wasm/scripts/render-beauty-thumbnails.mjs --base-url http://localhost:3003 --include-remote`.
+Use `--only <id>` or `--group <category>` for a focused capture. Native cards still
+use `usd-wasm/scripts/render-coverage-thumbnails.py` and
+`usd-wasm/scripts/render-api-thumbnails.py` with local OpenUSD/Storm. Beauty
+capture metadata and image hashes live in
+`usd-wasm/tests/fixtures/thumbnails/beauty/index.json`.
 
 **Window → Code** shows the current JavaScript lesson or USDA for any composed
 layer. Layer text comes from the USD API, includes unsaved authored edits and

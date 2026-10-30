@@ -1,7 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
+    endTimeCode = 97
     framesPerSecond = 24
     metersPerUnit = 1
     startTimeCode = 1
@@ -16,7 +16,7 @@ def Xform "World"
                 double2[] active = [(1, 0)]
                 asset[] assetPaths = [@./value-clip-asset.usda@]
                 string primPath = "/Asset"
-                double2[] times = [(1, 1), (48, 48)]
+                double2[] times = [(1, 1), (49, 49), (49, 1), (97, 49)]
             }
         }
     )
@@ -25,8 +25,6 @@ def Xform "World"
         {
             color3f[] primvars:displayColor = [(0.2, 0.65, 0.85)]
             double size = 1
-            double3 xformOp:translate
-            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
 
         def Cube "Foot"
@@ -67,6 +65,7 @@ def Xform "World"
 
         def Cone "Roof"
         {
+            uniform token axis = "Y"
             double height = 0.75
             color3f[] primvars:displayColor = [(0.8, 0.27, 0.18)]
             double radius = 0.8
@@ -83,34 +82,40 @@ def Xform "World"
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         }
 
-        def Cube "Beacon0"
+        def Xform "Beacon"
         {
-            color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
-            double size = 1
-            float xformOp:rotateY = 0
-            float3 xformOp:scale = (1.7, 0.06, 0.08)
-            double3 xformOp:translate = (0, 1.5, 0)
-            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateY"]
-        }
+            float xformOp:rotateY
+            uniform token[] xformOpOrder = ["xformOp:rotateY"]
 
-        def Cube "Beacon1"
-        {
-            color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
-            double size = 1
-            float xformOp:rotateY = 55
-            float3 xformOp:scale = (1.35, 0.06, 0.08)
-            double3 xformOp:translate = (0, 1.7, 0)
-            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateY"]
-        }
+            def Cube "Arm0"
+            {
+                color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
+                double size = 1
+                float xformOp:rotateY = 0
+                float3 xformOp:scale = (1.7, 0.06, 0.08)
+                double3 xformOp:translate = (0, 1.48, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY", "xformOp:scale"]
+            }
 
-        def Cube "Beacon2"
-        {
-            color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
-            double size = 1
-            float xformOp:rotateY = 110
-            float3 xformOp:scale = (1, 0.06, 0.08)
-            double3 xformOp:translate = (0, 1.9, 0)
-            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateY"]
+            def Cube "Arm1"
+            {
+                color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
+                double size = 1
+                float xformOp:rotateY = 55
+                float3 xformOp:scale = (1.35, 0.06, 0.08)
+                double3 xformOp:translate = (0, 1.6, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY", "xformOp:scale"]
+            }
+
+            def Cube "Arm2"
+            {
+                color3f[] primvars:displayColor = [(0.95, 0.55, 0.22)]
+                double size = 1
+                float xformOp:rotateY = 110
+                float3 xformOp:scale = (1, 0.06, 0.08)
+                double3 xformOp:translate = (0, 1.72, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY", "xformOp:scale"]
+            }
         }
     }
 
@@ -118,7 +123,7 @@ def Xform "World"
     {
         color3f[] primvars:displayColor = [(0.15, 0.22, 0.27)]
         double size = 1
-        float3 xformOp:scale = (6, 0.22, 2.7)
+        float3 xformOp:scale = (3.5, 0.22, 2.7)
         double3 xformOp:translate = (0, -0.85, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
@@ -127,7 +132,7 @@ def Xform "World"
     {
         color3f[] primvars:displayColor = [(0.79, 0.6, 0.33)]
         double size = 1
-        float3 xformOp:scale = (5.8, 0.05, 2.5)
+        float3 xformOp:scale = (3.3, 0.05, 2.5)
         double3 xformOp:translate = (0, -0.73, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }

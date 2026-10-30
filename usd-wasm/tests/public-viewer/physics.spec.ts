@@ -1,7 +1,32 @@
-import {clearStage,openAppMenu} from './workbench-menus';
+import {clearStage,openAppMenu,stageReady} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));
+});
+
+for(const dynamic of [false,true])test(`collider extraction waits for simulation (${dynamic?'dynamic':'static'} scene)`,async({page})=>{
+  const file=dynamic?'coverage/advanced/physics-mass.usda':'coverage/core/analytic-primitives.usda';
+  await page.goto('/?viewer=three&physics=off&assetCache=0&file='+encodeURIComponent('/test-fixtures/'+file));
+  await stageReady(page);
+  await page.evaluate(async()=>{
+    const w=window as any,h=w.usdHydra,url=new URL(location.href);url.searchParams.delete('physics');history.replaceState({},'',url);
+    w.physicsExtractions=0;
+    const original=h.driver.GetPhysicsSceneJson.bind(h.driver);
+    h.driver.GetPhysicsSceneJson=()=>{w.physicsExtractions++;return original();};
+    const {setupViewerPhysics}=await import('/viewer-physics.js');
+    w.testPhysics=await setupViewerPhysics(h,null,w.camera,w._controls,()=>true,{createSimulation:async({snapshot}:any)=>{
+      w.physicsShapes=snapshot.shapes.length;let playing=false;
+      return {isPlaying:()=>playing,play(){playing=true;},pause(){playing=false;},dispose(){}};
+    }});
+    w.usdWorkbench.openPanel('simulation');
+  });
+  expect(await page.evaluate(()=>(window as any).physicsExtractions)).toBe(0);
+  if(dynamic){
+    await page.getByRole('button',{name:'Simulate',exact:true}).click();
+    await expect.poll(()=>page.evaluate(()=>(window as any).physicsExtractions)).toBe(1);
+    await expect.poll(()=>page.evaluate(()=>(window as any).physicsShapes)).toBeGreaterThan(0);
+    await page.evaluate(()=>(window as any).testPhysics.dispose());
+  }else await expect(page.locator('#usd-physics-controls')).toBeHidden();
 });
 
 for (const viewer of ['three', 'needle']) {

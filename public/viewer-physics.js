@@ -2,6 +2,33 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import { createUsdPhysics, readUsdPhysics } from '/usd/physics/createPhysics.js';
 
 const runtimePromises = new Map();
+
+// Loading a scene only needs body flags and scene names. Extracting the full
+// collider snapshot here also copies every collision mesh into JSON.
+async function physicsOverview(handle) {
+  await handle.ready();
+  // The Hydra handle owns the stage; only the child/attribute wrappers below are temporary.
+  const stage=await handle.driver.GetStage(),pending=[stage.GetPrimAtPath('/')],scenes=[];
+  let dynamic=false;
+  const flag=(prim,name,fallback)=>{
+    const attribute=prim.GetAttribute(name);
+    try{return attribute.IsValid()? !['0','false'].includes(attribute.GetValueStringAtTime(handle.getTime())):fallback;}
+    finally{attribute.delete?.();}
+  };
+  try{
+    while(pending.length){
+      const prim=pending.pop();
+      try{
+        if(prim.GetTypeName()==='PhysicsScene')scenes.push({path:prim.GetPath()});
+        if(flag(prim,'physics:rigidBodyEnabled',false)&&!flag(prim,'physics:kinematicEnabled',false))dynamic=true;
+        const children=prim.GetChildren();
+        try{for(let i=0;i<children.size();i++)pending.push(children.get(i));}
+        finally{children.delete?.();}
+      }finally{prim.delete?.();}
+    }
+    return {scenes,dynamic};
+  }finally{for(const prim of pending)prim.delete?.();}
+}
 function loadRapier(context, options) {
   const key = options.loadRapier || options.moduleUrl || (context ? 'needle' : 'standalone');
   if (!runtimePromises.has(key)) {
@@ -27,20 +54,20 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   }
   const options = configuration || {};
   if (!handle.driver.GetPhysicsSceneJson) return null;
-  const snapshot = await readUsdPhysics(handle);
+  const overview = await physicsOverview(handle);
   if (!isCurrent()) return null;
   const owner = Symbol('USD physics controls');
   container.physicsOwner = owner;
   container.replaceChildren(); container.hidden = true;
-  if (!snapshot.bodies?.some(body => body.rigidBodyEnabled && !body.kinematicBody)) return null;
-  let simulation, disposed = false, dragging = false, previousControls = [], operation = 0;
+  if (!overview.dynamic) return null;
+  let simulation, snapshot, disposed = false, dragging = false, previousControls = [], operation = 0;
   const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
   const canvas = context?.renderer?.domElement || fallbackControls.domElement;
   const raycaster = new Raycaster(), pointer = new Vector2(), plane = new Plane(), hit = new Vector3();
   const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Simulate';
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Reset'; reset.disabled = true;
   const sceneSelect = document.createElement('select'); sceneSelect.setAttribute('aria-label', 'Physics scene');
-  for (const scene of snapshot.scenes || []) {
+  for (const scene of overview.scenes) {
     const option = document.createElement('option'); option.value = scene.path; option.textContent = scene.path.split('/').pop();
     sceneSelect.append(option);
   }
@@ -69,6 +96,8 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     const currentOperation = operation;
     try {
       if (!simulation) {
+        snapshot ||= await readUsdPhysics(handle);
+        if(disposed || currentOperation !== operation || !isCurrent())return;
         const settings = { handle, snapshot, scenePath: sceneSelect.value || undefined };
         let created;
         if (options.createSimulation) created = await options.createSimulation(settings);

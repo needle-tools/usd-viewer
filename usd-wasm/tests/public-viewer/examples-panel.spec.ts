@@ -6,7 +6,7 @@ for(const theme of ['light','dark'])test(`${theme}: Examples docks left, resizes
   await expect(page.locator('[data-panel=examples]')).toBeVisible();
   const position=await page.evaluate(()=>{const a=document.querySelector('[data-panel=examples]')!.getBoundingClientRect(),b=document.querySelector('#usd-viewport')!.getBoundingClientRect();return{left:a.left,right:a.right,viewport:b.left,width:a.width};});expect(position.left).toBe(0);expect(position.right).toBeLessThanOrEqual(position.viewport);expect(position.width).toBeGreaterThan(350);
   await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');await expect.poll(()=>page.locator('.gallery-card').count()).toBeGreaterThan(200);
-  await page.getByRole('searchbox',{name:'Search examples'}).fill('Shaped spotlight');await expect(page.locator('.gallery-card:visible')).toHaveCount(1);await expect(page.locator('#examples-count')).toHaveText(/^1 \/ /);
+  await page.getByRole('searchbox',{name:'Search examples'}).fill('Shaped spotlight');await expect(page.locator('.gallery-card:visible')).toHaveCount(2);await expect(page.locator('#examples-count')).toHaveText(/^2 \/ /);
   await page.getByRole('searchbox',{name:'Search examples'}).fill('');
   const first=page.locator('.gallery-card').first(),before=await first.boundingBox();
   await page.getByRole('slider',{name:'Preview size'}).fill('208');await expect.poll(async()=>(await first.boundingBox())!.width).toBeGreaterThan(before!.width);

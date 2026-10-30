@@ -6,9 +6,16 @@ const light = '/test-fixtures/coverage/lighting-mdl/animated-light.usda';
 const visibility = '/test-fixtures/coverage/core/animated-visibility.usda';
 const property = (page: Page, name: string) => page.locator('[data-panel=properties] tr').filter({has: page.getByRole('rowheader', {name, exact: true})}).locator('td');
 async function pause(page: Page) {
+  await page.evaluate(() => (window as any).usdWorkbench.openPanel('timeline'));
   const play = page.getByRole('button', {name: 'Play or pause'});
   if (await play.getAttribute('aria-pressed') === 'true') await play.click();
   await expect(play).toHaveAttribute('aria-pressed', 'false');
+}
+// Match USD's linear interpolation between the authored cosine samples.
+function lightIntensity(time: number) {
+  const index = Math.max(0, Math.min(23, Math.floor((time - 1) / 4)));
+  const sample = (i: number) => 100 + 250 * (1 - Math.cos(2 * Math.PI * i / 24));
+  return sample(index) + (sample(index + 1) - sample(index)) * (time - 1 - index * 4) / 4;
 }
 
 for (const viewer of ['three', 'needle']) {
@@ -17,7 +24,7 @@ for (const viewer of ['three', 'needle']) {
     await stageReady(page); await pause(page);
     await page.locator('[data-prim-path="/World/Lights/Animated"]').click();
     await page.getByRole('button', {name: 'Last frame', exact: true}).click();
-    await expect(property(page, 'inputs:intensity')).toHaveText('600');
+    await expect(property(page, 'inputs:intensity')).toHaveText('100');
     const matrix = property(page, 'xformOp:transform');
     await matrix.dblclick(); await expect(matrix).toHaveClass(/expanded/);
     await property(page, 'inputs:intensity').scrollIntoViewIfNeeded();
@@ -27,15 +34,15 @@ for (const viewer of ['three', 'needle']) {
     await page.screenshot({path: info.outputPath('last-frame.png')});
     const play = page.getByRole('button', {name: 'Play or pause'});
     await play.click();
-    await expect.poll(() => page.getByRole('spinbutton', {name: 'Current frame'}).inputValue()).not.toBe('48');
+    await expect.poll(() => page.getByRole('spinbutton', {name: 'Current frame'}).inputValue()).not.toBe('97');
     await page.waitForTimeout(650);
     // No heavy inspector replacement while animation is running.
     expect(await originalTable!.evaluate(el => el.isConnected)).toBe(true);
-    await expect(property(page, 'inputs:intensity')).toHaveText('600');
+    await expect(property(page, 'inputs:intensity')).toHaveText('100');
     await play.click(); await expect(play).toHaveAttribute('aria-pressed', 'false');
     const time = await page.evaluate(() => (window as any).usdHydra.getTime());
-    expect(time).toBeGreaterThan(1); expect(time).toBeLessThan(48);
-    const expected = 100 + (time - 1) * 500 / 47;
+    expect(time).toBeGreaterThan(1); expect(time).toBeLessThan(97);
+    const expected = lightIntensity(time);
     await page.waitForTimeout(250); await page.screenshot({path: info.outputPath('paused.png')});
     await expect.poll(async () => Math.abs(Number(await property(page, 'inputs:intensity').textContent()) - expected), {timeout: 5000}).toBeLessThan(0.02);
     await expect(play).toBeFocused();
@@ -46,7 +53,7 @@ for (const viewer of ['three', 'needle']) {
     // The same preservation applies to keyboard-driven manual seeks.
     const frame = page.getByRole('spinbutton', {name: 'Current frame'});
     await frame.fill('12'); await frame.press('Enter');
-    await expect.poll(async () => Math.abs(Number(await property(page, 'inputs:intensity').textContent()) - (100 + 11 * 500 / 47))).toBeLessThan(0.02);
+    await expect.poll(async () => Math.abs(Number(await property(page, 'inputs:intensity').textContent()) - lightIntensity(12))).toBeLessThan(0.02);
     await expect(frame).toBeFocused(); await expect(matrix).toHaveClass(/expanded/);
   });
 
@@ -73,6 +80,9 @@ for (const viewer of ['three', 'needle']) {
     await expect(prim.locator('..')).toHaveAttribute('data-visible', 'true');
     await expect(property(page, 'visibility')).toHaveText('inherited');
     await page.getByRole('button', {name: 'Last frame', exact: true}).click();
+    await expect(prim.locator('..')).toHaveAttribute('data-visible', 'true');
+    const frame = page.getByRole('spinbutton', {name: 'Current frame'});
+    await frame.fill('48'); await frame.press('Enter');
     await expect(prim.locator('..')).toHaveAttribute('data-visible', 'false');
     // A refreshed visibility button must act on the displayed state, rather
     // than the state captured when its row was first created.

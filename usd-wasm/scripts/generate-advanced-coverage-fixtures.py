@@ -20,6 +20,9 @@ def box(s,p,position=(0,0,0),color=(.25,.65,.8),scale=(1,1,1)):
     g=UsdGeom.Cube.Define(s,p); g.CreateSizeAttr(1); g.AddTranslateOp().Set(Gf.Vec3d(*position)); g.AddScaleOp().Set(Gf.Vec3f(*scale)); g.CreateDisplayColorAttr([Gf.Vec3f(*color)]); return g
 
 def finish(name,label,group,stage,path,features,checks,files=(),expected='Authored schema data; feature rendering depends on the viewer'):
+    # Static stages do not declare a playback range; spatial audio keeps one for its clip.
+    if name!='spatial-audio' and not any(a.ValueMightBeTimeVarying() for prim in stage.TraverseAll() for a in prim.GetAttributes()):
+        stage.GetRootLayer().ClearStartTimeCode(); stage.GetRootLayer().ClearEndTimeCode()
     stage.GetRootLayer().Save()
     if name.startswith('physics-'): path.write_text(path.read_text().rstrip()+'\n')
     reopened=Usd.Stage.Open(str(path),load=Usd.Stage.LoadAll)

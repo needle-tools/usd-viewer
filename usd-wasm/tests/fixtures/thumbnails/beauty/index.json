@@ -1,0 +1,2773 @@
+{
+  "schema": 1,
+  "profile": {
+    "revision": 2,
+    "renderer": "Needle Beauty",
+    "width": 448,
+    "height": 336,
+    "detail": "high",
+    "camera": [
+      6,
+      5,
+      7
+    ],
+    "fitPasses": 2,
+    "settleFrames": 24
+  },
+  "results": [
+    {
+      "id": "api-active-state",
+      "root": "api/examples.js#active-state",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-active-state.webp",
+      "sha256": "12e03cef5bf03a1d4858ec464be160b70e76b33a0dbe2d3b6de175f8f65ddc2e",
+      "sourceFingerprint": "53d3e9defb60936b2131a5be2d651d9b034c4f49a0af02eeeb8a9e941a066fce",
+      "background": "light"
+    },
+    {
+      "id": "api-animated-radius",
+      "root": "api/examples.js#animated-radius",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-animated-radius.webp",
+      "sha256": "f442db42547db14307efc21dcdb5f9d2b2c5a6af1f81a97f0b7767fe3b0612b7",
+      "sourceFingerprint": "9db74b539200757ce01e87e529fda0d38ee2879373a3e698bd87447f634e99eb",
+      "background": "light"
+    },
+    {
+      "id": "api-animated-transform",
+      "root": "api/examples.js#animated-transform",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-animated-transform.webp",
+      "sha256": "41a0257ba0e7ed09973897a3547aa8a0d8fb5637bb1f9a252217876077c2feda",
+      "sourceFingerprint": "a32d6fc41da904b0f9bdcd6aeb60b4ceafa8c16465a53a9b3f641fab9e9d40eb",
+      "background": "light"
+    },
+    {
+      "id": "api-api-animated-material",
+      "root": "api/examples.js#api-animated-material",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-api-animated-material.webp",
+      "sha256": "8c2643f3ef7e07d11bad79c2ac99d68f607e5b899647bf159d6b4a0090d28876",
+      "sourceFingerprint": "e72af25b3b873b8c9f5d2f3e9d4aeb67a3a0281690365c58fd24ae23c509c3fc",
+      "background": "light"
+    },
+    {
+      "id": "api-api-preview-surface",
+      "root": "api/examples.js#api-preview-surface",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-api-preview-surface.webp",
+      "sha256": "586ec27a0a502d50b4c85a30ab57d8b0ec163b8df10603f919ad476eb772808e",
+      "sourceFingerprint": "7651fcdffba4fd02874de4d1ea46f17404b3b11b2d686a9fb7d12b036c51ed19",
+      "background": "light"
+    },
+    {
+      "id": "api-api-variant-cube",
+      "root": "api/examples.js#api-variant-cube",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-api-variant-cube.webp",
+      "sha256": "625c9d6531a3bfc18bca261dc2b213d0dd04656ba77f7e2545be03610770740b",
+      "sourceFingerprint": "295a20cab2dc0da473152fcbdad535c6e95cd10b6b4dd33e3e9392e522c1678c",
+      "background": "light"
+    },
+    {
+      "id": "api-api-variant-sphere",
+      "root": "api/examples.js#api-variant-sphere",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-api-variant-sphere.webp",
+      "sha256": "13ddd8f68a4d9233cf10d6d1a33f503a4cea46551d8386ffe1cc1ce70102cf83",
+      "sourceFingerprint": "b59b3fbd4308c5ae2b7b5a8fbd09f725f8cd929efdd33d207fc645974863fa36",
+      "background": "light"
+    },
+    {
+      "id": "api-apply-api-schema",
+      "root": "api/examples.js#apply-api-schema",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-apply-api-schema.webp",
+      "sha256": "1f7942a2d2b306f315dd43c8650cc23c30075952bf13c048ded5bfc46b08bc82",
+      "sourceFingerprint": "2925dc5eff291c4ff51e062516f318e9f63cdc03333d4fd02e40009a7b46fe17",
+      "background": "light"
+    },
+    {
+      "id": "api-attribute-resolve-info",
+      "root": "api/examples.js#attribute-resolve-info",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-attribute-resolve-info.webp",
+      "sha256": "ed46fc42066d0a994f7bf592e16d42e06dfab9c83606e227e148014f83ce9205",
+      "sourceFingerprint": "e0ec11f863620768d11150db03161e8cabdbc11ef1e81eb0fe8c05dda5f92704",
+      "background": "light"
+    },
+    {
+      "id": "api-bind-material",
+      "root": "api/examples.js#bind-material",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-bind-material.webp",
+      "sha256": "5ca09055ae971950e10fd62cac3083528dffbb7462d45866ca5ce98edba946fe",
+      "sourceFingerprint": "463f8592bbd76f8870d0a67e12f1392e7123d86c2d6c407c54edf447679a8644",
+      "background": "light"
+    },
+    {
+      "id": "api-build-info",
+      "root": "api/examples.js#build-info",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-build-info.webp",
+      "sha256": "0242421bb7a3d71c9dc50be6a458bc17b27760bda3915756f7697f279666e2dc",
+      "sourceFingerprint": "eddb0cd78f4a5169f1f3ab83f19758dc73c964ffe58e7635ae716d83c723a990",
+      "background": "light"
+    },
+    {
+      "id": "api-cameras-and-lights",
+      "root": "api/examples.js#cameras-and-lights",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-cameras-and-lights.webp",
+      "sha256": "3adcaaf5d035f0a07513bdccd22f464099e3019cf8d07a4d78ee7bf717fa44ac",
+      "sourceFingerprint": "88803d5f6227188d36857335585e7da60dce8a36abc1ddc0a2aed5f0461b4543",
+      "background": "light"
+    },
+    {
+      "id": "api-composition-arcs",
+      "root": "api/examples.js#composition-arcs",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-composition-arcs.webp",
+      "sha256": "c97fe5a72ee990332d0f836bc251a18975bf3b2bb3ae13632148b7c3b2762bfa",
+      "sourceFingerprint": "21b27c5e0916b418e4cb39884d6ddba6fa1198909ce0328b17026b1ea289a96f",
+      "background": "light"
+    },
+    {
+      "id": "api-custom-properties",
+      "root": "api/examples.js#custom-properties",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-custom-properties.webp",
+      "sha256": "ffd9a551c3c557264917d05c5620743b7555b085fbf751ba78b8e5ca1297626f",
+      "sourceFingerprint": "b596439efb7c346aeaf79579c38c85b25338a572455991d0cca5935620e3dd4e",
+      "background": "light"
+    },
+    {
+      "id": "api-department-layers",
+      "root": "api/examples.js#department-layers",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-department-layers.webp",
+      "sha256": "0c7c0953ea20b5e379c13806d387fed0169b5462c86740131dd4265f77b7f170",
+      "sourceFingerprint": "c5d8dbd5402a3de2c7a7aeea5d8e1277bd3e7fc009217cf9a09986d29e6843e8",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-camera-light",
+      "root": "api/examples.js#fixture-camera-light",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-camera-light.webp",
+      "sha256": "4237d2bbfebe00d0338a8ea1acf50264bdeaf8ff9b25d57e909ebc0dbbd4855a",
+      "sourceFingerprint": "33cb24ed2fa13b246c0da8d400ca4eb1279cb3edb4e6f6904fc5aca3b3b73094",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-face-varying-normals-matrix",
+      "root": "api/examples.js#fixture-face-varying-normals-matrix",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-face-varying-normals-matrix.webp",
+      "sha256": "ad5c6543981c016dbb3427b14f9d6411a748dd4f74377669a4ae89c085bdb6f5",
+      "sourceFingerprint": "469753f67f600130667e4e296bb7d5bba0c8b75464cd514c51fd0c163eacc8c8",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-materialx-texture-noise",
+      "root": "api/examples.js#fixture-materialx-texture-noise",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-materialx-texture-noise.webp",
+      "sha256": "2cc77173e5651d0dccc3257af36a2f1e5c0d7ebfbe4bfda083bb8cd74dce9c3a",
+      "sourceFingerprint": "7bf43c200100a53b5d91ef24f61b608478f5fe8daf037f3a91154162592339bf",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-native-instances",
+      "root": "api/examples.js#fixture-native-instances",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-native-instances.webp",
+      "sha256": "8f078e2a672d38db02e0692b8e3a6d906dd7d0e26b408ae03f5a82d2715ef4d8",
+      "sourceFingerprint": "02742078dcfeb59c7b237d9992cea1af9be71b9e4855c0215c78951210b551e1",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-parent-folder-reference",
+      "root": "api/examples.js#fixture-parent-folder-reference",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-parent-folder-reference.webp",
+      "sha256": "733483d974442363a65343aa51d1f63a354f21c7ab633d61de9235ef4ba5f852",
+      "sourceFingerprint": "0164e4c8b626be37c1d68962885427372b2e3dad85829c597c0542c3dd8a5341",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-payload-root",
+      "root": "api/examples.js#fixture-payload-root",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-payload-root.webp",
+      "sha256": "b72d77d644cdacb95a1f159e4b9af94c1f5328a7d52949c098276b2fccf66233",
+      "sourceFingerprint": "13dfb738591babb1752528f328ba83c4d905a7f5ebcf855832c1db09b57eff54",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-point-instancer",
+      "root": "api/examples.js#fixture-point-instancer",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-point-instancer.webp",
+      "sha256": "d7241ca408730e349005c6a90477a4ce1fc55c311a9c91de635d0b13f98aa04f",
+      "sourceFingerprint": "a9288a2f2ed46deb82ac937e0626fc6da2858b00f3c9d3d63897044c9ac2b707",
+      "background": "light"
+    },
+    {
+      "id": "api-fixture-unmaterialed-empty-subset",
+      "root": "api/examples.js#fixture-unmaterialed-empty-subset",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-fixture-unmaterialed-empty-subset.webp",
+      "sha256": "91aa1b118fee3c113012e28bebab5741886257edf4eb45968dfec618e3306c70",
+      "sourceFingerprint": "021a92f4f8061c9d013af76a3ded8f1d400bb13d695b0c2904036dcf142923fb",
+      "background": "light"
+    },
+    {
+      "id": "api-generic-prims",
+      "root": "api/examples.js#generic-prims",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-generic-prims.webp",
+      "sha256": "f7375ce163a30e62dee493b8e7c1e22e8c5ce7cc4359fa744431aecc01ca25e6",
+      "sourceFingerprint": "2d5445b0a1137f0a3fa9bbffaf5611928d433d83c78287991cdaefd9cf8c423a",
+      "background": "light"
+    },
+    {
+      "id": "api-hello-world",
+      "root": "api/examples.js#hello-world",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-hello-world.webp",
+      "sha256": "67a43a0afbaef0717e03d1da647bec04ae7763fdca4077e85be6bafec8da66df",
+      "sourceFingerprint": "8fbb4932b4129cdacfe778d9434547d22ccdc6a0e2b3c27bd9f584671f59d40d",
+      "background": "light"
+    },
+    {
+      "id": "api-instanced-grove",
+      "root": "api/examples.js#instanced-grove",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-instanced-grove.webp",
+      "sha256": "4cef8279855bea35a87c4f44cac919bb3921a6569660de4a13cf3891a78f63ad",
+      "sourceFingerprint": "5fce37caa21a5c680bf91314dfe673964a2c7c90947c99d348d58fab6e28f30e",
+      "background": "light"
+    },
+    {
+      "id": "api-layer-stack",
+      "root": "api/examples.js#layer-stack",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-layer-stack.webp",
+      "sha256": "91fc9c156a64e936a21bda7f0fddd3096a59ea3e442a630f5398501b6af73c4e",
+      "sourceFingerprint": "ecd2904355f70fc55fe262b98fdb6c1c1560d465ab0a981c73f319616680f4a1",
+      "background": "light"
+    },
+    {
+      "id": "api-matrix-transform",
+      "root": "api/examples.js#matrix-transform",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-matrix-transform.webp",
+      "sha256": "4e0a45453e89f446d63ae158a60ceee1d9b4278a1a021b7ff329128f0d86a141",
+      "sourceFingerprint": "b5e0aa60d18a8bbd9ea3c9718824adf115a83ad52f1b8d5e87533f07b4c90e36",
+      "background": "light"
+    },
+    {
+      "id": "api-mesh-from-arrays",
+      "root": "api/examples.js#mesh-from-arrays",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-mesh-from-arrays.webp",
+      "sha256": "90a2a6d0410d28fa5c839b51a045abae9c3ab58ceb09f2dc7a67dabbb9046bd6",
+      "sourceFingerprint": "c0f9b3b77667adf41105d184876ede4b424ba2988b5f754f736cd241fbfdebc1",
+      "background": "light"
+    },
+    {
+      "id": "api-objects-changed",
+      "root": "api/examples.js#objects-changed",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-objects-changed.webp",
+      "sha256": "cf725ac10a09f0aa6b1a4057025a3de5e57a6d712fc2a516d990ea9d36dd35d5",
+      "sourceFingerprint": "abc4b82cb9a28597587799600c011a43ef3fddfcac1e7e9a378bfba691c853f0",
+      "background": "light"
+    },
+    {
+      "id": "api-open-text-layer",
+      "root": "api/examples.js#open-text-layer",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-open-text-layer.webp",
+      "sha256": "0f86f1b7e70cd63d164eb5d165ae74fb5b19b01af879d43cf3569357301259ca",
+      "sourceFingerprint": "150579a690426a013b37124bcfbd6c223834fcb7756dfc144d004486e202c3cf",
+      "background": "light"
+    },
+    {
+      "id": "api-payload",
+      "root": "api/examples.js#payload",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-payload.webp",
+      "sha256": "b41706c2371467fcae4d2fe49ddf8809e0b5a880e937c0ca07adf3d2c3327de2",
+      "sourceFingerprint": "656167264a6aef79f1439ebdb8c9d8e8a9b79934cc352f4cb5b3de57d7982cb3",
+      "background": "light"
+    },
+    {
+      "id": "api-payload-load-state",
+      "root": "api/examples.js#payload-load-state",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-payload-load-state.webp",
+      "sha256": "fd858c13a84359588ea5e4be71d240c5d2ec9ddb86e2dbe7feec766810c41b4b",
+      "sourceFingerprint": "0cc544982691246a7e12646aee584181a97396d4e3f75d2936ccdd16704e9955",
+      "background": "light"
+    },
+    {
+      "id": "api-payload-variant-assembly",
+      "root": "api/examples.js#payload-variant-assembly",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-payload-variant-assembly.webp",
+      "sha256": "a9f81d521fd01f8817af2d2afd2dec824568dd7497792cf057471d699b6c33f1",
+      "sourceFingerprint": "c6f0b2fcfb8b63293bffef137e6be5a6987e8565942f454f78a69c95af84e080",
+      "background": "light"
+    },
+    {
+      "id": "api-preview-material",
+      "root": "api/examples.js#preview-material",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-preview-material.webp",
+      "sha256": "51432bab0ae97342ea3a0ebc0d48c768b6338d9681b88ebfafe41890d950223a",
+      "sourceFingerprint": "a0e87cb4ca332d434c09e9d400480f84ac218f7ccce7518f833335b99cc29bf3",
+      "background": "light"
+    },
+    {
+      "id": "api-prim-stack",
+      "root": "api/examples.js#prim-stack",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-prim-stack.webp",
+      "sha256": "1f6dc18ab74e10679ed2c1844bfd48c8c8806a419e55cc4c5b235e694d108a5a",
+      "sourceFingerprint": "c28b86e7f91ae9133d9d1377d335feac5f83217cc1e837c3c73557b861f4d1fa",
+      "background": "light"
+    },
+    {
+      "id": "api-property-names",
+      "root": "api/examples.js#property-names",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-property-names.webp",
+      "sha256": "b37b32a57845b6dd31d84b38688a1397142923fc9e2b87a4fe6253897034b6fe",
+      "sourceFingerprint": "33ad87bdf4e5699d0da73aa3ed7f547a8d4dcdcabbe5d57ba8e6fd0123039640",
+      "background": "light"
+    },
+    {
+      "id": "api-purpose",
+      "root": "api/examples.js#purpose",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-purpose.webp",
+      "sha256": "d66e1aeb5c9a1e77af015d5d0bde6b7c2d3a88238b7eb98e7f7cef1614680ccf",
+      "sourceFingerprint": "9d1489d3a0c8230f878b0e86106ba1b843c96de4ebff5ab797e22ded49178b17",
+      "background": "light"
+    },
+    {
+      "id": "api-referenced-layer",
+      "root": "api/examples.js#referenced-layer",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-referenced-layer.webp",
+      "sha256": "d68f34d126e759a11acddac1fac98286598a0fe110e04851fe12dd245d7c05f0",
+      "sourceFingerprint": "54c9f725c16384e16c4c95bc87aff43e334c9eaa441eb999a2815ff5c5caab67",
+      "background": "light"
+    },
+    {
+      "id": "api-relationships",
+      "root": "api/examples.js#relationships",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-relationships.webp",
+      "sha256": "65078de652a980b2720ccd71e7f50e5c2ec2e38143e8c5b877948f3c2a1be613",
+      "sourceFingerprint": "d3ad83240337acfd53c6b5dbe8dfe1d3c3f1c2c5378be6fada3d1c72e4194364",
+      "background": "light"
+    },
+    {
+      "id": "api-reopen-verification",
+      "root": "api/examples.js#reopen-verification",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-reopen-verification.webp",
+      "sha256": "d09b43015d449a7435887a25208bea9abc909b49c698cd0220b0444dd34607d5",
+      "sourceFingerprint": "cccafaea3e6d11da6a5f8608ca88f7d0e91a9518c86008c1721e306670d3177c",
+      "background": "light"
+    },
+    {
+      "id": "api-rigid-skinning",
+      "root": "api/examples.js#rigid-skinning",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-rigid-skinning.webp",
+      "sha256": "37cd5c9a10f9d4a80fc4f177c86b1286bcc1cbd3fc6a5467fad613fabb60820b",
+      "sourceFingerprint": "255a6377e12d17efca8a9323860212420db20143778883d11e47651b0c26dcb0",
+      "background": "light"
+    },
+    {
+      "id": "api-schema-shapes",
+      "root": "api/examples.js#schema-shapes",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-schema-shapes.webp",
+      "sha256": "30e0a308ebf7cf95587ff71f359d6b7935be27480e5e0cff1f3334b5a56db7ab",
+      "sourceFingerprint": "f848ca7cd5870996c803a6a33a49e267b3940d4c82a4f3f9269f6188c1697b6d",
+      "background": "light"
+    },
+    {
+      "id": "api-sdf-paths",
+      "root": "api/examples.js#sdf-paths",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-sdf-paths.webp",
+      "sha256": "bd7afc2a39253820109946fa21d0b81ed2d2b1c4bec7135c523347b520d2af9c",
+      "sourceFingerprint": "028dccd99e4b2aded95dbf94d69c0fad6e1331060d93cac79ad88922a75d1fac",
+      "background": "light"
+    },
+    {
+      "id": "api-shader-color-inputs",
+      "root": "api/examples.js#shader-color-inputs",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-shader-color-inputs.webp",
+      "sha256": "d7d5ec66b296bf3b8b9b8eb679bb8e4c9c486ec6b9b8a9a1549ea25c70a77b91",
+      "sourceFingerprint": "24738c4f6d1c84c628bb9713f9cdfd481f6112909f6bec5a3210893c2dba1465",
+      "background": "light"
+    },
+    {
+      "id": "api-shaped-spotlights",
+      "root": "api/examples.js#shaped-spotlights",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-shaped-spotlights.webp",
+      "sha256": "d1d7755f88f3fbd1029212da6f99bdb50c255b2efd3bccb434115cfad2887add",
+      "sourceFingerprint": "a9746956df3a58d061c16d281490eb1415553d626f8735ec0eb2180998a0a31f",
+      "background": "light"
+    },
+    {
+      "id": "api-splat-blossom-tree",
+      "root": "api/examples.js#splat-blossom-tree",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-splat-blossom-tree.webp",
+      "sha256": "ea7523353e501d8855f43406fb548a9f16a05223ae14083d099787e08491a281",
+      "sourceFingerprint": "0fda1d3abb65cef5a1ed551ab18ae856af89353b4dcb720636c4383872e4bbb5",
+      "background": "light"
+    },
+    {
+      "id": "api-splat-galaxy",
+      "root": "api/examples.js#splat-galaxy",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-splat-galaxy.webp",
+      "sha256": "cb1dbffae9b6abdb73a8bc568ba588d69a87d4017ce081f2f954ff6eefe24aa0",
+      "sourceFingerprint": "e53d2c1fc96a814317f6b658d34acd49fcff2621896cd49fabf476ef1d6e6c6c",
+      "background": "dark"
+    },
+    {
+      "id": "api-stage-metadata",
+      "root": "api/examples.js#stage-metadata",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-stage-metadata.webp",
+      "sha256": "a6fb35f1f26c0c2e82dcb91ac6cbae72ed00888ec682189c9dec610bb097ceda",
+      "sourceFingerprint": "250555b5ff78673adef814b67a738842d8c61bf6e46db238e0542ccaf1a7806c",
+      "background": "light"
+    },
+    {
+      "id": "api-sun-cycle",
+      "root": "api/examples.js#sun-cycle",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-sun-cycle.webp",
+      "sha256": "c7a07c8997119b0c35be3525e60de83c53d2f066c9cea561197d82c6967355a2",
+      "sourceFingerprint": "05e50ceb54effdd515379fabe91c782b3926f2772056ad4d202a81219961e49a",
+      "background": "light"
+    },
+    {
+      "id": "api-texture-shader-network",
+      "root": "api/examples.js#texture-shader-network",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-texture-shader-network.webp",
+      "sha256": "db80ab6efc18a068128882e1442ee3876b458006e4c02c819a369e9de43b5882",
+      "sourceFingerprint": "d3211aa13f140b4451996acefcbbabcf2389e1e6705b47bf3fd9cbe884059198",
+      "background": "light"
+    },
+    {
+      "id": "api-three-point-light-rig",
+      "root": "api/examples.js#three-point-light-rig",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-three-point-light-rig.webp",
+      "sha256": "8a327c476800166842f0e368d5e2ba74180ca46ddaf467224c791f7eca98aaa2",
+      "sourceFingerprint": "b90ead1f82de8a167d692b76b13a6d2836c96e40c98d62a81e19524168c158a9",
+      "background": "light"
+    },
+    {
+      "id": "api-traverse",
+      "root": "api/examples.js#traverse",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-traverse.webp",
+      "sha256": "ce39228f53b74df6b51b911162136a692e19d2cd6c1273e48d8e69b294ed8048",
+      "sourceFingerprint": "86bb59da146b58c936c2cd842ca464e729172a37d6349e62475a7c9c8432f273",
+      "background": "light"
+    },
+    {
+      "id": "api-usdz-package",
+      "root": "api/examples.js#usdz-package",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-usdz-package.webp",
+      "sha256": "624f54fc2b8ddd6bb2f6ad56c941150aa53acfb416e019cf074c725ef73238ec",
+      "sourceFingerprint": "de33ce49ab2b623bb5c95ad8a032d8cb9387c5c6609eb57bc918817151f3a227",
+      "background": "light"
+    },
+    {
+      "id": "api-used-layers",
+      "root": "api/examples.js#used-layers",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-used-layers.webp",
+      "sha256": "d8a955878140bccde61e3e5940693140ff65e28c30c38e5e0ecdf6ee8b1582a0",
+      "sourceFingerprint": "19992fe1c35507752f0ce5dbfc5407a1837f64b56336d5d06dc370523f0a938a",
+      "background": "light"
+    },
+    {
+      "id": "api-variant-set",
+      "root": "api/examples.js#variant-set",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-variant-set.webp",
+      "sha256": "02e7ab384c007fa7767f0b0c2c72bd5c6e3b38a895ce38a92c93bdfd079f5d6c",
+      "sourceFingerprint": "fb1c5026c0e6521c4c950f14aaa5944a1bffd995d383d2a320ec27a696ea285f",
+      "background": "light"
+    },
+    {
+      "id": "api-variant-switch",
+      "root": "api/examples.js#variant-switch",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-variant-switch.webp",
+      "sha256": "b43318389d2c87eabe9479c4143653a6867eb6b22423f5dd6f296ad5cf2abdb7",
+      "sourceFingerprint": "de27cb3d58cf50a6901c95c2d8f724cc052816ba81d69b1e950b27e367dafa39",
+      "background": "light"
+    },
+    {
+      "id": "api-view-dependent-splats",
+      "root": "api/examples.js#view-dependent-splats",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-view-dependent-splats.webp",
+      "sha256": "f2b2bea8ddacc61a1e5627f41db00027e4aa6a4b39dc28232658872dcd748cef",
+      "sourceFingerprint": "739b974cbd4ccdc9efa88f9d0b3bf86ee46182df3bffd4e078f3e2abd8e7dc9c",
+      "background": "dark"
+    },
+    {
+      "id": "api-virtual-filesystem",
+      "root": "api/examples.js#virtual-filesystem",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-virtual-filesystem.webp",
+      "sha256": "047c55a685d2ee46e03814e02dee69ee96e1494fe492f0e682f2b5e471879434",
+      "sourceFingerprint": "3b579843ac9ee5efe829f1bd2190e0a554ea34b44053d273bf8dbab73e6fee70",
+      "background": "light"
+    },
+    {
+      "id": "api-visibility",
+      "root": "api/examples.js#visibility",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-visibility.webp",
+      "sha256": "6424b4a89da08d39af42dfd8688d227a1476bdd3774ea7c71b352a480874705d",
+      "sourceFingerprint": "2ca0f313cdd5e609453a695e635ae94a442307c5019c331ca5854a9cc283a5ca",
+      "background": "light"
+    },
+    {
+      "id": "api-weighted-skinning",
+      "root": "api/examples.js#weighted-skinning",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-weighted-skinning.webp",
+      "sha256": "c1916b2990ed641b9b6a3fbd531e69aebf9b51590e60232ca361fda64a99279a",
+      "sourceFingerprint": "da052d5683b4c49f2642d942f5c3660f3c2863969a07b67b10898394ae6e8804",
+      "background": "light"
+    },
+    {
+      "id": "api-xform-common-api",
+      "root": "api/examples.js#xform-common-api",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-xform-common-api.webp",
+      "sha256": "74108f90022f579f3ad4420ea5e5f3aec5f55650eac91209cf50eaae7ae183f4",
+      "sourceFingerprint": "1a8cfcc8050e61b3e06d233d1399c4b760588524194c2edda1c3c5444dcace6c",
+      "background": "light"
+    },
+    {
+      "id": "api-xform-ops",
+      "root": "api/examples.js#xform-ops",
+      "status": "rendered",
+      "image": "thumbnails/beauty/api-xform-ops.webp",
+      "sha256": "f1e178b3fc78e712d0e40b684bdb1842a97f8f81a4d955a71e0661d68f65ab3e",
+      "sourceFingerprint": "636e690a00b7a1381c9ae4112900b3f55268a997f0ff8c40c54877f187481873",
+      "background": "light"
+    },
+    {
+      "id": "composition-liverps-all-usda",
+      "root": "composition/liverps_all.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/composition-liverps-all-usda.webp",
+      "sha256": "a40aeef0f1801ea142f0d00545007e1d0997c72506215987a630ad7b2a189d8a",
+      "sourceFingerprint": "6ac1b5da22a9ac6be7e68d2108e25f4b27621dd626477def12c81b68391ba6f8",
+      "background": "light"
+    },
+    {
+      "id": "advanced-blendshape-inbetween",
+      "root": "coverage/advanced/blendshape-inbetween.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-blendshape-inbetween.webp",
+      "sha256": "85e99f28b165ee0fa738067143e40869ab001a5f6fc380f6463db90be4e8a8e8",
+      "sourceFingerprint": "ad0dd333bf946ef5552de116ba992382a5a49fb48f20528b6bd4699d8c9f4a5a",
+      "background": "light"
+    },
+    {
+      "id": "advanced-blendshape-sparse",
+      "root": "coverage/advanced/blendshape-sparse.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-blendshape-sparse.webp",
+      "sha256": "38e6422102e056ac3fbcfe2329a0988dcbc6627b24e6a877d6fe29fdc926b612",
+      "sourceFingerprint": "97dfa2e2045efd84fd8eb72f21a422e99a7f6f75214b4c81c421e641b0e1ca37",
+      "background": "light"
+    },
+    {
+      "id": "advanced-blendshape",
+      "root": "coverage/advanced/blendshape.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-blendshape.webp",
+      "sha256": "d9929556d78cffea4483133181ebaa940424041063e0fdddd639246338808240",
+      "sourceFingerprint": "186e68c174ca6954057e062cb9c09482d4de498c5c0e70edb3877a6fdf68503a",
+      "background": "light"
+    },
+    {
+      "id": "advanced-camera-optics",
+      "root": "coverage/advanced/camera-optics.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-camera-optics.webp",
+      "sha256": "b14051dc8d4252bf81d07d0f980827612117d3dad5581a5c6a1f5cdb3403039f",
+      "sourceFingerprint": "fddd30e47f0c48d96e23c39ef0a32326286ac1d6c865de8ecb2429f1eb2bc6d8",
+      "background": "light"
+    },
+    {
+      "id": "advanced-model-draw-mode",
+      "root": "coverage/advanced/model-draw-mode.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-model-draw-mode.webp",
+      "sha256": "0fc7c82e70205d903eeced21216603f1693dc674842b782f44cddeaa871ab95b",
+      "sourceFingerprint": "32956852444e9e58c776349a7137a5005d09404600829129751512135db28e15",
+      "background": "light"
+    },
+    {
+      "id": "advanced-nurbs-curve",
+      "root": "coverage/advanced/nurbs-curve.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-nurbs-curve.webp",
+      "sha256": "750ee0d693345068250beb07f1160342f2f72f278542003cd8e3d1f7680b7e9c",
+      "sourceFingerprint": "a515e30e55cc92c28cef6bc631547076203fc3d68f71d27887ccbc42f3eeced2",
+      "background": "light"
+    },
+    {
+      "id": "advanced-nurbs-patch",
+      "root": "coverage/advanced/nurbs-patch.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-nurbs-patch.webp",
+      "sha256": "f1d1a05e4acf34de788fa8ed9f02e9c74ae21370aa55607f8682fc19ec4e3891",
+      "sourceFingerprint": "432cbb6fe77967549f120546ff9e692ae2246cb45423a93aa22fec0307e7e2c0",
+      "background": "light"
+    },
+    {
+      "id": "advanced-periodic-bspline",
+      "root": "coverage/advanced/periodic-bspline.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-periodic-bspline.webp",
+      "sha256": "2f74630ff65ebca3beaa6bbb01a9a42db0ced5fabbe3e31cec1d7ee97de81d11",
+      "sourceFingerprint": "3a48986011bee0b67f6ef8098efd2f6625ff80ff7b5c008d09f43b8b867b8934",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-collision-group",
+      "root": "coverage/advanced/physics-collision-group.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-collision-group.webp",
+      "sha256": "4a7e2a685c3486759cb95c1dd81e7229c4aedfc264c5fc86ce4e7831bc270965",
+      "sourceFingerprint": "8b5a7dfdedecf22e6bb7b61295717550e541e3d227766c6f611196b19ac9d6ac",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-dominoes",
+      "root": "coverage/advanced/physics-dominoes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-dominoes.webp",
+      "sha256": "10b19a2ad7ccc45f4eb5ecfb8363f54a32736ccf389f77d00fd7ae40d8a8995c",
+      "sourceFingerprint": "8b75e3805fc5ddfef5b75cab4cbaba325845b467acdefb2dd9a4d08cbf2cd6e7",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-fixed-joint",
+      "root": "coverage/advanced/physics-fixed-joint.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-fixed-joint.webp",
+      "sha256": "d252de4364bc1d5a0c30816f0385755358a6346c8ade4878e5260f2662ddac55",
+      "sourceFingerprint": "c6e73514155ce138d4bc169f7c660576bb1c056cadc71b461e45771a2002788f",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-mass",
+      "root": "coverage/advanced/physics-mass.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-mass.webp",
+      "sha256": "70c3c5e6fb30c35604da9c8e7869d3772c053315f3f19b1ef68bd3296306758c",
+      "sourceFingerprint": "4c83ba01bac90de0741036b2f60f83fc1c785f48b2c8e29149c94df33be2cebc",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-pendulum",
+      "root": "coverage/advanced/physics-pendulum.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-pendulum.webp",
+      "sha256": "fa1c1d332d181041835e8d687cf272aa22db5259c877050431f6c20ee126f889",
+      "sourceFingerprint": "61d7599b4c56b22bc45461793597bbeb93fc57d7881ac29a09917de08e5a73be",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-prismatic-joint",
+      "root": "coverage/advanced/physics-prismatic-joint.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-prismatic-joint.webp",
+      "sha256": "b9ae5c04f4e818db4cd8cbbf3390984a2110aed9e3e9265ca6861efcd703b08f",
+      "sourceFingerprint": "d8815cff8a185c72e21db0cb9d253918e60695611713b249bc465c32fa1b1d59",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-revolute-joint",
+      "root": "coverage/advanced/physics-revolute-joint.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-revolute-joint.webp",
+      "sha256": "0e33082a482d57d80490d3d8eee6137f3bda947a7b53c74a985a0bc2e4d1385b",
+      "sourceFingerprint": "97df8f19cf5039c198adb7a343984a62c33e30e80bfb82c656ccf3bd238effae",
+      "background": "light"
+    },
+    {
+      "id": "advanced-physics-scene",
+      "root": "coverage/advanced/physics-scene.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-physics-scene.webp",
+      "sha256": "4e558fe374012f08fa7b26c4887408cacb5d7bd0ea397e897e57afac24e6c1e0",
+      "sourceFingerprint": "01d873a66eabd8c5e757232fae042a8c1e6eecedf22e0bdc0b786aa448584b63",
+      "background": "light"
+    },
+    {
+      "id": "advanced-point-velocities",
+      "root": "coverage/advanced/point-velocities.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-point-velocities.webp",
+      "sha256": "f6c117604b4cdeaaf9f2a0ba1f9bada52f665758a22f455efc1f2b02b309a218",
+      "sourceFingerprint": "cee12d1d32df80f7e1bdd5c183eba716766f6d8586da24a52ae93af0b05cb33e",
+      "background": "light"
+    },
+    {
+      "id": "advanced-render-settings",
+      "root": "coverage/advanced/render-settings.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-render-settings.webp",
+      "sha256": "2a6c2eb2737a38b576e25cdcdc7e4f6c693c80fedb065542bf1c3dccb1230968",
+      "sourceFingerprint": "bb33ba7d21cf1ae482f9a0281cc7d4fb4cb7352ef3510501bcb2b5fa2f253c08",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-bind",
+      "root": "coverage/advanced/skel-bind.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-bind.webp",
+      "sha256": "072707ea15007831b9e8e7059bebe7c6414c7879b584ebd7eda9bfb76d35aa72",
+      "sourceFingerprint": "4555017ea9aef4e9b8a45d99043af4ea339409d159cb13f3fb800233883e4b13",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-dual-quaternion",
+      "root": "coverage/advanced/skel-dual-quaternion.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-dual-quaternion.webp",
+      "sha256": "2b70947d2ce893a9d068ad200cfa5c1d02f68e92e306edc4560e9bb258386d2a",
+      "sourceFingerprint": "ed0870428400c15d453ffa1bc6f055bc040c13621802a673ff507cca43266dcd",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-joint-names",
+      "root": "coverage/advanced/skel-joint-names.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-joint-names.webp",
+      "sha256": "038963e628a2fff136fae2195c035d59ab327ace73ed6d8edcbaac3449ac2898",
+      "sourceFingerprint": "34dc1febb1cdd39d7010f8c54d1b0fbf708373c1c7b79998a44f9c5854ba5d70",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-rest",
+      "root": "coverage/advanced/skel-rest.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-rest.webp",
+      "sha256": "a94a15580250f24f365dd20aa92c40a1b03b55248c9750ac3ad3e04d9b8b6c52",
+      "sourceFingerprint": "3c471cc27689e1a0a93817006659b48811ef995111cc9d65eecfca7ddf96bcba",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-rotation",
+      "root": "coverage/advanced/skel-rotation.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-rotation.webp",
+      "sha256": "afa3c0484c31514256c69c57cc1a8e3b7308876c375a016a61ede55184fc39c6",
+      "sourceFingerprint": "364ba055b3b190a43ee6f07369188d1f74fa8505819b5ed417c622ff5c98d676",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-translation",
+      "root": "coverage/advanced/skel-translation.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-translation.webp",
+      "sha256": "d61c1d154fa159d77db1e7b05989f4802d5d388cc12cfca2516134f443e11b76",
+      "sourceFingerprint": "283495cf78283f736ab74aa885e80d46149af37a37a6092fba599cee8903bc11",
+      "background": "light"
+    },
+    {
+      "id": "advanced-skel-weighted",
+      "root": "coverage/advanced/skel-weighted.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-skel-weighted.webp",
+      "sha256": "34e54724fe895f37e6271a240e59b363bba6105b83aab43c46f3088ced906734",
+      "sourceFingerprint": "7bd7d891bea9b8353db2b0d0714d1ff7a1c6725724307614de2458fe17e61797",
+      "background": "light"
+    },
+    {
+      "id": "advanced-spatial-audio",
+      "root": "coverage/advanced/spatial-audio.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-spatial-audio.webp",
+      "sha256": "ca61c26da798dee17451102d3dae4ef637f7bd4d723b6a9619b0b324114cec77",
+      "sourceFingerprint": "c63ceb4a930007f4ab048012ee103e11f65fd61effb7c97a7cff71ff51ac6585",
+      "background": "light"
+    },
+    {
+      "id": "advanced-splat-anisotropic",
+      "root": "coverage/advanced/splat-anisotropic.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-splat-anisotropic.webp",
+      "sha256": "aa76c2cf3c81393b0a570a141bf0b2d56a540c7a4e37adecbe9636f72d41e87b",
+      "sourceFingerprint": "4cc89f56733d09cc8bd4453c9b282937349b5d9d9ad74ab175f7655bd2fad8a5",
+      "background": "light"
+    },
+    {
+      "id": "advanced-splat-harmonics",
+      "root": "coverage/advanced/splat-harmonics.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-splat-harmonics.webp",
+      "sha256": "2738b1bb177f4e8b8a8bb55df21079e328f21518d322fdee840192409729cb39",
+      "sourceFingerprint": "8ce29114ec3279a0ce8acb7ebd4c7cde13af0d5a6985f2809e84d9442d247376",
+      "background": "light"
+    },
+    {
+      "id": "advanced-splat-opacity",
+      "root": "coverage/advanced/splat-opacity.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-splat-opacity.webp",
+      "sha256": "dbdf5bad53b27754bde40550db9d8a3e12939d8b2c0b2ff1d4b824e5f9a76673",
+      "sourceFingerprint": "314303db996d991f57ddb0d73a1b765b6b6847de47f74366003aaf4a821ea09c",
+      "background": "light"
+    },
+    {
+      "id": "advanced-splat-ring",
+      "root": "coverage/advanced/splat-ring.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-splat-ring.webp",
+      "sha256": "3bb041140713b2444fe63e48feff78f9e5b8986fd435a37d20852b42fc87c27b",
+      "sourceFingerprint": "6d3b4cb4ad4a2e1093fbd8d5600c50153bbd830f331d4a7b3b8f327eca686b3f",
+      "background": "light"
+    },
+    {
+      "id": "advanced-volume-density-heat",
+      "root": "coverage/advanced/volume-density-heat.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-volume-density-heat.webp",
+      "sha256": "552f8d7a7914891489f691d4db12c6eb31fea3fac07cd35726a2dd12df915b5c",
+      "sourceFingerprint": "a425052817e7d9f629776f51f1a6b609c0c6f93e981a7bc248d557b84910a488",
+      "background": "light"
+    },
+    {
+      "id": "advanced-volume-density",
+      "root": "coverage/advanced/volume-density.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-volume-density.webp",
+      "sha256": "4ffaa9425cde9df6c3148979b360b1766c05de998525988cb184cbcc5bf25076",
+      "sourceFingerprint": "efd041480a2adb7628017bbe5748e80468c38972bed8bf3271a50f26539a6146",
+      "background": "light"
+    },
+    {
+      "id": "advanced-volume-sequence",
+      "root": "coverage/advanced/volume-sequence.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-volume-sequence.webp",
+      "sha256": "2cf38a061e2f9c008c5fd35c8a1bbcfccc02f4a96cc2bcf6629b453df1c53a7b",
+      "sourceFingerprint": "2aef004cb066f7778452a270f11b11db3057ed6599a4b0b183408dfd33f9c3c5",
+      "background": "light"
+    },
+    {
+      "id": "advanced-volume-transformed",
+      "root": "coverage/advanced/volume-transformed.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/advanced-volume-transformed.webp",
+      "sha256": "bd582a065daa5c44f46187e8c39218febf1a01de73df29ac9a5b724e043c1793",
+      "sourceFingerprint": "c71668beb345ee5d2376d09b37e18e50fc9dcca630555c2ba30541e115ec3f58",
+      "background": "light"
+    },
+    {
+      "id": "core-analytic-primitives",
+      "root": "coverage/core/analytic-primitives.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-analytic-primitives.webp",
+      "sha256": "48a872d270f823bc44bbf8816ec6c718273e74de49acb044c525946723c6af75",
+      "sourceFingerprint": "3b78bf9e193979e41cb867294c5d78af93136c8b0052554d257bfa9ee563496a",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-color",
+      "root": "coverage/core/animated-color.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-color.webp",
+      "sha256": "b1cbf9413c262792d1bd9eaca6823d6027a340719a40008cc7364b25edccfc92",
+      "sourceFingerprint": "b247a76e60d288135c15b5d67fc939b641e3f06a2bbc26ca974fff3b101a316e",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-points",
+      "root": "coverage/core/animated-points.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-points.webp",
+      "sha256": "3c19f553685b1609debe9bac8f21ac41cc4852674769b56fdc118849f6031cfe",
+      "sourceFingerprint": "73592186d834a127873d4b2deb87b4eed6662af4d560771d330dc12a35bf2f82",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-rotation",
+      "root": "coverage/core/animated-rotation.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-rotation.webp",
+      "sha256": "327f03b9b893123d82888529d52ac0df2f710f6c6ad7ddf04660c5b009abdaad",
+      "sourceFingerprint": "31c3c058f7d954d1d1e2eaa208e30d42f30f54885d99d1d21aba31e086084922",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-scale",
+      "root": "coverage/core/animated-scale.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-scale.webp",
+      "sha256": "f8fdfc373c5d26d5814f7f44ab4049d0b4c92143b026baab0f32d9902d642ad6",
+      "sourceFingerprint": "beb9fa06cdac8b450fafe05728ac771b99c6e776fa5a627122c5acc74a0eb36e",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-translation",
+      "root": "coverage/core/animated-translation.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-translation.webp",
+      "sha256": "cd8265bba5f67cee6a9ec992b7cbac0c0ef3b881c43bf395952c573af97b7cd7",
+      "sourceFingerprint": "c832408278dcb482660446ab180c5b0fefc0fe41b82c6d892083f52a5fa6b0d6",
+      "background": "light"
+    },
+    {
+      "id": "core-animated-visibility",
+      "root": "coverage/core/animated-visibility.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-animated-visibility.webp",
+      "sha256": "5c199ecc5d552c9c696f1c098fc2ce3bb3f550c65b8f378ac68d4ed86ab00240",
+      "sourceFingerprint": "3815dcd83882338798c561e372c7f728c58a1eb12b948e93c13f67c676bb85bf",
+      "background": "light"
+    },
+    {
+      "id": "core-bezier-curves",
+      "root": "coverage/core/bezier-curves.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-bezier-curves.webp",
+      "sha256": "00cecc6132038de39044f41e11ac8c6e73dea9f7bbcdb25c19c07dd71d4d18e6",
+      "sourceFingerprint": "6763bc334ca7ba771c33f8d1d221ec5838be989b3d34c965c53be53529d567b2",
+      "background": "light"
+    },
+    {
+      "id": "core-class-inherits",
+      "root": "coverage/core/class-inherits.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-class-inherits.webp",
+      "sha256": "1f483c32b23d104b2df2d3aba2fffa35d746b8b475f036eee8d1599b906937b6",
+      "sourceFingerprint": "36b2fdefaecfae8dfa0a187dd81729ff56568b67374f77929aaf9d27b937073e",
+      "background": "light"
+    },
+    {
+      "id": "core-class-specializes",
+      "root": "coverage/core/class-specializes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-class-specializes.webp",
+      "sha256": "df0b51c2e880e522a11c89fb002636afe4c16487cb9c40fc3e25c512421dd612",
+      "sourceFingerprint": "e7c9b91b6c43cdd80da82172ff48e786667cae6e0d02cefc2508e5b20b89888d",
+      "background": "light"
+    },
+    {
+      "id": "core-color-constant",
+      "root": "coverage/core/color-constant.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-color-constant.webp",
+      "sha256": "844a02feba966fb85b20866e0fcba28d30fe7b736afc0ac38a4d1b4390caf4dc",
+      "sourceFingerprint": "57e445c159258a853a67b8f586d4d6cd52c35ada0ad758b12942db65a5e67109",
+      "background": "light"
+    },
+    {
+      "id": "core-color-facevarying",
+      "root": "coverage/core/color-facevarying.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-color-facevarying.webp",
+      "sha256": "814c9cf8730bb149caa44b660a31195fa927d769d9cc50d40a82852f5998a5ed",
+      "sourceFingerprint": "67165d31be4f5ceba5ff3094998ac1c6c8f82c4b6f2a042f2cfc7a830cd558c3",
+      "background": "light"
+    },
+    {
+      "id": "core-color-uniform",
+      "root": "coverage/core/color-uniform.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-color-uniform.webp",
+      "sha256": "422e7f5511380086e13586e7e255ed20dbe8386411f62f76db0a090e6ed874a9",
+      "sourceFingerprint": "a0622ce71997420c59f28a72d035449216ede2756404b7327ac1353d0e9767ae",
+      "background": "light"
+    },
+    {
+      "id": "core-color-varying",
+      "root": "coverage/core/color-varying.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-color-varying.webp",
+      "sha256": "b7ac6126bf443d9cf655da9812ed9eb8125dfadd3a3d0d70ffab55b3e0c53f6b",
+      "sourceFingerprint": "425d432a303de8a08196481b4f7a236b67d5341d8e10cf7c9000a47a87aa0296",
+      "background": "light"
+    },
+    {
+      "id": "core-color-vertex",
+      "root": "coverage/core/color-vertex.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-color-vertex.webp",
+      "sha256": "ea630fe304679fd5ea6e5cdc1d8ca0b3e2397e9cab50cfb57becfd82802d9f34",
+      "sourceFingerprint": "ac0249583f7396d934b92ce34812e22ec83d00e17aea7dcd141b2fbe02778735",
+      "background": "light"
+    },
+    {
+      "id": "core-external-reference",
+      "root": "coverage/core/external-reference.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-external-reference.webp",
+      "sha256": "0fa5f9d6c26ddce84915d09850a4952a75cc0159b2f519a980ee8206ce9cc096",
+      "sourceFingerprint": "dea29ead2a65e87f0afaaa17e132c5b2003e476b317ba795f6400c48c29d6b8b",
+      "background": "light"
+    },
+    {
+      "id": "core-imageable-purposes",
+      "root": "coverage/core/imageable-purposes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-imageable-purposes.webp",
+      "sha256": "658c5029eaa5efa98375ef1401a3efb350ce8564951d29024922856ade16d421",
+      "sourceFingerprint": "d4d8ac7194fa0a0146806b7408dfa2fbf34a05799b5ba7d6e82ea92374d12563",
+      "background": "light"
+    },
+    {
+      "id": "core-indexed-face-colors",
+      "root": "coverage/core/indexed-face-colors.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-indexed-face-colors.webp",
+      "sha256": "b01af93f4cb233bdbd341ae8b341300937ca93a9c412c69007169a59f38c4b89",
+      "sourceFingerprint": "0819e3f438dd76739051d3f6b037ba56f06970b32e6a56a8ce4f0a1a9ee9dbce",
+      "background": "light"
+    },
+    {
+      "id": "core-indexed-uv-seam",
+      "root": "coverage/core/indexed-uv-seam.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-indexed-uv-seam.webp",
+      "sha256": "d920b6dab01e41acb781c6f55c06b6eb0bf8fd468cdf62ac51c19644287b9a90",
+      "sourceFingerprint": "21ac5476c33c01b7d41c6d7a9459f63c9e0e75b1fac8b6c3c4143c77a9b34aca",
+      "background": "light"
+    },
+    {
+      "id": "core-internal-reference",
+      "root": "coverage/core/internal-reference.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-internal-reference.webp",
+      "sha256": "e7a251bc1d1a2128c0e220945a6159d60f280d21ca6fa046962b95a7a7c3a68d",
+      "sourceFingerprint": "df15ba3a359c4d57bbd0c35db6f7215b3bd933bf2aac0c77a80c60ded1ee00ce",
+      "background": "light"
+    },
+    {
+      "id": "core-mesh-hole",
+      "root": "coverage/core/mesh-hole.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-mesh-hole.webp",
+      "sha256": "d645f2d5fc80d6823d54a6b1d5d6728d76a5b9b53577cee0995ae796c903b292",
+      "sourceFingerprint": "97c0673b442982c1b0f0eddb5cb471e4516ec2a415338bf3bbdb3da0e5ab38dd",
+      "background": "light"
+    },
+    {
+      "id": "core-mesh-orientation",
+      "root": "coverage/core/mesh-orientation.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-mesh-orientation.webp",
+      "sha256": "d01e895dcdbd7a0acd8c85b70ff3e519d3f7e1392e1499e8d92611ca337d67c2",
+      "sourceFingerprint": "01f1758d9c1f74264fcdacb926fc6b186a9336843569f8e85cbef6a7718511dc",
+      "background": "light"
+    },
+    {
+      "id": "core-model-extents",
+      "root": "coverage/core/model-extents.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-model-extents.webp",
+      "sha256": "2aca99b8890925849bb450071ee4b6ecc23c7cac4f76a159a05df386983e4a5d",
+      "sourceFingerprint": "eeede47561b8919f346ec6ee85265871c9248be6e9742239162081caa3890a70",
+      "background": "light"
+    },
+    {
+      "id": "core-native-instances",
+      "root": "coverage/core/native-instances.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-native-instances.webp",
+      "sha256": "525ca01962e4b9dc1c7b8fb87e02295a4aaa8031bacc27b92bbcdd00713f34c5",
+      "sourceFingerprint": "3e941450098f52612dfc1c0c79482e265530e7cd6ee20c3296161fed943534e4",
+      "background": "light"
+    },
+    {
+      "id": "core-nested-transforms",
+      "root": "coverage/core/nested-transforms.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-nested-transforms.webp",
+      "sha256": "80ee6dcbf6d65cc3ba5812b862642428ea64fdc16a0828d89e8b01a7bebca67e",
+      "sourceFingerprint": "60b96da039823cee7b663b72c06f285318c583985a42cdd8c20ce1b75d6fd13c",
+      "background": "light"
+    },
+    {
+      "id": "core-ngon-mesh",
+      "root": "coverage/core/ngon-mesh.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-ngon-mesh.webp",
+      "sha256": "ce5d8212ea77c4dce5287a1bab556132dce7ea4be881dfd5dcf7c7aee050e4ea",
+      "sourceFingerprint": "7f9d7b8f1c1f04442e323556b7c5d800b72f175b1b519f958bf3d70220cbfe9d",
+      "background": "light"
+    },
+    {
+      "id": "core-orthographic-camera",
+      "root": "coverage/core/orthographic-camera.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-orthographic-camera.webp",
+      "sha256": "f9a92f7fc5ff536d795d71cc7e1a4554b015453ca8e43d1412feba36d27afdf4",
+      "sourceFingerprint": "64a17726e4e6de26f0fc21e3b95646131f42f51d2f3ee02d8285228867bc4241",
+      "background": "light"
+    },
+    {
+      "id": "core-payload-loaded",
+      "root": "coverage/core/payload-loaded.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-payload-loaded.webp",
+      "sha256": "2726821f0612248f93a8ee3f953a0569dfaadc511461155e93cc49f73e1424dc",
+      "sourceFingerprint": "cfe4fe84ac70ad3c50e32c5e4789b4a8180d93fa54abbca3086a3d0a2f1ab6f2",
+      "background": "light"
+    },
+    {
+      "id": "core-perspective-camera",
+      "root": "coverage/core/perspective-camera.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-perspective-camera.webp",
+      "sha256": "30e05c5170b151ab8a415a42473820af2dce8fcfe38baef10555eb7833936fa3",
+      "sourceFingerprint": "692855da98953a6f405166700a314fb197d0832ad52a712ee58757716535c1c1",
+      "background": "light"
+    },
+    {
+      "id": "core-point-instancer",
+      "root": "coverage/core/point-instancer.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-point-instancer.webp",
+      "sha256": "0882a832f58250aea838626be2a69faf825f9f2d7dd67116fc0a36e624a54c03",
+      "sourceFingerprint": "3d5916b823874f3c6419143c8d38d69aa5c23e2e0d460801a2495a2e019d5252",
+      "background": "light"
+    },
+    {
+      "id": "core-points-widths",
+      "root": "coverage/core/points-widths.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-points-widths.webp",
+      "sha256": "7b06afb7a543c463bb3c656f984ba44787e4d7900981c55b52ef5ad062226c47",
+      "sourceFingerprint": "7ddcc4957f116a2ecd9992e19adf6d9a5f1b9f5836c19b6336125e1f54bcce4e",
+      "background": "light"
+    },
+    {
+      "id": "core-quad-mesh",
+      "root": "coverage/core/quad-mesh.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-quad-mesh.webp",
+      "sha256": "a459a02b507328f2fbf482540d67dbc8e411e0f6e5e03ee77e3449dac8fb8f55",
+      "sourceFingerprint": "b7e25998c560fe8390d2776b7598a2997b10165786494daf3319eaf6502746b5",
+      "background": "light"
+    },
+    {
+      "id": "core-reference-listop",
+      "root": "coverage/core/reference-listop.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-reference-listop.webp",
+      "sha256": "59498aa58b96ee0178b0965f5c2f95fbbc77f10a3c83953f36266262958d84d3",
+      "sourceFingerprint": "cfc86137a574e13b43f0df23b0b76c59579f50bbb9187efb8a84e699cb218764",
+      "background": "light"
+    },
+    {
+      "id": "core-reference-time-offset",
+      "root": "coverage/core/reference-time-offset.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-reference-time-offset.webp",
+      "sha256": "fe0897e1fe56adea179e9b91db0ee9ef6bb7b709d21b5438be6b84b575c73725",
+      "sourceFingerprint": "9d2e6184f30fb75d6e3f2d688d9af6a33b2d0d402f4e8f7c905811c0965c9f64",
+      "background": "light"
+    },
+    {
+      "id": "core-reset-transform",
+      "root": "coverage/core/reset-transform.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-reset-transform.webp",
+      "sha256": "df41265c120a418824872610ec590a788e4ea3b4c68535de6c27e995832c1237",
+      "sourceFingerprint": "cb0b154de66fa8c0773033d02820b32d327afd8da910b022f516c8369a81082b",
+      "background": "light"
+    },
+    {
+      "id": "core-shared-vertex-pyramid",
+      "root": "coverage/core/shared-vertex-pyramid.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-shared-vertex-pyramid.webp",
+      "sha256": "bd4a5de3342305f76e3d7b0a32621902762dd0b330d54a88c5771b23f44f3d59",
+      "sourceFingerprint": "1870486c658e9a8eed84333c8a417ab09b7312637a54d462e3960bf596c8900c",
+      "background": "light"
+    },
+    {
+      "id": "core-sphere-light",
+      "root": "coverage/core/sphere-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-sphere-light.webp",
+      "sha256": "f1fd1e716187807937bba5d47405c20ee6f8e6c660668a1e4d7e38e95d2671f1",
+      "sourceFingerprint": "75f1b091af1ed930343839cb11f5df8851f044fd84e314356ec1585eb00b357e",
+      "background": "light"
+    },
+    {
+      "id": "core-stronger-override",
+      "root": "coverage/core/stronger-override.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-stronger-override.webp",
+      "sha256": "550882b2cb429dd602a86c585f3f17c7ea1f880ea164c1c5843aa9f4fcd6e14d",
+      "sourceFingerprint": "bfebb9876d0efee8f4105ae4dfd4c406391b221f26fec4f4526a548b23c184a1",
+      "background": "light"
+    },
+    {
+      "id": "core-subdivision-bilinear",
+      "root": "coverage/core/subdivision-bilinear.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-subdivision-bilinear.webp",
+      "sha256": "db739b94c094b60018d911ddc8380bbb0f170f680031502309699d77c87dfb2e",
+      "sourceFingerprint": "5fa4d839e8f88a67e276f4183ab10dcae97f275b669f4a306b26b68b4a3c717a",
+      "background": "light"
+    },
+    {
+      "id": "core-subdivision-catmullclark",
+      "root": "coverage/core/subdivision-catmullclark.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-subdivision-catmullclark.webp",
+      "sha256": "d48cc53213d5253a251b454d3d949049944c23952dec6e9bb8077942fcc00c7e",
+      "sourceFingerprint": "e4c9d8e7167988d67544a91d5be4864085fb826b9f0338bfe21217544eddbb49",
+      "background": "light"
+    },
+    {
+      "id": "core-subdivision-loop",
+      "root": "coverage/core/subdivision-loop.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-subdivision-loop.webp",
+      "sha256": "b94c86ae323d67dc569fd6e7e50e1a7789f34f70d5524cb1a72189d1d994855a",
+      "sourceFingerprint": "14e3a56087d3bd8fad4a97ce901c81c13846e48fe084fbe03feb8cdace515635",
+      "background": "light"
+    },
+    {
+      "id": "core-sublayer-offset",
+      "root": "coverage/core/sublayer-offset.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-sublayer-offset.webp",
+      "sha256": "25848804970c8dcb9c99876e24261d8b8f1f7793c4e4284bffa5be0d4472451f",
+      "sourceFingerprint": "f6c179c705e1ff7fb3d9e1e13d4ad9893e89e4df2f6284f8badcbc4a8222b0a0",
+      "background": "light"
+    },
+    {
+      "id": "core-triangle-mesh",
+      "root": "coverage/core/triangle-mesh.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-triangle-mesh.webp",
+      "sha256": "0480a44601f94944ff2cfbbaf9260514228cc890ea871e404a00df93820d7dbc",
+      "sourceFingerprint": "a8d9fa82c842383e7ea533fd16d07086d62473a90226074904e8fc4271e0507e",
+      "background": "light"
+    },
+    {
+      "id": "core-value-clip",
+      "root": "coverage/core/value-clip.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-value-clip.webp",
+      "sha256": "6cff862440e0b48fb164afdc16c01c360470c67c2d68d4ec99c9addf5e9a195e",
+      "sourceFingerprint": "e37d6fdaa9ed467518d47fb7d9bdece8d2c4f9359b64c29c89d7f6467276b305",
+      "background": "light"
+    },
+    {
+      "id": "core-variant-selection",
+      "root": "coverage/core/variant-selection.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/core-variant-selection.webp",
+      "sha256": "389cee0d0cddde8fe06211858bbe754a3dd86971deb61bad546df4cc495e9d52",
+      "sourceFingerprint": "3bb36654bddaf2e5d9e3dc89f515b2ab076c5c4a02fec73c6b808fa5c77d08f2",
+      "background": "light"
+    },
+    {
+      "id": "curved-animated-subdivision-buddies",
+      "root": "coverage/curved-surfaces/animated-subdivision-buddies.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-animated-subdivision-buddies.webp",
+      "sha256": "e5ccb9f732bc6ca415b9a28797c97c08e794df85d90ca11cc4e566460f4d0bd7",
+      "sourceFingerprint": "d9cb6f3e6a9a3cfe56fe2c584754736e833dd58923ea428f804960b86a92ab11",
+      "background": "light"
+    },
+    {
+      "id": "curved-boundary-specimens",
+      "root": "coverage/curved-surfaces/boundary-specimens.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-boundary-specimens.webp",
+      "sha256": "c5d64f04c8386da4711764ad2ccb7c61e21fe82e52b7bd126e4805ec0a50da29",
+      "sourceFingerprint": "d711d027ae29ff377927528b6bf9898e1cc44533f672b527eebe7acf227a722f",
+      "background": "light"
+    },
+    {
+      "id": "curved-crease-ladder",
+      "root": "coverage/curved-surfaces/crease-ladder.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-crease-ladder.webp",
+      "sha256": "771c1cc13fd38d75a4f2b6137be50ec90e9588637acc23bd97b8e2934b52d43c",
+      "sourceFingerprint": "32e1cb2437b9a3a4a305dcf5210a59f41324aa7c08db2449475541106130abf8",
+      "background": "light"
+    },
+    {
+      "id": "curved-hole-lantern",
+      "root": "coverage/curved-surfaces/hole-lantern.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-hole-lantern.webp",
+      "sha256": "dcaef6eb3648dc236488ad649427896e52c73c10c015fa277d41930fa9e6e0f4",
+      "sourceFingerprint": "93a0c5d4c36f63543d3d3e272cd0d867f32bca218645851e3de71cb1ded6331a",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-arches",
+      "root": "coverage/curved-surfaces/nurbs-curve-arches.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-arches.webp",
+      "sha256": "b3c2849ab3609fadef7052a0430b9cc68ffec4facafe39592123974a035565a0",
+      "sourceFingerprint": "36f4dc8e87f4f25ca8f4e109a2d562f7949b4956661487e80605d394556e59fc",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-helix",
+      "root": "coverage/curved-surfaces/nurbs-curve-helix.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-helix.webp",
+      "sha256": "e65fe7c9f94d10e7900ee9744ae96905faca53193d0a9b88f98506246db83b59",
+      "sourceFingerprint": "9adef19eb64ec950dd88d52ea1073d1f47665a311213928f150336b9f4c48277",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-ribbons",
+      "root": "coverage/curved-surfaces/nurbs-curve-ribbons.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-ribbons.webp",
+      "sha256": "6d4d692e0b90e04fb6cf7c6716a1cc71b6235d81cd405b66c4ebe14dc73707a9",
+      "sourceFingerprint": "f2687d580397040139a1f5947895cb6a87d8b7811d3386681605184992dd0669",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-spiral",
+      "root": "coverage/curved-surfaces/nurbs-curve-spiral.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-spiral.webp",
+      "sha256": "f1a4cbc9ffeae884851d5973e90ea96ac839c2f036535777ea9bb8303832d59e",
+      "sourceFingerprint": "216751ca9e950f5f78cb8e64e6849eb477d8d80f24ca89f96feb7009c47e351f",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-swoosh",
+      "root": "coverage/curved-surfaces/nurbs-curve-swoosh.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-swoosh.webp",
+      "sha256": "6a1dfc971ef32dd2fabb21ad5e315f1e61fd38231cb6811b2be2d5d96317cadd",
+      "sourceFingerprint": "31a2081159905b991f797b0095e91a92579d132126c02ed98c9cc8996524e3b4",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-curve-weighted",
+      "root": "coverage/curved-surfaces/nurbs-curve-weighted.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-curve-weighted.webp",
+      "sha256": "1430e35d8e4fcda4f510630e4c2d5e1f53a0215f0b573cab8dbb2546ec77e6e4",
+      "sourceFingerprint": "183f9ea3edd0f31940a55c3c804bd91be1bd0ace75934af8580468bdb1dbab42",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-dome",
+      "root": "coverage/curved-surfaces/nurbs-patch-dome.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-dome.webp",
+      "sha256": "53a28d3f30a5849a6584923410954cd712ada7d91c577df49534e2f11108facb",
+      "sourceFingerprint": "9750169db8eae2241b8f0d06f392e506e038a4805ec3885de25d38386f7ca213",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-fold",
+      "root": "coverage/curved-surfaces/nurbs-patch-fold.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-fold.webp",
+      "sha256": "da2b4b87c62880e9602b5c2a866a12d26187ce559e56686d7698c973c58383ce",
+      "sourceFingerprint": "aded8f423c8007541ba43a8b69d6e35dee44201c9784b6f49eb2db73e3b96887",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-ripple",
+      "root": "coverage/curved-surfaces/nurbs-patch-ripple.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-ripple.webp",
+      "sha256": "bcb2dea4208ad668ca99f232eb44eddd182b3573e1f743ac5bde2160bab6cd07",
+      "sourceFingerprint": "37da415f577566a21857d703563462c25865b156edcc74eebe9213529c8b7678",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-saddle",
+      "root": "coverage/curved-surfaces/nurbs-patch-saddle.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-saddle.webp",
+      "sha256": "0854514001fcb4547e2f0dfad49d57c58997d179478b5c85ff7813407f60d2e8",
+      "sourceFingerprint": "22fe642ea4e895b822b6c45ec5a970f3779a9fdcefefb96926023a80aace1c52",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-wave",
+      "root": "coverage/curved-surfaces/nurbs-patch-wave.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-wave.webp",
+      "sha256": "019ea4adff653da885d62481a6abf4a197abbc9655296ad926a7e2c53d030d40",
+      "sourceFingerprint": "af8835670317ce6e65fb4f7949e1849f75aa6a1aa22279dee32267eb762d7ed1",
+      "background": "light"
+    },
+    {
+      "id": "curved-nurbs-patch-weighted",
+      "root": "coverage/curved-surfaces/nurbs-patch-weighted.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-nurbs-patch-weighted.webp",
+      "sha256": "29c4f7190124b656cc7c312737d4c5c1ce4fd0b1fc831c633eb6f1cf2a682fc4",
+      "sourceFingerprint": "f26e2c61b37c81dc966090690bd3e8f9f6892f9b6c439f18ee0019b3f52cacec",
+      "background": "light"
+    },
+    {
+      "id": "curved-scheme-comparison",
+      "root": "coverage/curved-surfaces/scheme-comparison.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-scheme-comparison.webp",
+      "sha256": "6901b4fc2c5b8c640a4d3c6d30686230cee5e7aea1d10f8d44f271569acca9d7",
+      "sourceFingerprint": "9118001006a9f2db5060b6dc4f862f5972f9741aaa4dcd2434f8647cbddd2499",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-armillary",
+      "root": "coverage/curved-surfaces/studio-armillary.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-armillary.webp",
+      "sha256": "3afb069bc526548a5559d94f1b96cb2fd8862eb7b11810afa68f392eb74e224a",
+      "sourceFingerprint": "933108dfc7db4cfa5756ad84bb31d36dcf452e8b4a53bce174db333cdd05db44",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-braided-rope",
+      "root": "coverage/curved-surfaces/studio-braided-rope.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-braided-rope.webp",
+      "sha256": "39ff98b40ec8171dfe88ce8bfc6d0cc2b3184c50f2f6d23b0422dae48a402be4",
+      "sourceFingerprint": "f24193c94eddcd78c1ee9405bf3e78e27c66494ffff3d97c4c60e4d652946cf9",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-fluted-vase",
+      "root": "coverage/curved-surfaces/studio-fluted-vase.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-fluted-vase.webp",
+      "sha256": "bb07482ce91e5f0c3b82dac657e26c5620d5f128337f9bc2de124d6dee8f4912",
+      "sourceFingerprint": "87079ece5d47b4fb2eeee072f9a5ba9fff7e6f7da3b26a6f9df1d7b6485fd89d",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-instrument-housing",
+      "root": "coverage/curved-surfaces/studio-instrument-housing.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-instrument-housing.webp",
+      "sha256": "a9c0341ed4d8e8812544dd69d2ab0930258c5d5b19b67118c18e2eb8c064e8cb",
+      "sourceFingerprint": "3e0b7c296f8bb471bb0a312dd992da95b084cfacc2a57d7103f362cba6aff1b6",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-lacquered-canoe",
+      "root": "coverage/curved-surfaces/studio-lacquered-canoe.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-lacquered-canoe.webp",
+      "sha256": "35e0a39990f74a4160ff49496ef42d8319c9885e4c84101c13661b0d9d7f4c8e",
+      "sourceFingerprint": "3b7ceafd67f60f8ef75fdfc6e154a254d60594e04ceae5be0699778f54251564",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-loop-trefoil",
+      "root": "coverage/curved-surfaces/studio-loop-trefoil.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-loop-trefoil.webp",
+      "sha256": "1695a34603b65b538bfc67508c10f062cef5e373848d308a8954b44dfcc285db",
+      "sourceFingerprint": "5b390aa7110ec14ac26aeff61031409451b5f55a51bc9ef93d82a3edf93703c0",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-pierced-lantern",
+      "root": "coverage/curved-surfaces/studio-pierced-lantern.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-pierced-lantern.webp",
+      "sha256": "b06d2517abba530d4b43bbdc68daecee3cf2d0eac19c61cb461fd0d9211a6e06",
+      "sourceFingerprint": "7cff627fba44e76123e1aa1b99ac112763cfedc8f2f8089cfebb44e26af56c02",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-rational-amphora",
+      "root": "coverage/curved-surfaces/studio-rational-amphora.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-rational-amphora.webp",
+      "sha256": "6d911333f6203463c63159a293dd5a50865f20577ae1a6628d303fe385178dc1",
+      "sourceFingerprint": "217efcd55cb5bd035c71a0077caa44d7112f5c2fb647c6aabc51c824ca047c79",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-rational-aqueduct",
+      "root": "coverage/curved-surfaces/studio-rational-aqueduct.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-rational-aqueduct.webp",
+      "sha256": "f5d692d36fcb26e19abdd2f16f89f6b61cef2a59e8a7c6b1b5d264ebe95f2fdb",
+      "sourceFingerprint": "b6ced014eced4c29dc582d4a2ed5caa907eb7379298f0cf9b44fb3dc1da8dc4b",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-ribbon-rosette",
+      "root": "coverage/curved-surfaces/studio-ribbon-rosette.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-ribbon-rosette.webp",
+      "sha256": "d87128edd59bce76a577ac4994b515f63f9d0f182044cd5a2c611250db4a066d",
+      "sourceFingerprint": "33d0909860c35a16b4a9cd3fef4f363d4e4df5740d35c80e9e01e25a0536bfcf",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-ruffled-lampshade",
+      "root": "coverage/curved-surfaces/studio-ruffled-lampshade.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-ruffled-lampshade.webp",
+      "sha256": "3d85fb7884fcbc7ae6f951d1e464a58e661e313e9bbbb38bf5b33f87ad1b60f8",
+      "sourceFingerprint": "c2c080ee11526d9a56a6d17fd98ab9721e1b10390a19df97cf1d31a010229836",
+      "background": "light"
+    },
+    {
+      "id": "curved-studio-shell-canopy",
+      "root": "coverage/curved-surfaces/studio-shell-canopy.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-studio-shell-canopy.webp",
+      "sha256": "7ea4cb545f91f2e6b59fece761b5158ecfcf2805561009acc5ffd85a7b7a888b",
+      "sourceFingerprint": "21d9fb07a53289f7428957837e14d5eb7b7e7c4cc4b4b2605d23c1b5cc21866a",
+      "background": "light"
+    },
+    {
+      "id": "curved-subdivision-car",
+      "root": "coverage/curved-surfaces/subdivision-car.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-subdivision-car.webp",
+      "sha256": "654d8431af6b0a5ec2f6d2b1193cebc2354e42820350ccccd45bf7911a54ef1d",
+      "sourceFingerprint": "44d2f726418ea895136dffac9b13509b118c75efdc0bab9282f40e8aa2233e56",
+      "background": "light"
+    },
+    {
+      "id": "curved-subdivision-playground",
+      "root": "coverage/curved-surfaces/subdivision-playground.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-subdivision-playground.webp",
+      "sha256": "e0a2411d348a72d9a75d566355779865cc7dac8fd47ef063130c3feac6561edf",
+      "sourceFingerprint": "c9e8a5d4ee409aeb8b3cc8388016df31b09239c6afdf9b846dd814926157271c",
+      "background": "light"
+    },
+    {
+      "id": "curved-valence-specimens",
+      "root": "coverage/curved-surfaces/valence-specimens.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/curved-valence-specimens.webp",
+      "sha256": "804ec39db17da1f757750ec48b2400351a71a22405a92c05ef2d11f3d2e38618",
+      "sourceFingerprint": "0c8bba64d2e58893eb5d5714c4ea9506298dc75e3ac12bf5d9a12fea83d05be0",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-animated-light",
+      "root": "coverage/lighting-mdl/animated-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-animated-light.webp",
+      "sha256": "1b97cff10339f9bae96faf1a4e8ebdbafc29e3c24eabf1e4b81b4cfcbaed5abf",
+      "sourceFingerprint": "0fb50cae06a4099c61f6674f80a5eba0ef59871076a13b3526821ca81c8dd5a1",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-area-softboxes",
+      "root": "coverage/lighting-mdl/area-softboxes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-area-softboxes.webp",
+      "sha256": "ca5d86409a88a8e61af71efe82e9819888464f7b8ea273d8a99298f2f2290c42",
+      "sourceFingerprint": "1cbb088c8f5a4b612a21b73b027bee5611abb7946c00ab0647672ef38d1c1b0e",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-colored-spheres",
+      "root": "coverage/lighting-mdl/colored-spheres.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-colored-spheres.webp",
+      "sha256": "c4ec48d9fc6792af94ea282e31a8640a5f8c14227e186244d86c0837a5e81362",
+      "sourceFingerprint": "1f0c66dc175da2609d3406abdbc90618c251fef6379f4b9776032c27d83c45fe",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-cylinder-light",
+      "root": "coverage/lighting-mdl/cylinder-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-cylinder-light.webp",
+      "sha256": "7f1692b190b4bab59e7aa7b069c11f80322528028428c3cddf5c98cc6cbef11c",
+      "sourceFingerprint": "3d2aa6686e19b5b827b334fd74dc812aa33c9c30464f61f3e2101c8ef5067aa2",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-disk-light",
+      "root": "coverage/lighting-mdl/disk-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-disk-light.webp",
+      "sha256": "08d076c03913fe94bbffc5a4fc0c18716cfb2f906dbe5643727fe4ba1032c733",
+      "sourceFingerprint": "3340e1e92f3dce7f67ae5978fe7871aca494df01db52474440f2924db8d156cb",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-distant-sun",
+      "root": "coverage/lighting-mdl/distant-sun.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-distant-sun.webp",
+      "sha256": "a3eafb3d05e12828e5dc41d84bd493d2cdc4f41984d57bb94e90568414c5a8a7",
+      "sourceFingerprint": "aaec2b47d1fd87878ff0e11175870b41183c1228603c087b576468a2467a6933",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-exr-dome",
+      "root": "coverage/lighting-mdl/exr-dome.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-exr-dome.webp",
+      "sha256": "a22fcb8e77dbf86934d0648c579d7d9b13bf86435dc7cc62e82892eb3cde0b06",
+      "sourceFingerprint": "0e2cde8fdf322bd0a6b4426e9f1864db52f6cc77277d79981e0ea2b0e2ac755b",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-geometry-light",
+      "root": "coverage/lighting-mdl/geometry-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-geometry-light.webp",
+      "sha256": "d11bb5c6bba779f369d818a1ab6cc581e22347938f44a2a2a69d4543804f8e32",
+      "sourceFingerprint": "98c1b2c773fbee9a35f1d187bd1390cb2e5992f95aace8cf4c6d99708b8b4b08",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-hdr-variants",
+      "root": "coverage/lighting-mdl/hdr-variants.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-hdr-variants.webp",
+      "sha256": "e607b466a8dbe632f1a5710814cb9f3be231335831746516c0038eeb63377ea0",
+      "sourceFingerprint": "1cc9b1734dcd4d44fde7a732b0d74a42b7072ec59c1a58941ed10466a9346852",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-light-linking",
+      "root": "coverage/lighting-mdl/light-linking.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-light-linking.webp",
+      "sha256": "86e6666b968990b273d70a02eb70418e02c46d94949011b41de364f58aa7294b",
+      "sourceFingerprint": "bed125fdb2a35ddb3fc40b4ed5696f41e5ffdc03fb2557d822820fb4a713df63",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-clearcoat",
+      "root": "coverage/lighting-mdl/mdl-clearcoat.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-clearcoat.webp",
+      "sha256": "d943d8e42e9dc1b99b4ec7d5a7f8866262a81cacacce5bd3c08262b572c24e1e",
+      "sourceFingerprint": "0d503b77e43f7f11f4b68ac4405b4e7fe9cf4a0bbb271f35b156996d9a63916b",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-color-texture",
+      "root": "coverage/lighting-mdl/mdl-color-texture.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-color-texture.webp",
+      "sha256": "46dc64d841d35246730428405a3f01e5a7409b9c35c12b234c311ea45daf5b12",
+      "sourceFingerprint": "8b4db418e61f310eb0027e73212c9a7df0d3543456e123a9f88f9eb014fb5479",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-gltf",
+      "root": "coverage/lighting-mdl/mdl-gltf.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-gltf.webp",
+      "sha256": "a048ad3d0a3f10d7712654bc015bb44c926b468e0cd60e5b4bdc79b43f1cf7dd",
+      "sourceFingerprint": "90067324d551b64046652a550a9c2304e079dbd89ba617dfffab211f9e15c004",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-metal",
+      "root": "coverage/lighting-mdl/mdl-metal.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-metal.webp",
+      "sha256": "801e31fdde47539bd3ec077829a607bf11a8dfec73584c3e43e071b258737b2c",
+      "sourceFingerprint": "2dd5f7d100ba93418670ddfd3ded2f50ed9b9df6bab7681849a0b97cdcf0408b",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-normal-texture",
+      "root": "coverage/lighting-mdl/mdl-normal-texture.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-normal-texture.webp",
+      "sha256": "56149b58051a50fc0d5f42141aef7a9382286f99fef430fcf7408fcc37a20fd4",
+      "sourceFingerprint": "fc60c88374b81eb5e861aec1a1ebdabb271f980cddafe11f2e9f247f648584e0",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mdl-opacity-mask",
+      "root": "coverage/lighting-mdl/mdl-opacity-mask.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mdl-opacity-mask.webp",
+      "sha256": "b8de7f6253991cc44e47df7a8418e88f076f208920010836402e01ebe92066f3",
+      "sourceFingerprint": "335628c71c074fa6ad215d668f53df89c583e7f4c4a7005a61836250da9673e2",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-mesh-light",
+      "root": "coverage/lighting-mdl/mesh-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-mesh-light.webp",
+      "sha256": "84c85fc5f09aca0c3ee9fad3a1c7adc573ad3a1835af3515edda715ba6d78d60",
+      "sourceFingerprint": "98c6e1cc234b8083ad13f2d63df31512d706842bb13ad01ceeef8c73d63100d3",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-portal-light",
+      "root": "coverage/lighting-mdl/portal-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-portal-light.webp",
+      "sha256": "c35ea2f044d325cb0d0bf4542b2477f59df1acc76b1136d663a2710d7881bc41",
+      "sourceFingerprint": "705d9423edc4fed241202ad0e8a6fcc9123d2b55c1b43b0b4076314a3ea5f14d",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-shaped-spot",
+      "root": "coverage/lighting-mdl/shaped-spot.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-shaped-spot.webp",
+      "sha256": "d2a9447a342ee1aa5e3da4e74eec9f01f3374538b734cb575ef7a3760593940a",
+      "sourceFingerprint": "ac85363a8035c9b5805178e6a9f78fa83c677882ca8c6c708a568e251954553b",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-studio-variants",
+      "root": "coverage/lighting-mdl/studio-variants.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-studio-variants.webp",
+      "sha256": "6ef9fdf199026e86450ce16593441f7530e81b7a9ccc84770194ffcff14b3f54",
+      "sourceFingerprint": "4d0d51687624948fa6c35eb1840d2587c99a434cf9e85aee1d7f20ef716a6e17",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-temperature-lights",
+      "root": "coverage/lighting-mdl/temperature-lights.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-temperature-lights.webp",
+      "sha256": "7e236cb43c3d7a3216aea3f6a5648224be7c627df88577a236ac3b136a8bd5dd",
+      "sourceFingerprint": "117a87e3b2c27c9b4b8d9e6d7183235497bf15ff9982625f3980e407c31101ed",
+      "background": "light"
+    },
+    {
+      "id": "lighting-mdl-volume-light",
+      "root": "coverage/lighting-mdl/volume-light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/lighting-mdl-volume-light.webp",
+      "sha256": "90ae65ede867aa380a8988b92a35a76db843a59f1da5f59d2687a151bbf54430",
+      "sourceFingerprint": "a2a5d285a60f7bbd31d68facf7956cc27e09fb2c7681c02ca841bbba8b119bb1",
+      "background": "light"
+    },
+    {
+      "id": "materialx-ember-torus",
+      "root": "coverage/materialx/ember-torus.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-ember-torus.webp",
+      "sha256": "e35dbf87141245d07940e3bb2e9e87856d7bbab811232b1534354162f41f00c1",
+      "sourceFingerprint": "339966ff53eb46c9c372961da2acbc4e96ed03d2b927228311487671426b936f",
+      "background": "dark"
+    },
+    {
+      "id": "materialx-explicit-version",
+      "root": "coverage/materialx/explicit-version.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-explicit-version.webp",
+      "sha256": "5af1eec9d0d09bbf815ae1187e0ebf488b25f8bb39b12fcd784b308806f997a8",
+      "sourceFingerprint": "1e745e30073cc17c4b7913876683039f823ad68f6dbbfc85f740c3421c235119",
+      "background": "light"
+    },
+    {
+      "id": "materialx-filename-interface-colorspace",
+      "root": "coverage/materialx/filename-interface-colorspace.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-filename-interface-colorspace.webp",
+      "sha256": "d2350c43c343cedd0229291a9efcf3973b47d2de83d2c8056e66b484fda32baa",
+      "sourceFingerprint": "eed1a2be176c61d7f8027610a63f25aeaee49238e4cf891fefffdf6b58c1214a",
+      "background": "light"
+    },
+    {
+      "id": "materialx-jade-plume",
+      "root": "coverage/materialx/jade-plume.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-jade-plume.webp",
+      "sha256": "33c7df9b20ef0cb5318a46703be8ad8b577676d930c8b4bdbdb2820630db4c47",
+      "sourceFingerprint": "97ed48d739bc9d96d0fe561933bfaa273c6fc21678db79296f0728294b8db432",
+      "background": "dark"
+    },
+    {
+      "id": "materialx-multi-output-uv",
+      "root": "coverage/materialx/multi-output-uv.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-multi-output-uv.webp",
+      "sha256": "70027574f3ec4ae50e3d3996422e3bb70c6ebd03b98dbfb8e2c90c9d679a93ea",
+      "sourceFingerprint": "d4d6baac1deac5bb001c53cbaebab4ce76e553ba28ef05f3f1a28711c5ee1352",
+      "background": "light"
+    },
+    {
+      "id": "materialx-nested",
+      "root": "coverage/materialx/nested.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-nested.webp",
+      "sha256": "c31cab6aeb3d6396ee8f9d5c75c0f2d47e421596b84bcd5b212c7e2615d54266",
+      "sourceFingerprint": "4e431a6a294005389f571c2eb3b7ed2fb52e2848685d449d3c9fffc87de63d33",
+      "background": "light"
+    },
+    {
+      "id": "materialx-two-instances",
+      "root": "coverage/materialx/two-instances.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-two-instances.webp",
+      "sha256": "3428729e2888c3105aa5dbbe121b227738857614a256d7a7c33f570644c97869",
+      "sourceFingerprint": "622d66500b24d209c8ca27133d37791a1fc78cade5535437bb650fe99bf5077c",
+      "background": "light"
+    },
+    {
+      "id": "materialx-violet-lattice",
+      "root": "coverage/materialx/violet-lattice.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-violet-lattice.webp",
+      "sha256": "da2fa555601fb80f5c20d950e24a15357b2b104914497fde8b94e072ac98b1bc",
+      "sourceFingerprint": "adcf83aa82abb30fb17c879264ced01be89a63e29ed3c37614a4461322885cba",
+      "background": "dark"
+    },
+    {
+      "id": "materialx-wrapped-standard_surface",
+      "root": "coverage/materialx/wrapped-standard_surface.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-wrapped-standard_surface.webp",
+      "sha256": "76127e535c1308b496f72af812089b36a3fc2cddf68ebf29e7d622afe9283ea2",
+      "sourceFingerprint": "54def8794450dc3d521ed4f8284bef13c9d14b4b4b10f048961056bc93e3b0a8",
+      "background": "light"
+    },
+    {
+      "id": "production-lookdev",
+      "root": "coverage/production/lookdev.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/production-lookdev.webp",
+      "sha256": "7826b563fb67b07e9cb61a961177d563b39d06cd327365380b01998a6f91c2d8",
+      "sourceFingerprint": "36cf049279a253cfd34cc0100ff0c419edf597b9dcef36e8d8ed15d576c6a981",
+      "background": "light"
+    },
+    {
+      "id": "production-shot",
+      "root": "coverage/production/shot.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/production-shot.webp",
+      "sha256": "93f10c12eb8a18a4b8f6a62a06d505c4478dd73db93d4379fc9c943dd2d1c49d",
+      "sourceFingerprint": "da281e958e2bf54fb49e571227931f49c667940286be89fed051c0a751c1ff05",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_color_facevarying",
+      "root": "coverage/shading/geomprop_color_facevarying.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_color_facevarying.webp",
+      "sha256": "78111b7f0a0e65a7b0fd35f5947e26a8e08add88123a901935cdf6d4bfe578c8",
+      "sourceFingerprint": "6f51d59926c4a91a53e0aee50edc859fb8f3a9d8b7b1698c16087db174bfdb33",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_color_indexed",
+      "root": "coverage/shading/geomprop_color_indexed.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_color_indexed.webp",
+      "sha256": "45f42e3bad8f6d6b92feec4dd8f64c4823da11c4b883941b80dddc712ba68931",
+      "sourceFingerprint": "9718d13aec060a2465d84d26dd8c93595b21fbe46df3122d372af155c201425b",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_float_constant",
+      "root": "coverage/shading/geomprop_float_constant.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_float_constant.webp",
+      "sha256": "07be1415083b603cb1844fb67cb0aad46da3782e8487526d065510038d28d9e1",
+      "sourceFingerprint": "8136326399a357ae0ec5cc89b536b1ef6777cf017125908587ce364595c99fa5",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_float_uniform",
+      "root": "coverage/shading/geomprop_float_uniform.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_float_uniform.webp",
+      "sha256": "8336d781a7403ee25830af93bbf0ab5d8b1bb0c190a9b55dd1a68e3be680a97a",
+      "sourceFingerprint": "da5f9079a48f133d2b2a73bdba41557743814342b70e08e24e359c012615d19b",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_float_varying",
+      "root": "coverage/shading/geomprop_float_varying.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_float_varying.webp",
+      "sha256": "5196b3cbc489c6e9e426865c33516459d7bb4be39c6a0878874ae55999bcd427",
+      "sourceFingerprint": "25f0462d90307ffe68d473784891019f5a593207c74c0baf9f5d268b680a4238",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_float_vertex",
+      "root": "coverage/shading/geomprop_float_vertex.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_float_vertex.webp",
+      "sha256": "e887d8b85ad366a6b766e0e94a25c8432d62dd820008f70ea308e934b911454f",
+      "sourceFingerprint": "fdc8e60f3f04f95efdd276fdaf83de8d0212b811ab859748cc130720fecbcd10",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_vector_indexed",
+      "root": "coverage/shading/geomprop_vector_indexed.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_vector_indexed.webp",
+      "sha256": "4edb47247d7cbb46b9dd5b3cac5e23aadb52c86ea565aa37b233b7d016d8ee75",
+      "sourceFingerprint": "d22e598fe0ab7f05cb511de46693d484d1ce508785c63947fb5b209d35fea366",
+      "background": "light"
+    },
+    {
+      "id": "shading-geomprop_vector_vertex",
+      "root": "coverage/shading/geomprop_vector_vertex.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-geomprop_vector_vertex.webp",
+      "sha256": "04631f9ba25d2e8fba4493dfbf383c12289adc02975770a81f16bce9ad6fa134",
+      "sourceFingerprint": "f8b97ccc06ec8b8dc1f9169e316b74ea4c855bde3314bccfa6ee8747ab06ec33",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_absorbing_glass",
+      "root": "coverage/shading/mx_absorbing_glass.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_absorbing_glass.webp",
+      "sha256": "5839ae54b7d6b269b2ad9551d085448b8664bc235b6fcec55df5086dc1da171b",
+      "sourceFingerprint": "c1882008d49492b5ad63b31f6c41132d679aca1b06c713ef0893471279a108d3",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_blackbody_emission",
+      "root": "coverage/shading/mx_blackbody_emission.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_blackbody_emission.webp",
+      "sha256": "08a86aa4ff00476c498fbcd675146b1b1be57a5002f941f7ae817e0be2f02c77",
+      "sourceFingerprint": "e4280f4fa8a9f8dce32b4ef7065f5375db4959a066c5b4f9426ece46f2361d98",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_brushed_anisotropy",
+      "root": "coverage/shading/mx_brushed_anisotropy.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_brushed_anisotropy.webp",
+      "sha256": "178c2ac54216ac60993185c684ab8d0795ce80a2463a17b4a56a126ce81bf1af",
+      "sourceFingerprint": "93dfd2b69a9638e9fd63a865ffceff327b798b532ed356041ed1497e221c4d03",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_bump_hammered",
+      "root": "coverage/shading/mx_bump_hammered.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_bump_hammered.webp",
+      "sha256": "a76879237eba77a7f872c5dbe1e62e0e04d65daa58945f7ceeca7631ed1b5016",
+      "sourceFingerprint": "e21c2ef66c792255969f74537e45dd1757ab65fcc6cfd23cb8bffad048f96967",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_cell_terrazzo",
+      "root": "coverage/shading/mx_cell_terrazzo.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_cell_terrazzo.webp",
+      "sha256": "d19bfb652785185865646a5453d3e9e4344dd2528a35e07a032bcebcb1a43fc4",
+      "sourceFingerprint": "8e4370f17893cace74d4b650fdd2a8fb999ece2b30cd33bd3e2027fd2444545f",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_checker_weave",
+      "root": "coverage/shading/mx_checker_weave.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_checker_weave.webp",
+      "sha256": "9b6decc07d5d859a13ea4487ece873302e77490e3d39a239bdeeffd77bf7e035",
+      "sourceFingerprint": "05616d5b8ccd2a912c2efcefeff0b8f8f4ec956008b798ba6e0334174288734f",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_cutout_lattice",
+      "root": "coverage/shading/mx_cutout_lattice.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_cutout_lattice.webp",
+      "sha256": "a879cff37b891cffb537253c5d1e3c52c896f18ed558a0de61809e127e104c60",
+      "sourceFingerprint": "1f421b9f9d157348f0063528b2f21a7a9f35d07db09cdf44317f1c7a55944d0b",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_four_corner_enamel",
+      "root": "coverage/shading/mx_four_corner_enamel.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_four_corner_enamel.webp",
+      "sha256": "bf57375e87d60d3a7db839e68dbf27a2333603a4dd65d9bfb8372583052ac1c9",
+      "sourceFingerprint": "b0b0cca1e794b92ecf88c7ae08451bdcc0d35ad43206c3c46f050334334be3ac",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_fractal_rock",
+      "root": "coverage/shading/mx_fractal_rock.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_fractal_rock.webp",
+      "sha256": "23b450e9301d5fc4af6be1a57cf040dab250449127cb021c4c4128a55f7cf51e",
+      "sourceFingerprint": "d34cf671e557b8a17ea5591159f85b4981272a81bbee1ed7290cafe33db2ae26",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_hsv_glaze",
+      "root": "coverage/shading/mx_hsv_glaze.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_hsv_glaze.webp",
+      "sha256": "93ec79b3cc689aa79e7ba42f0f9942ddd234254b95014ba4fc960707224ce211",
+      "sourceFingerprint": "b9e67fa4c26b8cd954876addd62cb126d78f9d5042a19b2c66bcdd195f10fa37",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_layered_clearcoat",
+      "root": "coverage/shading/mx_layered_clearcoat.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_layered_clearcoat.webp",
+      "sha256": "efab7a8d9f3778450bfc9762f7db38b70b451033bd331782797495cbcac71277",
+      "sourceFingerprint": "41d15af0e3eadaa3b0e199a1f6c13d6463608226ec9a219226679c11b50c294c",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_nested_nodegraph",
+      "root": "coverage/shading/mx_nested_nodegraph.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_nested_nodegraph.webp",
+      "sha256": "c07a7d14c4791b6e4fc1a23d9732c9d9b15603841f77d1d4b54b7044c0d887a5",
+      "sourceFingerprint": "6287f2f9b31c815e99495f54c277e8ce297b21930ffb4e8ace2a5e02ab101841",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_noise_marble",
+      "root": "coverage/shading/mx_noise_marble.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_noise_marble.webp",
+      "sha256": "99e68eb12e6eb35560264c5b237823a3189192d185f51782417d838951dfc8e2",
+      "sourceFingerprint": "c214ecc9c5215cc93675005da4c82c927a2384d6ede16dfeb08a4243b3c6a5b1",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_position_stripes",
+      "root": "coverage/shading/mx_position_stripes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_position_stripes.webp",
+      "sha256": "ad8015155dde4bb067b4062bf6ea712406501cc2cbe77530c735cd8bc8eee5ac",
+      "sourceFingerprint": "f4168bee154ee39d95e6ee1cd6495140a8b60b7e13040ecdf531336ee3f786b0",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_scalar_displacement",
+      "root": "coverage/shading/mx_scalar_displacement.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_scalar_displacement.webp",
+      "sha256": "77aa4ffea84d262b222fb97338bdc35a230d77db6de93935a37cb132bf111cdc",
+      "sourceFingerprint": "dc0114985c1637f870242210e3df58ebd9caa5baae8b7521f2b12f592b8f7ed6",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_tangent_normal",
+      "root": "coverage/shading/mx_tangent_normal.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_tangent_normal.webp",
+      "sha256": "3ec237d216e8ad835a8b0bc99efa3b31ed692b707f9adec131be10e99dbf6e80",
+      "sourceFingerprint": "0c89b26468061d3e5fe0e723ca0fbefc5607096a953cf1635553e90b99e7cdc1",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_thin_film",
+      "root": "coverage/shading/mx_thin_film.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_thin_film.webp",
+      "sha256": "93aa289b5116f5d0cc971c50d8dddd5dec5bea708aeb52a454dff07056dbe0b7",
+      "sourceFingerprint": "14e75ae304b17efdba4327f6c74b62b7c026a8edaa11733aba1134fa35fe1b18",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_triplanar_stone",
+      "root": "coverage/shading/mx_triplanar_stone.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_triplanar_stone.webp",
+      "sha256": "2b24403fc7094efff2c920b6777df18a5d3ba8ace1b932af83fb683308d130f3",
+      "sourceFingerprint": "f25f43226df3d0e86a9ec086d74a619fe77fcdf24554a60f13d4b8d1b0e26964",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_velvet_sheen",
+      "root": "coverage/shading/mx_velvet_sheen.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_velvet_sheen.webp",
+      "sha256": "e46c7f2f639720bc36f42680d78cf6873131432c9ffb6f003679ace2f648dc3d",
+      "sourceFingerprint": "5977180f1139c4aaa7df9ff3fc71249a03402f3f07732aa3de08fad570ef0c1f",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_wax_subsurface",
+      "root": "coverage/shading/mx_wax_subsurface.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_wax_subsurface.webp",
+      "sha256": "7de28e8b28d2c89f2cdb95b4432304333be4be9f1fc05ab21344aeb213abc15c",
+      "sourceFingerprint": "ca3276f71c3612b1c3a969f5f99fc8b0b738e90d7114a85d439c04e5fe323668",
+      "background": "light"
+    },
+    {
+      "id": "shading-mx_worley_ceramic",
+      "root": "coverage/shading/mx_worley_ceramic.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-mx_worley_ceramic.webp",
+      "sha256": "1c2bdc1c593517131e0778dfe6e95a9eb7fe2db45102dc126e0b070b7fc16fc5",
+      "sourceFingerprint": "3ffb12a09663fb7102edae98cf51e4cdc6d22fb24de2efcd289f83a89159c6a8",
+      "background": "light"
+    },
+    {
+      "id": "shading-preview_channel_packing",
+      "root": "coverage/shading/preview_channel_packing.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-preview_channel_packing.webp",
+      "sha256": "4c6439c6473e90b270d4d4f14520025e32999678b019e82cae3f4683b5b5a5e0",
+      "sourceFingerprint": "eeefec727a48558a5f702bda1c97859bf2f4294c4f4fdad53968053eea5c7377",
+      "background": "light"
+    },
+    {
+      "id": "shading-preview_normal_texture",
+      "root": "coverage/shading/preview_normal_texture.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-preview_normal_texture.webp",
+      "sha256": "7c66acd1e7f8afacfdfaeaf4114ab14b1cc6a3c824db7f7c1da93af4f992d6be",
+      "sourceFingerprint": "c5fdb73641bdd4b25de266c6895a8139c0f530265c1f3f29166eca0c208261d9",
+      "background": "light"
+    },
+    {
+      "id": "shading-preview_opacity_threshold",
+      "root": "coverage/shading/preview_opacity_threshold.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-preview_opacity_threshold.webp",
+      "sha256": "aa35dcfb64ed79808363dc7523f522848995e124ffcbff46dc0cc1b917fa574a",
+      "sourceFingerprint": "7b3cf64029e4b827d25e6ebfb426d76b43ce8af0194bfa153c9a0a55861fea96",
+      "background": "light"
+    },
+    {
+      "id": "shading-preview_sampler_wrap",
+      "root": "coverage/shading/preview_sampler_wrap.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-preview_sampler_wrap.webp",
+      "sha256": "8dd9271fc9535ff8f0c44148a41ac1100272452e8a011196d1d740d4d5bc81b8",
+      "sourceFingerprint": "d5ac5daccf8752681d42d478ef58359ebca455446433a75d96d59048639219a9",
+      "background": "light"
+    },
+    {
+      "id": "shading-preview_uv_transform",
+      "root": "coverage/shading/preview_uv_transform.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-preview_uv_transform.webp",
+      "sha256": "d27b2fcab7c95cd553c80616787f4714a80f98a4528644b288e6c530e3c20c8d",
+      "sourceFingerprint": "6ecdeed6224418d2c64ebf5529aa1dec55318a767013aa68ac1179027f1bbc85",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_collection_binding",
+      "root": "coverage/shading/shade_collection_binding.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_collection_binding.webp",
+      "sha256": "9ca800d7da6f8a62558a42c1b92334bc7bef82d513730407cca02999993fc0ba",
+      "sourceFingerprint": "d7764f7fefde141804d327130142890deaa94d46ea994bf5422204b250eada36",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_face_subsets",
+      "root": "coverage/shading/shade_face_subsets.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_face_subsets.webp",
+      "sha256": "b8a45d81f0066225e9149c68efcde428d361fc5207030f855e6a56a2ab3975de",
+      "sourceFingerprint": "0378836bec237dcc58b0e8b2e60002212d902bf36c77345f73f14c1b680707d0",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_material_interface",
+      "root": "coverage/shading/shade_material_interface.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_material_interface.webp",
+      "sha256": "544d8a9fa5f1b68dc5292ab07e827709f9c920552852b61edefd5a0852415330",
+      "sourceFingerprint": "69db0a04bbbb24e66da67ec2deeb07554de5bc83abc6c13b362a7737e186949e",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_material_purposes",
+      "root": "coverage/shading/shade_material_purposes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_material_purposes.webp",
+      "sha256": "63663c81351b1f9b1463eac96aff430af5bd70482c3c2b4a470b84b916cc62a7",
+      "sourceFingerprint": "c8e531804082380edd10af7a92fd900bc225e73c522fdaca0d4ffa986a8a9a77",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_material_specializes",
+      "root": "coverage/shading/shade_material_specializes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_material_specializes.webp",
+      "sha256": "3ae1bdab151f8d2cc25a8b483db8f09fda8699bf3b9ad4996edff07fae7bc0cb",
+      "sourceFingerprint": "c1fc973f73e056d726f0d08157bd64835d25bd7c494fc4645ecf3e44f5e6e819",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_nested_forwarding",
+      "root": "coverage/shading/shade_nested_forwarding.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_nested_forwarding.webp",
+      "sha256": "308a6bd32ffc3a32b1bda411d61c12ab838f477a0cab6fcd1cfc6c5e604a40b0",
+      "sourceFingerprint": "f6acfd7baa38d057546588a98b7d58e76c5783856d7548d3ef3b7d6a73462bfe",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_nodegraph_interface",
+      "root": "coverage/shading/shade_nodegraph_interface.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_nodegraph_interface.webp",
+      "sha256": "37926cd779c1cca7f675cf12e58c9013d5efcd2650035f98f5ef7e93025fe0a5",
+      "sourceFingerprint": "826f11e426d979421c3956d7ad58260c5ea1e52bd76fbe19c7906c4eda997b6b",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_primvar_fallback",
+      "root": "coverage/shading/shade_primvar_fallback.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_primvar_fallback.webp",
+      "sha256": "ad914824bf93a9b3823eb592f8a42a67bf77c0cdc65dbffa0d7aecb1d780eb4e",
+      "sourceFingerprint": "c11c5c3d82cd1e247c43a3d18f728baedca5e409be2b7a2326eb86c2e0a6e04c",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_render_contexts",
+      "root": "coverage/shading/shade_render_contexts.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_render_contexts.webp",
+      "sha256": "e334d8c6a0e1f049f5022e480a5803091515019fcc23f5b79f17dc50a990c908",
+      "sourceFingerprint": "1663a645208a1c8c56c650aa8e81577e970805eec5f56f2b488e719207d14739",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_specular_workflow",
+      "root": "coverage/shading/shade_specular_workflow.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_specular_workflow.webp",
+      "sha256": "3eb4f7af032d0be7ecfe7946cbde2e922fc18a7c0e8073d8a069abbb2d113973",
+      "sourceFingerprint": "71b155fad45f1de1902fcd50b6f93d9190e804dfe37526d56a71c1e7364b0b18",
+      "background": "light"
+    },
+    {
+      "id": "shading-shade_strong_binding",
+      "root": "coverage/shading/shade_strong_binding.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/shading-shade_strong_binding.webp",
+      "sha256": "95138ebcb60100274917c8c73f2bec7633c50f81d4d410519ee5d0d95adb5cc4",
+      "sourceFingerprint": "4024e9cbaa9cbb2a4e7d8d7da128324f52618f3228df3cc3769dea777dd9cefd",
+      "background": "light"
+    },
+    {
+      "id": "textures-exr-neon",
+      "root": "coverage/textures/exr-neon.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/textures-exr-neon.webp",
+      "sha256": "605619133a833fbd971e080f157fca93c401065346bf19074dab95f7314cfdf0",
+      "sourceFingerprint": "f9a50ef77254b92b3d567483d364009bf926384e1f7726c501cf21b15c8126cc",
+      "background": "light"
+    },
+    {
+      "id": "textures-image-formats",
+      "root": "coverage/textures/image-formats.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/textures-image-formats.webp",
+      "sha256": "42b807d683504961ad22d12ed19160ed3ce31c6586c81067df79e44f47d0b851",
+      "sourceFingerprint": "0f5c3e4040ff9ed03a290da4ef8c5fc8cb5a7dbc6480d74e844cf475c11b9890",
+      "background": "light"
+    },
+    {
+      "id": "textures-ktx2-mosaic",
+      "root": "coverage/textures/ktx2-mosaic.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/textures-ktx2-mosaic.webp",
+      "sha256": "74225315bb06c02061268e51cfcbeb1ff5ae950096d622fdb1c283805e3360eb",
+      "sourceFingerprint": "f602aa5c0a3abf522d7c7d9e5727b5312e018a23fe12b54108d4bc9b6c057d3b",
+      "background": "light"
+    },
+    {
+      "id": "draco-cubecompressedtriangles-usda",
+      "root": "draco/CubeCompressedTriangles.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/draco-cubecompressedtriangles-usda.webp",
+      "sha256": "d18b7d0d31add114232a842f8bcc362bfc34d2aa9318c56938691be5963cac9a",
+      "sourceFingerprint": "9bcd7380e9022ebf2e2ff783f86506ecb6f3efc93694917f5a95f4e6b0608073",
+      "background": "light"
+    },
+    {
+      "id": "draco-draco-mixed-overrides-usda",
+      "root": "draco/draco_mixed_overrides.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/draco-draco-mixed-overrides-usda.webp",
+      "sha256": "08892a1c17e1663a8dab7f96ab8b8ff1f600c341cf948ef5f2f1268dcfa47478",
+      "sourceFingerprint": "12ca5aedfec85b900a007f7bf31ab8d3fa9a42cbbd55ed1e56e4a12d5366394c",
+      "background": "light"
+    },
+    {
+      "id": "edge-cases-shared-material-mixed-cull-animated-usda",
+      "root": "edge-cases/shared_material_mixed_cull_animated.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/edge-cases-shared-material-mixed-cull-animated-usda.webp",
+      "sha256": "422ce7f7dd62c878b9725e96ea53a8cef5de170bd7cca511691a6561bdf16494",
+      "sourceFingerprint": "86d0c480e332039ac9c7c575df82b4151a351954f01b9c05d74c421638b5e24b",
+      "background": "light"
+    },
+    {
+      "id": "edge-cases-unmaterialed-empty-subset-usda",
+      "root": "edge-cases/unmaterialed_empty_subset.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/edge-cases-unmaterialed-empty-subset-usda.webp",
+      "sha256": "5e4e0f77f1324a9d2fc4402ca1b905b8ade0930f952c5e8608fe49c85f6332e3",
+      "sourceFingerprint": "ca79984b94518c2b6b464c65bff06273e04ba365509426789529e4351ea39378",
+      "background": "dark"
+    },
+    {
+      "id": "usd-assets-vrhead",
+      "root": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/models/behavior_robot/usd/vr_head.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-vrhead.webp",
+      "sha256": "3835b2841eff22b0ee617be29558606bfe346ec37154bc5b65f5af14b0a6f013",
+      "sourceFingerprint": "56fb2e834a4c502003eb3bd2354827251bb85c34992852cefec473e8f2bf7e4f",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-frankarq",
+      "root": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/models/franka/franka_robotiq/usd/franka_robotiq.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-frankarq.webp",
+      "sha256": "a6f9a10c2a65259c7ffe5c9cbfbb4fd239ea157772c24cc6ce2932e52abe1fde",
+      "sourceFingerprint": "fa2dfd1ae99eb4ee5c62c54d02aefab62399fa5907f000f4aa7db50efe4496d0",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-panda",
+      "root": "https://huggingface.co/datasets/behavior-1k/omnigibson-robot-assets/resolve/main/source/franka/franka_panda.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-panda.webp",
+      "sha256": "b6388334615a41f64439b7cde8f4eead3e42328859a12ed294f8707e92a9051f",
+      "sourceFingerprint": "6c7cbe652f0ff6f62d954b1fc62c5d5973afb49ce89f16682ebca36dce97b18c",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-bbq",
+      "root": "https://huggingface.co/datasets/imagine-io/PhysicalAI-Simready-Kitchen-Assets/resolve/main/Models/appliances/bbq_grill.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-bbq.webp",
+      "sha256": "e2dd54fc0434ff9c42e374912f25757589c2abf37e1d560e9e700c1c36b187d7",
+      "sourceFingerprint": "b729eb546fc768c31d8b61b83a2608231825ce2c02b164dc86083211668093c1",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-railing",
+      "root": "https://huggingface.co/datasets/imagineio/PhysicalAI-SimReady-Assets/resolve/main/assets/railings/railing_1/railling_1.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-railing.webp",
+      "sha256": "926c35313ba872d90636dde6abdfd9782d16a32fe5fe09f07a0aa8453ab06ce7",
+      "sourceFingerprint": "173780c2d3ea1b467c4d4d93b33144badab7035849721f1f75da2e9ad1e364b0",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-laptop",
+      "root": "https://huggingface.co/datasets/LGElectronics/simready-assets/resolve/ff9f5c4fdc7a368dcdfd81ce218b31f83e33735b/laptop_17z90ur/simready_usd/laptop_17z90ur.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-laptop.webp",
+      "sha256": "ff2be964f8c5eed4550b92a632d0701b549ac6623615a8ddc5e50c64eb3587a5",
+      "sourceFingerprint": "21419de23b7c29b58b1833a23c06baf372fb5ef3cacb6789332462f3aff4a817",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-piano",
+      "root": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/resolve/main/Objects/RoboDojo/Clutter/piano/00000/object.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-piano.webp",
+      "sha256": "76d839918bac127df78b650a4ba45bc894e7c3f1844edadce9517eeaaf25cb53",
+      "sourceFingerprint": "59f0ca1e01adb10161afd948bd619fad4a5b84065daa42ad50e7b10dc8a99d6a",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-watch",
+      "root": "https://huggingface.co/datasets/littleTang/IsaacLab-Arena_RoboDojo_Assets/resolve/main/Objects/RoboDojo/Rigid/watch/00000/object.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-watch.webp",
+      "sha256": "5068bbdd205252fd87d463b7d56884ba0a28dcc9fb3db89d98acaa3b90e2cfe8",
+      "sourceFingerprint": "4db72bd5ba6c027bec72cb2663436038f4b36baf5cd6860c79cc330d5e89799a",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-chair",
+      "root": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/main/chair_office_fabric_manager_a01/simready_usd/sm_chair_office_fabric_manager_a01_01.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-chair.webp",
+      "sha256": "0876cc3beb55e01e0f43ca5c44578dd289c64701a0ef13898ab38f3f8a51cdfc",
+      "sourceFingerprint": "25f63ac7cbe2e07b90168bfe84fe54e0fd5a6cfe4de21b19e4e3f63e893da69b",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-ivpole",
+      "root": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/main/IV_pole_a01/simready_usd/sm_IV_pole_a01_01.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-ivpole.webp",
+      "sha256": "c450004002590fd2fb5bce8775eb46a96a22e2491d4c209375f2eea48cec1587",
+      "sourceFingerprint": "e2c7f4eb8059e0d4340e4361f9be95cc85599f8319cd043578b9892427efa55d",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-robotiq",
+      "root": "https://huggingface.co/datasets/Robotiq-Official/simready-assets/resolve/main/Robotiq_2F_85/simready_usd/Robotiq_2F_85.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-robotiq.webp",
+      "sha256": "f2f2a1633912370733c11070f2f4cdc53422d70321411ea82b8404dddf2b0319",
+      "sourceFingerprint": "9a01e98e2b1b4a9b037b40591519001cf7a951de59922f8c85dda45709f7bdbe",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-thor",
+      "root": "https://huggingface.co/datasets/standardbots/simready-thor/resolve/main/standardbots_thor/thor/standardbots_thor.usd",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-thor.webp",
+      "sha256": "cce4142c3f88625e453f7f4d8c92ccfb5563d0a7618fab5d369bc9c74ee5955c",
+      "sourceFingerprint": "4faec7ad5b744a93c0de77d1b9226dbae158b2d8ee6cbac584ce2d88820638e8",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-mp5",
+      "root": "https://huggingface.co/val6ntin/glbgun/resolve/main/MP5_Submachine_Gun.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-mp5.webp",
+      "sha256": "09423b8a0b90d6a31639ef8a19f43a3293807e279cb271ff295714df83c6192b",
+      "sourceFingerprint": "73c8f635f731381acb567b23018d88125d223aefcbf4ab4d3322ca3b99c43aee",
+      "background": "light"
+    },
+    {
+      "id": "usd-assets-normals",
+      "root": "https://raw.githubusercontent.com/usd-wg/assets/3b75c2dad6a494897557dcca0098257bcf42a8c6/test_assets/NormalsTextureBiasAndScale/NormalsTextureBiasAndScale.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-assets-normals.webp",
+      "sha256": "cf9adf81f264855bd6173c573a291dbb4bdad43b819608fb408fefd787abce2f",
+      "sourceFingerprint": "47e4661c684c3395ea2952ae724929426cbc72117f472d2daefdd09606b6ae40",
+      "background": "light"
+    },
+    {
+      "id": "materialx-custom-nodedef-materialx-usda",
+      "root": "materialx/custom_nodedef_materialx.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-custom-nodedef-materialx-usda.webp",
+      "sha256": "08d1ae5aeecb401da8a9c69103dcb31d05eb055682ba83663db5ef0584a21771",
+      "sourceFingerprint": "364ae77078b35ee8ccd92fae66d16815cda985cb3bca533aaf118a81f1935b92",
+      "background": "light"
+    },
+    {
+      "id": "materialx-materialx-marble-usda",
+      "root": "materialx/materialx_marble.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-materialx-marble-usda.webp",
+      "sha256": "902b2a2ebd24ee73846255b5dbdc98b130e1c32b5b4f68a2903c8b60ed3c147f",
+      "sourceFingerprint": "b817df4f2abd6b9df7b9938a555b390e44ee9544c3e725e2bb084eae2d522ccf",
+      "background": "light"
+    },
+    {
+      "id": "materialx-materialx-nested-reference-usda",
+      "root": "materialx/materialx_nested_reference.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-materialx-nested-reference-usda.webp",
+      "sha256": "92511b2082e25bc212e87039afb097d815932fb4692795e38bbc30cbe05a7ce3",
+      "sourceFingerprint": "5451a919387918e64d2a785bc1481ce35b9e85304b4d02238a482a16835d9002",
+      "background": "light"
+    },
+    {
+      "id": "materialx-materialx-procedural-brick-usda",
+      "root": "materialx/materialx_procedural_brick.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-materialx-procedural-brick-usda.webp",
+      "sha256": "dde2d3d6340fd93e173eabe94d0c29a5927a10c49c8eeb45fdce54bc253f951b",
+      "sourceFingerprint": "6e72025529b66bd35bda9b2aaba75bdfaa1862423405124e360075a04bc76246",
+      "background": "light"
+    },
+    {
+      "id": "materialx-materialx-texture-noise-usda",
+      "root": "materialx/materialx_texture_noise.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-materialx-texture-noise-usda.webp",
+      "sha256": "48a65245c3a58c01c4722987eb544caafc43329ed1c32e178dd997247822eeeb",
+      "sourceFingerprint": "2898af6d28233d470b142df954897d24a635f48854e297d10b9d390415d77ed6",
+      "background": "light"
+    },
+    {
+      "id": "materialx-materialx-variant-bindings-usda",
+      "root": "materialx/materialx_variant_bindings.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-materialx-variant-bindings-usda.webp",
+      "sha256": "52b417d083b4f87d7087696eff444b3d6a070272a30b599967068d509cee77ed",
+      "sourceFingerprint": "afe0593c402fd15ca56322181383f4355747e1d42e2f410d6605e580a71f9b26",
+      "background": "light"
+    },
+    {
+      "id": "materialx-mxsimple-usda",
+      "root": "materialx/mxSimple.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-mxsimple-usda.webp",
+      "sha256": "00a3b7acae6a489e1d7b9fee60e178e941d2d94bf51098938ab5323f231e7442",
+      "sourceFingerprint": "de357414de0c6049ea8ab21659adb5e5a59c47ffe28d48fbd254783932872d25",
+      "background": "light"
+    },
+    {
+      "id": "materialx-usdshade-preview-with-mtlx-peer-usda",
+      "root": "materialx/usdshade_preview_with_mtlx_peer.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/materialx-usdshade-preview-with-mtlx-peer-usda.webp",
+      "sha256": "de304e8f9b3cdef0f46e9fb5b864d40008a44c0faae76e37be6fbd9db1698dbe",
+      "sourceFingerprint": "a80b32cc0e8fbb76e85fb2efc4696e0477e08c2d666cfc6a5f429a2df7523555",
+      "background": "light"
+    },
+    {
+      "id": "payloads-payload-root-usda",
+      "root": "payloads/payload_root.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/payloads-payload-root-usda.webp",
+      "sha256": "15e46352549e8806db4a430db82637fef902639331563f5b7cb3a1df8a2ff7f8",
+      "sourceFingerprint": "3c29a0d63afb05c42293f64e4c3990ea80d1a6e348802c1c18a061cd760940a1",
+      "background": "light"
+    },
+    {
+      "id": "primvars-facevarying-normals-matrix-usda",
+      "root": "primvars/facevarying_normals_matrix.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/primvars-facevarying-normals-matrix-usda.webp",
+      "sha256": "37f8bdc4a102a84a0fd1d246dde8101e46fb3f6863c821a5e5be12379fdefba1",
+      "sourceFingerprint": "bccf680926fe7d4c809158595badfe609805137371c7a572d74f864f032d8f22",
+      "background": "light"
+    },
+    {
+      "id": "resolver-parent-assets-models-parent-ref-root-usda",
+      "root": "resolver-parent/assets/models/parent_ref_root.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/resolver-parent-assets-models-parent-ref-root-usda.webp",
+      "sha256": "590dc0cac693d5d275d270faedaafff2ef62f39accd31b94cfe2a869973876a3",
+      "sourceFingerprint": "0f172b6b9a598406839d8ce28521842a24a37dadeb56ec50dff049ef1ebd27a7",
+      "background": "light"
+    },
+    {
+      "id": "subdivision-catmull-clark-cube-usda",
+      "root": "subdivision/catmull_clark_cube.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/subdivision-catmull-clark-cube-usda.webp",
+      "sha256": "c408490ac3d4895d93215499b24d525c9f9f2edf3fbdf586bf283c9468a24b6b",
+      "sourceFingerprint": "3f95ba65c768a9ac47b3b81b622f00339d8fd71a95e8fe4e49e4a777b2e75870",
+      "background": "light"
+    },
+    {
+      "id": "subdivision-catmull-clark-facevarying-st-usda",
+      "root": "subdivision/catmull_clark_facevarying_st.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/subdivision-catmull-clark-facevarying-st-usda.webp",
+      "sha256": "356b2b54a08e723290bcef298df42b1deead7f44b749451cdb07ee0e6a2e2b8d",
+      "sourceFingerprint": "78ce78af54e540e8f684a7762bc72696933e657be01e2a54c7d73e6c15babcd2",
+      "background": "light"
+    },
+    {
+      "id": "subdivision-catmull-clark-left-handed-cube-usda",
+      "root": "subdivision/catmull_clark_left_handed_cube.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/subdivision-catmull-clark-left-handed-cube-usda.webp",
+      "sha256": "715dfee038dcabdaa4cc5880ae6432c5d6dc8239c5ec5eea53cdfcee2c2f6409",
+      "sourceFingerprint": "987f591f95319c40b4196810df3b30de8a927f85ab463f38434986515c92b3d6",
+      "background": "light"
+    },
+    {
+      "id": "subdivision-catmull-clark-varying-color-usda",
+      "root": "subdivision/catmull_clark_varying_color.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/subdivision-catmull-clark-varying-color-usda.webp",
+      "sha256": "40afcb2d63f46d42a89e1115d61db1b162e7a38a2c4aba0b79cfa5ed98910ecb",
+      "sourceFingerprint": "cd862f377458520bfe7bc699bca5fb25823da28a673803ef3fa63ce037746c75",
+      "background": "light"
+    },
+    {
+      "id": "subdivision-loop-non-triangle-fallback-usda",
+      "root": "subdivision/loop_non_triangle_fallback.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/subdivision-loop-non-triangle-fallback-usda.webp",
+      "sha256": "cdeaca0c537a098fb8dfa25ecabed3b7955e69d1aa8aa1842902aad4e85b3ebb",
+      "sourceFingerprint": "8f33b09b99a9a8ec8120c7bbc4db5d9891d2de755bcbdad2ea032388461f58f2",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-camera-light-usda",
+      "root": "usd-concepts/camera_light.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-camera-light-usda.webp",
+      "sha256": "340d974b7238699add6462700131f1a64d4dd72cc64f29c9f9a7f8c976c9584c",
+      "sourceFingerprint": "60e033c3b7bfa7ad1e9e4a9e684e2e42230b8b43e1ab8dc3f342c5d05d320c21",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-collection-binding-usda",
+      "root": "usd-concepts/collection_binding.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-collection-binding-usda.webp",
+      "sha256": "1398979d3f624e9e870ade290c26c999553cb44e87c2fb1c877e702ccd164993",
+      "sourceFingerprint": "eddb6379750f7db36df02485d6e446781c9d4f97f04426f8e0fbff4ccc96c522",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-custom-geomprops-usdshade-usda",
+      "root": "usd-concepts/custom_geomprops_usdshade.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-custom-geomprops-usdshade-usda.webp",
+      "sha256": "33647b09714bb9ce2680f3459726d20be5f01a7d85a7a3f7bf59ab1bce90c9fa",
+      "sourceFingerprint": "c0e3228267fc29ea72e5cdd288d25727568f347cadcab14e37f429e512de0df4",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-custom-vertex-geomprops-usda",
+      "root": "usd-concepts/custom_vertex_geomprops.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-custom-vertex-geomprops-usda.webp",
+      "sha256": "044aa5928e445fce59b88aa81366f7bf6cfd1cfa445ab1abf80156ca770365fd",
+      "sourceFingerprint": "ace38a4afe23e04644eb9f2f5ca63c60a04cf40df38edd7810103370a58d4fd4",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-inherits-specializes-usda",
+      "root": "usd-concepts/inherits_specializes.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-inherits-specializes-usda.webp",
+      "sha256": "94c3a1ca23490208069f3ff3ecd200dfe4c912fd969b8b14745e876f8fe332e0",
+      "sourceFingerprint": "77d33dcd5f9c66bb247aad05035fe702eeee3eb85a3478363692459fbe1980f2",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-native-instances-usda",
+      "root": "usd-concepts/native_instances.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-native-instances-usda.webp",
+      "sha256": "f0df09309cc5f7411146b069fca4682782033ab34e2f7ac2c72b508cc44c34f1",
+      "sourceFingerprint": "f1001dca9ccec430a5ca6f8fc1204c6760d0bb443fb9c71e79c96e34a478f56e",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-point-instancer-usda",
+      "root": "usd-concepts/point_instancer.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-point-instancer-usda.webp",
+      "sha256": "147b38497396ccd17eba0a66590c85b99eb53c159193e2aa7f657f84ebff9608",
+      "sourceFingerprint": "5d1ef877e1a1e555cbb0cc822daec0d1cbf70f0143e425f0a39cb1843774c5ac",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-preview-separate-metal-rough-usda",
+      "root": "usd-concepts/preview_separate_metal_rough.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-preview-separate-metal-rough-usda.webp",
+      "sha256": "f302466d837504623fa34518153fe586aa1d75820cd20a08f8964ced9a567e82",
+      "sourceFingerprint": "0e3fd3742feb5f5e49aef5b49512c4dc5ad00c91b1f8427ca6b9f705c9a2360d",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-purpose-render-intent-usda",
+      "root": "usd-concepts/purpose_render_intent.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-purpose-render-intent-usda.webp",
+      "sha256": "cf32a487848e564e395e2e331525461680cc828785c2c95c1dfa2c335690b825",
+      "sourceFingerprint": "456784f451e2501e8563dc3203abc7e022473efc140d03c628cd3f69693be639",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-reference-override-usda",
+      "root": "usd-concepts/reference_override.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-reference-override-usda.webp",
+      "sha256": "5a8956e94c9e983c32e42aa64587141411b2742e55b63ce62feb279d9c45def6",
+      "sourceFingerprint": "918b88b37a5e85966373772fd0deb62daa084327e3d203bb41ae72a9027b6dc6",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-referenced-geomprop-overrides-usda",
+      "root": "usd-concepts/referenced_geomprop_overrides.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-referenced-geomprop-overrides-usda.webp",
+      "sha256": "6079e1d5953030d6b073c0f56842268f22cbe430acad3e6fbb8faa7e5bc46663",
+      "sourceFingerprint": "1ddf1f002dfa935916286ac0740ef6127c87fa76896d96e76ab340ec4bb339a5",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-time-samples-usda",
+      "root": "usd-concepts/time_samples.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-time-samples-usda.webp",
+      "sha256": "80301ef9e883b24a46cdba60e6f6851d0075c063967c6c227592df3193ba258d",
+      "sourceFingerprint": "c6a8ab9eb66dbbf911e5f19e57b4c08c02429a4f1733a16920b23efbafeff51b",
+      "background": "light"
+    },
+    {
+      "id": "usd-concepts-visibility-purpose-usda",
+      "root": "usd-concepts/visibility_purpose.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usd-concepts-visibility-purpose-usda.webp",
+      "sha256": "be9b848521a182bfacfeb75f3143f801310effd836d5a0ef2325f818f84bb5bb",
+      "sourceFingerprint": "9c135147d509a9181ba6c48b5c3e1ce9325fa803574afe012445be23428c16c0",
+      "background": "light"
+    },
+    {
+      "id": "usdz-nested-material-usdz",
+      "root": "usdz-nested-material.usdz",
+      "status": "rendered",
+      "image": "thumbnails/beauty/usdz-nested-material-usdz.webp",
+      "sha256": "afd88c09cfd1b6ad6188ce73125c61d4391ec5f5cd557863dbbbdbb3d68a8aff",
+      "sourceFingerprint": "d171f3b142193aba96bcc8921f949e4f4cc00bf15b35fb712302931b9c54a9de",
+      "background": "light"
+    },
+    {
+      "id": "variants-material-binding-overrides-usda",
+      "root": "variants/material_binding_overrides.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/variants-material-binding-overrides-usda.webp",
+      "sha256": "8299af634f3a326878e81ee33e313acb915e389216610c3605dfd5f0d2dd7f7e",
+      "sourceFingerprint": "c567ad3242ff37eab4e9100a19143fcd7ae62b546c670988e95572d09e6fa432",
+      "background": "light"
+    },
+    {
+      "id": "variants-nested-variants-usda",
+      "root": "variants/nested_variants.usda",
+      "status": "rendered",
+      "image": "thumbnails/beauty/variants-nested-variants-usda.webp",
+      "sha256": "6bfc8e3e88c423306b79424c198006178ac72ed326cd771c9efc50a00818836b",
+      "sourceFingerprint": "f8e09738a449fee5a15a88d170d615ede41a211267c6a23021a1c876dec4a369",
+      "background": "light"
+    }
+  ]
+}

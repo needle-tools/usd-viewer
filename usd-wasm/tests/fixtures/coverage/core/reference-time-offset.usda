@@ -1,7 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
+    endTimeCode = 97
     framesPerSecond = 24
     metersPerUnit = 1
     startTimeCode = 1
@@ -11,9 +11,11 @@
 def Xform "World"
 {
     def Xform "Model" (
-        prepend references = @./reference-time-offset-asset.usda@</Asset> (offset = 10; scale = 2)
+        prepend references = @./reference-time-offset-asset.usda@</Asset> (offset = -1; scale = 2)
     )
     {
+        double3 xformOp:translate = (1.75, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Cube "Plinth"
@@ -32,6 +34,14 @@ def Xform "World"
         float3 xformOp:scale = (5.8, 0.05, 2.5)
         double3 xformOp:translate = (0, -0.73, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "Reference" (
+        prepend references = @./reference-time-offset-asset.usda@</Asset>
+    )
+    {
+        double3 xformOp:translate = (-1.75, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 }
 

@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Defer hidden mesh geometry and primvar work until shown, applying edits and animation from the latest authored state. Invisible collision meshes remain available through native physics extraction without duplicating their data in render geometry.
+- Repair collapsed analytic poles when uniform smooth normals are degenerate, and reject near-singular adaptive patch derivatives before generating normals. Cone tips retain finite outward normals at every detail level.
 - Preserve reflections from solid-color UsdLux dome lights in WebGL by supplying an environment map large enough for PMREM filtering.
 - Preserve alpha-test thresholds when creating or refreshing node-material copies for mixed single/double-sided USD meshes. MDL and Preview Surface cutouts now remain clipped in Three WebGPU as well as WebGL.
 - Detach retired material textures from meshes during USD variant resync before releasing their GPU resources. Queue surviving assignments for the replacement material instead of rendering freed textures while it loads.

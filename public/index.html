@@ -233,6 +233,10 @@
       </div>
       <footer class="usd-examples-footer">
         <output id="examples-count" aria-live="polite">0 examples</output>
+        <div class="usd-preview-renderer" role="group" aria-label="Preview renderer" hidden>
+          <button type="button" data-preview-renderer="beauty" aria-pressed="true">Beauty</button>
+          <button type="button" data-preview-renderer="storm" aria-pressed="false">usdview</button>
+        </div>
         <label class="usd-examples-size">Size<input type="range" id="examples-preview-size" aria-label="Preview size" min="88" max="216" step="8" value="128" /></label>
         <button type="button" id="examples-details" aria-pressed="true" title="Show example details">Details</button>
       </footer>

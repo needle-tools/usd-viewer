@@ -100,7 +100,7 @@ def render(task):
         camera_path = '/Root' + camera_path if authored_camera else 'MainCamera'
     helper.setup_camera(stage, source)
     if not authored_camera:
-        bounds = particle_bounds if particle_bounds is not None else UsdGeom.BBoxCache(Usd.TimeCode.Default(), ['default', 'render', 'proxy']).ComputeWorldBound(stage.GetPseudoRoot()).ComputeAlignedRange()
+        bounds = particle_bounds if particle_bounds is not None else UsdGeom.BBoxCache(Usd.TimeCode(frame) if frame is not None else Usd.TimeCode.Default(), ['default', 'render', 'proxy']).ComputeWorldBound(stage.GetPseudoRoot()).ComputeAlignedRange()
         center = (bounds.GetMin() + bounds.GetMax()) * .5
         radius = max((bounds.GetMax() - bounds.GetMin()).GetLength() * .5, .01)
         camera_stage = Usd.Stage.Open('camera.usda')

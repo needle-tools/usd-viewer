@@ -411,3 +411,7 @@ body.usd-product ::-webkit-scrollbar-thumb { background: var(--usd-scrollbar-col
 .usd-code-link:hover { color:var(--text-link); text-decoration-color:currentColor; }
 .usd-code-definition[data-target=true] { background:var(--surface-panel-muted); }
 .usd-workbench .usd-code-history { display:inline-flex; align-items:center; justify-content:center; width:var(--usd-control-height); height:var(--usd-control-height); border:0; padding:0; color:var(--text-secondary); background:transparent; }
+
+.usd-preview-renderer { display:inline-flex; flex:none; border:1px solid var(--border-subtle); border-radius:var(--usd-radius-control); padding:var(--usd-space-1); gap:var(--usd-space-1); }
+.usd-examples-footer .usd-preview-renderer button { border:0; padding:var(--usd-space-1) var(--usd-space-small); border-radius:var(--usd-radius-small); }
+.usd-examples-footer:has(.usd-preview-renderer:not([hidden])) { flex-wrap:wrap; }

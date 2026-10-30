@@ -5,6 +5,16 @@ export function mountExamplesBrowser(root) {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORAGE)) || {}; } catch {}
   const size = root.querySelector('#examples-preview-size');
+  const previewControl=root.querySelector('.usd-preview-renderer');
+  let previewRenderer=saved.previewRenderer==='storm'?'storm':'beauty';
+  const beautyPreviews=new Map();let disposed=false;
+  const previewKey=value=>{
+    if(!/^https?:\/\//.test(value))return decodeURIComponent(value.replace(/^\/?test-fixtures\//,'').replace(/^\//,''));
+    try{return new URL(value).href;}catch{return value;}
+  };
+  fetch('/test-fixtures/thumbnails/beauty/index.json').then(response=>response.ok?response.json():null).then(index=>{
+    if(disposed)return;for(const entry of index?.results||[])if(entry.status==='rendered'&&entry.image)beautyPreviews.set(previewKey(entry.root),'/test-fixtures/'+entry.image);previewSource();
+  }).catch(()=>{});
   const details = root.querySelector('#examples-details');
   const search = root.querySelector('#examples-search');
   const grid = root.querySelector('#gallery-grid');
@@ -20,7 +30,7 @@ export function mountExamplesBrowser(root) {
   search.value = typeof saved.search === 'string' ? saved.search : '';
 
   function save() {
-    try { localStorage.setItem(STORAGE, JSON.stringify({ size: Number(size.value), details: showDetails, search: search.value, split: {heightRatio: folderRatio, width: folderWidth} })); } catch {}
+    try { localStorage.setItem(STORAGE, JSON.stringify({ size: Number(size.value), previewRenderer, details: showDetails, search: search.value, split: {heightRatio: folderRatio, width: folderWidth} })); } catch {}
   }
   function measureSplit() {
     const view = root.ownerDocument.defaultView;
@@ -89,6 +99,19 @@ export function mountExamplesBrowser(root) {
   divider.addEventListener('keydown', keyboardSplit);
   const splitObserver = new ResizeObserver(scheduleSplit);
   splitObserver.observe(content);
+  function previewSource(){
+    let available=false,hasBeauty=false,hasStorm=false;
+    for(const image of grid.querySelectorAll('img[data-preview-key]')){
+      const beauty=beautyPreviews.get(previewKey(image.dataset.previewKey));if(beauty)image.dataset.beauty=beauty;
+      if(!image.dataset.beauty&&!image.dataset.storm)continue;
+      available=true;hasBeauty ||= !!image.dataset.beauty;hasStorm ||= !!image.dataset.storm;
+      if(!image.dataset.previewFallback){image.dataset.previewFallback='true';image.addEventListener('error',()=>{if(image.getAttribute('src')===image.dataset.beauty&&image.dataset.storm){image.dataset.beautyFailed=image.dataset.beauty;image.src=image.dataset.storm;}});}
+      const source=(image.dataset.beautyFailed===image.dataset.beauty&&previewRenderer==='beauty'?image.dataset.storm:image.dataset[previewRenderer])||image.dataset.storm||image.dataset.beauty;
+      if(source&&image.getAttribute('src')!==source)image.src=source;
+    }
+    if(previewControl){previewControl.hidden=!available;for(const button of previewControl.children){button.disabled=button.dataset.previewRenderer==='beauty'?!hasBeauty:!hasStorm;button.setAttribute('aria-pressed',String(button.dataset.previewRenderer===previewRenderer));}}
+  }
+  if(previewControl)previewControl.onclick=event=>{const button=event.target.closest('[data-preview-renderer]');if(!button)return;previewRenderer=button.dataset.previewRenderer;previewSource();save();};
   function appearance() {
     root.style.setProperty('--usd-gallery-card-width', `${size.value}px`);
     root.dataset.details = String(showDetails);
@@ -117,11 +140,11 @@ export function mountExamplesBrowser(root) {
   size.oninput = changeAppearance;
   details.onclick = () => { showDetails = !showDetails; changeAppearance(); };
   search.oninput = () => { filter(); grid.scrollTop = 0; save(); };
-  const observer = new MutationObserver(filter);
+  const observer = new MutationObserver(()=>{filter();previewSource();});
   observer.observe(grid, { childList: true });
-  appearance(); filter(); scheduleSplit();
+  appearance(); filter(); previewSource(); scheduleSplit();
   return { dispose() {
-    observer.disconnect(); splitObserver.disconnect();
+    disposed=true;observer.disconnect(); splitObserver.disconnect();
     if (resizeFrame) frameWindow.cancelAnimationFrame(resizeFrame);
     finishDrag();
     divider.removeEventListener('pointerdown', startDrag); divider.removeEventListener('pointermove', moveDrag);

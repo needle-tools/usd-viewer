@@ -1,9 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -89,7 +87,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
         double size = 1
         float3 xformOp:scale = (5, 0.35, 3.3)
-        double3 xformOp:translate = (0, -0.24, 0)
+        double3 xformOp:translate = (0, -0.175, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -110,6 +108,8 @@ def Xform "World"
             interpolation = "faceVarying"
         )
         uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (0, 0, -0.5)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Mesh "Orbital1" (
@@ -130,6 +130,8 @@ def Xform "World"
             interpolation = "faceVarying"
         )
         uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Mesh "Orbital2" (
@@ -149,6 +151,8 @@ def Xform "World"
             interpolation = "faceVarying"
         )
         uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (0, 0, 0.5)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Mesh "Centerpiece" (
@@ -162,8 +166,9 @@ def Xform "World"
         point3f[] points = [(0, 2.4, 0), (-0.8, 1.05, -0.6), (0.8, 1.05, -0.6), (0.8, 1.05, 0.6), (-0.8, 1.05, 0.6), (0, 0.1, 0)]
         color3f[] primvars:displayColor = [(0.2, 0.55, 0.9)]
         uniform token subdivisionScheme = "none"
-        float3 xformOp:scale = (0.45, 0.7, 0.45)
-        uniform token[] xformOpOrder = ["xformOp:scale"]
+        float3 xformOp:scale = (0.28, 0.36, 0.28)
+        double3 xformOp:translate = (0, 0.42, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
     def Xform "Lights"

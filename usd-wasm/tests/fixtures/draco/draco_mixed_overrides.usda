@@ -46,10 +46,17 @@ def Xform "World"
 
     def DistantLight "Key"
     {
-        float inputs:intensity = 420
+        bool inputs:normalize = true
+        float inputs:intensity = 3
         float inputs:angle = 0.4
         float3 xformOp:rotateXYZ = (-45, 0, 35)
         uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def DomeLight "Fill"
+    {
+        float inputs:intensity = 0.35
+        color3f inputs:color = (0.9, 0.94, 1)
     }
 
     def Camera "Camera"

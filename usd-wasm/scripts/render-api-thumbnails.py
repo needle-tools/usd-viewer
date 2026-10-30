@@ -21,6 +21,8 @@ spec.loader.exec_module(capture)
 def render(entry):
     entry = {**entry, 'thumbnailComplexity': 'high'}
     stage = Usd.Stage.Open(entry['root'])
+    if stage.GetEndTimeCode() > stage.GetStartTimeCode() and any(attribute.GetNumTimeSamples() > 1 for prim in stage.Traverse() for attribute in prim.GetAttributes()):
+        entry['thumbnailFrame'] = round(stage.GetStartTimeCode() + (stage.GetEndTimeCode() - stage.GetStartTimeCode()) * .25)
     stage, particle_records = particle_preview(stage, Path(entry['root']).parent / 'native-particle-preview.usda')
     if particle_records:
         entry['root'] = stage.GetRootLayer().identifier

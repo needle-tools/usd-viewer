@@ -13,7 +13,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-external-reference.png",
-      "sha256": "6076866612bbbc43587a50b9dd1274f78f176cfe7514d83e73a40cfd5def7eab"
+      "sha256": "1c01367a182d0bec3553f5b7df3eab9a497eda8da7c466eeeb585792ceea0703"
     },
     {
       "id": "core-payload-loaded",
@@ -29,7 +29,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-reference-time-offset.png",
-      "sha256": "17e9af8c9bc8097c4b5f5dab6a60df1f41db9ef6fd52874d849fdb28476d6e24"
+      "sha256": "e76e2a236503cff590af1fb17d8b0245166fc35db9f8b153d90b0668819c87e0"
     },
     {
       "id": "core-sublayer-offset",
@@ -37,7 +37,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-sublayer-offset.png",
-      "sha256": "ea48374c9434c25e751d995e06eeb85264b5d23cbbbaee293979458d090b7028"
+      "sha256": "bd7230c95ba0b198a0723e7582ad03f8b9a0f0bb4e307dff8d5653887fb05455"
     },
     {
       "id": "core-variant-selection",
@@ -53,7 +53,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-class-inherits.png",
-      "sha256": "adced5d1201842248fd9f5c61ffcea190283d4e45857f1768de122cd68f4a465"
+      "sha256": "92b194847be54ed22e288bf2508d8a49de1b22bc4b0ecf77166ad82135330de6"
     },
     {
       "id": "core-class-specializes",
@@ -61,7 +61,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-class-specializes.png",
-      "sha256": "1747481b5964c3e689f84922a4a34b91d090e1a8826253a5e7d918e065caf2e1"
+      "sha256": "e45d632aceb5d342cb38e2aeb2884eb4287529d7f3c0f3643f4147944dfd7eef"
     },
     {
       "id": "core-internal-reference",
@@ -69,7 +69,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-internal-reference.png",
-      "sha256": "836c24375b7bd36994c210bfef080dde97a1f2e71b193274cbc186e2b56aaa7c"
+      "sha256": "0c562c0c4bed933050f12c66af0ef7efefe263cb2da2a5a88ba5b85b1a4a1a84"
     },
     {
       "id": "core-reference-listop",
@@ -77,7 +77,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-reference-listop.png",
-      "sha256": "e663f2fc22a541bb48412966feeece35a8517307d9fbbb559d9575349446c21b"
+      "sha256": "56200f296f33e30a4abf72b4e8deec78fcc8e5adf51d0dfd044a0005cede0a26"
     },
     {
       "id": "core-native-instances",
@@ -93,7 +93,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-value-clip.png",
-      "sha256": "17e9af8c9bc8097c4b5f5dab6a60df1f41db9ef6fd52874d849fdb28476d6e24"
+      "sha256": "56200f296f33e30a4abf72b4e8deec78fcc8e5adf51d0dfd044a0005cede0a26"
     },
     {
       "id": "core-stronger-override",
@@ -101,7 +101,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-stronger-override.png",
-      "sha256": "3bd4d122864af3cbb9ac5725738ebb347f84793109b13db6820c376132f31795"
+      "sha256": "089a94b9f41574b01cf6e732d466a8a58d4e18382f0e2c433058213cd46c487b"
     },
     {
       "id": "core-quad-mesh",
@@ -141,7 +141,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-subdivision-catmullclark.png",
-      "sha256": "06893dd08e745f49d91881203bb2165a5f857d66d287173b894012e82099f751"
+      "sha256": "a1177099e4fc2d552cd4a06fec545dc7911ea69ef15f03c90485c724df2aef18"
     },
     {
       "id": "core-subdivision-bilinear",
@@ -149,7 +149,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-subdivision-bilinear.png",
-      "sha256": "71e7b18a9ecfbbaadec45831c30afa45b949276812c13f747ab8882c3233c00b"
+      "sha256": "3af493f62f8d129fb8ec39d36a093e0c4861c8e136491618908a8d73b1183be2"
     },
     {
       "id": "core-subdivision-loop",
@@ -157,14 +157,15 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-subdivision-loop.png",
-      "sha256": "99e5288a42301c117c2b042252e229565e49558e18e9b331c9a07de41e3a98fd"
+      "sha256": "d9689255f6175a0ba99673011f56106e94ff6c8bf16a1c67c3f6c4ccdcfa3a44"
     },
     {
       "id": "core-analytic-primitives",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-analytic-primitives.png",
-      "sha256": "85752c6bdae889e0ad9a1c1d6d5e533f17a7a1bc373bdf0b4fe56c098bcc5657"
+      "sha256": "bcc775546ec764b00090e8a06f22f99ad4abb3f0153b60998ffcb7e175eeb19a"
     },
     {
       "id": "core-bezier-curves",
@@ -172,18 +173,20 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-bezier-curves.png",
-      "sha256": "d3075728c13b8d788dd8a448ea3bc73a592f658feb1a905c47c4aa4b2370d7c9"
+      "sha256": "1b29d426cb98d53dd3452697c5a242ed249bcdc27ae14ad956cbcac6a6866807"
     },
     {
       "id": "core-points-widths",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-points-widths.png",
-      "sha256": "11c38d943458636e5536da6e1d5f980a1f8ce32e15bda718a3a92722ff9dd84e"
+      "sha256": "4641aa8e48d740098b1fdf5d797b575002a38f86d6592dabb599278551d903a9"
     },
     {
       "id": "core-mesh-orientation",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-mesh-orientation.png",
       "sha256": "35b412d9928d00ac58ee40865cf8455696b1e1a77723cecd2141b7150a567c88"
@@ -191,13 +194,15 @@
     {
       "id": "core-shared-vertex-pyramid",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-shared-vertex-pyramid.png",
-      "sha256": "8379e2ec1b5984f77275d90d4f2947955860db0c10f8d9a0560b8aa49c5d3050"
+      "sha256": "85c54a2e3e8639ff7930c7b3deb0cefadc5de28dcb7419ae3978f5feff7e897d"
     },
     {
       "id": "core-color-constant",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-color-constant.png",
       "sha256": "690232e5361ee6e482d5185392436558fd03e77c0f5b0f1523449f85d407cf36"
@@ -205,6 +210,7 @@
     {
       "id": "core-color-uniform",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-color-uniform.png",
       "sha256": "17dd6bc5692a74f5d479c0734aae01765f7dadf91fc536187423f11937e6fadb"
@@ -212,6 +218,7 @@
     {
       "id": "core-color-vertex",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-color-vertex.png",
       "sha256": "bb60b4323bc2143811c316b63340722f830131a7f187a1f97d64642f8bfd608e"
@@ -219,6 +226,7 @@
     {
       "id": "core-color-varying",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-color-varying.png",
       "sha256": "bb60b4323bc2143811c316b63340722f830131a7f187a1f97d64642f8bfd608e"
@@ -226,6 +234,7 @@
     {
       "id": "core-color-facevarying",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-color-facevarying.png",
       "sha256": "4da275e857b926871f036a9d8e05da42184551a4a0dde39932d468494d50193f"
@@ -233,6 +242,7 @@
     {
       "id": "core-indexed-face-colors",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-indexed-face-colors.png",
       "sha256": "fe45518a6879aebbe599ddf8c5162e1cf47d8d3475815307779b2077be7693c4"
@@ -240,6 +250,7 @@
     {
       "id": "core-indexed-uv-seam",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-indexed-uv-seam.png",
       "sha256": "60da3505cc6c3e078ae833553516a508f7d70f7dc54aa82d0fbd4ce002c0a2d2"
@@ -250,7 +261,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-translation.png",
-      "sha256": "b3436a198ad9814797e7584d3a9e0ac6a7eb3ff0e7aa2764e2c7060dd00b29b3"
+      "sha256": "b96236ba85b560bfd45f84d8f3fd414381d213addcc5bd572b7a6bb83ddbed3a"
     },
     {
       "id": "core-animated-rotation",
@@ -258,7 +269,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-rotation.png",
-      "sha256": "de41e341fa3a291d28df0e00dbe27baee712a1c17c1e2363765e8786b0516056"
+      "sha256": "0726aa19a2d9b7c47d10be65309ab0d421de0b509bd11d8c2eadce57162a7e3a"
     },
     {
       "id": "core-animated-scale",
@@ -266,7 +277,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-scale.png",
-      "sha256": "ffeab58a7e97bdc2d3e10f6c8528910bbb3a3f7368cf5e19e9ca2cb937f50150"
+      "sha256": "ddf537653c0016a49eaed84c54e8eeaaa0801c3fe28bf504acc38370b2cd33a9"
     },
     {
       "id": "core-animated-points",
@@ -274,7 +285,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-points.png",
-      "sha256": "397e4c46cad586be11abb3412f6e9dc2b2b0de5ba8e22c34dcd074502b34384c"
+      "sha256": "02fd718b47f9a62bd422f7739809ebe0c8676a6bdfa27e9ea9991e55d399ad86"
     },
     {
       "id": "core-animated-visibility",
@@ -282,7 +293,7 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-visibility.png",
-      "sha256": "4b16835066feeabb7243b6dbb6e3abdd9a83f93260fe02a245a298a5e302a6a0"
+      "sha256": "dfe7896254ba5e7916981e4fa3c98297e2b2afc5d269c047e3737e1515d98723"
     },
     {
       "id": "core-animated-color",
@@ -290,11 +301,12 @@
       "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-animated-color.png",
-      "sha256": "ea8afaadf5494bcbc3df7f7e987758e318f71abff3a8cab5d6119f96b50d0858"
+      "sha256": "548b58f89f05a1b7f5f5309b36936ecb06538771aacade69f367427a48774872"
     },
     {
       "id": "core-point-instancer",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-point-instancer.png",
       "sha256": "4f4437779d3e99bfda0a8e23e7b123446b583ba515ca77d49e97740ab480d1bf"
@@ -302,6 +314,7 @@
     {
       "id": "core-imageable-purposes",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-imageable-purposes.png",
       "sha256": "cbf0b0e10451677543463d26af0a6940cc921879b437d4b2bdaf88edcb7d4556"
@@ -309,6 +322,7 @@
     {
       "id": "core-nested-transforms",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-nested-transforms.png",
       "sha256": "889de2eab55d2264799ef6c022552d6d6bdfa46c7e801523579e43fb5bf3a00c"
@@ -316,6 +330,7 @@
     {
       "id": "core-reset-transform",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-reset-transform.png",
       "sha256": "f8fcc244e08f80d5cae5ac0263f3dfd20777b74915cdcdd78b3f9c2464b5162a"
@@ -326,7 +341,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/core-perspective-camera.png",
-      "sha256": "e5d3e2cedd06b2a913ffb650aab7739bdad210ab284142ba0633cff319c0470a"
+      "sha256": "cde3cbaf395ea06ba98f8172a0f231d70bdf93ad7e6a296f7462cf316eec4b57"
     },
     {
       "id": "core-orthographic-camera",
@@ -334,7 +349,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/core-orthographic-camera.png",
-      "sha256": "f85c9f0c29d32e6eefdb5c231f6fc7d151c71f2dde1029655026780710feb5c5"
+      "sha256": "5da22336edef6ecd2b1286fd5e1a130dc0f98a129b8efcbad532047d4aeee2af"
     },
     {
       "id": "core-sphere-light",
@@ -342,11 +357,12 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/core-sphere-light.png",
-      "sha256": "6557b9cce72c4169761fb531d2bbfabfae42378971a1b92ebba1ef9bf897d3f9"
+      "sha256": "14f1c0eebceee3254e31ba15c750144a41fdd59c594e42313ecfb5a546192bc0"
     },
     {
       "id": "core-model-extents",
       "renderer": "Storm",
+      "camera": "MainCamera",
       "capture": "surface",
       "image": "thumbnails/core-model-extents.png",
       "sha256": "f052ebd3076bb3d9ecedb99932a6f851a0a8c6e202a374af7c0fcbd7d8cc6e15"
@@ -940,7 +956,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-studio-variants.png",
-      "sha256": "964dae9f56c0c5115bd079a45727667436037fb1b9bfd9099e5e7ba707cda711"
+      "sha256": "e497a8ad9cf60599de3205536f0750e80623fdab5f6ebef65dbb6ba0a9dd3475"
     },
     {
       "id": "lighting-mdl-hdr-variants",
@@ -948,7 +964,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-hdr-variants.png",
-      "sha256": "3a9eea918781ce2781fb14db320bf1b51fce514102f90c9cf2f57d717e74fbeb"
+      "sha256": "740d4959e68ab8da0bd1f1e8bb2432ab453b14a5b33ab637e91139acd059fb2e"
     },
     {
       "id": "lighting-mdl-area-softboxes",
@@ -956,7 +972,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-area-softboxes.png",
-      "sha256": "8a9ebd0c78f6f47fd7fe9a154b4ecfe65b401fbbe9aeb4d0f42a3ddc33218bbd"
+      "sha256": "1842e13ce4cc8d652b5445d088c4b490e9d0d91425a3c3ea83a4a42bdd369c39"
     },
     {
       "id": "lighting-mdl-colored-spheres",
@@ -964,7 +980,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-colored-spheres.png",
-      "sha256": "3c815c5f53a502c1a7f1482aa75af03dde65918cd1a163af5e1878f813cdc551"
+      "sha256": "07c658947ebb4af5b46bd404f73e9333f5126bec7e786cca2ce099bdfba0b6d9"
     },
     {
       "id": "lighting-mdl-shaped-spot",
@@ -972,7 +988,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-shaped-spot.png",
-      "sha256": "1fa978e2eb057b332990ab5be8009cc26a4ede65f09d84f683213738066c21df"
+      "sha256": "84c39fd9f6dcae4f82eef83baa9e5c468f6ba32b5fa539724c4047a3efc76873"
     },
     {
       "id": "lighting-mdl-distant-sun",
@@ -980,7 +996,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-distant-sun.png",
-      "sha256": "4ee3a471f11ad2ac2bededb4d107bd5d3d769241eaa1e1d2e55e29a8abdb6273"
+      "sha256": "7a0f14372aaa32d387ae16b144f199f108edfda4489059334cd696e2395344fd"
     },
     {
       "id": "lighting-mdl-animated-light",
@@ -988,7 +1004,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-animated-light.png",
-      "sha256": "cfe6f7dfb7ff338ec0597791b1dfb7200d37b81f05dfeb348a62a406c31311f5"
+      "sha256": "daa11115e85d92c25cb573241ca5ad58aa02a8023f4ad0732883395893f6fec7"
     },
     {
       "id": "lighting-mdl-mdl-metal",
@@ -996,7 +1012,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-metal.png",
-      "sha256": "bdc007a9f59c5d7793e25282fc50ad3d6dbd47653afb19c5899835601c4e912f"
+      "sha256": "eadde3dba84fba2e044f36fe208a883a69fb3e5d37d16ffb80073a210cfa1529"
     },
     {
       "id": "lighting-mdl-mdl-clearcoat",
@@ -1004,7 +1020,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-clearcoat.png",
-      "sha256": "b10a431e764459d133a2eeb8d06ad3a3a7026b4138441773494b357611ae4ad2"
+      "sha256": "c8da7e3ece70aa608e89d9b850318d8a38790b92d0eebe4121739f4f1eb00b9d"
     },
     {
       "id": "lighting-mdl-mdl-color-texture",
@@ -1012,7 +1028,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-color-texture.png",
-      "sha256": "0267056d09d9bc94c77e3794cd177a345164154e3d8d7f002103bbec7d18f7df"
+      "sha256": "caa0fff3b8c4243e97138f4f0165212c80d219c57b02606ef03a88daee9df977"
     },
     {
       "id": "lighting-mdl-mdl-normal-texture",
@@ -1020,79 +1036,79 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-normal-texture.png",
-      "sha256": "dc2b97fdd840bf3d08144eb4cb052765b118c7ef0e9732734c45e22ce7532b45"
+      "sha256": "5799b24b0c53d00fa47864594ac7a2d7c7a90afdc6ccf71d378d07720f8692aa"
     },
     {
       "id": "materialx-ember-torus",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-ember-torus.png",
-      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+      "sha256": "91ea35724108da533fd0edd95f778838ce1082979ddb02798f23de7dadacc98e"
     },
     {
       "id": "materialx-jade-plume",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-jade-plume.png",
-      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+      "sha256": "91ea35724108da533fd0edd95f778838ce1082979ddb02798f23de7dadacc98e"
     },
     {
       "id": "materialx-violet-lattice",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-violet-lattice.png",
-      "sha256": "9a12da684e0143995e9d25ec99078960e185db20dd51ba98ba634020cfa7a245"
+      "sha256": "91ea35724108da533fd0edd95f778838ce1082979ddb02798f23de7dadacc98e"
     },
     {
       "id": "materialx-nested",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-nested.png",
-      "sha256": "9bfd77641a67b83a5db8d267b8aefdc52a947aa3361facb7fb869405b81f2c91"
+      "sha256": "5344d54c8687dccfde096add233c3e12f97ededd10c5c06ba11e830ae95aa6da"
     },
     {
       "id": "materialx-multi-output-uv",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-multi-output-uv.png",
-      "sha256": "93dd294103674ec1fe04011ed0059bbff28b6e64f90ca0587b94c817f6c12a4e"
+      "sha256": "0b19da5f3e199fdc1b0f762357eca54afadce87630c892cd38dc79910beddc49"
     },
     {
       "id": "materialx-two-instances",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-two-instances.png",
-      "sha256": "8da1fc2ea2e46718413f42cc289c654f5e0d822c5cf9aeef2df6ebb9dbffd6e9"
+      "sha256": "5a3bc59763f50b2a4a87ecd04d4121d110918095b3ce037725effabcb6387292"
     },
     {
       "id": "materialx-wrapped-standard_surface",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-wrapped-standard_surface.png",
-      "sha256": "08f54c9483314ed1bdb223d3b422e5270722a619c48db17d83f0e5c230a10946"
+      "sha256": "4860b73a04eff0b6c7b7656f7fc512837df0e108b8b674e34f45072eaeab86de"
     },
     {
       "id": "materialx-filename-interface-colorspace",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-filename-interface-colorspace.png",
-      "sha256": "e2b1a8692d1f0b06c8912afd77b16390ae87e92dbbe8a3fd5213ede690df90fb"
+      "sha256": "dc63453feb7bb8a7a9ca77333d161ed0dde0478a945451b1c1aa3960a62709d5"
     },
     {
       "id": "materialx-explicit-version",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "image": "thumbnails/materialx-explicit-version.png",
-      "sha256": "1e07e1734c2a3860954dacb0fce22448dc9f207dc997bc2bb5c59328d15784d4"
+      "sha256": "8d31604707ae26cb8c42d941aa9d6bf46e2bcae4020ef427484c80dbc709ac22"
     },
     {
       "id": "lighting-mdl-mdl-opacity-mask",
@@ -1100,7 +1116,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-opacity-mask.png",
-      "sha256": "df6e5fc44fdb41c8bd70d78bc201e265b237b32d46157dcfdfd710f3ec390af9"
+      "sha256": "29f2dbb5d0bc418564b7f893e664c65d5226713096f6ddbcd442475dd1f420b7"
     },
     {
       "id": "lighting-mdl-mdl-gltf",
@@ -1108,7 +1124,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-gltf.png",
-      "sha256": "b1e33cf62ee0534ad0944212c4e85b57a77fff7a39f9023ff3ea495742be64ef"
+      "sha256": "52316fdbed037ec76a925bf80d926594fbb2a30eda87c28d9366432cc30c92cb"
     },
     {
       "id": "curved-subdivision-car",
@@ -1284,7 +1300,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-exr-dome.png",
-      "sha256": "0e769361f60fddfbd1357a621e78925785f51910a966b069e2f7701396011399"
+      "sha256": "b3a4fadeb1ed0617feaf7be9f9442ac0e5124a93cfbca117af12806fca963c39"
     },
     {
       "id": "lighting-mdl-disk-light",
@@ -1292,7 +1308,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-disk-light.png",
-      "sha256": "d0dfa6377009494dab0ed28c10daacbdc19638f2b4a814e2612f38b48dd53ee3"
+      "sha256": "5723789494deac1f3ff3700e27468117306e1ccef9deafb3b34e094d82f7d12c"
     },
     {
       "id": "lighting-mdl-cylinder-light",
@@ -1300,7 +1316,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-cylinder-light.png",
-      "sha256": "1e6e6c95adc83f41376671e53af0d59c5172087fb1b32fd1698c8a1af662cf90"
+      "sha256": "203ff3bb03e5f433684e786b65d3f44db4a48a06183a9181bac9ce5561d0c1d3"
     },
     {
       "id": "lighting-mdl-temperature-lights",
@@ -1308,7 +1324,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-temperature-lights.png",
-      "sha256": "1a47ecb7aeb2c9cbf45167956922882acdbe5b3f8bcbe75b4cd0b64134f876ea"
+      "sha256": "46424d200a149e4e1364183b210c535f0e9497d53274abcea535f9f347045ebc"
     },
     {
       "id": "lighting-mdl-portal-light",
@@ -1316,7 +1332,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-portal-light.png",
-      "sha256": "a0188d8daaf6a79121d080472344172c1751f3bb7b8af11519e24e1cd988f1ad"
+      "sha256": "7ef86a337a95df855b03a33af0e4d010b13941ae457ca49e2144b63053387622"
     },
     {
       "id": "lighting-mdl-mesh-light",
@@ -1324,7 +1340,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mesh-light.png",
-      "sha256": "38d356c0d0b462b681c7a43174c2e53d8f2861d04c96f8c9bb294e0c5ffc362f"
+      "sha256": "cd1ad22a6fb917ec7b1ec27a650c2e6008c382777d68f7912aa68144b63a5e7b"
     },
     {
       "id": "lighting-mdl-geometry-light",
@@ -1332,15 +1348,15 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-geometry-light.png",
-      "sha256": "75a935471f1d0f4e8206af8c276339b28660f23ea8ad69b8e6dc208bf1746dd3"
+      "sha256": "1ba775a4bf3d17f3cbf4068cd768ea25d3cd9b6f15290c4afaf44f5b2c6041c6"
     },
     {
       "id": "lighting-mdl-volume-light",
       "renderer": "Storm",
       "camera": "/Camera",
-      "capture": "companion scene only; VDB volume and volume light transport omitted because native Storm has no VDB plugin",
+      "capture": "bounds-only; native build has no VDB field plugin",
       "image": "thumbnails/lighting-mdl-volume-light.png",
-      "sha256": "75a935471f1d0f4e8206af8c276339b28660f23ea8ad69b8e6dc208bf1746dd3"
+      "sha256": "66a8fe13ea5ed57089650f1f5309c2479232333f28a7746af6b6fe4f1ecd6b9a"
     },
     {
       "id": "lighting-mdl-light-linking",
@@ -1348,7 +1364,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-light-linking.png",
-      "sha256": "1a5d5a1466948591b07a393b6addba26d6ab99939dd18033bb8e245e2ec02161"
+      "sha256": "83a8830c3b7d48da87a05f41c77e93234f464ac011670989b059b00b1f6c41b6"
     },
     {
       "id": "curved-studio-pierced-lantern",

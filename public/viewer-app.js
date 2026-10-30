@@ -1745,7 +1745,7 @@ async function ensureNeedleEngineLoader() {
       complexity: complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
       autoPlay: true,
       getFiles: () => needleLoaderFiles,
-      getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+      getScenePrimitiveLightIntensityScale: () => activeCatalogAsset?.scenePrimitiveLightIntensityScale ?? 1,
       ktx2TranscoderPath: "/three/examples/jsm/libs/basis/",
       getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
     });
@@ -2059,7 +2059,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         autoPlay: true,
         waitForMaterials,
         complexity: complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
-        scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale,
+        scenePrimitiveLightIntensityScale: activeCatalogAsset?.scenePrimitiveLightIntensityScale ?? 1,
         ktx2TranscoderPath: "/three/examples/jsm/libs/basis/",
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
@@ -3875,6 +3875,8 @@ async function init() {
         // (the API host sends Access-Control-Allow-Origin: *).
         img.crossOrigin = 'anonymous';
         img.alt = card.dataset.name;
+        img.dataset.previewKey=item.url||url;
+        if(/(?:test-fixtures\/thumbnails\/|thumbnails\/usd-assets\/)/.test(item.thumbnail))img.dataset.storm=item.thumbnail;
         img.src = item.thumbnail;
         thumbWrap.appendChild(img);
       } else if (item.icon) {
@@ -4289,9 +4291,9 @@ function resizeBeforeRender() {
   resizeRequested = false;
   const size = viewportSize();
   const pixelRatio = renderer.getPixelRatio();
+  const aspect = size.width / size.height;
+  if (camera.aspect !== aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); }
   if (renderer.domElement.width === Math.floor(size.width * pixelRatio) && renderer.domElement.height === Math.floor(size.height * pixelRatio)) return;
-  camera.aspect = size.width / size.height;
-  camera.updateProjectionMatrix();
   renderer.setSize(size.width, size.height, false);
   window.usdRenderModes?.resize();
 }

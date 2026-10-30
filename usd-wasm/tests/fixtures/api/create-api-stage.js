@@ -48,10 +48,13 @@ export async function createApiStage(usd, kind, path) {
     k.bind(sphere, material);
     if (kind === 'animated') {
       const diffuseColor = stage.GetPrimAtPath('/Looks/ApiPreview/Shader').GetAttribute('inputs:diffuseColor');
+      stage.SetEndTimeCode(49);
       diffuseColor.SetColor3f(0.1,0.35,1,Number.NaN);
-      diffuseColor.SetColor3f(0.1,0.35,1,1);
-      diffuseColor.SetColor3f(1,0.35,0.05,24);
-      diffuseColor.SetColor3f(0.1,0.35,1,48);
+      // Ease between blue and amber, returning to blue after two seconds.
+      for (let frame=1;frame<=49;frame++) {
+        const mix=(1-Math.cos((frame-1)/48*Math.PI*2))/2;
+        diffuseColor.SetColor3f(0.1+0.9*mix,0.35,1-0.95*mix,frame);
+      }
       k.bind(k.torus(stage,'/World/ColorRibbon',[0.65,0.15,0],0.9,0.22,c.blue),material);
       k.beam(stage,'/World/Timeline',[-1.8,-0.8,0],[1.8,-0.8,0],0.045,c.cream);
       for(let i=0;i<9;i++) k.sphere(stage,'/World/ColorSample'+i,[-1.6+i*0.4,-0.8,0],0.1,[0.1+i*0.1,0.35,1-i*0.1]);

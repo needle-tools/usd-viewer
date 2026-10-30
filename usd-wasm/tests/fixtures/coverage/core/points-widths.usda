@@ -1,10 +1,8 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     framesPerSecond = 24
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -13,6 +11,9 @@ def Xform "World"
     def Points "Points"
     {
         point3f[] points = [(-1, 0, 0), (0, 1, 0), (1, 0, 0), (0, -1, 0)]
+        color3f[] primvars:displayColor = [(0.95, 0.45, 0.25), (0.98, 0.8, 0.3), (0.3, 0.75, 0.6), (0.35, 0.55, 0.95)] (
+            interpolation = "vertex"
+        )
         float[] widths = [0.35, 0.5, 0.35, 0.5] (
             interpolation = "vertex"
         )

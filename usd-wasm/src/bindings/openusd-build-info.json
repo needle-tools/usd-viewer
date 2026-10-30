@@ -3,7 +3,7 @@
   "openusd": {
     "version": "0.26.11",
     "pxrVersion": 2611,
-    "gitSha": "0d55590d048e9fd9d9e877a62ec9f524a7668990",
+    "gitSha": "af06a735ac77a39efa3130601d874faa6d238a8c",
     "gitDirty": false
   },
   "toolchain": {

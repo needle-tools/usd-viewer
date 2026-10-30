@@ -1,10 +1,8 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     framesPerSecond = 24
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -83,6 +81,7 @@ class "_Class"
 
     def Cone "Roof"
     {
+        uniform token axis = "Y"
         double height = 0.75
         color3f[] primvars:displayColor = [(0.8, 0.27, 0.18)]
         double radius = 0.8
@@ -99,32 +98,47 @@ class "_Class"
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
-    def Cube "Sail0"
+    def Xform "Sails"
     {
-        color3f[] primvars:displayColor = [(0.94, 0.77, 0.42)]
-        double size = 1
-        float xformOp:rotateZ = 45
-        float3 xformOp:scale = (2.4, 0.17, 0.08)
-        double3 xformOp:translate = (0, 0.25, 0.68)
-        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateZ"]
+        double3 xformOp:translate = (0, 0.25, 0.95)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cube "Sail0"
+        {
+            color3f[] primvars:displayColor = [(0.94, 0.77, 0.42)]
+            double size = 1
+            float xformOp:rotateZ = 45
+            float3 xformOp:scale = (1.7, 0.17, 0.08)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ", "xformOp:scale"]
+        }
+
+        def Cube "Sail1"
+        {
+            color3f[] primvars:displayColor = [(0.94, 0.77, 0.42)]
+            double size = 1
+            float xformOp:rotateZ = -45
+            float3 xformOp:scale = (1.7, 0.17, 0.08)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZ", "xformOp:scale"]
+        }
+
+        def Sphere "Hub"
+        {
+            color3f[] primvars:displayColor = [(0.19, 0.29, 0.34)]
+            double radius = 0.16
+            double3 xformOp:translate = (0, 0, 0.04)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
     }
 
-    def Cube "Sail1"
-    {
-        color3f[] primvars:displayColor = [(0.94, 0.77, 0.42)]
-        double size = 1
-        float xformOp:rotateZ = -45
-        float3 xformOp:scale = (2.4, 0.17, 0.08)
-        double3 xformOp:translate = (0, 0.25, 0.68)
-        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateZ"]
-    }
-
-    def Sphere "Hub"
+    def Cube "Axle"
     {
         color3f[] primvars:displayColor = [(0.19, 0.29, 0.34)]
-        double radius = 0.2
-        double3 xformOp:translate = (0, 0.25, 0.75)
-        uniform token[] xformOpOrder = ["xformOp:translate"]
+        double size = 1
+        float3 xformOp:scale = (0.1, 0.1, 0.44)
+        double3 xformOp:translate = (0, 0.25, 0.74)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 }
 

@@ -282,60 +282,103 @@ print(rig.GetPrim().GetAttribute("xformOp:transform").GetValueString());`,
   {
     title: "Animated Radius",
     group: "Animation",
-    code: `// Pulse a sphere by keying its radius. The points behind it plot the keyed
-// values; USD interpolates the radius between them as the timeline plays.
+    code: `// Make a sphere beat like a heart by keying its radius. The points behind it
+// plot the keyed values; USD interpolates the radius between them as the timeline plays.
 const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/animated-radius.usda");
 stage.SetUpAxis("Y");
 stage.SetStartTimeCode(1);
-stage.SetEndTimeCode(48);
+stage.SetEndTimeCode(49);   // a two-second loop at 24 fps: frame 49 repeats frame 1
 
 const sphere = UsdGeom.Sphere.Define(stage, "/World/Pulse");
-const radius = sphere.CreateRadiusAttr(0.5);   // the default value, used when no time is given
-const keys = [[1, 0.5], [24, 1.5], [48, 0.5]];  // [frame, radius]
+const radius = sphere.CreateRadiusAttr(0.72);   // the default value, used when no time is given
+// [frame, radius]: a strong beat, a softer echo, then a slow rest. The rest keys
+// on either side of the loop seam lie on one line, so the wrap keeps its speed.
+const keys = [[1, 0.72], [9, 0.7], [13, 1.3], [17, 0.88], [20, 1.06], [26, 0.7], [41, 0.74], [49, 0.72]];
 for (const [frame, value] of keys) radius.Set(value, frame);
 kit.color(sphere, colors.coral);
+kit.pose(stage, sphere, [0, 1.4, 0]);
 
-// The largest keyed radius as a ring around the pulse...
-kit.torus(stage, "/World/PeakRadius", [0, 0, 0], 1.5, 0.03, colors.gold, "y");
+// The largest keyed radius as a ring around the pulse, over a plate it never touches...
+kit.torus(stage, "/World/PeakRadius", [0, 1.4, 0], 1.34, 0.03, colors.gold, "y");
+kit.lathe(stage, "/World/Plate", [0, 0, 0], [[0.01, 0], [0.95, 0], [0.9, 0.06], [0.01, 0.06]], colors.ink);
 // ...and the keys plotted behind it like a curve editor: x is time, y is radius.
-const plot = ([frame, value]) => [-1.6 + (frame - 1) / 47 * 3.2, value - 0.5, -1.9];
-kit.box(stage, "/World/Graph/Backdrop", [0, 0.5, -1.98], [3.6, 1.6, 0.05], colors.ink);
-keys.forEach((key, i) => {
-  kit.sphere(stage, "/World/Graph/Key" + i, plot(key), 0.08, colors.gold);
-  if (i > 0) kit.beam(stage, "/World/Graph/Segment" + i, plot(keys[i - 1]), plot(key), 0.025, colors.cream);
-});
+const plot = ([frame, value]) => [-1.6 + (frame - 1) / 48 * 3.2, 0.75 + (value - 0.7) * 1.6, -1.9];
+kit.box(stage, "/World/Graph/Backdrop", [0, 1.15, -1.98], [3.6, 1.4, 0.05], colors.ink);
+kit.beams(stage, "/World/Graph/Curve", keys.slice(1).map((key, i) => [plot(keys[i]), plot(key)]), 0.022, colors.cream);
+kit.spheres(stage, "/World/Graph/Keys", keys.map(plot), 0.06, colors.gold);
 
 print(sphere.GetPrim().GetAttribute("radius").GetValueStringAtTime(24));`,
   },
   {
     title: "Animated Transform",
     group: "Animation",
-    code: `// Send a cube along the track by keying its translation at the endpoints.
-// Intermediate positions come from USD's interpolation, not a JavaScript render loop.
+    code: `// Tumble a cube along the track and back by keying its translation and rotation.
+// The viewer plays these time samples; no JavaScript render loop moves the cube.
 const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/animated-transform.usda");
 stage.SetUpAxis("Y");
 stage.SetStartTimeCode(1);
-stage.SetEndTimeCode(60);
+stage.SetEndTimeCode(97);   // a four-second loop at 24 fps: frame 97 repeats frame 1
 
+const size = 0.8, half = size / 2, rail = -0.4;   // the cube rests on the rails
 const cube = UsdGeom.Cube.Define(stage, "/World/MovingCube");
-cube.CreateSizeAttr(0.8);
+cube.CreateSizeAttr(size);
 kit.color(cube, colors.coral);
+// Op order matters: rotate about the cube's centre, then move that centre.
 const translate = cube.AddTranslateOp();
-translate.Set(Gf.Vec3d(-2, 0, 0), 1);
-translate.Set(Gf.Vec3d(2, 0, 0), 60);
-translate.Set(Gf.Vec3d(-2, 0, 0));   // default value for still previews: the start position
+const rotate = cube.AddRotateXYZOp();
 
-// A short rail track, ending in a gate the cube drives through.
+// A cube rolls by tipping over its leading bottom edge. Each roll turns it a
+// quarter turn and moves it one cube width, easing in and settling flat.
+function rollPose(start, direction, amount) {
+  const eased = amount * amount * (3 - 2 * amount);
+  const angle = -direction * eased * Math.PI / 2;            // clockwise when rolling toward +X
+  const pivot = [start + direction * half, rail];
+  const [x, y] = [-direction * half, half];                  // centre relative to the pivot
+  const round = (value) => Math.round(value * 1e6) / 1e6;
+  return {
+    center: [round(pivot[0] + x * Math.cos(angle) - y * Math.sin(angle)), round(pivot[1] + x * Math.sin(angle) + y * Math.cos(angle)), 0],
+    degrees: round(angle * 180 / Math.PI),
+  };
+}
+// Choreography in frames: pause, five rolls to the gate, pause, five rolls back.
+// Both ends are at rest, so the loop wraps without a jump in position or speed.
+const rolls = 5, framesPerRoll = 8, startX = -2;
+function poseAt(frame) {
+  let t = frame - 1, x = startX, turned = 0;
+  const legs = [[4, 0], [rolls * framesPerRoll, 1], [8, 0], [rolls * framesPerRoll, -1], [4, 0]];
+  for (const [frames, direction] of legs) {
+    const done = Math.min(t, frames); t -= done;
+    if (!direction) continue;
+    const progress = done / framesPerRoll, whole = Math.floor(Math.min(progress, rolls - 1e-9));
+    const roll = rollPose(x + direction * whole * size, direction, Math.min(1, progress - whole));
+    if (t <= 0) return { center: roll.center, degrees: turned + direction * -90 * whole + roll.degrees };
+    x += direction * rolls * size; turned += direction * -90 * rolls;
+  }
+  return { center: [x, rail + half, 0], degrees: turned };
+}
+for (let frame = 1; frame <= 97; frame++) {
+  const pose = poseAt(frame);
+  translate.Set(Gf.Vec3d(...pose.center), frame);
+  rotate.Set(Gf.Vec3f(0, 0, pose.degrees), frame);
+}
+// Default values for still previews: frame 25, tipped onto an edge mid-track.
+const still = poseAt(25);
+translate.Set(Gf.Vec3d(...still.center));
+rotate.Set(Gf.Vec3f(0, 0, still.degrees));
+
+// A short rail track, with an arch the cube rolls under before it turns back.
 kit.box(stage, "/World/Track/Bed", [0, -0.55, 0], [5.5, 0.1, 1.1], colors.ink);
 const sleepers = Array.from({length: 9}, (_, i) => [[-2.4 + i * 0.6, -0.47, 0], [0.09, 0.05, 1]]);
 kit.boxes(stage, "/World/Track/Sleepers", sleepers, colors.cream);
 for (const side of [-1, 1]) {
   kit.beam(stage, "/World/Track/Rail" + (side < 0 ? "Left" : "Right"), [-2.6, -0.43, side * 0.4], [2.6, -0.43, side * 0.4], 0.03, colors.gold);
 }
-kit.group(stage, "/World/Track/FinishGate", [2, 0, 0], [0, 90, 0]);
-kit.torus(stage, "/World/Track/FinishGate/Hoop", [0, 0, 0], 0.72, 0.05, colors.teal);
+// A rolling cube's corners sweep up to size * sqrt(2) above the rail, so the arch clears that.
+kit.group(stage, "/World/Track/FinishGate", [2, rail, 0], [0, 90, 0]);
+kit.torus(stage, "/World/Track/FinishGate/Hoop", [0, 0, 0], 1.25, 0.05, colors.teal, "z", 0.5);
+kit.boxes(stage, "/World/Track/FinishGate/Feet", [-1, 1].map((side) => [[side * 1.25, -0.08, 0], [0.24, 0.16, 0.24]]), colors.teal);
 
 print(cube.GetPrim().GetAttribute("xformOp:translate").GetTimeSamples().size());`,
   },
@@ -402,7 +445,9 @@ print(listPrims(stage).map((path) => inspectPrim(stage.GetPrimAtPath(path))));`,
   {
     title: "Purpose",
     group: "Inspection",
-    code: `const k = sceneHelpers, c = k.colors;
+    code: `// Purpose picks a representation: "render" geometry is the detailed final
+// look, "proxy" is a light stand-in for interactive work. Viewers choose which to draw.
+const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/purpose.usda");
 stage.SetUpAxis("Y");
 const renderMesh = UsdGeom.Cube.Define(stage, "/World/RenderMesh");
@@ -411,17 +456,20 @@ const proxyMesh = UsdGeom.Cube.Define(stage, "/World/ProxyMesh");
 renderMesh.CreatePurposeAttr(UsdGeom.Tokens.render);
 proxyMesh.CreatePurposeAttr(UsdGeom.Tokens.proxy);
 
-k.pose(stage,renderMesh,[-0.9,0,0],[0.5,0.7,0.5]);
-k.pose(stage,proxyMesh,[0.9,0,0],[0.6,0.8,0.6]);
-k.color(renderMesh,c.coral); k.color(proxyMesh,c.teal);
-// Default-purpose silhouette stays visible when viewers omit render/proxy purposes.
-const bounds = [];
-for (const x of [-0.9, 0.9]) for (let i = 0; i < 4; i++) {
-  const a = i * Math.PI / 2 + Math.PI / 4, b = a + Math.PI / 2;
-  bounds.push([[x + 0.8 * Math.cos(a), 0.8 * Math.sin(a), 0.65], [x + 0.8 * Math.cos(b), 0.8 * Math.sin(b), 0.65]]);
-}
-k.beams(stage, "/World/Bounds", bounds, 0.035, c.gold);
-k.sphere(stage,"/World/PurposeKey",[0,1.4,0],0.25,c.cream);
+// The render crate carries banding and corner posts; the proxy is one plain
+// box with the same outer bounds. A size-2 cube spans -1..1 before scaling.
+kit.pose(stage, renderMesh, [-0.9, 0, 0], [0.48, 0.68, 0.48]);
+kit.color(renderMesh, colors.coral);
+const trim = [];
+for (const y of [-0.45, 0, 0.45]) trim.push([[-0.9, y, 0], [1.02, 0.1, 1.02]]);
+for (const x of [-1, 1]) for (const z of [-1, 1]) trim.push([[-0.9 + x * 0.45, 0, z * 0.45], [0.14, 1.4, 0.14]]);
+const detail = kit.boxes(stage, "/World/RenderDetail", trim, colors.cream);
+kit.attr(detail, "purpose", "token", UsdGeom.Tokens.render);
+kit.pose(stage, proxyMesh, [0.9, 0, 0], [0.51, 0.7, 0.51]);
+kit.color(proxyMesh, colors.teal);
+
+// The plinth keeps the default purpose: it belongs to neither representation.
+kit.box(stage, "/World/Plinth", [0, -0.76, 0], [3.2, 0.12, 1.5], colors.ink);
 
 print(stage.ExportToString());`,
   },
@@ -1231,11 +1279,18 @@ prim.SetActive(false);
 await new Promise((resolve) => setTimeout(resolve, 0));
 stage.RevokeObjectsChanged(listener);
 
-// A dark "before" block, a lit "after" block, and ripples carrying the notice across.
-kit.box(stage, "/World/Before", [-1.2, 0, 0], [0.7, 0.7, 0.7], colors.ink, [0, 20, 0]);
-kit.box(stage, "/World/After", [1, 0.2, 0], [1.1, 1.1, 1.1], colors.teal, [0, 20, 0]);
-for (let i = 0; i < 3; i++) kit.torus(stage, "/World/Notice" + i, [-0.1, 0.1, 0], 0.35 + i * 0.25, 0.035, colors.gold, "y", 0.7);
-kit.sphere(stage, "/World/Change", [1, 1, 0], 0.18, colors.coral);
+// The edit as a switch thrown off, a cable carrying the notice, and the
+// listener as a bell that rings once. /World/Thing itself is now inactive.
+kit.box(stage, "/World/Base", [0.05, -0.06, 0], [3.2, 0.12, 1.3], colors.ink);
+kit.box(stage, "/World/Switch/Housing", [-1.05, 0.15, 0], [0.7, 0.3, 0.6], colors.blue);
+kit.beam(stage, "/World/Switch/Lever", [-1.05, 0.3, 0], [-1.4, 0.82, 0], 0.045, colors.cream);
+kit.sphere(stage, "/World/Switch/Knob", [-1.4, 0.82, 0], 0.1, colors.coral);
+kit.beam(stage, "/World/Cable", [-0.7, 0.08, 0], [0.62, 0.08, 0], 0.03, colors.gold);
+kit.lathe(stage, "/World/Listener/Bell", [1, 0, 0], [[0.01, 0], [0.42, 0], [0.42, 0.06], [0.34, 0.14], [0.24, 0.42], [0.2, 0.8], [0.1, 0.92], [0.01, 0.94]], colors.teal);
+kit.sphere(stage, "/World/Listener/Clapper", [1, 1.02, 0], 0.07, colors.gold);
+// Three arcs above the bell: a 72 degree sweep, turned to centre on the vertical.
+kit.group(stage, "/World/Listener/Ring", [1, 0.55, 0], [0, 0, 54]);
+for (let i = 0; i < 3; i++) kit.torus(stage, "/World/Listener/Ring/Wave" + i, [0, 0, 0], 0.62 + i * 0.22, 0.028, colors.gold, "z", 0.2);
 
 print(notices);`,
   },
@@ -1529,15 +1584,24 @@ print(vectorToArray(stage.GetPrimAtPath("/World/Lights").GetChildren()).map((lig
     title: "Shaped Spotlights",
     group: "Lighting",
     code: `// ShapingAPI turns a light into a spotlight with a cone angle and a soft edge.
-// Three coloured spots overlap on a white stage and mix additively.
+// Three coloured spots overlap on a pale stage and mix additively.
 const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/shaped-spotlights.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 
-const white = [0.92, 0.92, 0.92];
-kit.lathe(stage, "/World/Stage", [0, 0, 0], [[0.01, -0.15], [2.2, -0.15], [2.2, 0], [0.01, 0]], white);
-kit.sphere(stage, "/World/Performer", [0, 0.45, 0], 0.45, white);
-kit.torus(stage, "/World/Truss", [0, 3.4, 0], 2.2, 0.05, colors.ink, "y");
+// A white sphere on a slim column: its curved surface shows each colour from
+// its own side and the additive mixes where the beams overlap.
+const white = [0.92, 0.92, 0.92], grey = [0.72, 0.72, 0.74];
+kit.lathe(stage, "/World/Stage", [0, 0, 0], [[0.01, -0.15], [1.7, -0.15], [1.7, 0], [0.01, 0]], grey);
+kit.lathe(stage, "/World/Plinth", [0, 0, 0], [[0.01, 0], [0.32, 0], [0.3, 0.06], [0.11, 0.12], [0.08, 0.7], [0.16, 0.78], [0.01, 0.78]], white);
+kit.sphere(stage, "/World/Performer", [0, 1.18, 0], 0.4, white);
+// The truss ring stands on three legs placed between the spots.
+const trussHeight = 2.8, trussRadius = 1.8;
+kit.torus(stage, "/World/Truss", [0, trussHeight, 0], trussRadius, 0.05, colors.ink, "y");
+kit.beams(stage, "/World/TrussLegs", [30, 150, 270].map((degrees) => {
+  const angle = degrees * Math.PI / 180, foot = [1.65 * Math.cos(angle), 0, 1.65 * Math.sin(angle)];
+  return [foot, [trussRadius * Math.cos(angle), trussHeight, trussRadius * Math.sin(angle)]];
+}), 0.04, colors.ink);
 
 const spots = [
   { name: "Red", color: [1, 0.12, 0.1], degrees: 90 },
@@ -1548,19 +1612,27 @@ for (const spot of spots) {
   const light = stage.DefinePrim("/World/Spots/" + spot.name, "SphereLight");
   light.ApplyAPI("ShapingAPI");   // adds the inputs:shaping:* attributes
   // Intensity is luminance (nits). A small emitter needs high luminance:
-  // 4000 * pi * 0.08² gives roughly 80 candela in the point approximation.
-  light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(4000);
+  // 1500 * pi * 0.08² gives roughly 30 candela in the point approximation:
+  // about 3 lux on the floor three metres away, like the other lessons' keys.
+  light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(1500);
   light.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(...spot.color));
   light.CreateAttribute("inputs:radius", Sdf.ValueTypeNames.Float, false).Set(0.08);
   light.CreateAttribute("inputs:shaping:cone:angle", Sdf.ValueTypeNames.Float, false).Set(18);    // degrees off the axis
   light.CreateAttribute("inputs:shaping:cone:softness", Sdf.ValueTypeNames.Float, false).Set(0.25);
 
-  // Hang each spot on the truss and aim it a little off-centre so the pools overlap.
+  // Hang each spot under the truss and aim it at the near side of the performer.
+  // Each beam grazes the sphere, then crosses the centre so the floor pools overlap.
   const angle = spot.degrees * Math.PI / 180, ring = [Math.cos(angle), 0, Math.sin(angle)];
-  const position = [2.2 * ring[0], 3.3, 2.2 * ring[2]];
-  kit.aim(stage, light, position, [0.45 * ring[0], 0, 0.45 * ring[2]]);
-  kit.sphere(stage, "/World/Truss/Can" + spot.name, [position[0], 3.5, position[2]], 0.1, spot.color);
+  const position = [trussRadius * ring[0], trussHeight - 0.15, trussRadius * ring[2]];
+  kit.aim(stage, light, position, [0.2 * ring[0], 0.7, 0.2 * ring[2]]);
+  kit.sphere(stage, "/World/Truss/Can" + spot.name, [position[0], trussHeight + 0.05, position[2]], 0.1, spot.color);
 }
+
+// A dim dome keeps the truss and the unlit floor readable. Authored lights
+// replace the viewer's default lighting, so without it they would be black.
+const house = stage.DefinePrim("/World/HouseLight", "DomeLight");
+house.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(0.08);
+house.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(0.7, 0.75, 0.9));
 
 // Frame the truss and the overlapping light pools together. Lens and aperture
 // set the field of view; moving the camera changes the perspective.
@@ -1568,7 +1640,7 @@ const camera = UsdGeom.Camera.Define(stage, "/World/Camera");
 camera.CreateFocalLengthAttr(40);
 kit.attr(camera, "horizontalAperture", "float", 36);
 kit.attr(camera, "verticalAperture", "float", 27);
-kit.aim(stage, camera.GetPrim(), [5, 4.5, 6], [0, 1.5, 0]);
+kit.aim(stage, camera.GetPrim(), [4.2, 3.4, 5.2], [0, 1.15, 0]);
 
 print(spots.map((spot) => inspectPrim(stage.GetPrimAtPath("/World/Spots/" + spot.name))));`,
   },
@@ -1576,12 +1648,12 @@ print(spots.map((spot) => inspectPrim(stage.GetPrimAtPath("/World/Spots/" + spot
     title: "Sun Cycle",
     group: "Lighting",
     code: `// Lights animate like any other prim: time-sample a sun's rotation, colour
-// and intensity across a day. Still previews show the default (golden hour).
+// and intensity across a day and night. Still previews show the default (golden hour).
 const kit = sceneHelpers, colors = kit.colors;
 stage = Usd.Stage.CreateNew("/tmp/sun-cycle.usda");
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 stage.SetStartTimeCode(1);
-stage.SetEndTimeCode(48);
+stage.SetEndTimeCode(97);   // one day in four seconds at 24 fps: frame 97 repeats frame 1
 
 // A lighthouse on a rock in a round patch of sea.
 kit.lathe(stage, "/World/Sea", [0, 0, 0], [[0.01, -0.1], [2.4, -0.1], [2.4, 0], [0.01, 0]], [0.12, 0.4, 0.62]);
@@ -1592,42 +1664,77 @@ for (const [i, from, to] of [[0, 0.4, 0.65], [1, 0.95, 1.2]]) {
   kit.lathe(stage, "/World/Lighthouse/Band" + i, [0, 0.3, 0], [[towerRadius(from) + 0.01, from], [towerRadius(to) + 0.01, to]], colors.coral);
 }
 kit.torus(stage, "/World/Lighthouse/Gallery", [0, 1.82, 0], 0.3, 0.035, colors.ink, "y");
-kit.sphere(stage, "/World/Lighthouse/Lamp", [0, 1.98, 0], 0.17, colors.gold);
 kit.lathe(stage, "/World/Lighthouse/Roof", [0, 2.1, 0], [[0.27, 0], [0.01, 0.3]], colors.coral);
+// The lamp's glass glows through an animated emissive input, and a sphere light
+// just outside the glass lights the rock and sea at night. Sphere-light intensity
+// is luminance (nits): 30 * pi * 0.2² is about 4 candela, a gentle harbour light.
+const glass = kit.material(stage, "/World/Looks/LampGlass", [1, 0.86, 0.55], 0, 0.15);
+const glow = kit.attr(stage.GetPrimAtPath("/World/Looks/LampGlass/Surface"), "inputs:emissiveColor", "color3f", [0, 0, 0]);
+kit.bind(kit.sphere(stage, "/World/Lighthouse/Lamp", [0, 1.98, 0], 0.15, colors.gold), glass);
+const beacon = stage.DefinePrim("/World/Lighthouse/Beacon", "SphereLight");
+beacon.CreateAttribute("inputs:radius", Sdf.ValueTypeNames.Float, false).Set(0.2);
+beacon.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(1, 0.78, 0.45));
+const beaconIntensity = beacon.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false);
+kit.pose(stage, beacon, [0, 1.98, 0]);
 
-// The sun travels a half circle tilted toward the back. The arc, the visible
-// sun disc and the light share one tilted group, so the maths stays 2D.
+// The sun and moon ride opposite ends of one orbit, tilted toward the back.
+// Rotating the orbit interpolates an angle, so two keys trace a true circle;
+// lights and discs are children, so their direction turns with it.
 kit.group(stage, "/World/Sky", [0, 0, 0], [-30, 20, 0]);
 kit.torus(stage, "/World/Sky/Arc", [0, 0, 0], 3.2, 0.015, colors.gold, "z", 0.5);
-const sunDisc = UsdGeom.Sphere.Define(stage, "/World/Sky/SunDisc");
-sunDisc.CreateRadiusAttr(0.22);
-kit.color(sunDisc, colors.gold);
-const sun = stage.DefinePrim("/World/Sky/Sun", "DistantLight");
-// Normalized distant intensity is illuminance (lux), independent of sun angle.
-sun.CreateAttribute("inputs:normalize", Sdf.ValueTypeNames.Bool, false).Set(true);
-const sunColor = sun.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false);
-const sunIntensity = sun.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false);
+const orbit = UsdGeom.Xform.Define(stage, "/World/Sky/Orbit");
+const turn = orbit.AddRotateXYZOp();
+turn.Set(Gf.Vec3f(0, 0, 0), 1);       // sunrise on the right
+turn.Set(Gf.Vec3f(0, 0, 360), 97);    // a full turn: the same pose as frame 1
+turn.Set(Gf.Vec3f(0, 0, 35));         // still previews: golden hour
 
-function placeSun(time, degrees) {
-  const angle = degrees * Math.PI / 180, height = Math.sin(angle);   // 0 at the horizon, 1 at noon
-  const position = [3.2 * Math.cos(angle), 3.2 * height, 0];
-  UsdGeom.XformCommonAPI(sunDisc).SetTranslate(Gf.Vec3d(...position), time);
-  // A DistantLight only uses its rotation: point it from the sun at the island.
-  UsdGeom.XformCommonAPI(sun).SetRotate(Gf.Vec3f(...kit.lookAt(position, [0, 0, 0])), time);
-  // Low sun is warm and dim, high sun white and bright.
-  const warm = [1, 0.45, 0.25], noon = [1, 0.97, 0.9];
-  sunColor.Set(Gf.Vec3f(...warm.map((value, i) => value + (noon[i] - value) * height)), time);
-  sunIntensity.Set(0.6 + 2.4 * height, time);
+function body(name, side, radius, rgb) {
+  const disc = UsdGeom.Sphere.Define(stage, "/World/Sky/Orbit/" + name + "Disc");
+  disc.CreateRadiusAttr(radius);
+  kit.color(disc, rgb);
+  kit.pose(stage, disc, [side * 3.2, 0, 0]);
+  // A DistantLight only uses its rotation: point it from the disc at the island.
+  const light = stage.DefinePrim("/World/Sky/Orbit/" + name, "DistantLight");
+  kit.aim(stage, light, [side * 3.2, 0, 0], [0, 0, 0]);
+  // Normalized distant intensity is illuminance (lux), independent of sun angle.
+  light.CreateAttribute("inputs:normalize", Sdf.ValueTypeNames.Bool, false).Set(true);
+  return {
+    visibility: disc.GetPrim().GetAttribute("visibility"),
+    color: light.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false),
+    intensity: light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false),
+  };
 }
-// Key the arc every few frames so the sun follows the circle, not a straight chord.
-for (let frame = 1; frame <= 46; frame += 3) placeSun(frame, 8 + 164 * (frame - 1) / 47);
-placeSun(48, 172);
-placeSun(Usd.TimeCode.Default(), 35);
+const sunLight = body("Sun", 1, 0.22, colors.gold), moonLight = body("Moon", -1, 0.15, [0.85, 0.88, 0.95]);
+const sunColor = sunLight.color;
+moonLight.color.Set(Gf.Vec3f(0.62, 0.72, 1));
 
-// The sky dome tints the shadow side.
+// The sky dome tints the shadow side, from day blue to night indigo.
 const sky = stage.DefinePrim("/World/Sky/Dome", "DomeLight");
-sky.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(0.3);
-sky.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(0.55, 0.7, 1));
+const skyIntensity = sky.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false);
+const skyColor = sky.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false);
+
+// Everything else follows the sun's height. Smoothstep keeps each curve's
+// slope continuous through dawn and dusk, and the angle repeats after a full turn.
+const smooth = (from, to, value) => { const t = Math.min(1, Math.max(0, (value - from) / (to - from))); return t * t * (3 - 2 * t); };
+const mix = (a, b, t) => a.map((value, i) => value + (b[i] - value) * t);
+function light(time, degrees) {
+  const height = Math.sin(degrees * Math.PI / 180);   // 0 at the horizon, 1 at noon, -1 at midnight
+  const day = smooth(-0.08, 0.3, height), night = smooth(-0.08, 0.3, -height);
+  // Low sun is warm and dim, high sun white and bright; moonlight is cool and faint.
+  sunColor.Set(Gf.Vec3f(...mix([1, 0.45, 0.25], [1, 0.97, 0.9], Math.max(0, height))), time);
+  sunLight.intensity.Set(3 * day * (0.25 + 0.75 * Math.max(0, height)), time);
+  moonLight.intensity.Set(0.3 * night, time);
+  // Hide each disc once it has set below the sea; visibility samples are held, not blended.
+  sunLight.visibility.Set(height < -0.08 ? "invisible" : "inherited", time);
+  moonLight.visibility.Set(height > 0.08 ? "invisible" : "inherited", time);
+  skyIntensity.Set(0.06 + 0.24 * day, time);
+  skyColor.Set(Gf.Vec3f(...mix([0.22, 0.26, 0.5], [0.55, 0.7, 1], day)), time);
+  // The lighthouse wakes at dusk and sleeps after dawn.
+  glow.Set(Gf.Vec3f(...[1, 0.72, 0.35].map((value) => value * night)), time);
+  beaconIntensity.Set(30 * night, time);
+}
+for (let frame = 1; frame <= 97; frame += 2) light(frame, 360 * (frame - 1) / 96);
+light(Usd.TimeCode.Default(), 35);
 
 // Keep the island and the sun arc in one shot. The camera stays fixed while
 // the light rotates, making changes in shadows and colour easier to compare.
@@ -1637,7 +1744,7 @@ kit.attr(camera, "horizontalAperture", "float", 36);
 kit.attr(camera, "verticalAperture", "float", 27);
 kit.aim(stage, camera.GetPrim(), [6, 5, 7.5], [0, 1.3, 0]);
 
-print({ samples: sunColor.GetNumTimeSamples(), noon: sunColor.GetValueStringAtTime(24), preview: sunColor.GetValueString() });`,
+print({ samples: sunColor.GetNumTimeSamples(), noon: sunColor.GetValueStringAtTime(25), preview: sunColor.GetValueString() });`,
   },
   {
     title: "Weighted Skinning",

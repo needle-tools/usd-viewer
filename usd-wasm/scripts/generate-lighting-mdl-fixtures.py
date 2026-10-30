@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Author local lighting and MDL-input approximation coverage assets."""
 from pathlib import Path
-import json, math, struct, zlib
+import json, math, struct, sys, zlib
 from pxr import Usd, UsdGeom, UsdShade, UsdLux, UsdVol, Sdf, Gf
 
 BASE=Path(__file__).resolve().parents[1]/'tests/fixtures'; OUT=BASE/'coverage/lighting-mdl'; OUT.mkdir(parents=True,exist_ok=True)
 entries=[]; validation=[]
+SELECT=set(sys.argv[1:])
+def wanted(name): return not SELECT or name in SELECT
 def hdr(name,night=False):
     # Radiance RGBE scanlines, with asymmetric luminous panels and a horizon.
     w,h=64,32; out=bytearray(b'#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 32 +X 64\n')
@@ -76,8 +78,8 @@ for source in mdl_sources:
     import hashlib
     assert hashlib.sha256((OUT/source['file']).read_bytes()).hexdigest()==source['sha256'], source['file']
 
-def setup(name):
-    p=OUT/(name+'.usda'); s=Usd.Stage.CreateNew(str(p)); UsdGeom.SetStageUpAxis(s,'Y'); UsdGeom.SetStageMetersPerUnit(s,1); s.SetStartTimeCode(1); s.SetEndTimeCode(48)
+def setup(name,end=48):
+    p=OUT/(name+'.usda'); s=Usd.Stage.CreateNew(str(p)); UsdGeom.SetStageUpAxis(s,'Y'); UsdGeom.SetStageMetersPerUnit(s,1); s.SetStartTimeCode(1); s.SetEndTimeCode(end)
     root=UsdGeom.Xform.Define(s,'/World');s.SetDefaultPrim(root.GetPrim())
     cam=UsdGeom.Camera.Define(s,'/World/Camera');cam.CreateFocalLengthAttr(42);cam.CreateHorizontalApertureAttr(36);cam.CreateVerticalApertureAttr(27);cam.AddTransformOp().Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(5,3.4,8),Gf.Vec3d(0,.8,0),Gf.Vec3d(0,1,0)).GetInverse())
     return s,p
@@ -171,31 +173,32 @@ def crystal(s,path):
 
 def scene(s,mode):
     mats=[material(s,'Matte',(.16,.5,.55),0,.8),material(s,'Metal',(.78,.43,.18),.95,.19),material(s,'Glass',(.32,.65,.8),0,.09,.38),material(s,'Base',(.15,.18,.22),.15,.5)]
-    base=box(s,'/World/Stage',(0,-.24,0),(5,.35,3.3),(.15,.18,.22));bind(base,mats[3])
+    base=box(s,'/World/Stage',(0,-.175,0),(5,.35,3.3),(.15,.18,.22));bind(base,mats[3])
     if mode!='rigs':
         if mode in ('domes','exr'):
-            g=lathe(s,'/World/Vase',[(.1,.35),(.3,.68),(.8,.75),(1.3,.48),(1.8,.38),(2.05,.5)]);bind(g,mats[1]);g=crystal(s,'/World/Crystal');UsdGeom.Xformable(g).AddTranslateOp().Set((1.5,.05,0));UsdGeom.Xformable(g).AddScaleOp().Set((.5,.65,.5));bind(g,mats[0])
+            g=lathe(s,'/World/Vase',[(.1,.35),(.3,.68),(.8,.75),(1.3,.48),(1.8,.38),(2.05,.5)]);UsdGeom.Xformable(g).AddTranslateOp().Set((0,-.1,0));bind(g,mats[1]);g=crystal(s,'/World/Crystal');UsdGeom.Xformable(g).AddTranslateOp().Set((1.5,-.065,0));UsdGeom.Xformable(g).AddScaleOp().Set((.5,.65,.5));bind(g,mats[0])
         elif mode in ('rect','disk','portal'):
-            for i,(x,y,w) in enumerate([(-1.4,.65,.65),(0,1.05,.85),(1.4,.8,.7)]):
+            for i,(x,y,w) in enumerate([(-1.4,.65,.65),(0,.62,.85),(1.4,.8,.7)]):
                 g=box(s,'/World/Column'+str(i),(x,y,0),(w,y*2,w),(.5,.5,.5));bind(g,mats[i%2])
             g=torus(s,'/World/Crown',(0,2.05,0),.68,.13);bind(g,mats[1])
         elif mode in ('sphere','cylinder','meshlight'):
             for i,x in enumerate((-1.1,0,1.1)):
-                g=torus(s,'/World/Orbital'+str(i),(x,.85,0),.48+i*.08,.12);bind(g,mats[i%2])
-            g=crystal(s,'/World/Centerpiece');UsdGeom.Xformable(g).AddScaleOp().Set((.45,.7,.45));bind(g,mats[1])
+                g=torus(s,'/World/Orbital'+str(i),(x,.85,0),.48+i*.08,.12);UsdGeom.Xformable(g).AddTranslateOp().Set((0,0,(i-1)*.5));bind(g,mats[i%2])
+            g=crystal(s,'/World/Centerpiece');UsdGeom.Xformable(g).AddTranslateOp().Set((0,.42,0));UsdGeom.Xformable(g).AddScaleOp().Set((.28,.36,.28));bind(g,mats[1])
         elif mode=='spot':
-            g=crystal(s,'/World/Crystal');bind(g,mats[1]);
+            g=crystal(s,'/World/Crystal');UsdGeom.Xformable(g).AddTranslateOp().Set((0,-.1,0));bind(g,mats[1])
             for i,x in enumerate((-1.45,1.45)):
                 g=box(s,'/World/Pillar'+str(i),(x,.5,-.25),(.45,1,.45),(.3,.5,.5));bind(g,mats[0])
         elif mode=='distant':
             for i in range(5):
                 g=box(s,'/World/Terrace'+str(i),((i-2)*.65,.18+i*.23,0),(.58,.36+i*.46,1.2),(.3,.5,.5));bind(g,mats[i%2])
         else:
-            g=lathe(s,'/World/Spindle',[(.1,.55),(.3,.65),(.65,.35),(1.1,.7),(1.6,.35),(2.1,.15)]);bind(g,mats[1]);g=torus(s,'/World/Halo',(0,1.45,0),1,.1);bind(g,mats[0])
+            g=lathe(s,'/World/Spindle',[(.1,.55),(.3,.65),(.65,.35),(1.1,.7),(1.6,.35),(2.1,.15)]);UsdGeom.Xformable(g).AddTranslateOp().Set((0,-.1,0));bind(g,mats[1])
+            g=torus(s,'/World/Halo',(0,0,0),1,.1);UsdGeom.Xformable(g).AddTranslateOp().Set((0,1.15,0));UsdGeom.Xformable(g).AddRotateXOp().Set(90);bind(g,mats[0])
         return
-    ring=torus(s,'/World/Ring',(0,1.45,0));bind(ring,mats[1])
+    ring=torus(s,'/World/Ring',(0,1.45,0));UsdGeom.Xformable(ring).AddTranslateOp().Set((0,0,-.55));bind(ring,mats[1])
     for i in range(3):
-        x=(i-1)*1.45; pedestal=box(s,'/World/Pedestal'+str(i),(x,.08,.22),(.9,.28,.9),(.3,.32,.36));bind(pedestal,mats[3]); ball=UsdGeom.Sphere.Define(s,'/World/Sphere'+str(i));ball.CreateRadiusAttr(.46);ball.AddTranslateOp().Set(Gf.Vec3d(x,.68,.22));ball.CreateDisplayColorAttr([Gf.Vec3f(*[(.16,.5,.55),(.78,.43,.18),(.32,.65,.8)][i])]);bind(ball,mats[i])
+        x=(i-1)*1.45; pedestal=box(s,'/World/Pedestal'+str(i),(x,.14,.22),(.9,.28,.9),(.3,.32,.36));bind(pedestal,mats[3]); ball=UsdGeom.Sphere.Define(s,'/World/Sphere'+str(i));ball.CreateRadiusAttr(.46);ball.AddTranslateOp().Set(Gf.Vec3d(x,.74,.22));ball.CreateDisplayColorAttr([Gf.Vec3f(*[(.16,.5,.55),(.78,.43,.18),(.32,.65,.8)][i])]);bind(ball,mats[i])
 
 def aimed(light,pos,target=(0,.8,0)):
     light.AddTransformOp().Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(*pos),Gf.Vec3d(*target),Gf.Vec3d(0,1,0)).GetInverse())
@@ -207,6 +210,8 @@ def dome(s,file,rotation=0):
     l=UsdLux.DomeLight.Define(s,'/World/Lights/Environment');l.CreateTextureFileAttr(Sdf.AssetPath('./'+file));l.CreateTextureFormatAttr('latlong');l.CreateIntensityAttr(1);l.AddRotateYOp().Set(rotation);return l
 
 def finish(name,label,group,s,p,features,checks,files=(),environment=None):
+    # Static stages do not declare a playback range.
+    if not any(a.ValueMightBeTimeVarying() for prim in s.TraverseAll() for a in prim.GetAttributes()): s.GetRootLayer().ClearStartTimeCode(); s.GetRootLayer().ClearEndTimeCode()
     s.GetRootLayer().Save()
     if group=='Lights': p.write_text(p.read_text().rstrip()+'\n')
     st=Usd.Stage.Open(str(p),load=Usd.Stage.LoadAll);assert st;out=[]
@@ -247,7 +252,8 @@ def check_shadow_variants(stage):
     finally:variants.SetVariantSelection(original)
 
 def light_case(name,label,mode):
-    s,p=setup(name);scene(s,mode);s.DefinePrim('/World/Lights','Xform'); files=[]; checks=[]
+    if not wanted(name): return
+    s,p=setup(name,97 if mode=='animated' else 48);scene(s,mode);s.DefinePrim('/World/Lights','Xform'); files=[]; checks=[]
     if mode=='rigs':
         prim=s.GetPrimAtPath('/World/Lights');v=prim.GetVariantSets().AddVariantSet('lighting')
         for variant in ('warmStudio','coolRim','nightNeon'):
@@ -302,7 +308,15 @@ def light_case(name,label,mode):
             with variants.GetVariantEditContext():shadow.CreateShadowEnableAttr(enabled)
         variants.SetVariantSelection('enabled');checks.append(('ShadowAPI enabled and disabled variants compose correctly',check_shadow_variants))
     else:
-        l=rect(s,'Animated',(2,4,4),(1,.4,.2),220);l.GetIntensityAttr().Set(100,1);l.GetIntensityAttr().Set(600,48);checks.append(('Light intensity has time samples',lambda st:len(st.GetPrimAtPath('/World/Lights/Animated').GetAttribute('inputs:intensity').GetTimeSamples())==2))
+        # Warm and cool keys cross-fade once per 1-97 loop at constant total intensity.
+        warm=rect(s,'Animated',(2,4,4),(1,.4,.2),220);cool=rect(s,'Counter',(-3,3.5,2),(.25,.55,1),220)
+        for frame in range(1,98,4):
+            k=.5-.5*math.cos(math.tau*((frame-1)%96)/96);warm.GetIntensityAttr().Set(round(100+500*k,4),frame);cool.GetIntensityAttr().Set(round(600-500*k,4),frame)
+        def crossfade(st):
+            warm,cool=(st.GetPrimAtPath('/World/Lights/'+n).GetAttribute('inputs:intensity') for n in ('Animated','Counter'))
+            ends=warm.GetTimeSamples()[0]==1 and warm.GetTimeSamples()[-1]==97 and warm.Get(1)==warm.Get(97)==100 and cool.Get(1)==cool.Get(97)==600 and warm.Get(49)==600
+            return ends and all(abs(warm.Get(f)+cool.Get(f)-700)<1e-3 for f in range(1,98)) and st.GetEndTimeCode()==97
+        checks.append(('Warm and cool intensities cross-fade in a seamless 1-97 loop',crossfade))
     checks.append(('Scene contains a stage and authored lights',lambda st:bool(st.GetPrimAtPath('/World/Stage')) and len(list(st.GetPrimAtPath('/World/Lights').GetChildren()))>0))
     finish(name,label,'Lights',s,p,['UsdLux',mode]+(['ShadowAPI','shadow:enable'] if mode=='distant' else []),checks,files,environment='none')
     # Use the authored UsdLux luminance, without per-fixture brightness overrides.
@@ -326,6 +340,7 @@ def check_material_effect(stage,field,enabled,disabled):
     finally:variant.SetVariantSelection(original)
 
 def mdl_case(name,label,mode):
+    if not wanted(name): return
     s,p=setup(name); files=[source['file'] for source in mdl_sources]+['LICENSE-NVIDIA.txt','mdl-sources.json']
     camera=UsdGeom.Camera(s.GetPrimAtPath('/World/Camera'));camera.GetFocalLengthAttr().Set(50)
     UsdGeom.Xformable(camera).GetOrderedXformOps()[0].Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(3.8,2.8,7),Gf.Vec3d(0,1.0,0),Gf.Vec3d(0,1,0)).GetInverse())
@@ -355,7 +370,7 @@ def mdl_case(name,label,mode):
         effect.AddVariant(choice);effect.SetVariantSelection(choice)
         with effect.GetVariantEditContext():sh.GetInput(field).Set(value)
     effect.SetVariantSelection('enabled')
-    platform=box(s,'/World/Plinth',(0,-.28,0),(5.2 if mode=='normal' else 4.1,.35,2.6),(.18,.22,.25));platform.CreateDisplayColorAttr([Gf.Vec3f(.18,.22,.25)])
+    platform=box(s,'/World/Plinth',(0,-.175,0),(5.2 if mode=='normal' else 4.1,.35,2.6),(.18,.22,.25));platform.CreateDisplayColorAttr([Gf.Vec3f(.18,.22,.25)])
     if mode=='metal': obj=lathe(s,'/World/MaterialRing',[(.1,.42),(.22,.4),(.28,.18),(.7,.18),(.8,.42),(1.0,.63),(1.5,.72),(1.75,.82),(1.82,.78)])
     elif mode=='clearcoat': obj=lathe(s,'/World/MaterialRing',[(.12,.08),(.22,.3),(.45,.62),(.75,.84),(.9,.89),(1.1,.77),(1.35,.48),(1.55,.16),(1.8,.1)])
     elif mode=='texture': obj=lathe(s,'/World/MaterialRing',[(.1,.35),(.2,.46),(.4,.68),(.8,.77),(1.2,.65),(1.55,.38),(1.85,.34),(1.9,.42)])
@@ -363,15 +378,19 @@ def mdl_case(name,label,mode):
     elif mode=='gltf': obj=crystal(s,'/World/MaterialRing')
     else: obj=torus(s,'/World/MaterialRing',(-1.05,1.18,0),.82,.25)
     if mode in ('metal','clearcoat','texture'):subdivision_variants(obj)
+    # Vessels, crystal and ring rest on the plinth.
+    if mode in ('metal','clearcoat','texture','gltf'):UsdGeom.Xformable(obj).AddTranslateOp().Set((0,-.1 if mode!='clearcoat' else -.12,0))
+    elif mode=='normal':UsdGeom.Xformable(obj).AddTranslateOp().Set((0,-.11,0))
     bind(obj,m)
-    for i in range(3):
-        b=uv_sphere(s,'/World/Bead'+str(i),((i-1)*1.2,.35,.6));bind(b,m)
+    # The middle bead sits in front of the vessel rather than inside it.
+    for i,(center,radius) in enumerate([((-1.2,.35,.6),.35),((0,.25,1.02),.25),((1.2,.35,.6),.35)]):
+        b=uv_sphere(s,'/World/Bead'+str(i),center,radius);bind(b,m)
     if mode == 'gltf':
-        inner=torus(s,'/World/InnerRing',(0,1.18,.08),.45,.12);bind(inner,m)
+        inner=torus(s,'/World/InnerRing',(0,1.08,.8),.45,.12);bind(inner,m)
     if mode=='normal':
-        relief=panel(s,'/World/ReliefPanel',(1.2,1.35,.05),1.65,2.1);bind(relief,m)
+        relief=panel(s,'/World/ReliefPanel',(1.2,1.05,.05),1.65,2.1);bind(relief,m)
     if mode=='texture':
-        swatch=panel(s,'/World/ColorSwatch',(-1.4,1.05,-.15),.7,1.65);bind(swatch,m)
+        swatch=panel(s,'/World/ColorSwatch',(-1.4,.825,-.15),.7,1.65);bind(swatch,m)
     if mode=='opacity':
         frame=material(s,'Frame',(.06,.085,.1),.6,.3)
         for i,(pos,scale) in enumerate([((0,.05,0),(2.9,.14,.12)),((0,2.35,0),(2.9,.14,.12)),((-1.38,1.2,0),(.14,2.3,.12)),((1.38,1.2,0),(.14,2.3,.12))]):bind(box(s,'/World/Frame'+str(i),pos,scale,(.06,.085,.1)),frame)
@@ -380,13 +399,19 @@ def mdl_case(name,label,mode):
             bar=box(s,'/World/Bar'+str(i),((i-.5)*2.4,.48,-.3),(.22,.9,.24),(.8,.5,.2));bind(bar,m)
     checks=[('MDL terminal is connected without Preview surface',lambda st: bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput('mdl').GetConnectedSources()[0]) and not bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput().GetConnectedSources()[0]) if UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput() else bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput('mdl').GetConnectedSources()[0])),('Material ring bound to MDL',lambda st:bool(UsdShade.MaterialBindingAPI(st.GetPrimAtPath('/World/MaterialRing')).GetDirectBindingRel().GetTargets())),('MDL source asset resolves',lambda st: bool(UsdShade.Shader(st.GetPrimAtPath('/World/Looks/MDL/Shader')).GetSourceAsset('mdl').resolvedPath))]
     checks.append(('Feature has enabled and disabled variants',lambda st:st.GetPrimAtPath('/World/Looks/MDL').GetVariantSet('effect').GetVariantNames()==['disabled','enabled']))
-    checks.append(('Effect variants change the composed MDL parameter',lambda st:check_material_effect(st,field,enabled,disabled)))
+    checks.append(('Effect variants change the composed MDL parameter',lambda st,field=field,enabled=enabled,disabled=disabled:check_material_effect(st,field,enabled,disabled)))
     if mode in ('metal','clearcoat','texture'):checks.append(('Smooth and cage variants preserve creases and seam UVs',check_subdivision_variants))
     if mode in ('texture','normal','opacity'):
         field={'texture':'diffuse_texture','normal':'normalmap_texture','opacity':'opacity_texture'}[mode];checks.append(('Texture asset resolves',lambda st,field=field: bool(st.GetPrimAtPath('/World/Looks/MDL/Shader').GetAttribute('inputs:'+field).Get().resolvedPath)))
     finish(name,label,'MDL',s,p,['MDL',family,mode],checks,files)
 for x in [('mdl-metal','MDL metallic gold','metal'),('mdl-clearcoat','MDL clearcoat enamel','clearcoat'),('mdl-color-texture','MDL patterned enamel','texture'),('mdl-normal-texture','MDL engraved normal','normal'),('mdl-opacity-mask','MDL cutout lattice','opacity'),('mdl-gltf','MDL glTF material','gltf')]: mdl_case(*x)
-assert len(entries)==22
-(OUT/'manifest.json').write_text(json.dumps(entries,indent=2)+'\n')
-(OUT/'native-validation.json').write_text(json.dumps({'openusdVersion':list(Usd.GetVersion()),'loadPolicy':'LoadAll','results':validation},indent=2)+'\n')
+if SELECT:
+    assert len(entries)==len(SELECT),(SELECT,len(entries))
+    def merge(path,updates,key=None):
+        old=json.loads(path.read_text()); rows=old[key] if key else old; by_id={v['id']:v for v in updates}; rows[:]=[by_id.get(v['id'],v) for v in rows]; path.write_text(json.dumps(old,indent=2)+'\n')
+    merge(OUT/'manifest.json',entries);merge(OUT/'native-validation.json',validation,'results')
+else:
+    assert len(entries)==22
+    (OUT/'manifest.json').write_text(json.dumps(entries,indent=2)+'\n')
+    (OUT/'native-validation.json').write_text(json.dumps({'openusdVersion':list(Usd.GetVersion()),'loadPolicy':'LoadAll','results':validation},indent=2)+'\n')
 print('Generated and validated',len(entries),'lighting/MDL fixtures')

@@ -1,9 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -89,7 +87,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
         double size = 1
         float3 xformOp:scale = (5, 0.35, 3.3)
-        double3 xformOp:translate = (0, -0.24, 0)
+        double3 xformOp:translate = (0, -0.175, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 

@@ -1,9 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -89,7 +87,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
         double size = 1
         float3 xformOp:scale = (5, 0.35, 3.3)
-        double3 xformOp:translate = (0, -0.24, 0)
+        double3 xformOp:translate = (0, -0.175, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -110,6 +108,8 @@ def Xform "World"
             interpolation = "faceVarying"
         )
         uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (0, 0, -0.55)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Cube "Pedestal0" (
@@ -120,7 +120,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.3, 0.32, 0.36)]
         double size = 1
         float3 xformOp:scale = (0.9, 0.28, 0.9)
-        double3 xformOp:translate = (-1.45, 0.08, 0.22)
+        double3 xformOp:translate = (-1.45, 0.14, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -131,7 +131,7 @@ def Xform "World"
         rel material:binding = </World/Looks/Matte>
         color3f[] primvars:displayColor = [(0.16, 0.5, 0.55)]
         double radius = 0.46
-        double3 xformOp:translate = (-1.45, 0.68, 0.22)
+        double3 xformOp:translate = (-1.45, 0.74, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
@@ -143,7 +143,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.3, 0.32, 0.36)]
         double size = 1
         float3 xformOp:scale = (0.9, 0.28, 0.9)
-        double3 xformOp:translate = (0, 0.08, 0.22)
+        double3 xformOp:translate = (0, 0.14, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -154,7 +154,7 @@ def Xform "World"
         rel material:binding = </World/Looks/Metal>
         color3f[] primvars:displayColor = [(0.78, 0.43, 0.18)]
         double radius = 0.46
-        double3 xformOp:translate = (0, 0.68, 0.22)
+        double3 xformOp:translate = (0, 0.74, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
@@ -166,7 +166,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.3, 0.32, 0.36)]
         double size = 1
         float3 xformOp:scale = (0.9, 0.28, 0.9)
-        double3 xformOp:translate = (1.45, 0.08, 0.22)
+        double3 xformOp:translate = (1.45, 0.14, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -177,7 +177,7 @@ def Xform "World"
         rel material:binding = </World/Looks/Glass>
         color3f[] primvars:displayColor = [(0.32, 0.65, 0.8)]
         double radius = 0.46
-        double3 xformOp:translate = (1.45, 0.68, 0.22)
+        double3 xformOp:translate = (1.45, 0.74, 0.22)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 

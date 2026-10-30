@@ -51,6 +51,8 @@ def build(name,label,kind,features):
  plinthmat,_=shading.preview(st,'/World/PlinthFinish',(.025,.035,.055),.32)
  UsdShade.MaterialBindingAPI.Apply(plinth.GetPrim()).Bind(plinthmat)
  light=UsdLux.DistantLight.Define(st,'/World/Key');light.CreateIntensityAttr(4 if isvolume else 2)
+ # Normalized distant lights author illuminance, rather than solar-disc luminance.
+ light.CreateNormalizeAttr(True)
  UsdGeom.Xformable(light).AddRotateXYZOp().Set((-25,-35,0))
  fill=UsdLux.DomeLight.Define(st,'/World/Fill');fill.CreateIntensityAttr(.28)
  camera=UsdGeom.Camera.Define(st,'/World/Camera');camera.CreateFocalLengthAttr(50);camera.CreateHorizontalApertureAttr(24);camera.CreateVerticalApertureAttr(24)

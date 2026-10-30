@@ -5,19 +5,24 @@ import {pathContains} from './usd/viewer/selection.js';
 export function createViewportFraming({viewport,getState,getSelection}) {
   let animation,restoreControls,epoch=0,disposed=false;
   function cancel() { epoch++;cancelAnimationFrame(animation); animation=undefined; restoreControls?.(); restoreControls=undefined; }
-  async function focus() {
+  async function focus({instant=false}={}) {
     cancel();
     const request=epoch;
     let state=getState(); if(!state?.scene || !state.camera)return;
     const {scene}=state;scene.updateMatrixWorld(true);
     async function bounds(items) {
       const box=new Box3();
-      const objects=[];scene.traverseVisible(object=>{if(object.geometry && !object.userData.usdHelperFor)objects.push(object);});
+      const objects=[];scene.traverseVisible(object=>{if((object.geometry||typeof object.getBoundingBox==='function')&&!object.userData.usdHelperFor&&!object.userData.usdExcludeFromBounds)objects.push(object);});
       for(const object of objects){
         let prim=object;while(prim && !prim.userData.usdPath)prim=prim.parent;
         const name=prim?.userData.usdPath;
         if(!name)continue;
-        if(!items.length){box.expandByObject(object);continue;}
+        if(!items.length){
+          const custom=object.getBoundingBox?.();
+          if(custom&&!custom.isEmpty())box.union(custom.clone().applyMatrix4(object.matrixWorld));
+          else box.expandByObject(object);
+          continue;
+        }
         if(object.isInstancedMesh){
           const indices=await state.handle?.resolveSelection?.(name,object.count,items);
           if(indices){
@@ -39,6 +44,7 @@ export function createViewportFraming({viewport,getState,getSelection}) {
     const target=box.getCenter(new Vector3()),right=new Vector3(1,0,0).applyQuaternion(current.getWorldQuaternion(current.quaternion.clone()));
     const up=new Vector3().crossVectors(direction,right).normalize();
     const rect=viewport.getBoundingClientRect(),aspect=rect.width/Math.max(1,rect.height);
+    if(camera.isPerspectiveCamera)camera.aspect=aspect;
     const tan=Math.tan((camera.getEffectiveFOV?.()||50)*Math.PI/360),size=box.getSize(new Vector3()).length();
     let distance=Math.max(size*.01,1e-6),height=1e-6;
     for(let k=0;k<8;k++) {
@@ -49,7 +55,7 @@ export function createViewportFraming({viewport,getState,getSelection}) {
     if(camera.isOrthographicCamera)distance=Math.max(origin.distanceTo(target),size*2);
     const destination=target.clone().addScaledVector(direction,distance),startTarget=origin.clone().addScaledVector(direction,-Math.max(origin.distanceTo(controls.target),size*.01)),startZoom=camera.zoom;
     const endZoom=camera.isOrthographicCamera?(camera.top-camera.bottom)/height:camera.zoom;
-    const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:280,start=performance.now();
+    const duration=instant||matchMedia('(prefers-reduced-motion: reduce)').matches?0:280,start=performance.now();
     function tick(now) {
       const t=duration?Math.min(1,(now-start)/duration):1,e=t*t*t*(t*(t*6-15)+10);
       const position=origin.clone().lerp(destination,e);camera.position.copy(camera.parent?camera.parent.worldToLocal(position):position);
@@ -58,7 +64,8 @@ export function createViewportFraming({viewport,getState,getSelection}) {
       camera.lookAt(controls.target);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);controls.update(0);
       if(t<1)animation=requestAnimationFrame(tick);else cancel();
     }
-    animation=requestAnimationFrame(tick);
+    if(instant)tick(start);else animation=requestAnimationFrame(tick);
+    return {bounds:{min:box.min.toArray(),max:box.max.toArray()},distance};
   }
   const onKey=event=>{
     if(event.key.toLowerCase()!=='f' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.target.closest?.('input,textarea,select,[contenteditable=true],[role=dialog]'))return;

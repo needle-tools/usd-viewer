@@ -1,9 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
@@ -89,7 +87,7 @@ def Xform "World"
         color3f[] primvars:displayColor = [(0.15, 0.18, 0.22)]
         double size = 1
         float3 xformOp:scale = (5, 0.35, 3.3)
-        double3 xformOp:translate = (0, -0.24, 0)
+        double3 xformOp:translate = (0, -0.175, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
@@ -112,8 +110,8 @@ def Xform "World"
         rel material:binding = </World/Looks/Metal>
         color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)]
         double size = 1
-        float3 xformOp:scale = (0.85, 2.1, 0.85)
-        double3 xformOp:translate = (0, 1.05, 0)
+        float3 xformOp:scale = (0.85, 1.24, 0.85)
+        double3 xformOp:translate = (0, 0.62, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 

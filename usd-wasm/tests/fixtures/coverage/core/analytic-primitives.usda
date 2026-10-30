@@ -1,40 +1,95 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
     framesPerSecond = 24
     metersPerUnit = 1
-    startTimeCode = 1
     upAxis = "Y"
 )
 
 def Xform "World"
 {
+    def Plane "Ground"
+    {
+        uniform token axis = "Y"
+        uniform bool doubleSided = 1
+        double length = 3.6
+        color3f[] primvars:displayColor = [(0.16, 0.21, 0.25)]
+        double width = 6
+    }
+
+    def Cube "Cube"
+    {
+        float3[] extent = [(-0.45, -0.45, -0.45), (0.45, 0.45, 0.45)]
+        color3f[] primvars:displayColor = [(0.93, 0.42, 0.24)]
+        double size = 0.9
+        float xformOp:rotateY = 25
+        double3 xformOp:translate = (-2.2, 0.44999998807907104, -0.85)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY"]
+    }
+
     def Sphere "Sphere"
     {
-        color3f[] primvars:displayColor = [(0.2, 0.6, 0.8)]
-        double3 xformOp:translate = (-2.7, 0, 0)
-        uniform token[] xformOpOrder = ["xformOp:translate"]
-    }
-
-    def Capsule "Capsule"
-    {
-        color3f[] primvars:displayColor = [(0.4, 0.6, 0.68)]
-        double3 xformOp:translate = (-0.9, 0, 0)
-        uniform token[] xformOpOrder = ["xformOp:translate"]
-    }
-
-    def Cone "Cone"
-    {
-        color3f[] primvars:displayColor = [(0.6, 0.6, 0.56)]
-        double3 xformOp:translate = (0.9, 0, 0)
+        float3[] extent = [(-0.55, -0.55, -0.55), (0.55, 0.55, 0.55)]
+        color3f[] primvars:displayColor = [(0.22, 0.62, 0.86)]
+        double radius = 0.55
+        double3 xformOp:translate = (-0.7, 0.550000011920929, -0.85)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Cylinder "Cylinder"
     {
-        color3f[] primvars:displayColor = [(0.8, 0.6, 0.44)]
-        double3 xformOp:translate = (2.7, 0, 0)
+        uniform token axis = "Y"
+        float3[] extent = [(-0.4, -0.65, -0.4), (0.4, 0.65, 0.4)]
+        double height = 1.3
+        color3f[] primvars:displayColor = [(0.25, 0.72, 0.52)]
+        double radius = 0.4
+        double3 xformOp:translate = (0.7, 0.6499999761581421, -0.85)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cone "Cone"
+    {
+        uniform token axis = "Y"
+        float3[] extent = [(-0.5, -0.7, -0.5), (0.5, 0.7, 0.5)]
+        double height = 1.4
+        color3f[] primvars:displayColor = [(0.96, 0.72, 0.22)]
+        double radius = 0.5
+        double3 xformOp:translate = (2.1, 0.699999988079071, -0.85)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Capsule "Capsule"
+    {
+        uniform token axis = "X"
+        float3[] extent = [(-0.73, -0.28, -0.28), (0.73, 0.28, 0.28)]
+        double height = 0.9
+        color3f[] primvars:displayColor = [(0.78, 0.38, 0.78)]
+        double radius = 0.28
+        double3 xformOp:translate = (-1.35, 0.2800000011920929, 0.85)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder_1 "TaperedCylinder"
+    {
+        uniform token axis = "Y"
+        float3[] extent = [(-0.45, -0.45, -0.45), (0.45, 0.45, 0.45)]
+        double height = 0.9
+        color3f[] primvars:displayColor = [(0.36, 0.48, 0.92)]
+        double radiusBottom = 0.45
+        double radiusTop = 0.2
+        double3 xformOp:translate = (0.25, 0.44999998807907104, 0.85)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Capsule_1 "TaperedCapsule"
+    {
+        uniform token axis = "Y"
+        float3[] extent = [(-0.32, -0.67, -0.32), (0.32, 0.67, 0.32)]
+        double height = 0.7
+        color3f[] primvars:displayColor = [(0.92, 0.38, 0.5)]
+        double radiusBottom = 0.32
+        double radiusTop = 0.18
+        double3 xformOp:translate = (1.65, 0.6700000166893005, 0.85)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 }

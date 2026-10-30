@@ -266,7 +266,7 @@
       "needle": "Authored USD lights and/or HDR maps; illumination depends on viewer support"
     },
     "assertions": [
-      "Light intensity has time samples",
+      "Warm and cool intensities cross-fade in a seamless 1-97 loop",
       "Scene contains a stage and authored lights"
     ],
     "complexity": "high",
@@ -438,6 +438,7 @@
       "Material ring bound to MDL",
       "MDL source asset resolves",
       "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter",
       "Smooth and cage variants preserve creases and seam UVs"
     ],
     "complexity": "high",
@@ -474,6 +475,7 @@
       "Material ring bound to MDL",
       "MDL source asset resolves",
       "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter",
       "Smooth and cage variants preserve creases and seam UVs"
     ],
     "complexity": "high",
@@ -511,6 +513,7 @@
       "Material ring bound to MDL",
       "MDL source asset resolves",
       "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter",
       "Smooth and cage variants preserve creases and seam UVs",
       "Texture asset resolves"
     ],
@@ -549,6 +552,7 @@
       "Material ring bound to MDL",
       "MDL source asset resolves",
       "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter",
       "Texture asset resolves"
     ]
   },
@@ -584,6 +588,7 @@
       "Material ring bound to MDL",
       "MDL source asset resolves",
       "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter",
       "Texture asset resolves"
     ]
   },
@@ -617,7 +622,8 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
-      "Feature has enabled and disabled variants"
+      "Feature has enabled and disabled variants",
+      "Effect variants change the composed MDL parameter"
     ]
   }
 ]

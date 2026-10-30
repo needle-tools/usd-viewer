@@ -59,7 +59,8 @@
     },
     "assertions": [
       "Composed body is present",
-      "Reference layer offset shifts samples"
+      "Reference layer offset maps asset samples 1, 49, 97 to stage 1, 97, 193",
+      "Unoffset reference turns twice while the scaled one turns once"
     ]
   },
   {
@@ -226,7 +227,7 @@
       "needle": "Composition support varies by arc; native OpenUSD is the reference"
     },
     "assertions": [
-      "Clip drives translation at frame 48"
+      "Clip times replay the one-turn clip twice across 1-97"
     ]
   },
   {
@@ -406,7 +407,9 @@
       "needle": "Geometry and authored data; individual feature support is viewer dependent"
     },
     "assertions": [
-      "Sphere and cylinder exist"
+      "Sphere and cylinder exist",
+      "All seven implicit solids author their dimensions and axes",
+      "Every solid rests on the ground plane at least 0.3 from its neighbours"
     ]
   },
   {
@@ -643,7 +646,7 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Translation has two samples"
+      "Translation loops over 1-97 with matching endpoints"
     ]
   },
   {
@@ -662,7 +665,8 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Rotation has two samples"
+      "Rotation has two samples",
+      "Nested spins complete whole turns over 1-97"
     ]
   },
   {
@@ -681,7 +685,8 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Scale has two samples"
+      "Scale loops over 1-97 with matching endpoints",
+      "Seven equalizer bars scale in whole cycles"
     ]
   },
   {
@@ -700,7 +705,8 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Mesh points have two samples"
+      "Mesh points loop over 1-97 with matching endpoints",
+      "Topology is fixed and extent is sampled with the points"
     ]
   },
   {
@@ -719,7 +725,9 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Visibility changes at frame 24"
+      "Visibility changes at frame 24",
+      "Beacon blink returns to its first state at frame 49",
+      "Eight-lamp chase keeps two lamps lit on every frame"
     ]
   },
   {
@@ -738,7 +746,8 @@
       "needle": "Time-sampled scene data; playback support varies by attribute"
     },
     "assertions": [
-      "Display color has two samples"
+      "Display color loops over 1-97 with matching endpoints",
+      "Twelve floor tiles cycle hue with staggered phase"
     ]
   },
   {
