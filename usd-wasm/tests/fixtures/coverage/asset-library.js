@@ -14,8 +14,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-rest.png"
   },
   {
@@ -32,8 +33,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-bind.png"
   },
   {
@@ -50,8 +52,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-joint-names.png"
   },
   {
@@ -68,8 +71,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-weighted.png"
   },
   {
@@ -86,8 +90,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-dual-quaternion.png"
   },
   {
@@ -104,8 +109,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-translation.png"
   },
   {
@@ -122,8 +128,9 @@ export const coverageAssetLibrary = [
     ],
     "expected": {
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
-      "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
+      "needle": "A four-second skinned performance with matching loop endpoints; compare deformation against native UsdSkel.BakeSkinning"
     },
+    "thumbnailFrame": 13,
     "thumbnail": "thumbnails/advanced-skel-rotation.png"
   },
   {
@@ -142,6 +149,7 @@ export const coverageAssetLibrary = [
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
       "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
     },
+    "thumbnailFrame": 27,
     "thumbnail": "thumbnails/advanced-blendshape.png"
   },
   {
@@ -160,6 +168,7 @@ export const coverageAssetLibrary = [
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
       "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
     },
+    "thumbnailFrame": 20,
     "thumbnail": "thumbnails/advanced-blendshape-sparse.png"
   },
   {
@@ -178,6 +187,7 @@ export const coverageAssetLibrary = [
       "native": "Opens and preserves checked data in OpenUSD 26.05; rendering is feature dependent",
       "needle": "Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness"
     },
+    "thumbnailFrame": 23,
     "thumbnail": "thumbnails/advanced-blendshape-inbetween.png"
   },
   {

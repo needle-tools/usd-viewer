@@ -567,10 +567,11 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "particleFields": [],
-      "sourceFingerprint": "223c96296d522b33be61af013e9d20c65aa2fd081b76aabc11bb343ffecd9e28",
-      "imageSha256": "bb50e5641125633a3f8aa03f3067ae44acbd160e322ef417f927b9a2fb4259df"
+      "sourceFingerprint": "554edcdf1ffaf3852b7fb769a582a9d0573fa57a98709bd1bdc95abdbdd1bbe6",
+      "imageSha256": "b2caba2f0b1134cadb36069c8f6790d994be670ce4d4ca3a1ee4c8cfedb5d3ba"
     },
     {
       "id": "api-rigid-skinning",
@@ -578,10 +579,11 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "particleFields": [],
-      "sourceFingerprint": "23b5b887a65cf590c358554b5d00721edfab2c8d506b742f2018be493840cddf",
-      "imageSha256": "4b72dfb1ce866dd83100263b6fad7bb5c78732957e44271482645d1d62610868"
+      "sourceFingerprint": "df3c34756070966a58bf3edeb071e1712f8d0ec7bcc7cb0cee64e057952b3031",
+      "imageSha256": "2fc49ac3c0c1e196bd0015958a610bb7b39073d30961675b313393bd8536e4ad"
     },
     {
       "id": "api-splat-galaxy",

@@ -11,10 +11,11 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 from types import SimpleNamespace
 
-from pxr import Gf, Sdf, Usd, UsdGeom
+from pxr import Gf, Sdf, Usd, UsdGeom, UsdSkel
 from nurbs_reference import evaluated_reference
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,22 @@ def render(task):
     particle_fields = [prim for prim in stage.Traverse() if prim.GetTypeName() == 'ParticleField3DGaussianSplat']
     particle_bounds = None
     capture = 'surface'
+    frame = entry.get('thumbnailFrame')
+    if frame is not None and any(prim.IsA(UsdSkel.Root) for prim in stage.Traverse()):
+        # Native CPU skinning avoids Storm 26.05's GPU normal/blend-shape
+        # artifacts. Flatten only this private reference layer, never the asset.
+        source = str(work / 'baked-skinning.usda')
+        stage.Flatten().Export(source)
+        stage = Usd.Stage.Open(source)
+        for prim in stage.Traverse():
+            for attr in prim.GetAttributes():
+                if attr.GetNumTimeSamples():
+                    value = attr.Get(frame)
+                    if value is not None: attr.Set(value, frame)
+        if not UsdSkel.BakeSkinning(stage.Traverse(), Gf.Interval(frame, frame)):
+            raise RuntimeError(f"{entry['id']}: native skinning failed at {frame}")
+        stage.GetRootLayer().Save()
+        capture = 'native UsdSkel.BakeSkinning; Storm'
     stage, nurbs_records = evaluated_reference(stage, work / 'evaluated-nurbs.usda')
     if nurbs_records:
         source = str(work / 'evaluated-nurbs.usda')
@@ -92,6 +109,10 @@ def render(task):
                '--imageWidth', str(options.width), '--purposes', 'default,render,proxy', 'camera.usda', str(output)]
     if entry.get('thumbnailComplexity'):
         command[-2:-2] = ['--complexity', entry['thumbnailComplexity']]
+    if entry.get('thumbnailFrame') is not None:
+        command[-2:-2] = ['--frames', str(entry['thumbnailFrame'])]
+        # usdrecord requires a frame placeholder even for one explicit frame.
+        command[-1] = str(work / 'thumbnail.####.png')
     if entry.get('thumbnailCameraLight') is False:
         command.insert(-2, '--disableCameraLight')
     with (work / 'usdrecord.log').open('w') as log:
@@ -116,8 +137,11 @@ def render(task):
         with (work / 'bounds-usdrecord.log').open('w') as log:
             result = subprocess.run(fallback_command, stdout=log, stderr=subprocess.STDOUT, timeout=120)
         capture = 'bounds-only; native build has no VDB field plugin'
+    if result.returncode == 0 and entry.get('thumbnailFrame') is not None:
+        shutil.copyfile(work / f"thumbnail.{int(entry['thumbnailFrame']):04d}.png", output)
     record = {'id': entry['id'], 'status': 'rendered' if result.returncode == 0 and output.exists() else 'failed',
             'renderer': 'Storm', 'camera': camera_path, 'exitCode': result.returncode, 'capture': capture,
+            **({'timeCode': entry['thumbnailFrame']} if entry.get('thumbnailFrame') is not None else {}),
             **({'surfaceRenderFailure': failure} if failure else {})}
     (work / 'capture.json').write_text(json.dumps(record, indent=2) + '\n')
     return record

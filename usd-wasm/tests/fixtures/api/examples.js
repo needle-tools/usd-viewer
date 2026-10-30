@@ -1601,7 +1601,7 @@ const kit = sceneKit, colors = kit.colors;
 mountText("/tmp/frond/frond-rig.usda", \`#usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
+    endTimeCode = 49
     startTimeCode = 1
     upAxis = "Y"
 )
@@ -1691,14 +1691,23 @@ bodyPrim.GetAttribute("primvars:displayColor").Set(vertexColors);
 bodyPrim.CreateRelationship("skel:skeleton", false).AddTarget("/World/Frond/Skeleton");
 
 // 3. Animation: joint translations are local to the parent joint. Swaying the
-//    mid and tip joints sideways bends the smoothly weighted body.
+//    mid and tip joints sideways shears the smoothly weighted body.
+//    Full character rigs normally bend with rotations; this lesson uses the
+//    translation arrays that are directly available in the JavaScript bindings.
 const frond = stage.GetPrimAtPath("/World/Frond");
 frond.ApplyAPI("SkelBindingAPI");
 frond.CreateRelationship("skel:animationSource", false).AddTarget("/World/Frond/Sway");
 const translations = stage.GetPrimAtPath("/World/Frond/Sway").CreateAttribute("translations", Sdf.ValueTypeNames.Float3Array, false);
-const swayed = (bend) => [[0, 0, 0], [bend * 0.45, 1.1, bend * 0.15], [bend, 1.1, bend * 0.3]];
-translations.Set(swayed(0.55));   // default value: the pose shown in still previews
-for (const [frame, bend] of [[1, -0.5], [12, 0.6], [24, -0.5], [36, 0.6], [48, -0.5]]) translations.Set(swayed(bend), frame);
+// A periodic sway, with the tip following the middle joint a little later.
+// Sample every two frames; matching phase at 1 and 49 closes the two-second loop.
+const swayed = (phase) => [[0, 0, 0],
+  [0.32 * Math.sin(phase), 1.1, 0.08 * Math.cos(phase)],
+  [0.68 * Math.sin(phase - 0.4), 1.1, 0.2 * Math.sin(phase)]];
+translations.Set(swayed(Math.PI / 3));   // an expressive still-preview pose
+for (let frame = 1; frame <= 49; frame += 2) {
+  const phase = frame === 49 ? 0 : (frame - 1) / 48 * 2 * Math.PI;
+  translations.Set(swayed(phase), frame);
+}
 
 // A rock and a sandy seabed to anchor the frond.
 kit.sphere(stage, "/World/Rock", [0, 0.05, 0], 0.5, [0.32, 0.34, 0.42], [1, 0.45, 0.9]);
@@ -1719,7 +1728,7 @@ const kit = sceneKit, colors = kit.colors;
 mountText("/tmp/rover/rover-rig.usda", \`#usda 1.0
 (
     defaultPrim = "World"
-    endTimeCode = 48
+    endTimeCode = 49
     startTimeCode = 1
     upAxis = "Y"
 )
@@ -1782,9 +1791,18 @@ const translations = stage.GetPrimAtPath("/World/Mast/Extend").CreateAttribute("
 const collapsed = [[0, 0, 0], [0, 0.3, 0], [0, 0.1, 0]];
 const extended = [[0, 0, 0], [0, 0.85, 0], [0, 0.7, 0]];
 translations.Set(extended);   // default value: still previews show the raised mast
-for (const [frame, pose] of [[1, collapsed], [20, extended], [32, extended], [48, collapsed]]) translations.Set(pose, frame);
+// Ease out, admire the sky, and retract. Zero speed at both ends prevents a
+// visible snap when the two-second cycle wraps from frame 49 back to frame 1.
+for (let frame = 1; frame <= 49; frame += 2) {
+  const phase = frame === 49 ? 0 : (frame - 1) / 48 * 2 * Math.PI;
+  const rise = Math.min(1, 0.8 * (1 - Math.cos(phase)));
+  const amount = rise * rise * (3 - 2 * rise);   // eased rise, with a hold at full extension
+  const pose = collapsed.map((joint, i) => joint.map((value, axis) =>
+    value + (extended[i][axis] - value) * amount));
+  translations.Set(pose, frame);
+}
 
-print({ samples: translations.GetNumTimeSamples(), extended: translations.GetValueStringAtTime(24), collapsed: translations.GetValueStringAtTime(1) });`,
+print({ samples: translations.GetNumTimeSamples(), extended: translations.GetValueStringAtTime(25), collapsed: translations.GetValueStringAtTime(1) });`,
   },
   {
     title: "Splat Galaxy",

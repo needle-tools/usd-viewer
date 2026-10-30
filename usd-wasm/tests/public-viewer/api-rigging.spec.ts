@@ -29,11 +29,13 @@ for (const viewer of ['three', 'needle']) for (const [id, path] of rigs) {
       });
       return values;
     }, {time, path});
-    const initial = await pose(1), extended = await pose(20), restored = await pose(1);
+    const end = await page.evaluate(() => (window as any).usdHydra.driver.GetStageEndTimeCode());
+    const initial = await pose(1), extended = await pose(20), looped = await pose(end), restored = await pose(1);
     expect(initial.length).toBeGreaterThan(0);
     expect(initial.every(Number.isFinite) && extended.every(Number.isFinite)).toBe(true);
     expect(initial.length).toBe(extended.length);
     expect(Math.max(...initial.map((value, i) => Math.abs(value - extended[i])))).toBeGreaterThan(.2);
+    expect(Math.max(...initial.map((value, i) => Math.abs(value - looped[i])))).toBeLessThan(1e-5);
     expect(restored).toEqual(initial);
   });
 }

@@ -20,6 +20,7 @@ def Points "Cloud" {
   await page.locator('input[type=file]').setInputFiles({name:'growing-points.usda',mimeType:'text/plain',buffer:Buffer.from(source)});
   await stageReady(page);await page.evaluate(()=>{(window as any).usdHydra.setPlaying(false);(window as any).usdStagePanel.selectPrim('/Cloud');});
   await expect(page.locator('.usd-selection-overlay')).toBeVisible();await page.waitForTimeout(200);
+  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('timeline'));
   await page.getByRole('button',{name:'Last frame',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>{let count=0;(window as any).usdRoot.traverse((o:any)=>{if(o.isInstancedMesh&&o.userData.usdPath==='/Cloud')count=o.count;});return count;})).toBe(3);
   await page.waitForTimeout(250);expect(errors).toEqual([]);

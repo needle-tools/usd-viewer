@@ -6,6 +6,13 @@ It includes 63 examples, including weighted and rigid skinning, Gaussian fields,
 light rigs, animated lighting, payload variants, layer composition and instancing.
 `create-api-stage.js` also supplies the standalone API test buttons.
 
+The two Rigging lessons loop over frames 1–49 at 24 fps, with matching endpoints
+and samples every two frames. Weighted Skinning uses a periodic sway with tip
+follow-through; Rigid Skinning eases the rover mast up, holds, then retracts.
+Their native Storm cards use frame 13 after CPU skinning on a private copy.
+`api-rigging.spec.ts` checks deformation, the loop seam and backward seeking in
+both viewer modes.
+
 Selecting an example runs its JavaScript in a disposable worker with the same
 OpenUSD wasm build as the viewer. The resulting root layer and dependencies load
 through the normal viewer pipeline. Variants, references and payloads remain

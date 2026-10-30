@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import json, math, shutil, wave, struct
 from pxr import Usd, UsdGeom, UsdSkel, UsdPhysics, UsdVol, UsdMedia, UsdRender, Sdf, Gf, Vt
+import skel_faces
 
 BASE=Path(__file__).resolve().parents[1]/'tests/fixtures'; OUT=BASE/'coverage/advanced'; OUT.mkdir(parents=True,exist_ok=True)
 entries=[]; results=[]
@@ -39,104 +40,19 @@ def V(path,name,value): return lambda s:s.GetPrimAtPath(path).GetAttribute(name)
 
 def skel_case(name,label,mode):
     if not wanted(name): return
-    s,p=setup(name); root=UsdSkel.Root.Define(s,'/World/Rig'); skel=UsdSkel.Skeleton.Define(s,'/World/Rig/Skeleton')
-    joints=['root','root/tip']; skel.CreateJointsAttr(joints); rest=[Gf.Matrix4d(1),Gf.Matrix4d(1).SetTranslate(Gf.Vec3d(0,1,0))]; skel.CreateRestTransformsAttr(rest); skel.CreateBindTransformsAttr(rest)
-    # Five articulated bands with three vertices per band. Each profile forms a
-    # distinct silhouette while keeping the same transparent skeletal structure.
-    designs={
-        'rest':([.30,.75,.65,.48,.34],[0,0,0,0,0],(.16,.65,.77),(.95,.66,.20)),
-        'bind':([.22,.52,1.0,.55,.16],[0,-.12,-.18,-.10,0],(.92,.37,.19),(.99,.77,.24)),
-        'names':([.42,.28,.65,.35,.52],[0,.12,0,-.12,0],(.46,.29,.76),(.91,.52,.64)),
-        'multi':([.17,.32,.60,.82,1.10],[0,.10,.05,-.10,0],(.12,.65,.47),(.81,.86,.36)),
-        'dual':([.20,.52,.82,.45,.18],[0,.20,.38,.18,0],(.18,.48,.85),(.42,.88,.91)),
-        'translate':([.70,.45,.22,.45,.70],[-.25,-.13,0,.13,.25],(.87,.30,.48),(.97,.68,.32)),
-        'rotation':([.12,.34,.60,.87,1.10],[0,.20,.35,.52,.65],(.24,.66,.71),(.88,.85,.35)),
-        'blend':([.20,.72,.93,.72,.20],[0,0,0,0,0],(.98,.58,.24),(.92,.26,.25)),
-        'sparse':([.48,.86,.94,.82,.38],[0,.05,0,-.05,0],(.52,.36,.78),(.92,.65,.77)),
-        'inbetween':([.25,.76,1.0,.76,.25],[0,-.05,0,.05,0],(.23,.68,.62),(.96,.71,.34)),
-    }
-    widths,centers,primary,accent=designs[mode]
-    pts=[(centers[row]+widths[row]*col,row*.5,.07*(1-abs(col))) for row in range(5) for col in (-1,0,1)]
-    indices=[]; counts=[]; colors=[Gf.Vec3f(*(accent if (row+col)%3==0 else primary)) for row in range(5) for col in range(3)]
-    for row in range(4):
-        for col in range(2):
-            i=row*3+col; indices.extend([i,i+1,i+4,i+3]); counts.append(4)
-    def panel(vertices,color,z=.18):
-        start=len(pts); pts.extend([(x,y,z) for x,y in vertices]); indices.extend(range(start,start+len(vertices))); counts.append(len(vertices)); colors.extend([Gf.Vec3f(*color)]*len(vertices))
-    def disk(x,y,rx,ry,color,z=.2):
-        panel([(x+rx*math.cos(i*math.tau/12),y+ry*math.sin(i*math.tau/12)) for i in range(12)],color,z)
-    dark=(.08,.13,.19); white=(.95,.93,.78)
-    if mode in ('blend','sparse','inbetween'):
-        # Faces have different brow/cheek forms and a curved, articulated mouth.
-        for x in (-.38,.38): disk(x,1.30,.12,.15,dark); disk(x-.03,1.34,.035,.045,white,.23)
-        y={'blend':.62,'sparse':.70,'inbetween':.77}[mode]
-        panel([(-.44,y+.12),(-.25,y),(.25,y),(.44,y+.12),(.30,y-.12),(-.30,y-.12)],dark)
-        if mode=='blend':
-            for x in (-.7,.7): disk(x,.85,.13,.1,(.92,.19,.22))
-        elif mode=='sparse':
-            for x in (-.55,.55): panel([(x-.2,1.64),(x+.18,1.72),(x+.2,1.63),(x-.18,1.55)],white)
-        else:
-            panel([(-.26,.48),(0,.38),(.26,.48),(.18,.39),(0,.30),(-.18,.39)],white)
-    elif mode=='rest':
-        for x in (-.23,.23): disk(x,1.64,.11,.10,dark); disk(x,1.65,.04,.04,white,.23)
-        for y in (.4,.7,1.): disk(0,y,.075,.075,dark)
-        for x in (-.43,.43): panel([(x-.07,1.75),(x+.07,1.75),(x+.14,2.22),(x,2.17)],accent)
-    elif mode=='bind':
-        panel([(-.26,1.05),(-1.28,1.36),(-.77,.60),(-.35,.54)],accent); panel([(.26,1.05),(1.28,1.36),(.77,.60),(.35,.54)],accent)
-        disk(.08,1.65,.09,.10,dark); panel([(.18,1.55),(.52,1.44),(.18,1.35)],white)
-    elif mode=='names':
-        for i in range(7):
-            a=i*math.tau/7; disk(.58*math.cos(a),1.5+.58*math.sin(a),.19,.21,accent)
-        disk(0,1.5,.27,.27,white,.23); disk(0,1.5,.12,.12,dark,.24)
-    elif mode=='multi':
-        for y,x in ((.48,-.3),(.85,.28),(1.18,-.35),(1.52,.35)):
-            panel([(x,y),(x*2,y+.36),(x*1.65,y+.10),(0,y-.12)],accent)
-        panel([(-.06,.1),(.06,.1),(.06,1.95),(-.06,1.95)],white)
-    elif mode=='dual':
-        for i in range(4):
-            a=i*math.tau/4; dx,dy=math.cos(a),math.sin(a); panel([(0,1.1),(.2*dx-.15*dy,1.1+.2*dy+.15*dx),(1.12*dx-.12*dy,1.1+1.12*dy+.12*dx),(.92*dx+.22*dy,1.1+.92*dy-.22*dx)],accent)
-        disk(0,1.1,.22,.22,dark,.23); disk(0,1.1,.10,.10,white,.24)
-    elif mode=='translate':
-        for y in (.46,1.0,1.54): panel([(-.55,y-.12),(.1,y-.12),(.1,y-.28),(.58,y),(.1,y+.28),(.1,y+.12),(-.55,y+.12)],accent)
-    elif mode=='rotation':
-        for y,x in ((.45,.08),(.9,.25),(1.35,.43)):
-            panel([(x,y),(x-.72,y+.32),(x-.4,y-.18)],accent); panel([(x,y),(x+.72,y+.35),(x+.4,y-.18)],white)
-    m=UsdGeom.Mesh.Define(s,'/World/Rig/Surface'); m.CreatePointsAttr(pts); m.CreateFaceVertexCountsAttr(counts); m.CreateFaceVertexIndicesAttr(indices); m.CreateSubdivisionSchemeAttr('none'); m.CreateDoubleSidedAttr(True)
-    m.CreateDisplayColorAttr(colors); m.GetDisplayColorPrimvar().SetInterpolation('vertex')
-    # A neutral display base anchors the rig, but is not used as proof of skinning.
-    box(s,'/World/Base',(0,-.16,0),(.13,.20,.25),(2.8,.18,.9)); box(s,'/World/BaseTrim',(0,-.055,0),accent,(2.65,.035,.76))
-    camera=UsdGeom.Camera.Define(s,'/World/Camera'); camera.CreateFocalLengthAttr(42); camera.CreateHorizontalApertureAttr(36); camera.CreateVerticalApertureAttr(27)
-    camera.AddTransformOp().Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(2.4,2.1,6.6),Gf.Vec3d(0,1,0),Gf.Vec3d(0,1,0)).GetInverse())
-    b=UsdSkel.BindingAPI.Apply(m.GetPrim()); b.CreateSkeletonRel().SetTargets([skel.GetPath()]); b.CreateGeomBindTransformAttr(Gf.Matrix4d(1))
-    influences=2 if mode=='multi' else 1
-    ji=b.CreateJointIndicesPrimvar(False,influences); jw=b.CreateJointWeightsPrimvar(False,influences)
-    if mode=='multi':
-        ji.Set([0,1]*len(pts)); jw.Set([value for _,y,_ in pts for value in (1-min(max(y/2,0),1),min(max(y/2,0),1))])
-    else: ji.Set([0 if y<=1 else 1 for _,y,_ in pts]); jw.Set([1]*len(pts))
-    if mode=='dual': b.CreateSkinningMethodAttr('dualQuaternion')
-    anim=UsdSkel.Animation.Define(s,'/World/Rig/Animation'); anim.CreateJointsAttr(joints)
-    anim.CreateTranslationsAttr().Set([Gf.Vec3f(0,0,0),Gf.Vec3f(0,1,0)],1); anim.CreateTranslationsAttr().Set([Gf.Vec3f(0,0,0),Gf.Vec3f(.5 if mode=='translate' else 0,1,0)],48)
-    anim.CreateRotationsAttr().Set([Gf.Quatf(1),Gf.Quatf(1)],1); anim.CreateRotationsAttr().Set([Gf.Quatf(1),Gf.Quatf(Gf.Rotation(Gf.Vec3d(0,0,1),60).GetQuat())],48)
-    anim.CreateScalesAttr().Set([Gf.Vec3h(1),Gf.Vec3h(1)],1)
-    UsdSkel.BindingAPI.Apply(root.GetPrim()).CreateAnimationSourceRel().SetTargets([anim.GetPath()])
-    checks=[('Two joint hierarchy',lambda st:list(UsdSkel.Skeleton(st.GetPrimAtPath('/World/Rig/Skeleton')).GetJointsAttr().Get())==joints),('Skin binds to skeleton',lambda st:bool(UsdSkel.BindingAPI(st.GetPrimAtPath('/World/Rig/Surface')).GetSkeletonRel().GetTargets()))]
-    if mode in ('blend','sparse','inbetween'):
-        bs=UsdSkel.BlendShape.Define(s,'/World/Rig/Smile'); bs.CreateOffsetsAttr([(0,.25,0)]* (2 if mode=='sparse' else len(pts)))
-        if mode=='sparse': bs.CreatePointIndicesAttr([12,14])
-        if mode=='inbetween': ib=bs.CreateInbetween('half'); ib.SetWeight(.5); ib.SetOffsets([(0,.1,0)]*len(pts))
-        b.CreateBlendShapesAttr(['smile']); b.CreateBlendShapeTargetsRel().SetTargets([bs.GetPath()]); anim.CreateBlendShapesAttr(['smile']); anim.CreateBlendShapeWeightsAttr().Set([0],1); anim.CreateBlendShapeWeightsAttr().Set([1],48)
-        checks.append(('Blend shape target is bound',lambda st:bool(UsdSkel.BindingAPI(st.GetPrimAtPath('/World/Rig/Surface')).GetBlendShapeTargetsRel().GetTargets())))
-        if mode=='sparse': checks.append(('Sparse shape has two point indices',lambda st:len(st.GetPrimAtPath('/World/Rig/Smile').GetAttribute('pointIndices').Get())==2))
-        if mode=='inbetween': checks.append(('Inbetween weight is authored',lambda st:UsdSkel.BlendShape(st.GetPrimAtPath('/World/Rig/Smile')).HasInbetween('half')))
-    elif mode=='dual': checks.append(('Dual quaternion skinning method',V('/World/Rig/Surface','primvars:skel:skinningMethod','dualQuaternion')))
-    elif mode=='multi': checks.append(('Two influences per vertex',lambda st:UsdSkel.BindingAPI(st.GetPrimAtPath('/World/Rig/Surface')).GetJointWeightsPrimvar().GetElementSize()==2))
-    elif mode=='translate': checks.append(('Joint translations sampled',lambda st:len(st.GetPrimAtPath('/World/Rig/Animation').GetAttribute('translations').GetTimeSamples())==2))
-    elif mode=='rotation': checks.append(('Joint rotations sampled',lambda st:len(st.GetPrimAtPath('/World/Rig/Animation').GetAttribute('rotations').GetTimeSamples())==2))
-    elif mode=='bind': checks.append(('Two bind transforms',lambda st:len(st.GetPrimAtPath('/World/Rig/Skeleton').GetAttribute('bindTransforms').Get())==2))
-    elif mode=='rest': checks.append(('Two rest transforms',lambda st:len(st.GetPrimAtPath('/World/Rig/Skeleton').GetAttribute('restTransforms').Get())==2))
-    elif mode=='names': skel.CreateJointNamesAttr(['Base','Tip']); checks.append(('Joint names authored',lambda st:list(st.GetPrimAtPath('/World/Rig/Skeleton').GetAttribute('jointNames').Get())==['Base','Tip']))
+    if mode not in skel_faces.MODES:
+        from skeletal_props import create_prop
+        s,p=setup(name)
+        create_prop(s,p,name,label,mode,finish,box)
+        return
+    # Expressive face rigs with localized smile/wink/surprise targets, looping over frames 1-97.
+    s,p=setup(name); checks=skel_faces.build(s,mode)
     finish(name,label,'Skeletal animation',s,p,['UsdSkel',mode],checks,expected='Compare deformed points with native UsdSkel.BakeSkinning; static mesh visibility alone does not establish playback correctness')
 for x in [('skel-rest','Skeleton rest transforms','rest'),('skel-bind','Skeleton bind transforms','bind'),('skel-joint-names','Skeleton joint names','names'),('skel-weighted','Two joint influences','multi'),('skel-dual-quaternion','Dual quaternion skinning','dual'),('skel-translation','Animated joint translation','translate'),('skel-rotation','Animated joint rotation','rotation'),('blendshape','Blend shape','blend'),('blendshape-sparse','Sparse blend shape','sparse'),('blendshape-inbetween','Blend shape inbetween','inbetween')]: skel_case(*x)
+
+# Native default time shows the bind pose; choose an actual performance frame.
+for entry in entries:
+    if entry['group'] == 'Skeletal animation': entry['thumbnailFrame'] = skel_faces.THUMBNAIL_FRAMES.get(entry['id'], 13)
 
 # 26.05 retains typed schema and attributes even though it lacks the 26.11 schema class.
 def splat_case(name,label,mode):

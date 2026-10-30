@@ -48,7 +48,7 @@ function dataSnapshot(root, capturePositions) {
             materials.set(m.uuid,details); materialDetails.push(details);
         }
         objects.push({name:o.name,type:o.type,visible:o.visible,mesh:!!o.isMesh,skinnedMesh:!!o.isSkinnedMesh,points:!!o.isPoints,line:!!o.isLine,
-            instanceCount:o.isInstancedMesh?o.count:null,attributes,positions:capturePositions && geometry?.attributes?.position && geometry.attributes.position.count<=2048 ? Array.from(geometry.attributes.position.array) : null,primvars:Object.fromEntries(Object.entries(o.userData?.usdPrimvars||{}).map(([name,value])=>[name,{count:value.length,preview:value.slice(0,12)}])),morphAttributes:Object.fromEntries(Object.entries(geometry?.morphAttributes||{}).map(([k,v])=>[k,v.length])),
+            instanceCount:o.isInstancedMesh?o.count:null,attributes,positions:capturePositions && geometry?.attributes?.position ? Array.from(geometry.attributes.position.array) : null,primvars:Object.fromEntries(Object.entries(o.userData?.usdPrimvars||{}).map(([name,value])=>[name,{count:value.length,preview:value.slice(0,12)}])),morphAttributes:Object.fromEntries(Object.entries(geometry?.morphAttributes||{}).map(([k,v])=>[k,v.length])),
             matrix:o.matrixWorld.toArray().map(n=>Math.round(n*100000)/100000),geometryHash:hash,
             morphInfluences:o.morphTargetInfluences?.slice()??null,materials:materialDetails});
     });

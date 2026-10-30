@@ -672,81 +672,91 @@
       "id": "advanced-skel-rest",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-rest.png",
-      "sha256": "d5244bf8e9ddc6111e3d05f6c5fde1270660330f5b1aa416b87583cb0d99d334"
+      "sha256": "30fa3f461d3a7ab0bc3ea981c72dd706ac6dd55384248ac0d67a0401d777debb"
     },
     {
       "id": "advanced-skel-bind",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-bind.png",
-      "sha256": "391fd0a2704a05edb98ed248a1e9cdc140a22d716282086594c5c7cf2b28fdc8"
+      "sha256": "6c84319d35ba643702516414e37572a98bfc935eeb9847aa619f5ee101d5933a"
     },
     {
       "id": "advanced-skel-joint-names",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-joint-names.png",
-      "sha256": "3f6e1b093d5c0c9919fd6da261e82482cffa2e3ac017d20f569093d404d2ef1b"
+      "sha256": "5fd50c7870b778823e0c1ff34911edc302bfded353f8789d1fd309174c8924cd"
     },
     {
       "id": "advanced-skel-weighted",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-weighted.png",
-      "sha256": "094689fced44fcef31df0c1af5b23a2856656b0f9ad0418bd92798b661081474"
+      "sha256": "7d1b0c7848f85e3b2de26c4a3e8e01aa3d5d4fd0219952ab012f31e22c6b7332"
     },
     {
       "id": "advanced-skel-dual-quaternion",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-dual-quaternion.png",
-      "sha256": "48c5a337428fbf1f62fbcbd3687c6d85f8bd0ac16adf795d3a2cf9a5e0a74d79"
+      "sha256": "144a298543457565285ead0e9111c67ccfe151e9b35aae076b718d2338bf01dd"
     },
     {
       "id": "advanced-skel-translation",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-translation.png",
-      "sha256": "f90f582ed93983524a33ffc9be26e731673652cd93e77cc0e779c3f6fca8dcaa"
+      "sha256": "d43849da58999d01c4df77d83d35a627be4d0acdef98a111baaf32ab2ac9ca95"
     },
     {
       "id": "advanced-skel-rotation",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 13,
       "image": "thumbnails/advanced-skel-rotation.png",
-      "sha256": "485600304cb9b22b724d1160afce169791495e21629de15076158f6a7a8d3ae1"
+      "sha256": "ae0be5b46e1f5d065f079d27f4e4009203b0136c24347e432c5608b19c7ebb7c"
     },
     {
       "id": "advanced-blendshape",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 27,
       "image": "thumbnails/advanced-blendshape.png",
-      "sha256": "df32a198133c2a5292ff25ce837b9ee0ebc4f0a6c28a2eb0ef0b0197345645b3"
+      "sha256": "00189d868f6647f0ecb3e91b7eb2ec8ed651238373fcf326a47bbbc9796b47fb"
     },
     {
       "id": "advanced-blendshape-sparse",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 20,
       "image": "thumbnails/advanced-blendshape-sparse.png",
-      "sha256": "42fcb6d062ebab4b30048f5526186b0248a5cb4543ac8abd470caad547be6d47"
+      "sha256": "0b61b7bf1359b93f91c293aa2833952db3d665af52cd6ba8a1729156de86def1"
     },
     {
       "id": "advanced-blendshape-inbetween",
       "renderer": "Storm",
       "camera": "/World/Camera",
-      "capture": "surface",
+      "capture": "native UsdSkel.BakeSkinning; Storm",
+      "timeCode": 23,
       "image": "thumbnails/advanced-blendshape-inbetween.png",
-      "sha256": "46a73ae8d76c9c32965eff24e9b51e911900af4863030bdc201b492768e35eb1"
+      "sha256": "e9a4e9eff602803752b8577a8bc09f95ed1fcc2ed6341c8be0fee8d46476f64b"
     },
     {
       "id": "advanced-splat-ring",

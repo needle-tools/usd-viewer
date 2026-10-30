@@ -8,6 +8,7 @@ import {createInstanceMaskCache} from './usd/viewer/instanceSelection.js';
 export function createViewportInteraction({viewport,getState,onSelect}) {
   const ray = new Raycaster(), pointer = new Vector2();
   let selected = [], hovered = null, start, dragged = false, disposed = false, frame, overlay, pending, hoverEpoch = 0, clickEpoch = 0, pickMode = 'prim';
+  let cursor = null, hoverRequest = null, hoverInFlight = false, hoverHandle, hoverTime, hoverRevision, hoverCamera, hoverWorld = [], hoverProjection = [];
   const framing=createViewportFraming({viewport,getState,getSelection:()=>selected});
   const listeners = [];
   function listen(type,handler) {viewport.addEventListener(type,handler,true); listeners.push([type,handler]);}
@@ -17,7 +18,18 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
     const rect = viewport.getBoundingClientRect(); if(!rect.width || !rect.height)return null;
     pointer.set((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2);
     state.scene.updateMatrixWorld(true); state.camera.updateMatrixWorld(); ray.setFromCamera(pointer,state.camera);
-    for(const hit of ray.intersectObject(state.scene,true)) {
+    // Raycaster traverses hidden objects too. Filter before triangle testing,
+    // including hidden Hydra source meshes retained behind visible instances.
+    const candidates=[];
+    state.scene.traverseVisible(object=>{
+      let path=false;
+      for(let parent=object;parent;parent=parent.parent){
+        if(parent.userData.usdHelperFor)return;
+        path ||= !!parent.userData.usdPath;
+      }
+      if(path && typeof object.raycast==='function')candidates.push(object);
+    });
+    for(const hit of ray.intersectObjects(candidates,false)) {
       if(!visible(hit.object) || hit.object.userData.usdHelperFor)continue;
       let object=hit.object; while(object && !object.userData.usdPath)object=object.parent;
       if(!object)continue;
@@ -47,29 +59,49 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
     pending=makeOutline(viewport).then(value=>{if(disposed)value.dispose();else overlay=value;}).catch(error=>console.error('Selection outline failed',error)).finally(()=>pending=null);
   }
   function choose(value) {selected=(Array.isArray(value)?value:value?[value]:[]).map(selectionItem).filter(Boolean);if(selected.length)void ensureOverlay();}
-  listen('pointerdown',event=>{if(event.button!==0)return;start=[event.clientX,event.clientY];dragged=false;clickEpoch++;});
+  function clearHover() {hoverEpoch++;cursor=hoverRequest=null;hovered=null;}
+  function queueHover(event) {
+    hoverEpoch++;
+    if(event.buttons || event.target.closest?.('button,input,select,summary,.usd-timeline')){cursor=hoverRequest=null;hovered=null;return;}
+    cursor=hoverRequest={clientX:event.clientX,clientY:event.clientY,target:event.target};
+  }
+  function updateHover(state) {
+    if(!cursor || hoverInFlight || !state?.camera || window.usdViewportVisible===false)return;
+    const camera=state.camera,time=state.handle?.renderedTime,revision=state.handle?.revision;
+    const changed=hoverRequest || hoverHandle!==state.handle || hoverTime!==time || hoverRevision!==revision || hoverCamera!==camera
+      || camera.matrixWorld.elements.some((v,i)=>v!==hoverWorld[i]) || camera.projectionMatrix.elements.some((v,i)=>v!==hoverProjection[i]);
+    if(!changed)return;
+    const request=hoverRequest||cursor,epoch=hoverEpoch;hoverRequest=null;hoverInFlight=true;
+    hoverHandle=state.handle;hoverTime=time;hoverRevision=revision;hoverCamera=camera;
+    hoverWorld=camera.matrixWorld.elements.slice();hoverProjection=camera.projectionMatrix.elements.slice();
+    // One in-flight pick and one latest pointer sample; animation also rechecks
+    // a stationary cursor as the rendered surface moves beneath it.
+    void pick(request).then(next=>{if(!disposed && epoch===hoverEpoch){hovered=next;if(next)void ensureOverlay();}})
+      .catch(()=>{}).finally(()=>{hoverInFlight=false;});
+  }
+  listen('pointerdown',event=>{if(event.button!==0)return;start=[event.clientX,event.clientY];dragged=false;clickEpoch++;clearHover();});
   listen('pointermove',event=>{
     if(start && Math.hypot(event.clientX-start[0],event.clientY-start[1])>4)dragged=true;
-    const epoch=++hoverEpoch;
-    if(event.buttons){hovered=null;return;}
-    void pick(event).then(next=>{if(!disposed && epoch===hoverEpoch){hovered=next;if(next)void ensureOverlay();}}).catch(()=>{});
+    queueHover(event);
   });
-  listen('pointerleave',()=>{hoverEpoch++;hovered=null;});
-  listen('pointercancel',()=>{clickEpoch++;hoverEpoch++;start=undefined;hovered=null;});
+  listen('pointerleave',clearHover);
+  listen('pointercancel',()=>{clickEpoch++;start=undefined;clearHover();});
   listen('pointerup',event=>{
     if(!start || event.button!==0)return;
     const click=!dragged && Math.hypot(event.clientX-start[0],event.clientY-start[1])<=4;start=undefined;
+    queueHover(event);
     const epoch=clickEpoch, options={toggle:event.ctrlKey||event.metaKey,range:false};
     if(click)void pick(event).then(item=>{if(!disposed && epoch===clickEpoch)onSelect(item,options);}).catch(error=>console.error('USD picking failed',error));
   });
   function tick() {
     if(disposed)return;frame=requestAnimationFrame(tick);
     const state=getState(),rect=viewport.getBoundingClientRect();
+    updateHover(state);
     if(overlay)overlay.render(state,selected,hovered,rect,window.usdViewportVisible!==false);
   }
   tick();
-  return {select:choose,focus:framing.focus,setPickMode(mode){if(['prim','instance'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;}},get pickMode(){return pickMode;},
-    clear(){selected=[];hovered=null;hoverEpoch++;clickEpoch++;framing.cancel();},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
+  return {select:choose,focus:framing.focus,setPickMode(mode){if(['prim','instance'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;hoverRequest=cursor;}},get pickMode(){return pickMode;},
+    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
     dispose(){disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
 }
 
@@ -122,7 +154,7 @@ async function makeOutline(viewport) {
     pipeline=new RenderPipeline(renderer,vec4(color.mul(alpha),alpha));pipeline.outputColorTransform=false;
   }
   function clear() {
-    for(const [,copies]of pairs)for(let i=0;i<copies.length;i++){scenes[i].remove(copies[i]);if(copies[i].isInstancedMesh)copies[i].dispose();}
+    for(const [,copies]of pairs)for(let i=0;i<copies.length;i++){scenes[i].remove(copies[i]);if(copies[i].isInstancedMesh){copies[i].morphTexture=null;copies[i].dispose();}}
     pairs=[];sources=[];previousKey='';
   }
   function proxy(source,material) {
@@ -165,12 +197,17 @@ async function makeOutline(viewport) {
         const selectedMask=masks.get(source,selected,state.handle,'selected'),rawHoverMask=masks.get(source,hovered?[hovered]:[],state.handle,'hover');
         const hoveredMask=selectedMask===null ? new Set() : new Set([...(rawHoverMask===null ? Array.from({length:source.count||1},(_,i)=>i) : rawHoverMask)].filter(i=>!selectedMask.has(i)));
         const version=`${source.geometry.attributes.position?.version}:${source.geometry.index?.version}:${source.instanceMatrix?.version}:${source.count}:${source.geometry.drawRange.start}:${source.geometry.drawRange.count}`;
+        const position=source.geometry.attributes.position,index=source.geometry.index,morph=source.morphTargetInfluences?.join(','),morphTexture=source.morphTexture?.version;
         for(let i=0;i<copies.length;i++){
           const copy=copies[i],indices=i===1?selectedMask:i===2?hoveredMask:null,visible=i===0 || indices===null || indices.size>0;
-          if(copy.geometry!==source.geometry || !copy.matrixWorld.equals(source.matrixWorld) || copy.visible!==visible || copy.userData.version!==version || source.isSkinnedMesh || source.morphTargetInfluences?.some(Boolean))previousKey='';
+          if(copy.geometry!==source.geometry || copy.userData.position!==position || copy.userData.index!==index
+            || !copy.matrixWorld.equals(source.matrixWorld) || copy.visible!==visible || copy.userData.version!==version
+            || source.isSkinnedMesh || copy.userData.morph!==morph || copy.userData.morphTexture!==morphTexture)previousKey='';
+          copy.userData.position=position;copy.userData.index=index;copy.userData.morph=morph;copy.userData.morphTexture=morphTexture;
           copy.userData.version=version;copy.visible=visible;
           copy.geometry=source.geometry;copy.matrix.copy(source.matrixWorld);copy.matrixWorld.copy(source.matrixWorld);
           copy.morphTargetInfluences=source.morphTargetInfluences;copy.skeleton=source.skeleton;
+          if(copy.isInstancedMesh)copy.morphTexture=source.morphTexture;
           if(source.isSkinnedMesh){copy.bindMode=source.bindMode;copy.bindMatrix.copy(source.bindMatrix);copy.bindMatrixInverse.copy(source.bindMatrixInverse);}
           if(source.instanceMatrix){
             if(i===0 || indices===null){copy.instanceMatrix=source.instanceMatrix;copy.count=source.count;}
