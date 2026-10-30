@@ -1,2 +1,5 @@
 # Unified-diff context lines and mail signatures contain intentional spaces.
 patches/openusd/*.patch -whitespace
+# Preserve NVIDIA MDL sources byte-for-byte, including upstream formatting.
+usd-wasm/tests/fixtures/coverage/lighting-mdl/*.mdl -text -whitespace
+usd-wasm/tests/fixtures/coverage/lighting-mdl/nvidia/*.mdl -text -whitespace

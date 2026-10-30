@@ -112,6 +112,25 @@ test('separate opacity maps extract their channel as linear data and respect mas
   } finally { context.delegate.dispose(); }
 });
 
+test('retiring a textured material detaches it while its replacement is pending', async () => {
+  const context = setup();
+  try {
+    const document = omni({ enable_opacity: true, enable_opacity_texture: true,
+      opacity_texture: 'opacity.png', opacity_mode: 1, opacity_threshold: .5 });
+    const previous = await update(context, document);
+    assert.ok(previous.alphaMap); assert.equal(context.mesh._mesh.visible, true);
+    context.delegate.destroySPrim('/Material');
+    assert.notEqual(context.mesh._mesh.material, previous);
+    assert.equal(context.mesh._mesh.material.alphaMap, null);
+    assert.equal(context.mesh._mesh.visible, false);
+    context.material = context.delegate.createSPrim('material', '/Material');
+    const replacement = await update(context, document);
+    assert.equal(context.mesh._mesh.material, replacement);
+    assert.equal(context.mesh._mesh.visible, true);
+    assert.equal(replacement.alphaTest, .5);
+  } finally { context.delegate.dispose(); }
+});
+
 test('known glTF texture lookups retain independent UV transforms, sampler and resolved asset metadata', async () => {
   const context = setup();
   try {

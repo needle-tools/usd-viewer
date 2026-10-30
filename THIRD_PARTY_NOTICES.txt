@@ -1,5 +1,12 @@
 Third-party notices preserved from the previous LICENSE.txt.
 
+NVIDIA MDL fixture materials
+The unmodified OmniPBR modules are from NVIDIA ovrtx 0.5.1.385782.
+gltf_support.mdl and nvidia/core_definitions.mdl are from NVIDIA MDL SDK 2026.0.2.
+These fixture dependencies use BSD-3-Clause; original notices remain in each file.
+Full license: usd-wasm/tests/fixtures/coverage/lighting-mdl/LICENSE-NVIDIA.txt
+Source versions and SHA-256: usd-wasm/tests/fixtures/coverage/lighting-mdl/mdl-sources.json
+
 Rapier3D (@dimforge/rapier3d-compat 0.21.0)
 https://github.com/dimforge/rapier.js
 Copyright 2020 Dimforge EURL

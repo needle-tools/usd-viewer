@@ -35,16 +35,23 @@ def Xform "World"
 
     def DistantLight "Key"
     {
-        float inputs:intensity = 350
+        float inputs:intensity = 2
+        bool inputs:normalize = true
         float inputs:angle = 0.35
-        float3 xformOp:rotateXYZ = (-45, 0, 45)
+        float3 xformOp:rotateXYZ = (45, 0, -25)
         uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def DomeLight "Sky"
+    {
+        float inputs:intensity = 0.8
     }
 
     def Camera "Camera"
     {
-        float focalLength = 35
-        float horizontalAperture = 21
+        float focalLength = 30
+        float horizontalAperture = 36
+        float verticalAperture = 27
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.35, 0.94, 0), (0, -0.94, 0.35, 0), (0, -4.8, 2.0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

@@ -2485,7 +2485,15 @@ export const coverageAssetLibrary = [
     "root": "coverage/lighting-mdl/mdl-metal.usda",
     "files": [
       "coverage/lighting-mdl/mdl-metal.usda",
-      "coverage/lighting-mdl/OmniPBR.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",
@@ -2507,7 +2515,15 @@ export const coverageAssetLibrary = [
     "root": "coverage/lighting-mdl/mdl-clearcoat.usda",
     "files": [
       "coverage/lighting-mdl/mdl-clearcoat.usda",
-      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",
@@ -2530,6 +2546,14 @@ export const coverageAssetLibrary = [
     "files": [
       "coverage/lighting-mdl/mdl-color-texture.usda",
       "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-color.png"
     ],
     "features": [
@@ -2553,6 +2577,14 @@ export const coverageAssetLibrary = [
     "files": [
       "coverage/lighting-mdl/mdl-normal-texture.usda",
       "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-normal.png"
     ],
     "features": [
@@ -2573,7 +2605,15 @@ export const coverageAssetLibrary = [
     "root": "coverage/lighting-mdl/mdl-opacity-mask.usda",
     "files": [
       "coverage/lighting-mdl/mdl-opacity-mask.usda",
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
       "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-opacity.png"
     ],
     "features": [
@@ -2594,7 +2634,15 @@ export const coverageAssetLibrary = [
     "root": "coverage/lighting-mdl/mdl-gltf.usda",
     "files": [
       "coverage/lighting-mdl/mdl-gltf.usda",
-      "coverage/lighting-mdl/gltf_support.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",

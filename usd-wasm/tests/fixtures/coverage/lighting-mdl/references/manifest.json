@@ -1,0 +1,144 @@
+{
+  "renderer": "NVIDIA RTX / ovrtx",
+  "display": "Needle AgX / exposure 1 / sRGB",
+  "results": [
+    {
+      "name": "mdl-metal",
+      "image": "mdl-metal.png",
+      "sha256": "9b408ab253bcef41ece32adc86dd6c00ad03bab70b71ee5d1be6d9cf138ac62b",
+      "capture": "mdl-metal.json",
+      "effectDifference": {
+        "meanRGB": 0.05835503472222222,
+        "fractionAbove15": 0.2822597789115646,
+        "control": "mdl-metal-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-metal-disabled",
+      "image": "mdl-metal-disabled.png",
+      "sha256": "05206cdc2ca3526263dbbc218b81447c137f964139898919c72bd0be38809afc",
+      "capture": "mdl-metal-disabled.json"
+    },
+    {
+      "name": "mdl-clearcoat",
+      "image": "mdl-clearcoat.png",
+      "sha256": "c11e3eca07559f8f6e31e3a595f4466b55b5496947601b5df6a0eac0eb0334c7",
+      "capture": "mdl-clearcoat.json",
+      "effectDifference": {
+        "meanRGB": 0.008893149273598328,
+        "fractionAbove15": 0.04390545280612245,
+        "control": "mdl-clearcoat-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-clearcoat-disabled",
+      "image": "mdl-clearcoat-disabled.png",
+      "sha256": "91583ad67c057db40da3ef02a09f3ac089b97133ca439c4d6ad53d39c5242d0d",
+      "capture": "mdl-clearcoat-disabled.json"
+    },
+    {
+      "name": "mdl-color-texture",
+      "image": "mdl-color-texture.png",
+      "sha256": "1e2898bcc7efb546c467f2dbb84ba8a5048bca1a70382a4ff522cf3df1e51bf8",
+      "capture": "mdl-color-texture.json",
+      "effectDifference": {
+        "meanRGB": 0.09313953880163177,
+        "fractionAbove15": 0.3296064519557823,
+        "control": "mdl-color-texture-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-color-texture-disabled",
+      "image": "mdl-color-texture-disabled.png",
+      "sha256": "3a609a7bbb6b8b72cd94be1beaea7626fc66299c526cda9723c120743992b27e",
+      "capture": "mdl-color-texture-disabled.json"
+    },
+    {
+      "name": "mdl-normal-texture",
+      "image": "mdl-normal-texture.png",
+      "sha256": "67c5cc04d31a3948702765dd434ef9048688989f441aa768861c712523f861b8",
+      "capture": "mdl-normal-texture.json",
+      "effectDifference": {
+        "meanRGB": 0.0638348915955271,
+        "fractionAbove15": 0.3637197066326531,
+        "control": "mdl-normal-texture-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-normal-texture-disabled",
+      "image": "mdl-normal-texture-disabled.png",
+      "sha256": "702f72d69d22f639bb6ee72bb413218bf05b29e87047ce3aab7a562c0b071916",
+      "capture": "mdl-normal-texture-disabled.json"
+    },
+    {
+      "name": "mdl-opacity-mask",
+      "image": "mdl-opacity-mask.png",
+      "sha256": "ae320841fd892bc5fc4303d8ac6d09d56d41d82ab9ab041809bd59de77f443dd",
+      "capture": "mdl-opacity-mask.json",
+      "effectDifference": {
+        "meanRGB": 0.01882291979291717,
+        "fractionAbove15": 0.14277078018707484,
+        "control": "mdl-opacity-mask-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-opacity-mask-disabled",
+      "image": "mdl-opacity-mask-disabled.png",
+      "sha256": "d3ae940fd63be3358bb9d9a2a09efa99ff65617ed93c4d1a9113848e1e5dce11",
+      "capture": "mdl-opacity-mask-disabled.json"
+    },
+    {
+      "name": "mdl-gltf",
+      "image": "mdl-gltf.png",
+      "sha256": "f4aaa9a622970c53d83f04f3895db9f871778735cc8afbad87eb499865d15bed",
+      "capture": "mdl-gltf.json",
+      "effectDifference": {
+        "meanRGB": 0.02931472936396781,
+        "fractionAbove15": 0.22771843112244897,
+        "control": "mdl-gltf-disabled.png",
+        "roi": [
+          0.15,
+          0.15,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "name": "mdl-gltf-disabled",
+      "image": "mdl-gltf-disabled.png",
+      "sha256": "2701976ee5289518a79141594952fea0d74d15f0f85010d522d2144015a0213d",
+      "capture": "mdl-gltf-disabled.json"
+    }
+  ]
+}

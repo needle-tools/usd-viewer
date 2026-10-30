@@ -73,10 +73,19 @@ UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 const world = stage.DefinePrim("/World", "Xform");
 const props = stage.DefinePrim("/World/Props", "Scope");
 const light = stage.DefinePrim("/World/KeyLight", "DistantLight");
+const sky = stage.DefinePrim("/World/SkyLight", "DomeLight");
 
 // Generic attributes take a name, a value type and custom = false for schema inputs.
-light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(800);
-light.CreateAttribute("inputs:angle", Sdf.ValueTypeNames.Float, false).Set(0.45);
+// With normalize on, a DistantLight's intensity is the illuminance it delivers,
+// independent of its angular size. Without it, intensity is the luminance of a
+// 0.53 degree sun disc and needs values in the tens of thousands.
+light.CreateAttribute("inputs:normalize", Sdf.ValueTypeNames.Bool, false).Set(true);
+light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(2.5);
+light.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(1, 0.95, 0.88));
+// A stage with its own lights replaces the viewer's default lighting, so a dim
+// untextured dome adds the soft fill that keeps the shadow sides readable.
+sky.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(0.4);
+sky.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(0.75, 0.85, 1));
 // XformCommonAPI works on any xformable prim, lights included.
 UsdGeom.XformCommonAPI(light).SetRotate(Gf.Vec3f(-35, -25, 0));
 
@@ -102,7 +111,8 @@ for (let level = 0; level < 4; level++) {
 }
 kit.sphere(stage, "/World/Props/Weight", pivot, 0.12, colors.violet);
 
-print([world.GetTypeName(), props.GetTypeName(), light.GetTypeName()]);`,
+print([world.GetTypeName(), props.GetTypeName(), light.GetTypeName(), sky.GetTypeName()]);`,
+    authoredLighting: true,
   },
   {
     title: "Schema Shapes",
@@ -990,7 +1000,18 @@ print(arcs);`,
 const kit = sceneKit, colors = kit.colors;
 stage = await openFixture("Unmaterialed Empty Subset");
 
-// Outline the fixture's triangle with survey edges and corner markers.
+// /World/PlainTriangle has no material binding and no displayColor, so every
+// renderer draws it with its own fallback surface: a plain light grey. It is
+// single-sided (doubleSided defaults to false) and faces up, the stage's +Z.
+const triangle = stage.GetPrimAtPath("/World/PlainTriangle");
+const hasBinding = triangle.GetRelationship("material:binding").IsValid();
+const hasDisplayColor = triangle.GetAttribute("primvars:displayColor").HasAuthoredValueOpinion();
+
+// A dark slate plinth under the triangle makes the pale fallback surface stand
+// out. The helpers work in Y-up design space and convert to this Z-up stage.
+kit.box(stage, "/World/Plinth", [0, -0.08, -0.55], [2.9, 0.12, 2.4], colors.ink);
+
+// Outline the triangle with survey edges and corner markers.
 const corners = [[-1, 0, 0], [1, 0, 0], [0, 0, -1.5]];
 corners.forEach((corner, i) => {
   kit.beam(stage, "/World/Survey/Edge" + i, corner, corners[(i + 1) % 3], 0.035, colors.teal);
@@ -998,8 +1019,9 @@ corners.forEach((corner, i) => {
 });
 
 print({
-  prims: listPrims(stage),
-  mesh: inspectPrim(stage.GetPrimAtPath("/World/PlainTriangle")),
+  hasBinding,
+  hasDisplayColor,
+  mesh: inspectPrim(triangle),
 });`,
   },
   {
@@ -1154,25 +1176,40 @@ print(inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
   {
     title: "Fixture: Camera + Light",
     group: "Fixture Smoke",
-    code: `// Re-aim the fixture's shot camera and stage a vessel in its existing lights.
+    code: `// Re-aim the fixture's shot camera and retune one of its lights.
 const kit = sceneKit, colors = kit.colors;
 stage = await openFixture("Camera + Light");
 
 // Camera prims are xformable and carry lens attributes such as focalLength.
+// This fixture is Z-up, so the raw camera values below are in Z-up space.
 const shot = stage.GetPrimAtPath("/World/ShotCam");
 kit.attr(shot, "xformOp:translate", "double3", [5, -6, 3]);
 kit.attr(shot, "xformOp:rotateXYZ", "float3", [70, 0, 40]);
 kit.attr(shot, "xformOpOrder", "token[]", ["xformOp:translate", "xformOp:rotateXYZ"]);
 kit.attr(shot, "focalLength", "float", 40);
 
+// The fixture already has an orange key and a blue fill (SphereLights), a dim
+// dome and an Xform with LightAPI applied. Its SunLight is unnormalized with
+// intensity 10, which is the luminance of a tiny sun disc: almost no light.
+// Turning on normalize makes intensity mean illuminance, so 2 is a soft sun.
+const sun = stage.GetPrimAtPath("/World/SunLight");
+kit.attr(sun, "inputs:normalize", "bool", true);
+kit.attr(sun, "inputs:intensity", "float", 2);
+kit.attr(sun, "inputs:color", "color3f", [1, 0.95, 0.88]);
+
+// Stage a vessel next to the fixture's cube on a dark studio floor.
 kit.pose(stage, stage.GetPrimAtPath("/World/LitCube"), [-0.6, 0.2, 0], [1, 1, 1], [0, 25, 0]);
 kit.bind(kit.lathe(stage, "/World/LitVessel", [0.55, 0, 0], [[0.01, -0.4], [0.4, -0.4], [0.5, 0], [0.25, 0.6], [0.3, 0.9]], colors.cream), "/Looks/Neutral");
 kit.box(stage, "/World/StudioFloor", [0, -0.55, 0], [2.8, 0.1, 1.8], colors.ink);
 
 print({
-  camera: inspectPrim(stage.GetPrimAtPath("/World/ShotCam")),
-  light: inspectPrim(stage.GetPrimAtPath("/World/KeyLight")),
+  camera: inspectPrim(shot),
+  lights: ["KeyLight", "FillLight", "SunLight", "SkyLight", "ApiLight"].map((name) => {
+    const light = stage.GetPrimAtPath("/World/" + name);
+    return { name, type: light.GetTypeName(), intensity: light.GetAttribute("inputs:intensity").GetValueString() };
+  }),
 });`,
+    authoredLighting: true,
   },
   {
     title: "Fixture: MaterialX Texture + Noise",
@@ -1276,18 +1313,39 @@ camera.CreateFocalLengthAttr(35);
 UsdGeom.XformCommonAPI(camera).SetTranslate(Gf.Vec3d(0, 2, 6));
 UsdGeom.XformCommonAPI(camera).SetRotate(Gf.Vec3f(-15, 0, 0));
 
-const light = stage.DefinePrim("/World/KeyLight", "DistantLight");
-light.CreateAttribute("inputs:intensity", Sdf.ValueTypeNames.Float, false).Set(600);
-light.CreateAttribute("inputs:color", Sdf.ValueTypeNames.Color3f, false).Set(Gf.Vec3f(1, 0.94, 0.86));
-UsdGeom.XformCommonAPI(light).SetRotate(Gf.Vec3f(-40, -35, 0));
+// Light inputs are ordinary attributes. A small helper keeps the rig readable.
+function setInput(prim, name, type, value) {
+  prim.CreateAttribute("inputs:" + name, type, false).Set(value);
+}
 
-// A ceramic jug on a blue backdrop: what the camera frames and the light falls on.
+// Key: a normalized DistantLight, so intensity is illuminance (a few lux here).
+const key = stage.DefinePrim("/World/Lights/Key", "DistantLight");
+setInput(key, "normalize", Sdf.ValueTypeNames.Bool, true);
+setInput(key, "intensity", Sdf.ValueTypeNames.Float, 3);
+setInput(key, "color", Sdf.ValueTypeNames.Color3f, Gf.Vec3f(1, 0.94, 0.86));
+UsdGeom.XformCommonAPI(key).SetRotate(Gf.Vec3f(-40, -35, 0));
+
+// Rim: a small SphereLight behind the jug picks out its silhouette in cool blue.
+// Sphere and area lights use luminance; their output grows with their size.
+const rim = stage.DefinePrim("/World/Lights/Rim", "SphereLight");
+setInput(rim, "radius", Sdf.ValueTypeNames.Float, 0.2);
+setInput(rim, "intensity", Sdf.ValueTypeNames.Float, 200);
+setInput(rim, "color", Sdf.ValueTypeNames.Color3f, Gf.Vec3f(0.55, 0.75, 1));
+UsdGeom.XformCommonAPI(rim).SetTranslate(Gf.Vec3d(-1.4, 1.6, -1.6));
+
+// Fill: an untextured DomeLight lights the scene evenly from every direction.
+// Authored lights replace the viewer's default lighting, so the stage needs one.
+const fill = stage.DefinePrim("/World/Lights/Fill", "DomeLight");
+setInput(fill, "intensity", Sdf.ValueTypeNames.Float, 0.35);
+
+// A ceramic jug on a blue backdrop: what the camera frames and the lights fall on.
 const ceramic = kit.material(stage, "/World/Looks/Ceramic", colors.cream, 0, 0.2);
 kit.bind(kit.lathe(stage, "/World/Subject", [0, 0, 0], [[0.01, -0.8], [0.6, -0.8], [0.7, -0.4], [0.35, 0.5], [0.15, 1.1], [0.01, 1.1]], colors.cream), ceramic);
 kit.torus(stage, "/World/SubjectHandle", [0.55, 0.2, 0], 0.35, 0.09, colors.teal);
 kit.box(stage, "/World/Backdrop", [0, -1.05, 0], [3.3, 0.15, 2.6], colors.blue);
 
 print(stage.ExportToString());`,
+    authoredLighting: true,
   },
   {
     title: "USDZ Package",
@@ -2083,7 +2141,8 @@ print(stage.GetPrimAtPath("/World/Street/House2/Roof").GetPrimStack().map((spec)
     title: "Instanced Grove",
     group: "Composition",
     code: `// References, variants and native instancing together. Every tree references
-// one asset; instanceable trees with the same variant selection share a prototype.
+// one asset. Instanceable prims that compose identically (same references, same
+// variant selection) share one prototype: the orchard's 15 trees need only 3.
 const kit = sceneKit, colors = kit.colors;
 
 // 1. The tree asset, with a "season" variant set that swaps the canopy.
@@ -2110,46 +2169,69 @@ for (let i = 0; i < 4; i++) {
 await season.SetVariantSelection("summer");
 asset.GetRootLayer().Export("/tmp/grove/tree.usda");   // the layer, not a flattened stage
 
-// 2. The grove layer references the asset once per tree. "instanceable" and
-//    "references" are prim metadata the bindings cannot author, so write the
-//    declarations as text; everything else is authored through the API below.
-const spots = [];
-for (let i = 0; i < 15; i++) {
-  const angle = i * 2.39996, radius = 0.35 + 1.9 * Math.sqrt(i / 15);
-  spots.push([radius * Math.cos(angle), radius * Math.sin(angle)]);
-}
-const declarations = spots.map((_, i) => \`    def Xform "Tree\${i}" (
-        instanceable = true
+// 2. The orchard layer references the asset once per tree. "instanceable" and
+//    "references" are prim metadata the bindings cannot author, so these
+//    declarations are text; everything else is authored through the API below.
+//    Three rows of five instanceable trees, one row per season, and one hero
+//    tree that references the same asset but is not instanceable.
+const rows = [{ season: "summer", z: -1.1 }, { season: "autumn", z: 0 }, { season: "winter", z: 1.1 }];
+const rowName = (season) => season[0].toUpperCase() + season.slice(1);
+const declare = (name, instanceable) => \`    def Xform "\${name}" (
+        instanceable = \${instanceable}
         prepend references = @tree.usda@</Tree>
     )
     {
-    }\`);
-mountText("/tmp/grove/grove.usda", \`#usda 1.0
+    }\`;
+const orchard = rows.flatMap(({ season }) => [0, 1, 2, 3, 4].map((i) => declare(rowName(season) + i, true)));
+mountText("/tmp/grove/orchard.usda", \`#usda 1.0
 (
     upAxis = "Y"
 )
 
 def Xform "World"
 {
-\${declarations.join("\\n")}
+    def Xform "Orchard"
+    {
+\${orchard.join("\\n")}
+    }
+
+\${declare("HeroTree", false)}
 }
 \`);
-stage = await Usd.Stage.Open("/tmp/grove/grove.usda");
+stage = await Usd.Stage.Open("/tmp/grove/orchard.usda");
 
 // 3. An instance root still takes local opinions: placement, size and its own
-//    variant selection. The seasons change from left to right across the grove.
-for (const [i, [x, z]] of spots.entries()) {
-  const instance = stage.GetPrimAtPath("/World/Tree" + i);
-  const seasonName = x < -0.6 ? "summer" : x < 0.7 ? "autumn" : "winter";
-  await instance.GetVariantSets().GetVariantSet("season").SetVariantSelection(seasonName);
-  const size = 0.8 + 0.4 * ((i * 5) % 7) / 6;
-  kit.pose(stage, instance, [x, 0, z], [size, size, size], [0, i * 47, 0]);
+//    variant selection. Each row selects one season, so each row shares one
+//    prototype; the trees differ only in their transforms.
+for (const [row, { season, z }] of rows.entries()) {
+  for (let i = 0; i < 5; i++) {
+    const instance = stage.GetPrimAtPath("/World/Orchard/" + rowName(season) + i);
+    await instance.GetVariantSets().GetVariantSet("season").SetVariantSelection(season);
+    const size = 0.85 + 0.12 * ((i * 2 + row) % 3);
+    kit.pose(stage, instance, [(i - 2) * 0.85, 0, z], [size, size, size], [0, i * 67, 0]);
+  }
 }
-kit.lathe(stage, "/World/Meadow", [0, 0, 0], [[0.01, -0.12], [2.6, -0.12], [2.5, 0], [0.01, 0.02]], [0.5, 0.62, 0.38]);
 
-print(spots.map((_, i) => {
-  const instance = stage.GetPrimAtPath("/World/Tree" + i);
-  return { path: instance.GetPath(), instance: instance.IsInstance(), season: instance.GetVariantSelection("season") };
+// 4. Below an instance root, the prims come from the shared prototype and
+//    cannot be edited. The hero tree is not instanceable, so it can: add a
+//    birdhouse under it and recolour its own canopy, without touching the asset.
+const hero = stage.GetPrimAtPath("/World/HeroTree");
+await hero.GetVariantSets().GetVariantSet("season").SetVariantSelection("autumn");
+kit.pose(stage, hero, [-2.6, 0.08, 2], [1.3, 1.3, 1.3], [0, -20, 0]);
+kit.color(stage.GetPrimAtPath("/World/HeroTree/AutumnCanopy"), colors.violet);
+kit.box(stage, "/World/HeroTree/Birdhouse", [0, 0.48, 0.13], [0.16, 0.18, 0.14], colors.teal);
+kit.box(stage, "/World/HeroTree/BirdhouseRoof", [0, 0.6, 0.13], [0.13, 0.13, 0.17], colors.gold, [0, 0, 45]);
+kit.lathe(stage, "/World/HeroPlinth", [-2.6, 0, 2], [[0.01, 0], [0.62, 0], [0.62, 0.08], [0.01, 0.08]], colors.cream);
+
+// One bed per row: everything standing on a bed shares that row's prototype.
+const beds = { summer: [0.32, 0.5, 0.3], autumn: [0.62, 0.34, 0.2], winter: [0.78, 0.84, 0.92] };
+for (const { season, z } of rows) kit.box(stage, "/World/Beds/" + rowName(season), [0, 0.02, z], [4.4, 0.04, 0.8], beds[season]);
+kit.box(stage, "/World/Ground", [-0.45, -0.05, 0.5], [5.9, 0.1, 4.5], [0.24, 0.3, 0.26]);
+
+const trees = [...rows.flatMap(({ season }) => [0, 1, 2, 3, 4].map((i) => "/World/Orchard/" + rowName(season) + i)), "/World/HeroTree"];
+print(trees.map((path) => {
+  const prim = stage.GetPrimAtPath(path);
+  return { path, instance: prim.IsInstance(), season: prim.GetVariantSelection("season") };
 }));`,
   },
 ];
@@ -2162,12 +2244,16 @@ for (const [kind, title] of [['preview', 'API Preview Surface'], ['animated', 'A
   });
 }
 
+// Examples that author a complete light rig are shown with those lights alone,
+// in authored UsdLux units, without the viewer's environment or headlight.
+export const hasAuthoredLighting = example => example.group === 'Lighting' || example.authoredLighting === true;
+
 export const apiExampleAssets = replExamples.map(example => {
   const id = example.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return {
     group: 'JavaScript API', label: example.title, exampleGroup: example.group,
     root: `api/examples.js#${id}`, executable: id,
-    ...(example.group === 'Lighting' ? {scenePrimitiveLightIntensityScale: 1, environment: 'none'} : {}),
+    ...(hasAuthoredLighting(example) ? {scenePrimitiveLightIntensityScale: 1, environment: 'none'} : {}),
     ...(apiPreviewIds.has(id) ? { thumbnail: `thumbnails/api-${id}.png` } : {}),
   };
 });

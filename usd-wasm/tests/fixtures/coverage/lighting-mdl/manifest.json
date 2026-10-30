@@ -414,7 +414,15 @@
     "root": "coverage/lighting-mdl/mdl-metal.usda",
     "files": [
       "coverage/lighting-mdl/mdl-metal.usda",
-      "coverage/lighting-mdl/OmniPBR.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",
@@ -429,6 +437,7 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
+      "Feature has enabled and disabled variants",
       "Smooth and cage variants preserve creases and seam UVs"
     ],
     "complexity": "high",
@@ -441,7 +450,15 @@
     "root": "coverage/lighting-mdl/mdl-clearcoat.usda",
     "files": [
       "coverage/lighting-mdl/mdl-clearcoat.usda",
-      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",
@@ -456,6 +473,7 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
+      "Feature has enabled and disabled variants",
       "Smooth and cage variants preserve creases and seam UVs"
     ],
     "complexity": "high",
@@ -469,6 +487,14 @@
     "files": [
       "coverage/lighting-mdl/mdl-color-texture.usda",
       "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-color.png"
     ],
     "features": [
@@ -484,6 +510,7 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
+      "Feature has enabled and disabled variants",
       "Smooth and cage variants preserve creases and seam UVs",
       "Texture asset resolves"
     ],
@@ -498,6 +525,14 @@
     "files": [
       "coverage/lighting-mdl/mdl-normal-texture.usda",
       "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-normal.png"
     ],
     "features": [
@@ -513,6 +548,7 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
+      "Feature has enabled and disabled variants",
       "Texture asset resolves"
     ]
   },
@@ -523,7 +559,15 @@
     "root": "coverage/lighting-mdl/mdl-opacity-mask.usda",
     "files": [
       "coverage/lighting-mdl/mdl-opacity-mask.usda",
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
       "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json",
       "coverage/lighting-mdl/pattern-opacity.png"
     ],
     "features": [
@@ -539,6 +583,7 @@
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
       "MDL source asset resolves",
+      "Feature has enabled and disabled variants",
       "Texture asset resolves"
     ]
   },
@@ -549,7 +594,15 @@
     "root": "coverage/lighting-mdl/mdl-gltf.usda",
     "files": [
       "coverage/lighting-mdl/mdl-gltf.usda",
-      "coverage/lighting-mdl/gltf_support.mdl"
+      "coverage/lighting-mdl/OmniPBR.mdl",
+      "coverage/lighting-mdl/OmniPBRBase.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat.mdl",
+      "coverage/lighting-mdl/OmniPBR_Opacity.mdl",
+      "coverage/lighting-mdl/OmniPBR_ClearCoat_Opacity.mdl",
+      "coverage/lighting-mdl/gltf_support.mdl",
+      "coverage/lighting-mdl/nvidia/core_definitions.mdl",
+      "coverage/lighting-mdl/LICENSE-NVIDIA.txt",
+      "coverage/lighting-mdl/mdl-sources.json"
     ],
     "features": [
       "MDL",
@@ -563,7 +616,8 @@
     "assertions": [
       "MDL terminal is connected without Preview surface",
       "Material ring bound to MDL",
-      "MDL source asset resolves"
+      "MDL source asset resolves",
+      "Feature has enabled and disabled variants"
     ]
   }
 ]

@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Preserve reflections from solid-color UsdLux dome lights in WebGL by supplying an environment map large enough for PMREM filtering.
+- Preserve alpha-test thresholds when creating or refreshing node-material copies for mixed single/double-sided USD meshes. MDL and Preview Surface cutouts now remain clipped in Three WebGPU as well as WebGL.
+- Detach retired material textures from meshes during USD variant resync before releasing their GPU resources. Queue surviving assignments for the replacement material instead of rendering freed textures while it loads.
 - Preserve authored hole faces and coarse-face identity during uniform subdivision, including material subsets and uniform primvars.
 - Update time-sampled crease indices, lengths and sharpness, plus corner indices and sharpness, independently of mesh-point or hole changes. Playback and backward seeks update both uniform and adaptive subdivision.
 - Preserve sharp crease normals and face-varying UV seams in adaptive geometry; enforce actual tessellation budgets and recompute rates after point deformation.

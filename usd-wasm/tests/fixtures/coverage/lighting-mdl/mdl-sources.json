@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "file": "OmniPBR.mdl",
+      "sha256": "d384fc800f120e3cad1b7ca8837f9c554f9c34343d194813fca27caa493001f2",
+      "source": "NVIDIA ovrtx 0.5.1.385782 library/mdl/Base",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "OmniPBRBase.mdl",
+      "sha256": "701f37299b44106842bdbe025de52eedec391e35b038f61c4ed4d25bd98e7db1",
+      "source": "NVIDIA ovrtx 0.5.1.385782 library/mdl/Base",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "OmniPBR_ClearCoat.mdl",
+      "sha256": "687fce3f0693146b91495f04407a7c38c78f6b9262b63621f44b4b1f09110469",
+      "source": "NVIDIA ovrtx 0.5.1.385782 library/mdl/Base",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "OmniPBR_Opacity.mdl",
+      "sha256": "e4d56fda91f3dfadfb67f8a14120219ad7493418656ad19fabc10b55ee2fa565",
+      "source": "NVIDIA ovrtx 0.5.1.385782 library/mdl/Base",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "OmniPBR_ClearCoat_Opacity.mdl",
+      "sha256": "894492f8118d6bf798b88a45843ead2202f1852a8741de337e33a842215edcbe",
+      "source": "NVIDIA ovrtx 0.5.1.385782 library/mdl/Base",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "gltf_support.mdl",
+      "sha256": "05eafe69d055f6b1f82db83575f1f215b29a084b9c94519572a70659f2704359",
+      "source": "NVIDIA MDL SDK 2026.0.2 examples/mdl",
+      "license": "BSD-3-Clause",
+      "modified": false
+    },
+    {
+      "file": "nvidia/core_definitions.mdl",
+      "sha256": "f444cf349eb1750aba562ead8a246ac38a7cd018d968342925abfc4cb242cbf9",
+      "source": "NVIDIA MDL SDK 2026.0.2 examples/mdl",
+      "license": "BSD-3-Clause",
+      "modified": false
+    }
+  ]
+}

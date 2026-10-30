@@ -60,7 +60,9 @@ export function createDomeTexture(source, color) {
     } else if (source) {
         throw new Error('USD dome lighting requires a decoded HDR/EXR texture');
     } else {
-        width = 8; height = 4; data = new Float32Array(width * height * 4);
+        // WebGL PMREM needs at least a 16-pixel cube face (64-pixel equirectangular width).
+        // Smaller constant maps lose specular illumination in its minimum LOD.
+        width = 64; height = 32; data = new Float32Array(width * height * 4);
         for (let pixel = 0; pixel < width * height; pixel++) data.set([...color, 1], pixel * 4);
     }
     const texture = new DataTexture(data, width, height, RGBAFormat, FloatType);

@@ -1548,6 +1548,10 @@ class HydraMesh {
       clone.copy(material);
       clone.userData.usdHydraSideCloneOf = material.uuid;
     }
+    // NodeMaterial.copy in r185 skips inherited accessors, including alphaTest.
+    // Sidedness copies must retain the authored cutout, just like WebGL copies.
+    clone.alphaTest = material.alphaTest;
+    clone.alphaClip = material.alphaClip;
     installPreviewPrimvarShader(clone);
     clone.side = this._side;
     clone.needsUpdate = true;
@@ -2047,11 +2051,16 @@ class HydraMaterial {
   }
 
   dispose() {
-    for (const assignment of this._assignments) {
-      this._setMeshMaterialPending(assignment.mesh, false);
+    const previous = this._material;
+    // USD variant resync can retire a material before its replacement is ready.
+    // Detach its textures from live/retired meshes before freeing GPU resources.
+    this._useMeshFallback = true;
+    for (const { mesh, materialIndex } of this._assignments) {
+      this._applyMaterialToMesh(mesh, materialIndex);
+      this._interface.rememberPendingMaterialAssignment(this._id, mesh, materialIndex);
     }
     this._assignments = [];
-    disposeMaterialResources(this._material);
+    disposeMaterialResources(previous);
     this._material = null;
   }
 

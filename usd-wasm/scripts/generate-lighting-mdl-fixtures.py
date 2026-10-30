@@ -43,23 +43,38 @@ def exr(name):
     (OUT/name).write_bytes(header+struct.pack('<'+str(h)+'Q',*offsets)+b''.join(lines))
 
 def png(name,kind):
-    w=h=32; raw=bytearray()
+    w=h=512; raw=bytearray()
     for y in range(h):
         raw.append(0)
         for x in range(w):
-            if kind=='color': p=(225,85,34,255) if ((x//4+y//4)%2) else (25,155,180,255)
-            elif kind=='normal': p=(128+int(28*math.sin(x*math.tau/8)),128+int(28*math.cos(y*math.tau/8)),245,255)
-            else: p=(240,240,240,255) if ((x//5+y//5)%2) else (15,15,15,255)
+            u,v=(x+.5)/w,(y+.5)/h
+            if kind=='color':
+                # Large ceramic tiles with a thin warm grout line.
+                a,b=(u*6)%1,(v*4)%1
+                p=(245,202,112,255) if min(a,b)<.055 else (225,72,26,255) if ((int(u*6)+int(v*4))%2) else (14,142,166,255)
+            elif kind=='normal':
+                # Analytic gradient of a broad, periodic pillow relief. Encode
+                # a unit tangent-space normal, not arbitrary noisy RGB values.
+                a,b=math.tau*4*u,math.tau*4*v
+                dx=1.35*math.sin(a)*math.cos(b);dy=1.35*math.cos(a)*math.sin(b)
+                length=math.sqrt(dx*dx+dy*dy+1)
+                p=tuple(round(127.5*(c/length+1)) for c in (dx,dy,1))+(255,)
+            else:
+                # Regular circular perforations; RGB carries cutout coverage.
+                a,b=(u*6)%1-.5,(v*4)%1-.5
+                value=0 if a*a+b*b<.31**2 else 255
+                p=(value,value,value,255)
             raw.extend(p)
     def chunk(k,data): return struct.pack('>I',len(data))+k+data+struct.pack('>I',zlib.crc32(k+data)&0xffffffff)
     (OUT/name).write_bytes(b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',w,h,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(bytes(raw)))+chunk(b'IEND',b''))
 hdr('studio-day.hdr'); hdr('studio-night.hdr',True); exr('studio-panels.exr')
 for k in ('color','normal','opacity'): png('pattern-'+k+'.png',k)
-# Local identity-only modules make identifiers resolvable; approximation is
-# driven by USD-authored inputs, not these minimal MDL implementations.
-for name in ['OmniPBR','OmniPBR_ClearCoat','OmniPBR_Opacity']:
-    (OUT/(name+'.mdl')).write_text('mdl 1.7;\nexport material '+name+'() = material();\n')
-(OUT/'gltf_support.mdl').write_text('mdl 1.7;\nexport material gltf_material() = material();\n')
+# Real, unmodified NVIDIA modules are checked in with their dependency closure.
+# Keep regeneration from replacing them with shader-identifier placeholders.
+mdl_sources=json.loads((OUT/'mdl-sources.json').read_text())['files']
+for source in mdl_sources:
+    import hashlib
+    assert hashlib.sha256((OUT/source['file']).read_bytes()).hexdigest()==source['sha256'], source['file']
 
 def setup(name):
     p=OUT/(name+'.usda'); s=Usd.Stage.CreateNew(str(p)); UsdGeom.SetStageUpAxis(s,'Y'); UsdGeom.SetStageMetersPerUnit(s,1); s.SetStartTimeCode(1); s.SetEndTimeCode(48)
@@ -81,12 +96,35 @@ def torus(s,path,center=(0,1,0),R=.75,r=.18):
     for i in range(n):
         a=math.tau*i/n
         for j in range(k):
-            b=math.tau*j/k;pts.append((center[0]+(R+r*math.cos(b))*math.cos(a),center[1]+(R+r*math.cos(b))*math.sin(a),center[2]+r*math.sin(b)));normals.append((math.cos(b)*math.cos(a),math.cos(b)*math.sin(a),math.sin(b)));uv.append((i/n,j/k))
+            b=math.tau*j/k;pts.append((center[0]+(R+r*math.cos(b))*math.cos(a),center[1]+(R+r*math.cos(b))*math.sin(a),center[2]+r*math.sin(b)));normals.append((math.cos(b)*math.cos(a),math.cos(b)*math.sin(a),math.sin(b)))
     for i in range(n):
-        for j in range(k): indices.extend([i*k+j,((i+1)%n)*k+j,((i+1)%n)*k+(j+1)%k,i*k+(j+1)%k])
+        for j in range(k):
+            indices.extend([i*k+j,((i+1)%n)*k+j,((i+1)%n)*k+(j+1)%k,i*k+(j+1)%k])
+            # Shared geometry stays smooth. Independent face-corner UVs let the
+            # two closing strips reach 1 instead of interpolating back to 0.
+            uv.extend([(i/n,j/k),((i+1)/n,j/k),((i+1)/n,(j+1)/k),(i/n,(j+1)/k)])
     m=UsdGeom.Mesh.Define(s,path);m.CreatePointsAttr(pts);m.CreateFaceVertexCountsAttr([4]*(n*k));m.CreateFaceVertexIndicesAttr(indices);m.CreateSubdivisionSchemeAttr('none');m.CreateDoubleSidedAttr(True);m.CreateDisplayColorAttr([Gf.Vec3f(.55,.65,.72)])
     m.CreateNormalsAttr(normals);m.SetNormalsInterpolation(UsdGeom.Tokens.vertex)
-    UsdGeom.PrimvarsAPI(m).CreatePrimvar('st',Sdf.ValueTypeNames.TexCoord2fArray,'vertex').Set(uv);return m
+    UsdGeom.PrimvarsAPI(m).CreatePrimvar('st',Sdf.ValueTypeNames.TexCoord2fArray,'faceVarying').Set(uv);return m
+
+def uv_sphere(s,path,center,radius=.35):
+    # Explicit UVs/normals keep native RTX and Hydra on the same parameterization.
+    n,k=64,32;points=[];normals=[];indices=[];counts=[];uv=[]
+    for j in range(k+1):
+        v=j/k;phi=math.pi*v
+        for i in range(n+1):
+            u=i/n;theta=math.tau*u;normal=(math.sin(phi)*math.cos(theta),math.cos(phi),math.sin(phi)*math.sin(theta))
+            points.append(tuple(center[c]+radius*normal[c] for c in range(3)));normals.append(normal)
+    for j in range(k):
+        for i in range(n):
+            a=j*(n+1)+i;b=a+1;c=b+n+1;d=a+n+1
+            corners=[(a,(i/n,j/k)),(b,((i+1)/n,j/k)),(c,((i+1)/n,(j+1)/k)),(d,(i/n,(j+1)/k))]
+            if j==0: corners=[corners[0],corners[2],corners[3]]
+            elif j==k-1:corners=corners[:3]
+            counts.append(len(corners));indices.extend(p for p,_ in corners);uv.extend(t for _,t in corners)
+    g=UsdGeom.Mesh.Define(s,path);g.CreatePointsAttr(points);g.CreateFaceVertexCountsAttr(counts);g.CreateFaceVertexIndicesAttr(indices);g.CreateSubdivisionSchemeAttr('none')
+    g.CreateNormalsAttr(normals);g.SetNormalsInterpolation('vertex');g.CreateDisplayColorAttr([Gf.Vec3f(.35,.5,.55)])
+    UsdGeom.PrimvarsAPI(g).CreatePrimvar('st',Sdf.ValueTypeNames.TexCoord2fArray,'faceVarying').Set(uv);return g
 
 def lathe(s,path,profile):
     sides=40; pts=[]; uv=[]; indices=[]
@@ -121,8 +159,11 @@ def check_subdivision_variants(stage):
         return uv.GetInterpolation()=='faceVarying' and len(values)==len(mesh.GetFaceVertexIndicesAttr().Get()) and seam_ok and len(mesh.GetCreaseLengthsAttr().Get())==80
     finally:variants.SetVariantSelection(original)
 
-def panel(s,path):
-    g=UsdGeom.Mesh.Define(s,path);g.CreatePointsAttr([(-1.3,.1,0),(1.3,.1,0),(1.3,2.3,0),(-1.3,2.3,0)]);g.CreateFaceVertexCountsAttr([4]);g.CreateFaceVertexIndicesAttr([0,1,2,3]);g.CreateSubdivisionSchemeAttr('none');g.CreateDoubleSidedAttr(True);g.CreateDisplayColorAttr([Gf.Vec3f(.4,.7,.5)]);UsdGeom.PrimvarsAPI(g).CreatePrimvar('st',Sdf.ValueTypeNames.TexCoord2fArray,'vertex').Set([(0,0),(3,0),(3,3),(0,3)]);return g
+def panel(s,path,center=(0,1.2,0),width=2.6,height=2.2):
+    x,y,z=center;w,h=width/2,height/2
+    g=UsdGeom.Mesh.Define(s,path);g.CreatePointsAttr([(x-w,y-h,z),(x+w,y-h,z),(x+w,y+h,z),(x-w,y+h,z)]);g.CreateFaceVertexCountsAttr([4]);g.CreateFaceVertexIndicesAttr([0,1,2,3]);g.CreateSubdivisionSchemeAttr('none');g.CreateDoubleSidedAttr(True);g.CreateDisplayColorAttr([Gf.Vec3f(.4,.7,.5)])
+    g.CreateNormalsAttr([(0,0,1)]*4);g.SetNormalsInterpolation('vertex')
+    UsdGeom.PrimvarsAPI(g).CreatePrimvar('st',Sdf.ValueTypeNames.TexCoord2fArray,'vertex').Set([(0,0),(1,0),(1,1),(0,1)]);return g
 
 def crystal(s,path):
     points=[(0,2.4,0),(-.8,1.05,-.6),(.8,1.05,-.6),(.8,1.05,.6),(-.8,1.05,.6),(0,.1,0)]
@@ -272,43 +313,74 @@ def light_case(name,label,mode):
     if mode=='volumelight': entries[-1]['renderer']='bounded-volume'
 for x in [('studio-variants','Studio light rig variants','rigs'),('hdr-variants','HDR dome variants','domes'),('exr-dome','EXR studio dome','exr'),('area-softboxes','Area softboxes','rect'),('disk-light','Disk light','disk'),('cylinder-light','Cylinder light','cylinder'),('temperature-lights','Color temperature and normalize','temperature'),('colored-spheres','Colored sphere lights','sphere'),('shaped-spot','Shaped spotlight','spot'),('distant-sun','Distant sun','distant'),('animated-light','Animated light intensity','animated'),('portal-light','Dome portal','portal'),('mesh-light','Mesh light','meshlight'),('geometry-light','Geometry light','geometry'),('volume-light','Volume light','volumelight'),('light-linking','Light and shadow linking','linking')]:light_case(*x)
 
+def check_material_effect(stage,field,enabled,disabled):
+    variant=stage.GetPrimAtPath('/World/Looks/MDL').GetVariantSet('effect');original=variant.GetVariantSelection()
+    try:
+        for choice,value in [('enabled',enabled),('disabled',disabled)]:
+            variant.SetVariantSelection(choice)
+            actual=UsdShade.Shader(stage.GetPrimAtPath('/World/Looks/MDL/Shader')).GetInput(field).Get()
+            if isinstance(value,float):
+                if not math.isclose(actual,value,abs_tol=1e-6):return False
+            elif actual!=value:return False
+        return True
+    finally:variant.SetVariantSelection(original)
+
 def mdl_case(name,label,mode):
-    s,p=setup(name); files=[]
+    s,p=setup(name); files=[source['file'] for source in mdl_sources]+['LICENSE-NVIDIA.txt','mdl-sources.json']
+    camera=UsdGeom.Camera(s.GetPrimAtPath('/World/Camera'));camera.GetFocalLengthAttr().Set(50)
+    UsdGeom.Xformable(camera).GetOrderedXformOps()[0].Set(Gf.Matrix4d().SetLookAt(Gf.Vec3d(3.8,2.8,7),Gf.Vec3d(0,1.0,0),Gf.Vec3d(0,1,0)).GetInverse())
     family={'clearcoat':'OmniPBR_ClearCoat','opacity':'OmniPBR_Opacity','gltf':'gltf_material'}.get(mode,'OmniPBR')
-    module='gltf_support' if family=='gltf_material' else family;files.append(module+'.mdl')
+    module='gltf_support' if family=='gltf_material' else family
     m=UsdShade.Material.Define(s,'/World/Looks/MDL');sh=UsdShade.Shader.Define(s,'/World/Looks/MDL/Shader');sh.SetSourceAsset(Sdf.AssetPath('./'+module+'.mdl'),'mdl');sh.SetSourceAssetSubIdentifier(family,'mdl');sh.CreateOutput('out',Sdf.ValueTypeNames.Token);m.CreateSurfaceOutput('mdl').ConnectToSource(sh.ConnectableAPI(),'out')
     def inp(n,t,v):sh.CreateInput(n,t).Set(v)
     if family=='gltf_material':
-        inp('base_color_factor',Sdf.ValueTypeNames.Color4f,Gf.Vec4f(.18,.55,.9,1));inp('metallic_factor',Sdf.ValueTypeNames.Float,.75);inp('roughness_factor',Sdf.ValueTypeNames.Float,.22)
+        inp('base_color_factor',Sdf.ValueTypeNames.Color3f,Gf.Vec3f(.18,.55,.9));inp('metallic_factor',Sdf.ValueTypeNames.Float,.75);inp('roughness_factor',Sdf.ValueTypeNames.Float,.22)
     else:
         inp('diffuse_color_constant',Sdf.ValueTypeNames.Color3f,Gf.Vec3f(*({'metal':(.85,.43,.1),'clearcoat':(.45,.05,.11),'texture':(.9,.9,.9),'normal':(.18,.42,.7),'opacity':(.35,.8,.55)}[mode])));inp('metallic_constant',Sdf.ValueTypeNames.Float,.9 if mode=='metal' else .1);inp('reflection_roughness_constant',Sdf.ValueTypeNames.Float,.16 if mode in ('metal','clearcoat') else .42)
-        if mode=='clearcoat':inp('enable_clearcoat',Sdf.ValueTypeNames.Bool,True);inp('clearcoat_weight',Sdf.ValueTypeNames.Float,.85);inp('clearcoat_reflection_roughness',Sdf.ValueTypeNames.Float,.1)
+        if mode=='clearcoat':
+            inp('enable_clearcoat',Sdf.ValueTypeNames.Bool,True);inp('clearcoat_weight',Sdf.ValueTypeNames.Float,1);inp('clearcoat_reflection_roughness',Sdf.ValueTypeNames.Float,.045)
+            inp('reflection_roughness_constant',Sdf.ValueTypeNames.Float,.55);inp('metallic_constant',Sdf.ValueTypeNames.Float,0)
         if mode=='texture':inp('diffuse_texture',Sdf.ValueTypeNames.Asset,Sdf.AssetPath('./pattern-color.png'));files.append('pattern-color.png')
-        if mode=='normal':inp('enable_normal_texture',Sdf.ValueTypeNames.Bool,True);inp('normalmap_texture',Sdf.ValueTypeNames.Asset,Sdf.AssetPath('./pattern-normal.png'));inp('bump_factor',Sdf.ValueTypeNames.Float,.9);files.append('pattern-normal.png')
+        if mode=='normal':
+            inp('normalmap_texture',Sdf.ValueTypeNames.Asset,Sdf.AssetPath('./pattern-normal.png'));inp('bump_factor',Sdf.ValueTypeNames.Float,.9);files.append('pattern-normal.png')
+            inp('reflection_roughness_constant',Sdf.ValueTypeNames.Float,.22);inp('metallic_constant',Sdf.ValueTypeNames.Float,.55)
+            inp('geometry_normal_roughness_strength',Sdf.ValueTypeNames.Float,0)
         if mode=='opacity':inp('enable_opacity',Sdf.ValueTypeNames.Bool,True);inp('enable_opacity_texture',Sdf.ValueTypeNames.Bool,True);inp('opacity_texture',Sdf.ValueTypeNames.Asset,Sdf.AssetPath('./pattern-opacity.png'));inp('opacity_mode',Sdf.ValueTypeNames.Int,1);inp('opacity_threshold',Sdf.ValueTypeNames.Float,.5);files.append('pattern-opacity.png')
-    # A ring and three beads create a compact material test object, with UVs on the ring.
-    platform=box(s,'/World/Plinth',(0,-.28,0),(4.1,.35,2.6),(.18,.22,.25));platform.CreateDisplayColorAttr([Gf.Vec3f(.18,.22,.25)])
+    # Every feature has a reversible authored control, with identical geometry.
+    field,disabled={'metal':('metallic_constant',0.),'clearcoat':('enable_clearcoat',False),'texture':('diffuse_texture',Sdf.AssetPath('')),'normal':('bump_factor',0.),'opacity':('enable_opacity',False),'gltf':('metallic_factor',0.)}[mode]
+    enabled=sh.GetInput(field).Get();effect=m.GetPrim().GetVariantSets().AddVariantSet('effect')
+    # Local property opinions are stronger than variants in USD composition.
+    sh.GetInput(field).GetAttr().Clear()
+    for choice,value in [('enabled',enabled),('disabled',disabled)]:
+        effect.AddVariant(choice);effect.SetVariantSelection(choice)
+        with effect.GetVariantEditContext():sh.GetInput(field).Set(value)
+    effect.SetVariantSelection('enabled')
+    platform=box(s,'/World/Plinth',(0,-.28,0),(5.2 if mode=='normal' else 4.1,.35,2.6),(.18,.22,.25));platform.CreateDisplayColorAttr([Gf.Vec3f(.18,.22,.25)])
     if mode=='metal': obj=lathe(s,'/World/MaterialRing',[(.1,.42),(.22,.4),(.28,.18),(.7,.18),(.8,.42),(1.0,.63),(1.5,.72),(1.75,.82),(1.82,.78)])
     elif mode=='clearcoat': obj=lathe(s,'/World/MaterialRing',[(.12,.08),(.22,.3),(.45,.62),(.75,.84),(.9,.89),(1.1,.77),(1.35,.48),(1.55,.16),(1.8,.1)])
     elif mode=='texture': obj=lathe(s,'/World/MaterialRing',[(.1,.35),(.2,.46),(.4,.68),(.8,.77),(1.2,.65),(1.55,.38),(1.85,.34),(1.9,.42)])
     elif mode=='opacity': obj=panel(s,'/World/MaterialRing')
     elif mode=='gltf': obj=crystal(s,'/World/MaterialRing')
-    else: obj=torus(s,'/World/MaterialRing',(0,1.18,0),.9,.28)
+    else: obj=torus(s,'/World/MaterialRing',(-1.05,1.18,0),.82,.25)
     if mode in ('metal','clearcoat','texture'):subdivision_variants(obj)
     bind(obj,m)
     for i in range(3):
-        b=UsdGeom.Sphere.Define(s,'/World/Bead'+str(i));b.CreateRadiusAttr(.35);b.AddTranslateOp().Set(Gf.Vec3d((i-1)*1.2,.35,.6));b.CreateDisplayColorAttr([Gf.Vec3f(.35,.5,.55)]);bind(b,m)
+        b=uv_sphere(s,'/World/Bead'+str(i),((i-1)*1.2,.35,.6));bind(b,m)
     if mode == 'gltf':
         inner=torus(s,'/World/InnerRing',(0,1.18,.08),.45,.12);bind(inner,m)
-    if mode in ('texture','normal'):
-        for i in range(2):
-            column=box(s,'/World/Panel'+str(i),((i-.5)*2.8,1.0,0),(.3,1.5,.3),(.25,.5,.6));bind(column,m)
+    if mode=='normal':
+        relief=panel(s,'/World/ReliefPanel',(1.2,1.35,.05),1.65,2.1);bind(relief,m)
+    if mode=='texture':
+        swatch=panel(s,'/World/ColorSwatch',(-1.4,1.05,-.15),.7,1.65);bind(swatch,m)
     if mode=='opacity':
-        second=torus(s,'/World/OuterRing',(0,1.18,-.26),1.15,.1);bind(second,m)
+        frame=material(s,'Frame',(.06,.085,.1),.6,.3)
+        for i,(pos,scale) in enumerate([((0,.05,0),(2.9,.14,.12)),((0,2.35,0),(2.9,.14,.12)),((-1.38,1.2,0),(.14,2.3,.12)),((1.38,1.2,0),(.14,2.3,.12))]):bind(box(s,'/World/Frame'+str(i),pos,scale,(.06,.085,.1)),frame)
     if mode=='metal':
         for i in range(2):
             bar=box(s,'/World/Bar'+str(i),((i-.5)*2.4,.48,-.3),(.22,.9,.24),(.8,.5,.2));bind(bar,m)
     checks=[('MDL terminal is connected without Preview surface',lambda st: bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput('mdl').GetConnectedSources()[0]) and not bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput().GetConnectedSources()[0]) if UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput() else bool(UsdShade.Material(st.GetPrimAtPath('/World/Looks/MDL')).GetSurfaceOutput('mdl').GetConnectedSources()[0])),('Material ring bound to MDL',lambda st:bool(UsdShade.MaterialBindingAPI(st.GetPrimAtPath('/World/MaterialRing')).GetDirectBindingRel().GetTargets())),('MDL source asset resolves',lambda st: bool(UsdShade.Shader(st.GetPrimAtPath('/World/Looks/MDL/Shader')).GetSourceAsset('mdl').resolvedPath))]
+    checks.append(('Feature has enabled and disabled variants',lambda st:st.GetPrimAtPath('/World/Looks/MDL').GetVariantSet('effect').GetVariantNames()==['disabled','enabled']))
+    checks.append(('Effect variants change the composed MDL parameter',lambda st:check_material_effect(st,field,enabled,disabled)))
     if mode in ('metal','clearcoat','texture'):checks.append(('Smooth and cage variants preserve creases and seam UVs',check_subdivision_variants))
     if mode in ('texture','normal','opacity'):
         field={'texture':'diffuse_texture','normal':'normalmap_texture','opacity':'opacity_texture'}[mode];checks.append(('Texture asset resolves',lambda st,field=field: bool(st.GetPrimAtPath('/World/Looks/MDL/Shader').GetAttribute('inputs:'+field).Get().resolvedPath)))

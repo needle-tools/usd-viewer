@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "id": "usd-concepts-custom-geomprops-usdshade-usda",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/Root/World/Camera",
+      "exitCode": 0,
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "root": "usd-concepts/custom_geomprops_usdshade.usda",
+      "sourceSha256": "3242d6a0f75ceeaab5b87d3c4f98204339e0670e8bf5e9ec056de0381fbf8426",
+      "image": "thumbnails/usd-concepts-custom-geomprops-usdshade-usda.png",
+      "imageSha256": "2b2fc375a6a3b40cefeccc7f755e26de974e1b7ec6b6bbac82037c45f019e5f1"
+    },
+    {
+      "id": "usd-concepts-custom-vertex-geomprops-usda",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/Root/World/Camera",
+      "exitCode": 0,
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "root": "usd-concepts/custom_vertex_geomprops.usda",
+      "sourceSha256": "8159bd0692f4804e363e3473a784812719d77b38b52b1b74ecbea8bc57aec8e3",
+      "image": "thumbnails/usd-concepts-custom-vertex-geomprops-usda.png",
+      "imageSha256": "5cbfdd699bff65719a8b5967100433361f7535cf6c7e78fbf76dfac7ab8cd814"
+    },
+    {
+      "id": "usd-concepts-referenced-geomprop-overrides-usda",
+      "status": "rendered",
+      "renderer": "Storm",
+      "camera": "/Root/World/Camera",
+      "exitCode": 0,
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
+      "root": "usd-concepts/referenced_geomprop_overrides.usda",
+      "sourceSha256": "8a44f7e95fe940e62356618fabb8c68cfc91b99f2474176279a8c4686255373c",
+      "image": "thumbnails/usd-concepts-referenced-geomprop-overrides-usda.png",
+      "imageSha256": "9db5a1359bcff203f34b86d070cc7f354093cd4d548b56d9e87a5bffcec81fe3"
+    }
+  ]
+}

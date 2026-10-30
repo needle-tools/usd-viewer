@@ -98,6 +98,23 @@ test('Preview reader hooks survive side clones and obsolete shader attributes ar
     delegate.dispose();
 });
 
+test('node-material side copies retain cutout thresholds on creation and refresh', async () => {
+    const { MeshPhysicalNodeMaterial } = await import('three/webgpu');
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group() });
+    const panel = mesh(delegate, '/Panel');
+    const source = new MeshPhysicalNodeMaterial(); source.alphaTest = .5; source.alphaClip = true;
+    const hydraMaterial = { requiresMaterialSideVariants: () => true };
+    const copy = panel._applyMaterialSide(source, hydraMaterial);
+    assert.notEqual(copy, source); assert.equal(copy.alphaTest, .5); assert.equal(copy.alphaClip, true);
+    source.alphaTest = .25;
+    assert.equal(panel._applyMaterialSide(source, hydraMaterial), copy);
+    assert.equal(copy.alphaTest, .25);
+    source.alphaTest = 0; source.alphaClip = false;
+    panel._applyMaterialSide(source, hydraMaterial);
+    assert.equal(copy.alphaTest, 0); assert.equal(copy.alphaClip, false);
+    source.dispose(); delegate.dispose();
+});
+
 test('MaterialX custom inputs bind constants and typed vertex primvars without stale aliases', async () => {
     const { ShaderMaterial } = await import('three');
     const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group() });

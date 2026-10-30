@@ -996,7 +996,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-metal.png",
-      "sha256": "da763b22f07858c6bb44f1506e42ba7c3d13bfe4002a32a219ba669c6a90da02"
+      "sha256": "bdc007a9f59c5d7793e25282fc50ad3d6dbd47653afb19c5899835601c4e912f"
     },
     {
       "id": "lighting-mdl-mdl-clearcoat",
@@ -1004,7 +1004,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-clearcoat.png",
-      "sha256": "268ed8d7ff4630409bc592da97458eaa7aba550547676e16ddbd2797b7ac377b"
+      "sha256": "b10a431e764459d133a2eeb8d06ad3a3a7026b4138441773494b357611ae4ad2"
     },
     {
       "id": "lighting-mdl-mdl-color-texture",
@@ -1012,7 +1012,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-color-texture.png",
-      "sha256": "a1ddff1b8c00263024dc089207f453d073cd54e0ccbb7225852a26a42c93ee19"
+      "sha256": "0267056d09d9bc94c77e3794cd177a345164154e3d8d7f002103bbec7d18f7df"
     },
     {
       "id": "lighting-mdl-mdl-normal-texture",
@@ -1020,7 +1020,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-normal-texture.png",
-      "sha256": "1aad0e69fa3aad0c48f4936990b781691f20332c82298590b87c37e5704f3fd3"
+      "sha256": "dc2b97fdd840bf3d08144eb4cb052765b118c7ef0e9732734c45e22ce7532b45"
     },
     {
       "id": "materialx-ember-torus",
@@ -1100,7 +1100,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-opacity-mask.png",
-      "sha256": "11abcc4da9b0ff17d88c9c79e05fc1084aee88dd4787283057c6042ff4c5b2cf"
+      "sha256": "df6e5fc44fdb41c8bd70d78bc201e265b237b32d46157dcfdfd710f3ec390af9"
     },
     {
       "id": "lighting-mdl-mdl-gltf",
@@ -1108,7 +1108,7 @@
       "camera": "/World/Camera",
       "capture": "surface",
       "image": "thumbnails/lighting-mdl-mdl-gltf.png",
-      "sha256": "0a42949d1e1616e61d6ef0cb4fc76a053e3e7b5fb7159ec211cabe32d7ae05dd"
+      "sha256": "b1e33cf62ee0534ad0944212c4e85b57a77fff7a39f9023ff3ea495742be64ef"
     },
     {
       "id": "curved-subdivision-car",

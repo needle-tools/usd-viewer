@@ -44,7 +44,14 @@ def render(entry):
 
 
 if __name__ == '__main__':
-    entries = json.loads((ROOT / '.cache/api-example-captures/manifest.json').read_text())
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('captures', nargs='?', default=str(ROOT / '.cache/api-example-captures'))
+    # A subset run (export-api-example-stages.mjs --only) merges its records
+    # into the existing index instead of replacing every preview.
+    parser.add_argument('--merge', action='store_true')
+    options = parser.parse_args()
+    entries = json.loads((Path(options.captures) / 'manifest.json').read_text())
     missing = [entry['example'] for entry in entries if not entry['hasGeometry'] or not entry['root']]
     if missing:
         raise SystemExit(f'Examples without preview geometry: {missing}')
@@ -60,6 +67,10 @@ if __name__ == '__main__':
                 'imageSha256': hashlib.sha256((ROOT / 'tests/fixtures/thumbnails' / (result['id'] + '.png')).read_bytes()).hexdigest()
                 if result['status'] == 'rendered' else None} for result in results]
     fixture = ROOT / 'tests/fixtures/api'
+    if options.merge:
+        updated = {record['id']: record for record in records}
+        previous = json.loads((fixture / 'native-captures.json').read_text())['results']
+        records = [updated.pop(record['id'], record) for record in previous] + list(updated.values())
     (fixture / 'native-captures.json').write_text(json.dumps({'results': records}, indent=2) + '\n')
     ids = [record['id'].removeprefix('api-') for record in records if record['status'] == 'rendered']
     (fixture / 'previews.js').write_text(

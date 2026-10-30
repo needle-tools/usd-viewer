@@ -17,6 +17,7 @@ from types import SimpleNamespace
 
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdSkel
 from nurbs_reference import evaluated_reference
+from native_dome_reference import textured_dome_reference
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures'
@@ -82,6 +83,10 @@ def render(task):
         proxy.GetRootLayer().Save()
         stage, source = proxy, str(work / 'particle-bounds.usda')
         capture = 'bounds-only; native Storm 26.05 predates particle-field rendering'
+    stage, textured_domes = textured_dome_reference(stage, work / 'textured-domes.usda')
+    if textured_domes:
+        source = stage.GetRootLayer().identifier
+        capture += '; solid dome emitted via equivalent constant HDR texture'
     authored_camera = next((prim.GetPath() for prim in stage.Traverse() if prim.IsA(UsdGeom.Camera)), None)
     camera_path = str(authored_camera) if authored_camera else 'MainCamera'
     if UsdGeom.GetStageUpAxis(stage) == 'Z':

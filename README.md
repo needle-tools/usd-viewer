@@ -67,6 +67,11 @@ Adaptive uses camera-independent curvature rates with a bounded triangle budget.
 MDL materials use documented authored-input approximations. Path-tracer, volume,
 physics and NURBS limitations are described in the [SDK README](usd-wasm/README.md).
 
+Native MDL reference rendering is available through SSH on `felix-win` for
+complete USD scenes, and with the installed NVIDIA MDL SDK on this Mac for
+material probes. Commands, input preparation and reference images are documented
+in [Native MDL references](docs/mdl-reference-rendering.md).
+
 ## Viewer URL Options
 
 The main options are `viewer=three|needle`,

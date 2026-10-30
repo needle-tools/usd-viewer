@@ -30,9 +30,10 @@ try {
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
     if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
-    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, mountDownloadButton };\n");
+    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera, mountDownloadButton };\n");
     await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
+    if (name === 'modern') await cp(join(sdk,'tests/fixtures/coverage/lighting-mdl'),join(root,'public/mdl'),{recursive:true});
     await command(`${name}-build`, root, 'npm', ['run', 'build']);
   }
   const root = result.consumers[0].root;
@@ -42,7 +43,7 @@ try {
   try {
     const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
     page.on('pageerror', error => result.errors.push(error.stack));
-    page.on('console', message => { if (message.type() === 'error' || /Multiple instances of Three|THREE.TSL|BVH preparation failed/.test(message.text())) result.errors.push(message.text()); });
+    page.on('console', message => { if (message.type() === 'error' || /Multiple instances of Three|THREE.TSL|BVH preparation failed/.test(message.text())) {result.errors.push(message.text());(result.errorPhases||=[]).push({phase:result.phase,text:message.text()});} });
     page.on('response', response => result.requests.push({ url: response.url(), status: response.status() }));
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(() => !!window.packed, null, { timeout: 120_000 });
@@ -128,10 +129,21 @@ try {
     for(const phase of ['preparing','packaging','reading','compressing','complete']) assert.ok(result.exportPhases.includes(phase),`packed export phase ${phase}`);
     await page.screenshot({path:join(output,'download-component.png')});
     result.downloadControl = 'Installed /viewer/download split button: default ZIP, keyboard-selected USDZ, actual downloads and standalone SDK styles';
+    result.mdlCutouts=[];
+    for(const value of ['enabled','disabled','enabled']) {
+      result.phase='MDL cutout '+value;
+      const materials=await page.evaluate(value=>window.packed.cutout(value),value);
+      assert.ok(materials.length>=4 && materials.every(m=>m.sideCopy),'packed MDL has actual mixed-side material copies');
+      assert.ok(materials.every(m=>m.alphaTest===(value==='enabled'?.5:0)),'packed side copies retain the composed alpha cutoff');
+      result.mdlCutouts.push({value,materials});await page.waitForTimeout(300);
+      await page.screenshot({path:join(output,`mdl-cutout-${value}.png`)});
+    }
+    result.phase='modern disposal';
     await page.evaluate(async () => { await window.packed.dispose(); });
     const legacyRoot = result.consumers[1].root;
     const legacyServer = await preview({root:legacyRoot, configFile:join(legacyRoot,'vite.config.js'), preview:{port:0}});
     try {
+      result.phase='legacy';
       await page.goto(legacyServer.resolvedUrls.local[0]);
       await page.waitForFunction(() => !!window.baseSdk);
       const legacyDownload = page.waitForEvent('download');
@@ -155,6 +167,22 @@ try {
         } finally { await repack?.dispose(); await handle.dispose(); }
       });
       assert.equal((await legacyDownload).suggestedFilename(), 'legacy.zip');
+      result.legacySolidDome = await page.evaluate(async () => {
+        const {getUsdModule, createThreeHydra, Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera} = window.baseSdk;
+        const USD = await getUsdModule(), scene = new Scene(), root = new Group(); scene.add(root);
+        const renderer = new WebGLRenderer(), target = new WebGLRenderTarget(64, 64);
+        const camera = new PerspectiveCamera(35, 1, .1, 100); camera.position.z = 4;
+        const source = '#usda 1.0\n( upAxis = "Y" )\ndef Xform "World" {\n def Sphere "Metal" (prepend apiSchemas = ["MaterialBindingAPI"]) {\n rel material:binding = </World/Material>\n }\n def Material "Material" {\n token outputs:surface.connect = </World/Material/Surface.outputs:surface>\n def Shader "Surface" {\n uniform token info:id = "UsdPreviewSurface"\n color3f inputs:diffuseColor = (1, .28, .08)\n float inputs:metallic = 1\n float inputs:roughness = .2\n token outputs:surface\n }\n }\n def DomeLight "Sky" {\n float inputs:intensity = .8\n }\n}\n';
+        const handle = await createThreeHydra({USD, scene:root, renderScene:scene, renderer, url:'solid-dome.usda', buffer:new TextEncoder().encode(source)});
+        try {
+          await handle.ready(); await handle.materialsReady();
+          renderer.setRenderTarget(target); renderer.render(scene, camera);
+          const pixels = new Uint8Array(64 * 64 * 4); renderer.readRenderTargetPixels(target, 0, 0, 64, 64, pixels);
+          const index = (32 * 64 + 32) * 4, center = [...pixels.slice(index, index + 3)];
+          if (!(center[0] > 80 && center[0] > center[1] * 1.2 && center[1] > center[2])) throw new Error('Solid dome lost its metal reflections: ' + center);
+          return {center, reflected:true};
+        } finally { scene.remove(root); renderer.render(scene,camera); await handle.dispose(); target.dispose(); renderer.dispose(); }
+      });
     } finally { await new Promise(resolve => legacyServer.httpServer.close(resolve)); }
     await page.waitForTimeout(100);
     assert.deepEqual(result.errors, []);

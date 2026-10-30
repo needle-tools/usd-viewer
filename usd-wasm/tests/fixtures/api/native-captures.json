@@ -28,10 +28,10 @@
       "renderer": "Storm",
       "camera": "MainCamera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "4ee551d1e74ca9871ded94dd7c5ad76bcae62308cc27db2d1ccef143267c61ed",
-      "imageSha256": "7bf978fd72d4fffe9e9c99ab9eb47ca5adb6e0014313ae9ae2ab86d9de8a3c2e"
+      "sourceFingerprint": "fc46664a0a1344f84ac229d62bcb03c690651b365ea64180d7a338a992fc10dd",
+      "imageSha256": "20182d1ed669f0ae71f654a006553a3fc8b83dcf29c86329787a7d0b43755c40"
     },
     {
       "id": "api-schema-shapes",
@@ -349,8 +349,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "de6e14a6978424e753c9708488ff15527004f79df15d050fc47f7b5db124d725",
-      "imageSha256": "e13b660a5d0e6822de6c5b81bf81f0af16cb96a6332c13c8f5a17d3b9a5c3d19"
+      "sourceFingerprint": "65a51b3bdf53b9fe00b56383bb81786bb649c39c97aabeac5b8816b650a3b1f2",
+      "imageSha256": "4f4543c0ec198a33b2e7685690bed90789770c8724c4a7f616775bb41657f50c"
     },
     {
       "id": "api-fixture-face-varying-normals-matrix",
@@ -413,10 +413,10 @@
       "renderer": "Storm",
       "camera": "/Root/World/ShotCam",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "9e0d798fb303e91fe790cb190f205801f9c71ecee96d38af2c1a58b8e2fc260a",
-      "imageSha256": "82a1c1196e69f7d328c74051c0c6250dde141d792945fccc4ed53e94ccba21b7"
+      "sourceFingerprint": "3fab787e30807cd412b2b1b82e890f78f178f885b443e73f44a16f8d7a267618",
+      "imageSha256": "d0b985ddea8d849519100054e9f8f2c6a302b1229fe5d19445913f20081aee17"
     },
     {
       "id": "api-fixture-materialx-texture-noise",
@@ -468,10 +468,10 @@
       "renderer": "Storm",
       "camera": "/World/Camera",
       "exitCode": 0,
-      "capture": "surface",
+      "capture": "surface; solid dome emitted via equivalent constant HDR texture",
       "particleFields": [],
-      "sourceFingerprint": "91b0d75ff5e49744cdfbfcc2a60f44ae7a40d0eb5624f78a31085a90c0aef662",
-      "imageSha256": "9cfa3dc199d7c4edcf47d39694c2c85903e7da31e9500528e99169a3c9490aba"
+      "sourceFingerprint": "704f0b8bc2e569ad4e044121443cd0967e5ff19ee52c3768a1257863fb9a718e",
+      "imageSha256": "ce59bc0737f8c2f2c77f28e690eca2937b58cb35d29f87b2abcbf8e911591b00"
     },
     {
       "id": "api-usdz-package",
@@ -666,8 +666,8 @@
       "exitCode": 0,
       "capture": "surface",
       "particleFields": [],
-      "sourceFingerprint": "bab61c602f2255a16b4bc56281ec439ed455dd58766a582a9b36da915f41378e",
-      "imageSha256": "eaddd08f9b1d79392c1dac6abb3867b545532adc57c5bb9f77ae993e28f7dc03"
+      "sourceFingerprint": "86aafc9e08f4efd0b82d49e0fa14059955629bcff277ea94cef1685ed013cbae",
+      "imageSha256": "74c69d2da399ccebaba9c78ef1f93774abf40a7da553ec95648731472f31d33f"
     },
     {
       "id": "api-api-preview-surface",
