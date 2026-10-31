@@ -16,10 +16,10 @@ export default defineConfig({
         deviceScaleFactor: 1,
     },
     webServer: {
-        command: 'PORT=5199 npm run start',
+        command: 'npm run prepare:public && PORT=5199 npm run start',
         cwd: '../../..',
         port: 5199,
         reuseExistingServer: true,
-        timeout: 30_000,
+        timeout: 180_000,
     },
 });

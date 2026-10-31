@@ -7,10 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Start the viewer's runtime and initial USDZ download alongside the UI module graph, and precompress both runtimes for HTTP delivery without adding compressed duplicates to the npm package.
+- Defer native MaterialX library initialization until a material terminal needs a MaterialX document. PreviewSurface-only assets avoid the extra library parse; mixed materials, custom nodedefs and volumes retain their existing path.
+- Load EXR/HDR/TGA texture decoders and USD area-light lookup tables on demand. `createWebGpuSupport({lazyAreaLights: true})` opts into deferred WebGPU lookup preparation while preserving eager support for host-created lights by default.
+- Reduce viewer startup transfer with lossless HDR compression and full WOFF2 fonts; overlap required lighting downloads with stage preparation and load glTF tools when used.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added
 
+- Optional JSPI runtime with native Wasm exceptions: 45.6% smaller Wasm and 38.7% smaller Brotli transfer, preserving the full native feature set. `getUsdModule({asyncRuntime: 'auto'})` selects it on supporting engines; the existing Asyncify runtime remains the SDK default and compatibility fallback.
+- Asynchronous stage and prim inspection helpers, with serialized native reads across picking, properties, physics and shadows. API examples support both runtimes.
+- Earlier viewer module loading and package downloads, with cancellation and single-fetch reuse. Native file readers copy temporary bytes before returning, and disposal waits for pending shadow reads.
 - Narrow `/runtime`, `/viewer/inspect`, `/viewer/repl` and `/editing` entry points. Archive packaging loads on the first export; the app loads Code and Console tools only when opened.
 - Serialized `handle.readStage()` and reusable resolver-aware source reads, scene/layer/variant inspection and lightweight physics overview for embedded consumers.
 - Reusable typed array commands in `/editing`, with conflict-safe rollback that preserves newer edits and the original failure. Stage controls reject stale document mutations after asynchronous preparation or queue waits.

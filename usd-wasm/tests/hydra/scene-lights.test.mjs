@@ -22,6 +22,43 @@ test('rect lights retain their authored area and directional targets follow loca
     delegate.dispose();
 });
 
+test('area-light preparation starts once on first use and remains part of readiness', async () => {
+    let finish, preparations = 0;
+    const preparation = new Promise(resolve => { finish = resolve; });
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), webGpuSupport: {
+        prepareAreaLights: () => { preparations++; return preparation; },
+    } });
+    try {
+        const point = delegate.createSPrim('sphereLight', '/Point');
+        point.updateLightState({ intensity: 20 });
+        const shaped = delegate.createSPrim('rectLight', '/Shaped');
+        shaped.updateLightState({ intensity: 20, coneAngle: 30 });
+        assert.equal(preparations, 0, 'punctual and shaped lights need no area lookup tables');
+        const area = delegate.createSPrim('rectLight', '/Area');
+        area.updateLightState({ intensity: 20, width: 2, height: 3 });
+        area.updateLightState({ intensity: 40, width: 3, height: 4 });
+        assert.equal(preparations, 1);
+        let ready = false;
+        const pending = delegate.waitForRprimsReady().then(() => { ready = true; });
+        await Promise.resolve();
+        assert.equal(ready, false);
+        finish(); await pending;
+        assert.equal(ready, true);
+    } finally { finish(); delegate.dispose(); }
+});
+
+test('area lookup failures remain visible if the import rejects before readiness is requested', async () => {
+    const failure = new Error('area lookup import failed');
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), webGpuSupport: {
+        prepareAreaLights: () => Promise.reject(failure),
+    } });
+    try {
+        delegate.createSPrim('diskLight', '/Area').updateLightState({ intensity: 20 });
+        await new Promise(resolve => setImmediate(resolve));
+        await assert.rejects(delegate.waitForRprimsReady(), error => error === failure);
+    } finally { delegate.dispose(); }
+});
+
 test('solid dome lights illuminate the scene and restore its environment on disposal', async () => {
     const { scene, delegate } = setup();
     const dome = delegate.createSPrim('domeLight', '/Sky');
@@ -52,4 +89,19 @@ test('orthographic cameras use Hydra world aperture units and preserve authored 
     assert.equal(camera._object.isPerspectiveCamera, true);
     assert.ok(Math.abs(camera._object.fov - 26.99146656) < 0.00001);
     delegate.dispose();
+});
+
+test('area-light preparation can finish after disposal without requesting another render', async () => {
+    let finish, requests = 0;
+    const preparation = new Promise(resolve => { finish = resolve; });
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(),
+        requestRender: () => { requests++; },
+        webGpuSupport: { prepareAreaLights: () => preparation },
+    });
+    delegate.createSPrim('rectLight', '/Area').updateLightState({ intensity: 20 });
+    const ready = delegate.waitForRprimsReady();
+    delegate.dispose();
+    finish();
+    await ready;
+    assert.equal(requests, 0);
 });

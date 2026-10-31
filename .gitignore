@@ -26,6 +26,8 @@ public/dockview
 /docs/releases/
 /docs/reviews/
 /patches/openusd/
+/usd-wasm/src/bindings/*.br
+/usd-wasm/src/bindings/*.gz
 /usd-wasm/tests/hydra/asset-corpus-results.json
 /usd-wasm/tests/hydra/runtime-measurements.json
 /usd-wasm/tests/fixtures/coverage/**/*validation.json

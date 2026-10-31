@@ -20,9 +20,6 @@ export {
 export { createThreeHydra } from './usd/create.three.js';
 export { getUsdModule } from './usd/bindings/index.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-export { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-export { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-export { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
@@ -40,3 +37,7 @@ export function getHydraHandleFromNeedleEngineAsset() {
 export function fitCamera() {
   return null;
 }
+
+export async function loadExrLoader() { return (await import('three/addons/loaders/EXRLoader.js')).EXRLoader; }
+export async function loadGltfExporter() { return (await import('three/addons/exporters/GLTFExporter.js')).GLTFExporter; }
+export async function loadGltfLoader() { return (await import('three/addons/loaders/GLTFLoader.js')).GLTFLoader; }

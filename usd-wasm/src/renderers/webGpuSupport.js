@@ -1,12 +1,21 @@
+import { prepareWebGlAreaLights } from '../hydra/areaLightSupport.js';
+
 /** Modern renderer support stays outside the base loader's dependency graph. */
-export async function createWebGpuSupport() {
-  const [{ MeshPhysicalNodeMaterial, RectAreaLightNode }, { RectAreaLightTexturesLib }, TSL, { createMaterialXNodeMaterial }] = await Promise.all([
-    import('three/webgpu'), import('three/addons/lights/RectAreaLightTexturesLib.js'), import('three/tsl'), import('../hydra/materialxVolume.js'),
+export async function createWebGpuSupport({ lazyAreaLights = false } = {}) {
+  const [{ MeshPhysicalNodeMaterial, RectAreaLightNode }, TSL, { createMaterialXNodeMaterial }] = await Promise.all([
+    import('three/webgpu'), import('three/tsl'), import('../hydra/materialxVolume.js'),
   ]);
-  RectAreaLightNode.setLTC(RectAreaLightTexturesLib.init());
+  let areaLightPreparation;
   const strokeOpacity = new WeakMap();
-  return {
+  const support = {
     SurfaceMaterial: MeshPhysicalNodeMaterial,
+    prepareAreaLights() {
+      return areaLightPreparation ??= Promise.all([
+        prepareWebGlAreaLights(), import('three/addons/lights/RectAreaLightTexturesLib.js'),
+      ]).then(([, { RectAreaLightTexturesLib }]) => {
+        RectAreaLightNode.setLTC(RectAreaLightTexturesLib.init());
+      });
+    },
     async createParticleField(data) { return (await import('./gaussian.js')).createGaussianParticleField(data); },
     createMaterialXMaterial: createMaterialXNodeMaterial,
     configureStrokeMaterial(material) {
@@ -25,4 +34,8 @@ export async function createWebGpuSupport() {
       }
     },
   };
+  // Preserve ready-to-render support for host-authored lights. USD-only scenes
+  // can opt into preparation when their first area-light prim arrives.
+  if (!lazyAreaLights) await support.prepareAreaLights();
+  return support;
 }

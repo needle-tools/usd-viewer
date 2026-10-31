@@ -36,6 +36,7 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
 ```sh
 npm install
+npm run prepare:public
 npm run start
 ```
 
@@ -47,6 +48,10 @@ The public viewer entrypoint lives in `public/`. The package and the three.js
 Hydra bridge live under `usd-wasm/`. Node.js 22.12 or newer is required for local
 development. The npm package version is maintained in `usd-wasm/package.json`;
 the private server has its own version.
+`prepare:public` also generates lossless Brotli/gzip runtime files for HTTP
+delivery. They stay out of the npm package; rerun preparation after updating
+the native artifacts. The development server serves the current original if
+its compressed files are missing or older.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 

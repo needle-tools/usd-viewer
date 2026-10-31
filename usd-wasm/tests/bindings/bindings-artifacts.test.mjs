@@ -20,11 +20,11 @@ process.once("exit", () => {
     }
 });
 
-async function loadUsdModuleFromTempCopy() {
+async function loadUsdModuleFromTempCopy(runtime = 'asyncify') {
     const tempDir = await mkdtemp(join(tmpdir(), "usd-bindings-"));
     tempModuleDirs.add(tempDir);
     const cjsPath = join(tempDir, "emHdBindings.cjs");
-    await writeFile(cjsPath, await readFile(jsPath));
+    await writeFile(cjsPath, await readFile(runtime === 'jspi' ? resolve(bindingsDir, 'emHdBindings.jspi.js') : jsPath));
 
     const getUsdModule = require(cjsPath);
     return getUsdModule({
@@ -42,6 +42,47 @@ async function loadUsdModuleFromTempCopy() {
 }
 
 describe("OpenUSD wasm binding artifacts", () => {
+    it("ships a JSPI artifact matching its build and optimization metadata", async () => {
+        const [js, wasm, metadata, optimization] = await Promise.all([
+            readFile(resolve(bindingsDir, 'emHdBindings.jspi.js'), 'utf8'),
+            readFile(resolve(bindingsDir, 'emHdBindings.jspi.wasm')),
+            readFile(resolve(bindingsDir, 'openusd-build-info.jspi.json'), 'utf8').then(JSON.parse),
+            readFile(resolve(bindingsDir, 'openusd-optimization-info.jspi.json'), 'utf8').then(JSON.parse),
+        ]);
+        assert.match(js, /globalThis\["NEEDLE:USD:GET:JSPI"\]/);
+        assert.equal(metadata.toolchain.asyncRuntime, 'JSPI');
+        assert.equal(metadata.openusd.gitDirty, false);
+        assert.equal(wasm.length, optimization.output.bytes);
+        assert.equal(createHash('sha256').update(wasm).digest('hex'), optimization.output.sha256);
+        assert.ok(optimization.arguments.includes('--enable-exception-handling'));
+    });
+
+    it("loads the JSPI runtime with matching feature metadata and awaited native operations", {
+        skip: typeof WebAssembly.Suspending !== 'function' || typeof WebAssembly.promising !== 'function',
+    }, async () => {
+        const USD = await loadUsdModuleFromTempCopy('jspi');
+        const expected = JSON.parse(await readFile(resolve(bindingsDir, 'openusd-build-info.jspi.json'), 'utf8'));
+        assert.deepEqual(JSON.parse(USD.GetBuildInfoJson()), expected);
+        assert.ok(Object.values(expected.modules).every(value => value === true), 'all existing native features remain linked');
+        USD.FS_createDataFile('/', 'jspi-api.usda', new TextEncoder().encode('#usda 1.0\ndef Cube "Cube" {\n double size.timeSamples = { 0: 1, 2: 3 }\n}\n'), true, true, true);
+        const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
+        const driver = await USD.CreateHdWebSyncDriver(delegate, '/jspi-api.usda');
+        try {
+            assert.equal(driver.HasStage(), true);
+            const prim = driver.GetStage().GetPrimAtPath('/Cube'), size = prim.GetAttribute('size');
+            try {
+                assert.equal(await size.Get(1), 2);
+                assert.equal(await size.GetNumTimeSamples(), 2);
+                assert.equal(await prim.SetActive(false), true);
+                assert.equal(prim.IsActive(), false);
+                assert.equal(await prim.SetActive(true), true);
+            } finally { size.delete(); prim.delete(); }
+        } finally { driver.delete(); }
+        const compatibilityDriver = await new USD.HdWebSyncDriver(delegate, '/jspi-api.usda');
+        try { assert.equal(compatibilityDriver.HasStage(), true); }
+        finally { compatibilityDriver.delete(); }
+    });
+
     it("ships the JS and wasm artifacts used by getUsdModule", async () => {
         const [js, wasm] = await Promise.all([
             stat(jsPath),

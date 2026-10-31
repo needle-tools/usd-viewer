@@ -7,10 +7,7 @@ import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPr
 import { remapNormalTextureSamples, remapTextureSamples } from './textureChannels.js';
 import { textureFileType } from './textureFileType.js';
 import { Ktx2Textures } from './ktx2Textures.js';
-import { TGALoader } from 'three/addons/loaders/TGALoader.js';
-import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { prepareWebGlAreaLights } from './areaLightSupport.js';
 import { createDomeTexture, updateDomeEnvironment, removeDomeEnvironment } from './domeEnvironment.js';
 import { VdbVolumeRprim } from './vdbVolumeRprim.js';
 import { hasMaterialXVolume } from './materialxVolumeSupport.js';
@@ -326,8 +323,7 @@ class TextureRegistry {
     this.materialXDefinitionCache = new Map();
     this.disposed = false;
     this.loader = new TextureLoader();
-    this.tgaLoader = new TGALoader();
-    this.exrLoader = new EXRLoader();
+    this.textureDecoders = new Map();
     this.driverFileQueue = Promise.resolve();
     this.ktx2Textures = null;
 
@@ -535,6 +531,23 @@ class TextureRegistry {
     return candidates[0];
   }
 
+  getTextureDecoder(filetype) {
+    let pending = this.textureDecoders.get(filetype);
+    if (!pending) {
+      // Keep uncommon decoders and their compression dependencies off the
+      // normal PNG/JPEG startup path; concurrent textures share one loader.
+      if (filetype === 'image/tga') {
+        pending = import('three/addons/loaders/TGALoader.js').then(({ TGALoader }) => new TGALoader());
+      } else if (filetype === 'image/x-exr') {
+        pending = import('three/addons/loaders/EXRLoader.js').then(({ EXRLoader }) => new EXRLoader());
+      } else if (filetype === 'image/vnd.radiance') {
+        pending = import('three/addons/loaders/RGBELoader.js').then(({ RGBELoader }) => new RGBELoader());
+      }
+      if (pending) this.textureDecoders.set(filetype, pending);
+    }
+    return pending;
+  }
+
   getTexture(resourcePath, readable = false) {
     resourcePath = this.resolveResourcePath(resourcePath);
     const cacheKey = resourcePath + (readable ? "#usd-readable" : "");
@@ -567,42 +580,29 @@ class TextureRegistry {
         }, error => { releaseUrl(); textureReject(error); });
         return;
       }
-      const loader = filetype === 'image/tga' ? this.tgaLoader : filetype === 'image/x-exr' ? this.exrLoader
-        : filetype === 'image/vnd.radiance' ? (this.hdrLoader ??= new RGBELoader()) : this.loader;
-      if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "resourcePath", resourcePath);
-      // Load the texture
-      loader.load(
-        // resource URL
-        url,
-
-        // onLoad callback
-        (texture) => {
-          if (revokeOnLoad) {
-            URL.revokeObjectURL(url);
-            this.objectUrls.delete(url);
-          }
-          texture.name = resourcePath;
-          if (this.disposed) {
-            texture.dispose();
-          }
-          else {
-            this.loadedTextures.add(texture);
-          }
-          textureResolve(texture);
-        },
-
-        // onProgress callback currently not used
-        undefined,
-
-        // onError callback
-        (err) => {
-          if (revokeOnLoad) {
-            URL.revokeObjectURL(url);
-            this.objectUrls.delete(url);
-          }
-          textureReject(err);
+      const releaseUrl = () => {
+        if (revokeOnLoad) {
+          URL.revokeObjectURL(url);
+          this.objectUrls.delete(url);
         }
-      );
+      };
+      const fail = error => { releaseUrl(); textureReject(error); };
+      const loadWith = loader => {
+        try {
+          if (this.disposed) throw new Error('Texture registry disposed while loading ' + resourcePath);
+          if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "resourcePath", resourcePath);
+          loader.load(url, texture => {
+            releaseUrl();
+            texture.name = resourcePath;
+            if (this.disposed) texture.dispose();
+            else this.loadedTextures.add(texture);
+            textureResolve(texture);
+          }, undefined, fail);
+        } catch (error) { fail(error); }
+      };
+      const decoder = this.getTextureDecoder(filetype);
+      if (decoder) decoder.then(loadWith, fail);
+      else loadWith(this.loader);
     };
 
     const loadFromFile = (_loadedFile) => {
@@ -768,7 +768,7 @@ class HydraScenePrimitive {
     const photometry = lightIntensity(state || {}, typeId, shaped);
     if (this._object.isLight) this._object.intensity = photometry.intensity * scale;
     if (area && !shaped) {
-      RectAreaLightUniformsLib.init();
+      this._interface.prepareAreaLights();
       this._object.width = Math.max(photometry.width, .001);
       this._object.height = Math.max(photometry.height, .001);
     }
@@ -2737,6 +2737,20 @@ export class ThreeRenderDelegateInterface {
     promise.then(remove, remove);
   }
 
+  prepareAreaLights() {
+    if (!this.areaLightsReady) {
+      this.areaLightsReady = (async () => {
+        const support = this.config.webGpuSupport;
+        if (support?.prepareAreaLights) await support.prepareAreaLights();
+        else await prepareWebGlAreaLights();
+        if (!this.registry.disposed) this.config.requestRender?.();
+      })();
+      // Retain failures for readiness, including imports that reject before Draw finishes.
+      void this.areaLightsReady.catch(() => {});
+    }
+    return this.areaLightsReady;
+  }
+
   async waitForRprimsReady() {
     const failures = [];
     while (this.pendingRprimUpdates.size > 0) {
@@ -2745,6 +2759,7 @@ export class ThreeRenderDelegateInterface {
     }
     // One rejected factory must not release the driver while another still reads.
     if (failures.length) throw failures[0];
+    if (this.areaLightsReady) await this.areaLightsReady;
   }
 
   ensureSparkRenderer(spark, sortingModeHint) {

@@ -71,7 +71,7 @@ export async function createApiStage(usd, kind, path) {
   for(let i=0;i<descendants.size();i++) {
     const p=descendants.get(i), path=p.GetPath();
     if(!['Mesh','Sphere','Cube'].includes(p.GetTypeName()) || ['/World/Shape','/World/ApiSphere','/World/GlazeBody','/World/ColorRibbon'].includes(path)) continue;
-    const rgb=p.GetAttribute('primvars:displayColor').Get(Number.NaN)?.[0];
+    const rgb=(await p.GetAttribute('primvars:displayColor').Get(Number.NaN))?.[0];
     if(rgb?.length===3) k.bind(p,k.material(stage,'/Looks/Details'+i,rgb,0.1,0.4));
   }
   return stage;

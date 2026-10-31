@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "openusd": {
+    "version": "0.26.11",
+    "pxrVersion": 2611,
+    "gitSha": "926715d5c5e4dcfb34c7595a488050e8a9160734",
+    "gitDirty": false
+  },
+  "toolchain": {
+    "emscripten": "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.23 (7a5d93b50f6a3a35e85a0d2fc9e667b8498e6aed)",
+    "cxxCompiler": "/Users/herbst/git/emsdk/upstream/emscripten/em++",
+    "cmakeBuildType": "Release",
+    "asyncRuntime": "JSPI"
+  },
+  "modules": {
+    "usdImaging": true,
+    "hydraBridge": true,
+    "materialX": true,
+    "openSubdiv": true,
+    "usdDraco": true,
+    "usdGltf": true,
+    "usdGltfDraco": true
+  },
+  "dependencies": {
+    "openSubdiv": {
+      "version": "3.6.1"
+    },
+    "materialX": {
+      "prefix": "/Users/herbst/git/usd-viewer/.cache/performance-20261031/native-deps/lib/cmake/MaterialX",
+      "gitSha": "3523fff0ba00a6124d6229e34e4f2a2bb3accfe7",
+      "gitDirty": false
+    },
+    "usdGltf": {
+      "prefix": "/Users/herbst/git/usd-viewer/.cache/performance-20261031/native-deps",
+      "gitSha": "ca3c2de5553648ae280077ddde079b6f3362a830",
+      "gitDirty": false,
+      "draco": true
+    },
+    "emsdk": {
+      "gitSha": "af78ec5c14c4ae7d14cfef39fc46a6c43ccd844f",
+      "gitDirty": false
+    }
+  }
+}

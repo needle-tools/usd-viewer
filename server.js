@@ -1,11 +1,19 @@
 const fastify = require('fastify')()
 const path = require('path')
+const {runtimeCompressionGuard} = require('./scripts/precompressed-runtime')
 const { injectClientIpIntoAnalyticsTrackBody, maskIpForLog } = require('./scripts/analytics-proxy')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
 // Otherwise we wouldn't need a server at all.
 
 function setHeaders(res, path, stat) {
+
+  const previous = res.getHeader('Vary');
+  const vary = Array.isArray(previous) ? previous.join(', ') : String(previous || '');
+  const fields = vary.split(',').map(value => value.trim().toLowerCase());
+  if (!fields.includes('accept-encoding') && !fields.includes('*')) {
+    res.setHeader('Vary', vary ? `${vary}, Accept-Encoding` : 'Accept-Encoding');
+  }
 
   const normalizedPath = path.replaceAll("\\", '/');
   if (normalizedPath.endsWith('/usd-asset-cache-sw.js')) {
@@ -273,6 +281,15 @@ fastify.register(require('@fastify/static'), {
   setHeaders,
 });
 
+fastify.addHook('onRequest', runtimeCompressionGuard(path.join(__dirname, 'usd-wasm/src/bindings')));
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'usd-wasm/src/bindings'),
+  prefix: '/usd/bindings',
+  preCompressed: true,
+  setHeaders,
+  decorateReply: false,
+});
+
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'node_modules/@needle-tools/materialx'),
   prefix: '/materialx',
@@ -332,6 +349,7 @@ fastify.register(require('@fastify/static'), {
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
   prefix: '/',
+  preCompressed: true,
   setHeaders,
   decorateReply: false,
 })

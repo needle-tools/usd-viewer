@@ -4,6 +4,11 @@ import {apiExampleAssets} from '../fixtures/api/examples.js';
 
 for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute into the viewport and restore from their URL`, async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  const runtimeRequests = new Set<string>();
+  page.context().on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (/\/emHdBindings(?:\.jspi)?\.wasm$/.test(path)) runtimeRequests.add(path);
+  });
   await page.goto(`/?viewer=${viewer}`); await openSamples(page);
   await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
@@ -18,6 +23,8 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute 
   expect(await page.evaluate(() => (window as any).usdStage.GetPrimAtPath('/World/Ball').IsValid())).toBe(true);
   await expect(page.locator('.usd-repl-output')).toContainText('/World/Ball');
   await expect.poll(() => page.workers().filter(worker => worker.url().endsWith('/api/worker.js')).length).toBe(0);
+  const selectedRuntime = await page.evaluate(() => typeof (WebAssembly as any).Suspending === 'function' && typeof (WebAssembly as any).promising === 'function' ? 'emHdBindings.jspi.wasm' : 'emHdBindings.wasm');
+  expect([...runtimeRequests]).toEqual(['/usd/bindings/' + selectedRuntime]);
   await page.screenshot({ path: info.outputPath(`${viewer}-api-shapes.png`) });
   await page.reload(); await stageReady(page);
   expect(await page.evaluate(() => (window as any).usdStage.GetPrimAtPath('/World/Box').IsValid())).toBe(true);

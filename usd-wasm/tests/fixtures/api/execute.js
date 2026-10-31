@@ -29,9 +29,9 @@ export async function executeExample(USD, example, { fixtureCatalog, readFixture
   const context = {
     USD, ...pxr, stage: null, print, createApiStage, sceneHelpers: createSceneHelpers(USD), vectorToArray: pxr.vectorToArray,
     listPrims: (stage = context.stage) => stage ? pxr.vectorToArray(stage.TraverseAll()).map(prim => prim.GetPath()) : [],
-    inspectPrim: prim => !prim?.IsValid?.() ? null : ({
+    inspectPrim: async prim => !prim?.IsValid?.() ? null : ({
       path: prim.GetPath(), typeName: prim.GetTypeName(),
-      attributes: pxr.vectorToArray(prim.GetAttributes()).map(attr => ({ name: attr.GetName(), typeName: attr.GetTypeName(), value: attr.GetValueString() })),
+      attributes: await Promise.all(pxr.vectorToArray(prim.GetAttributes()).map(async attr => ({ name: attr.GetName(), typeName: attr.GetTypeName(), value: await attr.GetValueString() }))),
       relationships: pxr.vectorToArray(prim.GetRelationships()).map(rel => ({ name: rel.GetName(), targets: pxr.vectorToArray(rel.GetTargets()) })),
     }),
     mountBytes, mountText: (path, text) => mountBytes(path, encoder.encode(text)),

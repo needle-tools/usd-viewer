@@ -1778,7 +1778,7 @@ button.user-profile {
 
 @font-face {
   font-family: 'NunitoSans';
-  src: url('fonts/NunitoSans-Variable.ttf') format('truetype');
+  src: url('fonts/NunitoSans-Variable.woff2') format('woff2');
 }
 
 @font-face {

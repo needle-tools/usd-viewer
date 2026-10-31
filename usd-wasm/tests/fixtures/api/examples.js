@@ -186,7 +186,7 @@ const hullPoints = [
 ];
 kit.mesh(stage, "/World/Hull", hullPoints, [4, 4, 4], [0, 1, 2, 3, 4, 3, 2, 5, 0, 4, 5, 1], colors.blue);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Xform Ops",
@@ -214,7 +214,7 @@ kit.box(stage, "/World/Model/Fin", [-0.62, 0.2, 0], [0.22, 0.34, 0.03], colors.t
 kit.torus(stage, "/World/Origin", [0, 0, 0], 0.4, 0.04, colors.ink, "y");
 kit.beam(stage, "/World/Translate", [0, 0, 0], [1, 2, 3], 0.03, colors.gold);
 
-print(inspectPrim(model.GetPrim()));`,
+print(await inspectPrim(model.GetPrim()));`,
   },
   {
     title: "Xform Common API",
@@ -248,7 +248,7 @@ kit.box(stage, "/World/Tower/Belfry", [0, 0.56, 0], [0.8, 0.12, 0.8], colors.cor
 kit.box(stage, "/World/Plinth", [0, -0.08, 0], [2.4, 0.16, 1.8], colors.teal);
 kit.beam(stage, "/World/Vertical", [0.85, 0, -0.55], [0.85, 3.3, -0.55], 0.02, colors.coral);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Matrix Transform",
@@ -277,7 +277,7 @@ kit.beam(stage, "/World/Rig/AxisX", [0, 0, 0], [1.2, 0, 0], 0.02, colors.coral);
 kit.beam(stage, "/World/Rig/AxisY", [0, 0, 0], [0, 1.2, 0], 0.02, colors.teal);
 kit.beam(stage, "/World/Rig/AxisZ", [0, 0, 0], [0, 0, 1.2], 0.02, colors.blue);
 
-print(rig.GetPrim().GetAttribute("xformOp:transform").GetValueString());`,
+print(await rig.GetPrim().GetAttribute("xformOp:transform").GetValueString());`,
   },
   {
     title: "Animated Radius",
@@ -308,7 +308,7 @@ kit.box(stage, "/World/Graph/Backdrop", [0, 1.15, -1.98], [3.6, 1.4, 0.05], colo
 kit.beams(stage, "/World/Graph/Curve", keys.slice(1).map((key, i) => [plot(keys[i]), plot(key)]), 0.022, colors.cream);
 kit.spheres(stage, "/World/Graph/Keys", keys.map(plot), 0.06, colors.gold);
 
-print(sphere.GetPrim().GetAttribute("radius").GetValueStringAtTime(24));`,
+print(await sphere.GetPrim().GetAttribute("radius").GetValueStringAtTime(24));`,
   },
   {
     title: "Animated Transform",
@@ -380,7 +380,7 @@ kit.group(stage, "/World/Track/FinishGate", [2, rail, 0], [0, 90, 0]);
 kit.torus(stage, "/World/Track/FinishGate/Hoop", [0, 0, 0], 1.25, 0.05, colors.teal, "z", 0.5);
 kit.boxes(stage, "/World/Track/FinishGate/Feet", [-1, 1].map((side) => [[side * 1.25, -0.08, 0], [0.24, 0.16, 0.24]]), colors.teal);
 
-print(cube.GetPrim().GetAttribute("xformOp:translate").GetTimeSamples().size());`,
+print((await cube.GetPrim().GetAttribute("xformOp:translate").GetTimeSamples()).size());`,
   },
   {
     title: "Shader Color Inputs",
@@ -412,7 +412,7 @@ const blueMaterial = materialFor(blue, "/World/Looks/Blue");
 kit.bind(kit.torus(stage, "/World/RedLink", [-0.65, 0, 0], 1, 0.24, colors.coral), redMaterial);
 kit.bind(kit.torus(stage, "/World/BlueLink", [0.65, 0, 0], 1, 0.24, colors.blue, "y"), blueMaterial);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Visibility",
@@ -440,7 +440,7 @@ const dots = Array.from({length: 16}, (_, i) => {
 kit.spheres(stage, "/World/HiddenOutline", dots, 0.045, colors.gold);
 kit.box(stage, "/World/Stage", [0, -0.06, 0], [3.8, 0.12, 1.4], colors.ink);
 
-print(listPrims(stage).map((path) => inspectPrim(stage.GetPrimAtPath(path))));`,
+print(await Promise.all(listPrims(stage).map((path) => inspectPrim(stage.GetPrimAtPath(path)))));`,
   },
   {
     title: "Purpose",
@@ -471,7 +471,7 @@ kit.color(proxyMesh, colors.teal);
 // The plinth keeps the default purpose: it belongs to neither representation.
 kit.box(stage, "/World/Plinth", [0, -0.76, 0], [3.2, 0.12, 1.5], colors.ink);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Custom Properties",
@@ -488,7 +488,7 @@ prim.CreateAttribute("userProperties:massKg", Sdf.ValueTypeNames.Float, true).Se
 prim.CreateAttribute("userProperties:approved", Sdf.ValueTypeNames.Bool, true).Set(true);
 
 // Read the approval as a boolean and use it to choose the status-lamp colour.
-const approved = prim.GetAttribute("userProperties:approved").Get();
+const approved = await prim.GetAttribute("userProperties:approved").Get();
 
 // A tool case; its parts are children of /World/Asset and share its turn.
 kit.pose(stage, prim, [0, 0, 0], [1, 1, 1], [0, 15, 0]);
@@ -500,7 +500,7 @@ for (const x of [-0.65, 0.65]) {
 }
 kit.sphere(stage, "/World/Asset/StatusLamp", [0, 0.6, 0.52], 0.11, approved ? colors.teal : colors.coral);
 
-print(inspectPrim(prim));`,
+print(await inspectPrim(prim));`,
   },
   {
     title: "Relationships",
@@ -559,7 +559,7 @@ kit.bind(kit.lathe(stage, "/World/Pitcher", [0, 0, 0], pitcherProfile, colors.go
 kit.bind(kit.torus(stage, "/World/Handle", [0.7, 0.1, 0], 0.5, 0.085, colors.gold), material);
 kit.box(stage, "/World/Slate", [0, -1.09, 0], [2.1, 0.18, 1.8], colors.ink, [0, 20, 0]);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Bind Material",
@@ -629,7 +629,7 @@ kit.box(stage, "/World/Sign/Top", [0, 1.3, 0], [2.3, 0.16, 0.24], colors.coral);
 kit.beam(stage, "/World/Sign/Pole", [0, -0.7, 0], [0, -2, 0], 0.09, colors.ink);
 kit.torus(stage, "/World/Sign/Foot", [0, -2, 0], 0.65, 0.09, colors.teal, "y");
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Variant Set",
@@ -696,9 +696,9 @@ kit.sphere(stage, "/World/WarmChip", [-1.6, -0.4, 0], 0.3, colors.coral);
 kit.sphere(stage, "/World/CoolChip", [1.6, -0.4, 0], 0.3, colors.blue);
 
 await look.SetVariantSelection("cool");
-print(stage.GetPrimAtPath("/World/Product/CoolSwatch").GetAttribute("userProperties:look").GetValueString());
+print(await stage.GetPrimAtPath("/World/Product/CoolSwatch").GetAttribute("userProperties:look").GetValueString());
 await look.SetVariantSelection("warm");
-print(stage.GetPrimAtPath("/World/Product/WarmSwatch").GetAttribute("userProperties:look").GetValueString());`,
+print(await stage.GetPrimAtPath("/World/Product/WarmSwatch").GetAttribute("userProperties:look").GetValueString());`,
   },
   {
     title: "Payload",
@@ -709,12 +709,12 @@ const kit = sceneHelpers, colors = kit.colors;
 const payloadStage = Usd.Stage.CreateNew("/tmp/payload-asset.usda");
 payloadStage.DefinePrim("/PayloadRoot", "Xform");
 payloadStage.DefinePrim("/PayloadRoot/Sphere", "Sphere");
-payloadStage.Export("/tmp/payload-asset.usda");
+await payloadStage.Export("/tmp/payload-asset.usda");
 
 stage = Usd.Stage.CreateNew("/tmp/payload-root.usda");
 stage.SetUpAxis("Y");
 const holder = stage.DefinePrim("/World/PayloadHolder", "Xform");
-holder.GetPayloads().AddPayload("payload-asset.usda", "/PayloadRoot");
+await holder.GetPayloads().AddPayload("payload-asset.usda", "/PayloadRoot");
 
 // The payload's sphere now appears under the holder; colour it from the root layer.
 kit.color(stage.GetPrimAtPath("/World/PayloadHolder/Sphere"), colors.gold);
@@ -727,7 +727,7 @@ for (const a of [-s, s]) for (const b of [-s, s]) {
 }
 kit.beams(stage, "/World/Crate/Edges", edges, 0.07, colors.teal);
 
-print(inspectPrim(holder));`,
+print(await inspectPrim(holder));`,
   },
   {
     title: "Payload Load State",
@@ -738,12 +738,12 @@ const kit = sceneHelpers, colors = kit.colors;
 const payloadStage = Usd.Stage.CreateNew("/tmp/payload-load-asset.usda");
 payloadStage.DefinePrim("/PayloadRoot", "Xform");
 payloadStage.DefinePrim("/PayloadRoot/Cube", "Cube");
-payloadStage.Export("/tmp/payload-load-asset.usda");
+await payloadStage.Export("/tmp/payload-load-asset.usda");
 
 stage = Usd.Stage.CreateNew("/tmp/payload-load.usda");
 stage.SetUpAxis("Y");
 const holder = stage.DefinePrim("/World/Holder", "Xform");
-holder.GetPayloads().AddPayload("payload-load-asset.usda", "/PayloadRoot");
+await holder.GetPayloads().AddPayload("payload-load-asset.usda", "/PayloadRoot");
 
 // The loaded cube sits in an open drawer that "stores" the payload.
 const cube = stage.GetPrimAtPath("/World/Holder/Cube");
@@ -827,7 +827,7 @@ kit.pose(stage, stage.GetPrimAtPath("/World/Neighbour"), [0.95, 0, 0.4], [0.62, 
 kit.color(stage.GetPrimAtPath("/World/Neighbour/Cap"), colors.gold);
 kit.lathe(stage, "/World/Moss", [0.35, 0, 0.15], [[0.01, -0.08], [1.5, -0.08], [1.35, 0.01], [0.01, 0.04]], [0.3, 0.5, 0.32]);
 
-print(inspectPrim(stage.GetPrimAtPath("/World")));`,
+print(await inspectPrim(stage.GetPrimAtPath("/World")));`,
   },
   {
     title: "Layer Stack",
@@ -970,14 +970,14 @@ for (const x of [-1, 1]) kit.box(stage, "/World/Probe/Column" + (x < 0 ? "Left" 
 kit.box(stage, "/World/Probe/Bridge", [0, 1.1, 0], [2.2, 0.22, 0.5], colors.teal);
 kit.beam(stage, "/World/Probe/Stylus", [0, 0.7, 0], [0, 1.4, 0], 0.06, colors.gold);
 kit.box(stage, "/World/Probe/Readout", [0.7, 1.4, 0], [0.65, 0.48, 0.2], colors.blue);
-const measuredRadius = attr.Get();
+const measuredRadius = await attr.Get();
 const gaugeTicks = Array.from({length: Math.round(measuredRadius * 8)}, (_, i) =>
   [[-0.8 + i * 0.17, -0.53, 0.35], [0.025, 0.025, i % 2 ? 0.12 : 0.24]]);
 kit.boxes(stage, "/World/Probe/Ticks", gaugeTicks, colors.cream);
 
 print({
-  value: attr.GetValueString(),
-  resolve: attr.GetResolveInfo(Usd.TimeCode.Default()),
+  value: await attr.GetValueString(),
+  resolve: await attr.GetResolveInfo(Usd.TimeCode.Default()),
 });`,
   },
   {
@@ -1065,7 +1065,7 @@ corners.forEach((corner, i) => {
 print({
   hasBinding,
   hasDisplayColor,
-  mesh: inspectPrim(triangle),
+  mesh: await inspectPrim(triangle),
 });`,
   },
   {
@@ -1078,9 +1078,9 @@ stage = await openFixture("Face-Varying Normals Matrix");
 // Read points as arrays of [x, y, z]. Their bounds tell us where to centre
 // each authored mesh without changing its points or normal interpolation.
 const cells = vectorToArray(stage.TraverseAll()).filter((prim) => prim.GetTypeName() === "Mesh");
-cells.forEach((cell, i) => {
+for (const [i, cell] of cells.entries()) {
   // Centre each mesh in its rack slot using the middle of its point bounds.
-  const points = cell.GetAttribute("points").Get();
+  const points = await cell.GetAttribute("points").Get();
   const center = [0, 1, 2].map((axis) => {
     const coords = points.map(point => point[axis]);
     return (Math.min(...coords) + Math.max(...coords)) / 2;
@@ -1095,12 +1095,12 @@ cells.forEach((cell, i) => {
   }
   // Draw the first authored normal as a short gold needle.
   const normals = cell.GetAttribute("primvars:normals");
-  const normal = normals.IsValid() ? (normals.Get()?.[0] ?? []) : [];
+  const normal = normals.IsValid() ? ((await normals.Get())?.[0] ?? []) : [];
   if (normal.length === 3) {
     const length = Math.hypot(...normal) || 1;
     kit.beam(stage, "/World/Rack/Normal" + i, [x, y, 0.15], [x + normal[0] / length * 0.4, y + normal[1] / length * 0.4, 0.15 + normal[2] / length * 0.4], 0.025, colors.gold);
   }
-});
+}
 
 print(listPrims(stage).filter((path) => {
   return stage.GetPrimAtPath(path).GetTypeName() === "Mesh";
@@ -1122,8 +1122,8 @@ kit.sphere(stage, "/World/SharedAsset", [1.4, 1.1, 0], 0.24, colors.coral);
 
 print({
   usedLayers: stage.GetUsedLayers(false).map((layer) => layer.displayName),
-  world: inspectPrim(stage.GetPrimAtPath("/World")),
-  referencedCube: inspectPrim(stage.GetPrimAtPath("/World/Shape")),
+  world: await inspectPrim(stage.GetPrimAtPath("/World")),
+  referencedCube: await inspectPrim(stage.GetPrimAtPath("/World/Shape")),
 });`,
   },
   {
@@ -1160,7 +1160,7 @@ stage = await openFixture("usd-concepts/native_instances.usda");
 for (let i = 0; i < 7; i++) {
   const instance = stage.DefinePrim("/Spiral/Instance" + i, "Xform");
   await instance.GetReferences().AddReference("", "/Prototype");
-  instance.SetInstanceable(true);
+  await instance.SetInstanceable(true);
 }
 
 // An instance root still takes ordinary local opinions: wind the copies up a spiral.
@@ -1202,7 +1202,7 @@ kit.attr(scatter, "scales", "float3[]", scales);
 scatter.GetAttribute("orientations").Set(Array.from({length: count}, () => [1, 0, 0, 0]));
 kit.torus(stage, "/World/ScatterFoot", [0, -0.3, 0], 1.3, 0.055, colors.teal, "y");
 
-print(inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
+print(await inspectPrim(stage.GetPrimAtPath("/World/Scatter")));`,
   },
   {
     title: "Fixture: Camera + Light",
@@ -1234,11 +1234,11 @@ kit.bind(kit.lathe(stage, "/World/LitVessel", [0.55, 0, 0], [[0.01, -0.4], [0.4,
 kit.box(stage, "/World/StudioFloor", [0, -0.55, 0], [2.8, 0.1, 1.8], colors.ink);
 
 print({
-  camera: inspectPrim(shot),
-  lights: ["KeyLight", "FillLight", "SunLight", "SkyLight", "ApiLight"].map((name) => {
+  camera: await inspectPrim(shot),
+  lights: await Promise.all(["KeyLight", "FillLight", "SunLight", "SkyLight", "ApiLight"].map(async (name) => {
     const light = stage.GetPrimAtPath("/World/" + name);
-    return { name, type: light.GetTypeName(), intensity: light.GetAttribute("inputs:intensity").GetValueString() };
-  }),
+    return { name, type: light.GetTypeName(), intensity: await light.GetAttribute("inputs:intensity").GetValueString() };
+  })),
 });`,
     authoredLighting: true,
   },
@@ -1275,7 +1275,7 @@ const notices = [];
 
 // Listen, make one edit, give the notice a tick to arrive, then stop listening.
 const listener = stage.RegisterObjectsChanged((notice) => notices.push(notice));
-prim.SetActive(false);
+await prim.SetActive(false);
 await new Promise((resolve) => setTimeout(resolve, 0));
 stage.RevokeObjectsChanged(listener);
 
@@ -1305,7 +1305,7 @@ stage.SetUpAxis("Y");
 const keep = stage.DefinePrim("/World/Keep", "Cube");
 const mute = stage.DefinePrim("/World/Mute", "Cube");
 
-mute.SetActive(false);
+await mute.SetActive(false);
 
 // A switch panel: the active cube stands lit; the muted one leaves an empty slot.
 kit.pose(stage, keep, [-0.65, 0, 0], [0.45, 0.7, 0.45]);
@@ -1339,7 +1339,7 @@ kit.pose(stage, prim, [0, 0, 0], [0.6, 0.8, 0.5], [0, 30, 0]);
 kit.bind(kit.torus(stage, "/World/BindingBand", [0, 0, 0], 1.15, 0.12, colors.violet, "y"), appliedMaterial);
 kit.sphere(stage, "/World/BindingClasp", [1.1, 0, 0], 0.23, colors.gold);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
   },
   {
     title: "Cameras And Lights",
@@ -1385,7 +1385,7 @@ kit.bind(kit.lathe(stage, "/World/Subject", [0, 0, 0], [[0.01, -0.8], [0.6, -0.8
 kit.torus(stage, "/World/SubjectHandle", [0.55, 0.2, 0], 0.35, 0.09, colors.teal);
 kit.box(stage, "/World/Backdrop", [0, -1.05, 0], [3.3, 0.15, 2.6], colors.blue);
 
-print(stage.ExportToString());`,
+print(await stage.ExportToString());`,
     authoredLighting: true,
   },
   {
@@ -1407,7 +1407,7 @@ for (const x of [-0.95, 0.95]) kit.box(stage, "/World/Parcel/Side" + (x < 0 ? "L
 kit.box(stage, "/World/Parcel/OpenLid", [0, 0.7, -0.9], [2, 1.5, 0.12], colors.gold, [-25, 0, 0]);
 
 stage.GetRootLayer().Export("/tmp/package-source.usda");
-const ok = USD.CreateUsdzPackage("/tmp/package-source.usda", "/tmp/package.usdz");
+const ok = await USD.CreateUsdzPackage("/tmp/package-source.usda", "/tmp/package.usdz");
 const bytes = USD.ReadFile("/tmp/package.usdz");
 
 // A .usdz is a zip archive: it starts with the bytes "PK" (80, 75).
@@ -1436,9 +1436,9 @@ for (let i = 0; i < 15; i++) {
 }
 kit.sphere(stage, "/World/Caliper/Lock", [0.86, 1.72, 0], 0.12, colors.coral);
 
-stage.Export("/tmp/reopen.usda");
+await stage.Export("/tmp/reopen.usda");
 const reopened = await Usd.Stage.Open("/tmp/reopen.usda");
-print(reopened.GetPrimAtPath("/World/Sphere").GetAttribute("radius").GetValueString());`,
+print(await reopened.GetPrimAtPath("/World/Sphere").GetAttribute("radius").GetValueString());`,
   },
   {
     title: "Build Info",
@@ -1578,7 +1578,7 @@ kit.attr(camera, "horizontalAperture", "float", 36);
 kit.attr(camera, "verticalAperture", "float", 27);
 kit.aim(stage, camera.GetPrim(), [4, 3.3, 5], [0, 0.75, 0]);
 
-print(vectorToArray(stage.GetPrimAtPath("/World/Lights").GetChildren()).map((light) => inspectPrim(light)));`,
+print(await Promise.all(vectorToArray(stage.GetPrimAtPath("/World/Lights").GetChildren()).map((light) => inspectPrim(light))));`,
   },
   {
     title: "Shaped Spotlights",
@@ -1642,7 +1642,7 @@ kit.attr(camera, "horizontalAperture", "float", 36);
 kit.attr(camera, "verticalAperture", "float", 27);
 kit.aim(stage, camera.GetPrim(), [4.2, 3.4, 5.2], [0, 1.15, 0]);
 
-print(spots.map((spot) => inspectPrim(stage.GetPrimAtPath("/World/Spots/" + spot.name))));`,
+print(await Promise.all(spots.map((spot) => inspectPrim(stage.GetPrimAtPath("/World/Spots/" + spot.name)))));`,
   },
   {
     title: "Sun Cycle",
@@ -1744,7 +1744,7 @@ kit.attr(camera, "horizontalAperture", "float", 36);
 kit.attr(camera, "verticalAperture", "float", 27);
 kit.aim(stage, camera.GetPrim(), [6, 5, 7.5], [0, 1.3, 0]);
 
-print({ samples: sunColor.GetNumTimeSamples(), noon: sunColor.GetValueStringAtTime(25), preview: sunColor.GetValueString() });`,
+print({ samples: await sunColor.GetNumTimeSamples(), noon: await sunColor.GetValueStringAtTime(25), preview: await sunColor.GetValueString() });`,
   },
   {
     title: "Weighted Skinning",
@@ -1844,7 +1844,7 @@ for (let frame = 1; frame <= 49; frame += 2) {
 kit.sphere(stage, "/World/Rock", [0, 0.05, 0], 0.5, [0.32, 0.34, 0.42], [1, 0.45, 0.9]);
 kit.lathe(stage, "/World/Seabed", [0, 0, 0], [[0.01, -0.12], [1.9, -0.12], [1.75, 0], [0.01, 0.03]], [0.86, 0.76, 0.56]);
 
-print({ vertices: points.length, faces: counts.length, joints: jointHeights.length, keyframes: rotations.GetNumTimeSamples() });`,
+print({ vertices: points.length, faces: counts.length, joints: jointHeights.length, keyframes: await rotations.GetNumTimeSamples() });`,
   },
   {
     title: "Rigid Skinning",
@@ -1916,7 +1916,7 @@ for (let frame = 1; frame <= 49; frame += 2) {
   translations.Set(pose, frame);
 }
 
-print({ samples: translations.GetNumTimeSamples(), extended: translations.GetValueStringAtTime(25), collapsed: translations.GetValueStringAtTime(1) });`,
+print({ samples: await translations.GetNumTimeSamples(), extended: await translations.GetValueStringAtTime(25), collapsed: await translations.GetValueStringAtTime(1) });`,
   },
   {
     title: "Splat Galaxy",
@@ -2121,7 +2121,7 @@ const styles = ["tall", "round", "bell", "round", "tall"];
 for (const [i, styleName] of styles.entries()) {
   const x = (i - 2) * 1.05;
   const holder = stage.DefinePrim("/World/Lantern" + i, "Xform");
-  holder.GetPayloads().AddPayload("lantern.usda", "/Lantern");
+  await holder.GetPayloads().AddPayload("lantern.usda", "/Lantern");
   await holder.GetVariantSets().GetVariantSet("style").SetVariantSelection(styleName);
   kit.pose(stage, holder, [x, stringHeight(x) - 0.55, 0]);
 }
@@ -2235,7 +2235,7 @@ UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y);
 for (const {season} of rows) for (let i = 0; i < 5; i++) {
   const instance = stage.DefinePrim("/World/Orchard/" + rowName(season) + i, "Xform");
   await instance.GetReferences().AddReference("tree.usda", "/Tree");
-  instance.SetInstanceable(true);
+  await instance.SetInstanceable(true);
 }
 await stage.DefinePrim("/World/HeroTree", "Xform").GetReferences().AddReference("tree.usda", "/Tree");
 

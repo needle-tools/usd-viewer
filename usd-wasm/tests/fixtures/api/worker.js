@@ -9,7 +9,7 @@ self.onmessage = async ({ data }) => {
   try {
     const index = apiExampleAssets.findIndex(asset => asset.executable === id);
     if (index < 0) throw new Error(`Unknown API example: ${id}`);
-    const USD = await getUsdModule({ print() {}, printErr: message => console.warn(message), setStatus() {} });
+    const USD = await getUsdModule({ asyncRuntime: 'auto', print() {}, printErr: message => console.warn(message), setStatus() {} });
     const result = await executeExample(USD, source===undefined?replExamples[index]:{...replExamples[index],code:String(source)}, {
       fixtureCatalog: testAssetLibrary,
       async readFixture(path) {

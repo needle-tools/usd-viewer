@@ -10,13 +10,15 @@ const script = fileURLToPath(import.meta.url);
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const args = process.argv.slice(2);
 const argument = name => args[args.indexOf(name) + 1];
+const runtime = args.includes('--runtime') ? argument('--runtime') : 'asyncify';
+if (!['asyncify', 'jspi'].includes(runtime)) throw new Error('--runtime must be asyncify or jspi');
 
 if (args.includes('--child')) {
     const { Group } = await import('three');
     const { createThreeHydra } = await import('../src/create.three.js');
     const { getUsdModule } = await import(pathToFileURL(resolve(argument('--bindings'), 'index.js')));
     const started = performance.now();
-    const USD = await getUsdModule({ print() {}, printErr() {}, setStatus() {} });
+    const USD = await getUsdModule({ asyncRuntime: runtime, print() {}, printErr() {}, setStatus() {} });
     const moduleMs = performance.now() - started;
     const moduleRss = process.memoryUsage().rss;
     const moduleHeap = USD.wasmMemory.buffer.byteLength;
@@ -46,7 +48,8 @@ if (!Number.isInteger(runs) || runs < 1 || runs > 20) throw new Error('--runs mu
 const results = [];
 for (const directory of bindings) {
     const sizes = [];
-    for (const file of ['emHdBindings.js', 'emHdBindings.wasm']) {
+    const entry = runtime === 'jspi' ? 'emHdBindings.jspi' : 'emHdBindings';
+    for (const file of [`${entry}.js`, `${entry}.wasm`]) {
         const bytes = await readFile(resolve(directory, file));
         sizes.push({
             file, raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length,
@@ -55,7 +58,7 @@ for (const directory of bindings) {
     }
     const samples = [];
     for (let i = 0; i < runs; ++i) {
-        const child = spawnSync(process.execPath, [script, '--child', '--bindings', directory], {
+        const child = spawnSync(process.execPath, [script, '--child', '--bindings', directory, '--runtime', runtime], {
             encoding: 'utf8', timeout: 120000,
         });
         if (child.error || child.status !== 0) throw new Error(child.error?.message || child.stderr || child.stdout);
@@ -67,6 +70,6 @@ for (const directory of bindings) {
     for (const key of Object.keys(samples[0])) {
         median[key] = samples.map(sample => sample[key]).sort((a, b) => a - b)[Math.floor(samples.length / 2)];
     }
-    results.push({ bindings: directory, sizes, samples, median });
+    results.push({ bindings: directory, runtime, sizes, samples, median });
 }
 console.log(JSON.stringify({ node: process.version, platform: process.platform, arch: process.arch, results }, null, 2));

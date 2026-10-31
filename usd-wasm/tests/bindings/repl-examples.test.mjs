@@ -13,14 +13,16 @@ import { executeExample } from '../fixtures/api/execute.js';
 import { createApiStage } from '../fixtures/api/create-api-stage.js';
 import { createSceneHelpers } from '../fixtures/api/scene-helpers.js';
 
-const bindingsDir = resolve("src/bindings");
+const bindingsDir = resolve(process.env.USD_BINDINGS_DIR || "src/bindings");
+const runtime = process.env.USD_TEST_RUNTIME || "asyncify";
+assert.ok(["asyncify", "jspi"].includes(runtime), "USD_TEST_RUNTIME must be asyncify or jspi");
 const fixturesDir = resolve("tests/fixtures");
 const require = createRequire(import.meta.url);
 
 async function loadUsdModuleFromTempCopy() {
   const tempDir = await mkdtemp(join(tmpdir(), "usd-repl-bindings-"));
   const cjsPath = join(tempDir, "emHdBindings.cjs");
-  await writeFile(cjsPath, await readFile(resolve(bindingsDir, "emHdBindings.js")));
+  await writeFile(cjsPath, await readFile(resolve(bindingsDir, runtime === "jspi" ? "emHdBindings.jspi.js" : "emHdBindings.js")));
   const getUsdModule = require(cjsPath);
   return getUsdModule({
     locateFile(file) {
@@ -48,8 +50,8 @@ describe("OpenUSD browser REPL examples", () => {
     for (const axis of ['Y', 'Z']) {
       const stage = USD.CreateStage(`/tmp/scene-helpers-${axis}.usda`); stage.SetUpAxis(axis);
       const box = kit.box(stage, '/Box', [1, 2, 3], [4, 5, 6]);
-      assert.equal(box.GetAttribute('xformOp:translate').GetValueString(), axis === 'Z' ? '(1, -3, 2)' : '(1, 2, 3)');
-      assert.equal(box.GetAttribute('xformOp:scale').GetValueString(), axis === 'Z' ? '(4, 6, 5)' : '(4, 5, 6)');
+      assert.equal(await box.GetAttribute('xformOp:translate').GetValueString(), axis === 'Z' ? '(1, -3, 2)' : '(1, 2, 3)');
+      assert.equal(await box.GetAttribute('xformOp:scale').GetValueString(), axis === 'Z' ? '(4, 6, 5)' : '(4, 5, 6)');
     }
   });
   it('batches box details with outward normals in both stage up axes', async () => {
@@ -58,15 +60,15 @@ describe("OpenUSD browser REPL examples", () => {
     for(const axis of ['Y','Z']) {
       const stage=USD.CreateStage(`/tmp/batched-boxes-${axis}.usda`);stage.SetUpAxis(axis);
       const mesh=kit.boxes(stage,'/Boxes',[[[0,0,0],[2,4,6]]],kit.colors.gold);
-      const points=numbers(mesh.GetAttribute('points').GetValueString());
-      const normals=numbers(mesh.GetAttribute('normals').GetValueString());
+      const points=numbers(await mesh.GetAttribute('points').GetValueString());
+      const normals=numbers(await mesh.GetAttribute('normals').GetValueString());
       assert.equal(points.length,normals.length);
       for(let i=0;i<points.length;i+=3) {
         const normal=normals.slice(i,i+3), point=points.slice(i,i+3);
         assert.ok(Math.abs(Math.hypot(...normal)-1)<1e-6,'unit face normal');
         assert.ok(point.reduce((dot,value,j)=>dot+value*normal[j],0)>0,'box normals face outward');
       }
-      const counts=numbers(mesh.GetAttribute('faceVertexCounts').GetValueString());
+      const counts=numbers(await mesh.GetAttribute('faceVertexCounts').GetValueString());
       assert.equal(counts.reduce((a,b)=>a+b,0),points.length/3,'each quad has its own flat normals');
       USD.ReleaseStage(stage);
     }
@@ -149,16 +151,16 @@ describe("OpenUSD browser REPL examples", () => {
       return vectorToArray(stage.TraverseAll()).map((prim) => prim.GetPath());
     }
 
-    function inspectPrim(prim) {
+    async function inspectPrim(prim) {
       if (!prim?.IsValid?.()) return null;
       return {
         path: prim.GetPath(),
         typeName: prim.GetTypeName(),
-        attributes: vectorToArray(prim.GetAttributes()).map((attr) => ({
+        attributes: await Promise.all(vectorToArray(prim.GetAttributes()).map(async (attr) => ({
           name: attr.GetName(),
           typeName: attr.GetTypeName(),
-          value: attr.GetValueString(),
-        })),
+          value: await attr.GetValueString(),
+        }))),
         relationships: vectorToArray(prim.GetRelationships()).map((rel) => ({
           name: rel.GetName(),
           targets: vectorToArray(rel.GetTargets()),

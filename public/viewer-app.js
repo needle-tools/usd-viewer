@@ -1,4 +1,5 @@
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
+import {viewerUsdReady, subscribeRuntimeProgress, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
 import {viewerToneMapping,mountDisplayControl} from './viewer-display.js';
 import {
   Vector3,
@@ -17,15 +18,14 @@ import {
   PMREMGenerator,
   EquirectangularReflectionMapping,
   createThreeHydra,
-  getUsdModule,
   addPluginForNeedleEngine,
   getHydraHandleFromNeedleEngineAsset,
-  EXRLoader,
+  loadExrLoader,
   RGBELoader,
   KTX2Loader,
   RoomEnvironment,
-  GLTFExporter,
-  GLTFLoader,
+  loadGltfExporter,
+  loadGltfLoader,
   OrbitControls,
   runtimeViewerMode,
 } from 'viewer-runtime';
@@ -665,6 +665,7 @@ let startRenderMode;
 let suiteControls;
 let activeCatalogAsset = catalogAssetForUrlPath(filename.split('?')[0]);
 let apiExampleAbort = null;
+let ensureViewerRepl;
 const initialNavigation = filename && activeCatalogAsset
   ? fixtureNavigation(location.href, activeCatalogAsset, viewerMode === VIEWER_MODE_THREE ? 'three' : 'needle', useNodeRenderer)
   : null;
@@ -943,7 +944,8 @@ async function loadThreeEnvironment(scene, renderer, environment) {
       return;
     }
 
-    const loader = lowerUrl.includes(".exr") ? new EXRLoader() : new RGBELoader();
+    const Loader = lowerUrl.includes(".exr") ? await loadExrLoader() : RGBELoader;
+    const loader = new Loader();
     const texture = await loader.loadAsync(url);
     texture.mapping = EquirectangularReflectionMapping;
     texture.needsUpdate = true;
@@ -1114,26 +1116,31 @@ if (messageLog) messageLog.textContent = "Initializing...";
 if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 const startupFilename = filename, startupGeneration = loadGeneration;
 const initPromise = init();
+let startupPackagePromise;
 
 console.log("Loading USD Module...");
 if (messageLog) messageLog.textContent = "Loading USD Module – this can take a moment...";
 if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 // Normalizing a restored document must preserve its Forward history entries.
 updateUrl(true);
+// A USDZ is self-contained, so its bytes can arrive while OpenUSD and the
+// renderer initialize. Pass them to Hydra once, keeping the source URL intact.
+if (viewerMode === VIEWER_MODE_THREE && /\.usdz(?:[?#]|$)/i.test(filename) && !activeCatalogAsset?.files?.length) {
+  const url = filename.split('?')[0];
+  startupPackagePromise = takeStartupPackage(url) || fetch(url, { signal: startupPackageAbort.signal }).then(async response => {
+    if (!response.ok) throw new Error(`Failed to fetch USD file ${url}: ${response.status} ${response.statusText}`);
+    return response.arrayBuffer();
+  });
+  // Startup can be cancelled before the runtime is ready to consume the bytes.
+  void startupPackagePromise.catch(() => {});
+}
 try {
-  Promise.all([getUsdModule({
-    mainScriptUrlOrBlob: "/usd/bindings/emHdBindings.js",
-    locateFile: (file) => {
-      return "/usd/bindings/" + file;
-    },
-    printErr: (...args) => {
-      const text = args.join(" ");
-      if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);
-      else console.error(...args);
-    },
-    onDownloadProgress: (downloaded, total) => updateLoadingByteProgress(downloaded, total, "OpenUSD runtime"),
-    onAssetFetchProgress: updateUsdAssetFetchProgress,
-  }), initPromise]).then(async ([Usd]) => {
+  const unsubscribeProgress = subscribeRuntimeProgress(
+    (downloaded, total) => updateLoadingByteProgress(downloaded, total, "OpenUSD runtime"),
+    updateUsdAssetFetchProgress,
+  );
+  window.addEventListener('pagehide', unsubscribeProgress, {once: true});
+  Promise.all([viewerUsdReady, initPromise]).then(async ([Usd]) => {
     USD = Usd;
     resolveUsdModuleReady?.(USD);
     updateOpenUsdBuildInfo(USD);
@@ -1153,7 +1160,7 @@ try {
         track('load_url', { method: 'url', type: extOf(filename), host });
       }
 
-      await clearStage();
+      await clearStage({ preserveStartupPackage: true });
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
       if (catalogAsset?.executable || catalogAsset?.files?.length) {
@@ -1164,13 +1171,17 @@ try {
         if (isGltfFileName(displayFilename || urlPath)) {
           await loadNativeGltfFile(displayFilename, urlPath);
         } else {
-          await loadUsdFile(undefined, displayFilename, urlPath, true);
+          const packagePromise = startupPackagePromise;
+          startupPackagePromise = undefined;
+          await loadUsdFile(undefined, displayFilename, urlPath, true, undefined, packagePromise);
         }
       }
     }
     window.usdWorkbench?.setReady();
   }).catch((error) => {
     // Async rejections aren't caught by the surrounding try/catch — surface them.
+    startupPackageAbort.abort();
+    startupPackagePromise = undefined;
     rejectUsdModuleReady?.(error);
     if (window.setViewerLoading) window.setViewerLoading(false);
     const err = "Failed to load the USD module: " + error;
@@ -1179,6 +1190,8 @@ try {
   });
 }
 catch (error) {
+  startupPackageAbort.abort();
+  startupPackagePromise = undefined;
   rejectUsdModuleReady?.(error);
   if (window.setViewerLoading) window.setViewerLoading(false);
   if(error.toString().indexOf("SharedArrayBuffer") >= 0) {
@@ -1196,10 +1209,13 @@ catch (error) {
 }
 
 // In-browser glTF export (binary .glb) of the currently loaded scene.
-function doGltfExport() {
-  const exporter = new GLTFExporter();
-  console.log("EXPORTING GLTF", window.usdRoot);
+async function doGltfExport() {
+  const generation = loadGeneration;
   try {
+    const GLTFExporter = await loadGltfExporter();
+    if (generation !== loadGeneration) return;
+    const exporter = new GLTFExporter();
+    console.log("EXPORTING GLTF", window.usdRoot);
     exporter.parse( window.usdRoot, function ( gltf ) {
       const blob = new Blob([gltf], {type: 'application/octet-stream'});
       // Completed export: full source name + the exported glb size in bytes.
@@ -1584,7 +1600,7 @@ async function showUsdVariants(stage, handle) {
         const url = new URL(location.href);
         url.searchParams.set('stageVariant', [variant.path, variant.setName, select.value].join('|'));
         history.replaceState({}, '', url);
-        suiteControls?.refresh();
+        await suiteControls?.refresh();
       } catch (error) { console.error('Failed to change USD variant', error); }
       finally { controls.forEach(control => { control.disabled = false; }); }
     });
@@ -1593,7 +1609,11 @@ async function showUsdVariants(stage, handle) {
   container.hidden = variants.length === 0;
 }
 
-async function clearStage({ clearNeedleEngine = false } = {}) {
+async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = false } = {}) {
+  if (!preserveStartupPackage) {
+    startupPackageAbort.abort();
+    startupPackagePromise = undefined;
+  }
   apiExampleAbort?.abort(); apiExampleAbort = null;
   loadGeneration++;
   // Revoke the Code pane's stage listener before the Hydra handle is disposed.
@@ -1925,7 +1945,9 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   return context;
 }
 
-function loadThreeGltf(path) {
+async function loadThreeGltf(path, generation) {
+  const GLTFLoader = await loadGltfLoader();
+  if (generation !== loadGeneration) return null;
   const loader = new GLTFLoader();
   loader.setCrossOrigin?.("anonymous");
   return new Promise((resolve, reject) => {
@@ -1964,7 +1986,7 @@ async function loadNativeGltfFile(filename, path) {
       window.usdStage = undefined;
       window.renderInterface = undefined;
     } else {
-      const gltf = await loadThreeGltf(path);
+      const gltf = await loadThreeGltf(path, generation);
       if (generation !== loadGeneration) return;
       nativeGltfRoot = gltf.scene || new Group();
       window.usdRoot.add(nativeGltfRoot);
@@ -1973,7 +1995,9 @@ async function loadNativeGltfFile(filename, path) {
         nativeGltfMixers[0]?.clipAction(clip).play();
       }
       fitCameraToSelection(window.camera, window._controls, [nativeGltfRoot]);
-      window.scene.environment = await loadHostEnvironment(window.renderer);
+      const environment = await loadHostEnvironment(window.renderer);
+      if (generation !== loadGeneration) return;
+      window.scene.environment = environment;
       window.needleEngineContext = undefined;
       window.usdHydra = undefined;
       window.driver = undefined;
@@ -1988,6 +2012,7 @@ async function loadNativeGltfFile(filename, path) {
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
     if (messageLog) messageLog.textContent = "";
   } catch (err) {
+    if (generation !== loadGeneration) return;
     console.error("Failed to load glTF file:", err);
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
@@ -2000,7 +2025,7 @@ async function loadNativeGltfFile(filename, path) {
   }
 }
 
-async function loadUsdFile(directory, filename, path, isRootFile = true, filesForHydra = undefined) {
+async function loadUsdFile(directory, filename, path, isRootFile = true, filesForHydra = undefined, packagePromise = undefined) {
   setFilenameText(filename);
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
@@ -2033,13 +2058,16 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       handle = result.handle;
       needleContext = result.context;
     } else {
-      handle = await createThreeHydra({
+      const buffer = await packagePromise;
+      if (generation !== loadGeneration) return;
+      const hydraConfig = {
         USD,
         scene: window.usdRoot,
         renderScene: window.scene,
         renderer: window.renderer,
         webGpuSupport: window.usdWebGpuSupport,
         url: filesForHydra?.length ? undefined : path,
+        buffer,
         files: filesForHydra,
         autoPlay: true,
         waitForMaterials,
@@ -2048,7 +2076,13 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         ktx2TranscoderPath: "/three/examples/jsm/libs/basis/",
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
-      });
+      };
+      try {
+        handle = await createThreeHydra(hydraConfig);
+      } finally {
+        // Hydra owns its filesystem copy after opening the stage.
+        hydraConfig.buffer = undefined;
+      }
 
       if (generation !== loadGeneration) {
         await handle.dispose();
@@ -2079,8 +2113,11 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     window.usdStage = stage;
     window.needleEngineContext = needleContext || undefined;
     window.renderInterface = undefined;
+    // Only request fallback lighting after inspecting this stage's authored
+    // lights. Its download can overlap camera, physics and panel preparation.
+    const lightingReady = applyStageLighting(handle, needleContext, stage, generation);
+    void lightingReady.catch(() => {});
     await showUsdVariants(stage, handle);
-    await applyStageLighting(handle, needleContext, stage, generation);
     if (generation !== loadGeneration || currentHydraHandle !== handle) return;
 
     const metadata = handle.stageMetadata?.();
@@ -2098,8 +2135,6 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     else {
       console.log(`Loading done: ${currentDisplayFilename || filename || "USD asset"}`);
     }
-    ready = true;
-
     const physics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
     if (generation !== loadGeneration) { physics?.dispose(); return; }
     viewerPhysics = physics;
@@ -2128,6 +2163,9 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     window.usdStagePanel = suiteControls;
     window.usdWorkbench?.code.show({ stage, usd: USD, handle, edit:callback=>suiteControls.edit(callback), navigate:target=>{followingSource=true;try{return suiteControls.navigate(target);}finally{followingSource=false;}}, runExample:activeCatalogAsset?.executable?source=>runEditedApiExample(activeCatalogAsset,source):undefined, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     viewportInteraction?.select(suiteControls.selection);
+    await lightingReady;
+    if (generation !== loadGeneration || currentHydraHandle !== handle) return;
+    ready = true;
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
@@ -2201,6 +2239,12 @@ async function responseBlobWithProgress(response, onProgress) {
 
 async function fetchCatalogFile(path, onProgress) {
   const url = testFixtureUrl(path);
+  const startup = takeStartupPackage(url);
+  if (startup) {
+    const bytes = await startup;
+    onProgress?.(bytes.byteLength, bytes.byteLength);
+    return new File([bytes], path.split('/').pop() || path);
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch " + url + ": " + response.status + " " + response.statusText);
@@ -2289,6 +2333,8 @@ async function loadApiExample(asset, prepared) {
     }
     if (generation !== loadGeneration || controller.signal.aborted) return;
     setFilenameText(asset.label);
+    await ensureViewerRepl?.();
+    if (generation !== loadGeneration || controller.signal.aborted) return;
     const output = window.usdWorkbench?.containers.console.querySelector('.usd-repl-output');
     if (output) {
       output.replaceChildren();
@@ -2445,7 +2491,7 @@ async function init() {
   if (useNodeRenderer) {
     await renderer.init();
     await (await import('./usd/renderers/index.js')).configureNeedleAgx(renderer);
-    window.usdWebGpuSupport = await (await import('./usd/renderers/index.js')).createWebGpuSupport();
+    window.usdWebGpuSupport = await (await import('./usd/renderers/index.js')).createWebGpuSupport({ lazyAreaLights: true });
   }
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( viewportSize().width, viewportSize().height );
@@ -2519,7 +2565,7 @@ async function init() {
           scene:window.needleEngineContext?.scene || window.scene, selection:suiteControls.selection, panel:suiteControls, api, three,
           select:value=>Array.isArray(value)?suiteControls.selectMany(value):suiteControls.selectPrim(value),
           follow:target=>suiteControls.navigate(target),
-          inspect:(value=suiteControls.selectedPath)=>api.inspectPrim(window.usdStage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime()),
+          inspect:(value=suiteControls.selectedPath)=>currentHydraHandle.readStage(stage=>api.inspectPrimAsync(stage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime())),
         }:null,
         edit:callback=>{
           const panel=suiteControls, handle=currentHydraHandle;
@@ -2535,10 +2581,12 @@ async function init() {
     function dispose() {
       if (disposed) return;
       disposed = true; unsubscribeVisibility?.(); unsubscribeDispose?.();
+      ensureViewerRepl = undefined;
       window.removeEventListener('pagehide', dispose);
       disposeMounted?.();
     }
     const reportLoadError = error => { if (!disposed) console.warn('Console could not load', error); };
+    ensureViewerRepl = () => ensureRepl(true);
     // Programmatic users can still run before the panel has ever been opened.
     window.usdRepl = {
       run: async (...args) => (await ensureRepl(true)).run(...args),
@@ -4243,6 +4291,8 @@ async function init() {
       }
       await loadUsdFile(undefined, displayFilename, urlPath, true);
     } else {
+      window.setViewerLoading?.(false);
+      window.hideLoadingOverlay?.();
       // Clear the URL when no file is selected (Clear button clicked)
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete("file");

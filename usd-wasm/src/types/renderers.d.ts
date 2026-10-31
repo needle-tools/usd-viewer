@@ -1,5 +1,6 @@
 import type { WebGpuSupport } from './hydra.js';
-export function createWebGpuSupport(): Promise<WebGpuSupport>;
+/** With lazyAreaLights, USD emitters prepare lookup tables on demand. Before adding host area lights, await support.prepareAreaLights(). */
+export function createWebGpuSupport(options?: { lazyAreaLights?: boolean }): Promise<WebGpuSupport & { prepareAreaLights(): Promise<void> }>;
 /** Register Needle's AgX look on a modern renderer, retaining its current exposure. */
 export function configureNeedleAgx(renderer: PresentationRenderer): Promise<boolean>;
 /** MuTracer Engine; installs a display pass and returns its unregister function. Requires WebGPU extended output. */

@@ -1,14 +1,15 @@
-import {clearStage,openSettings} from './workbench-menus';
+import {clearStage,openSettings,stageReady} from './workbench-menus';
 import {expect,test,type Page} from '@playwright/test';
 import {openAppMenu} from './workbench-menus';
 
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
-async function loaded(page:Page) {await page.waitForFunction(()=>!!(window as any).usdHydra&&!!(window as any).usdStagePanel);await page.evaluate(()=>(window as any).usdHydra.setPlaying(false));}
+async function loaded(page:Page) {await stageReady(page);await page.evaluate(()=>(window as any).usdHydra.setPlaying(false));}
 async function switchViewer(page:Page,viewer:'three'|'needle') {
   await openAppMenu(page,'view');
   await Promise.all([page.waitForURL(url=>url.searchParams.get('viewer')===viewer),page.locator(`[data-viewer-mode="${viewer==='needle'?'needle-loader':'three'}"]`).click()]);
 }
 async function capturePixel(page:Page,viewer:string) {
+  await page.keyboard.press('Escape');
   const png=await page.locator(viewer==='needle'?'needle-engine canvas':'canvas.usd-viewer-three-canvas').first().screenshot();
   return page.evaluate(async data=>{const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob());const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const ctx=c.getContext('2d')!;ctx.drawImage(bitmap,0,0);return [...ctx.getImageData(2,2,1,1).data];},png.toString('base64'));
 }
@@ -48,6 +49,7 @@ test('Needle and Three preserve the chosen backdrop and exposure when switching 
     if(background==='dark'){await openSettings(page);await page.getByRole('combobox',{name:'Background',exact:true}).selectOption('dark');}
     const three=await capturePixel(page,'three');await switchViewer(page,'needle');await loaded(page);
     expect(await page.evaluate(()=>(window as any).needleEngineContext.renderer.toneMappingExposure)).toBe(1.3);
+    await openSettings(page);
     await expect(page.getByRole('combobox',{name:'Background',exact:true})).toHaveValue(background);
     const needle=await capturePixel(page,'needle');
     for(let i=0;i<3;i++)expect(Math.abs(three[i]-needle[i]),JSON.stringify({background,three,needle})).toBeLessThanOrEqual(2);

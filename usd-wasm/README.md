@@ -169,9 +169,52 @@ export default {
 };
 ```
 
-The modern Emscripten output contains `emHdBindings.js` and
-`emHdBindings.wasm`. It does not ship a separate `emHdBindings.worker.js`; the
-pthread workers load the main generated JavaScript entrypoint directly.
+The default Asyncify runtime contains `emHdBindings.js` and
+`emHdBindings.wasm`. An additional JSPI runtime uses `emHdBindings.jspi.js` and
+`emHdBindings.jspi.wasm`. There is no separate worker script; pthread workers
+load the selected generated JavaScript entrypoint directly.
+
+Applications that await asynchronous native binding operations can opt into
+the smaller JSPI runtime with `getUsdModule({ asyncRuntime: 'auto' })`. This
+selects JSPI when both `WebAssembly.Suspending` and `WebAssembly.promising` are
+available and otherwise selects Asyncify. JSPI binding operations marked
+asynchronous return promises even when their data is already local. Use
+`await` for these calls. `createThreeHydra` handles driver creation for both
+runtimes. Direct binding consumers should select the optional async factory:
+
+```js
+const driver = await (USD.CreateHdWebSyncDriver
+  ? USD.CreateHdWebSyncDriver(delegate, file)
+  : new USD.HdWebSyncDriver(delegate, file));
+```
+
+Use `asyncRuntime: 'asyncify'` to retain the existing binding behavior or
+`asyncRuntime: 'jspi'` to require JSPI and receive an error on unsupported
+engines. Runtime initialization errors are reported without silently trying a
+different runtime. Concurrent calls share one initialization; the first call's
+options select the runtime. Custom `locateFile` and `mainScriptUrlOrBlob`
+overrides must point to matching artifacts for the selected runtime.
+
+The 1.2.0 JSPI Wasm artifact is 19.5 MB, versus 35.9 MB for Asyncify. With
+Brotli quality 11, this is 3.32 MB versus 5.42 MB (39% less transfer). Both
+contain the same native feature set. The package includes both runtimes;
+applications download only the selected runtime. The viewer app uses `auto`.
+
+Precompute Brotli compression for production Wasm delivery and serve it with
+`Content-Type: application/wasm`, `Content-Encoding: br` and
+`Vary: Accept-Encoding`, alongside the required isolation headers. Compression
+belongs to the host's build/server configuration; the npm package contains the
+original runtimes without compressed duplicates.
+
+For inspection with either runtime, use `inspectStageAsync` or
+`inspectPrimAsync` from `/scene` inside `handle.readStage()`. The synchronous
+helpers remain available for existing Asyncify integrations.
+
+Native JSPI builds use `-DPXR_EMSCRIPTEN_RUNTIME=JSPI` in a separate build
+directory. Exception-using dependencies must also be rebuilt with
+`-fwasm-exceptions` into a separate dependency prefix; mixing exception ABIs
+is unsafe. The default `ASYNCIFY` build retains `-fexceptions`. Each shipped
+runtime has its own `openusd-build-info[.jspi].json` and optimization manifest.
 
 ## Minimal Examples
 
@@ -742,6 +785,8 @@ Basic and Beauty support optional HDR bloom on `WebGPURenderer`, including its W
 UsdLux light conversion respects luminance, angular size and [area normalization](https://openusd.org/release/user_guides/schemas/usdLux/LightAPI.html). `scenePrimitiveLightIntensityScale` is an additional overall multiplier; the loader retains its legacy default of `0.01`. Pass `1` to use authored luminance without that multiplier, as the public viewer does by default. Catalog entries can override that viewer setting. Dome environments retain their authored intensity independently. Disk and cylinder lights remain geometric approximations, and native Storm thumbnails can differ in area-light transport and display transform. Preview Surface emissive colors remain linear HDR values; Beauty's ambient occlusion does not attenuate their emission.
 
 WebGPU support translates MaterialX surfaces through the bundled TSL loader, including textures, nested graphs and geometry properties. Bounded MaterialX and VDB volumes additionally require the factories from `/volumes`. Gaussian splats use the same WebGPURenderer through the particle-field factory in `createWebGpuSupport()`.
+
+For scenes whose rectangular lights come from USD, `createWebGpuSupport({ lazyAreaLights: true })` loads area-light lookup tables when an authored area light needs them. Hydra readiness waits for those tables before rendering. The default eagerly prepares them for host-created Three.js area lights; with the lazy option, call `await support.prepareAreaLights()` before rendering host-created area lights. EXR, HDR and TGA texture decoders also load only when a corresponding texture is encountered.
 
 `pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
 

@@ -1,6 +1,7 @@
 import { cpSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import './prepare-static-assets.mjs';
 
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 

@@ -20,7 +20,9 @@ export {
 export { createThreeHydra } from './usd/create.three.js';
 export { getUsdModule } from './usd/bindings/index.js';
 export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
-export { EXRLoader, GLTFExporter, GLTFLoader } from 'three-examples';
+export async function loadExrLoader() { return (await import('three-examples')).EXRLoader; }
+export async function loadGltfExporter() { return (await import('three-examples')).GLTFExporter; }
+export async function loadGltfLoader() { return (await import('three-examples')).GLTFLoader; }
 export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';

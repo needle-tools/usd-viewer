@@ -15,6 +15,8 @@ export type MaterialXVolumeFactory = (xml: string, target: string | number, opti
 /** Optional support from @needle-tools/usd/renderers; keeps modern Three modules out of the base loader. */
 export interface WebGpuSupport {
     SurfaceMaterial: new () => Material;
+    /** Initialize area-light lookup tables before a scene containing rect/disk emitters is rendered. */
+    prepareAreaLights?(): Promise<void>;
     createParticleField?(data: {
       positions: Float32Array; orientations: Float32Array; scales: Float32Array; opacities: Float32Array;
       degree: number; coefficients: Float32Array; projectionModeHint: string; sortingModeHint: string;

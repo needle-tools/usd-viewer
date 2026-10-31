@@ -177,8 +177,17 @@
   </script>
   <script type="module">
     try {
-      window.usdWorkbench = await (await import("/viewer-workbench.js")).mountWorkbench();
-      document.documentElement.dataset.workbench = 'ready';
+      // Fetch the viewer graph while the workbench loads; initialization still
+      // waits for its viewport and panel containers to exist.
+      await Promise.all([
+        import("/viewer-workbench.js").then(async workbench => {
+          window.usdWorkbench = await workbench.mountWorkbench();
+          document.documentElement.dataset.workbench = 'ready';
+          // Prioritize the shell, then overlap runtime/assets with the app graph.
+          void import('/viewer-startup.js').catch(() => {});
+        }),
+        import("/viewer-app.js"),
+      ]);
       await import(window.__usdViewerEntry || "/index.three.js");
     } catch (error) {
       document.documentElement.dataset.workbench = 'error';

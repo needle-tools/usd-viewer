@@ -12,7 +12,26 @@ function isNodeRuntime() {
     return !!globalThis.process?.versions?.node && globalThis.process?.type !== "renderer";
 }
 
-async function getNodeUsdModuleFn() {
+/** @param {undefined | import("..").GetUsdModuleOptions} opts */
+function selectAsyncRuntime(opts) {
+    const requested = opts?.asyncRuntime ?? "asyncify";
+    if (!["auto", "jspi", "asyncify"].includes(requested)) {
+        throw new Error(`Unknown USD async runtime: ${requested}. Expected auto, jspi, or asyncify.`);
+    }
+    const supportsJspi = typeof globalThis.WebAssembly?.Suspending === "function"
+        && typeof globalThis.WebAssembly?.promising === "function";
+    if (requested === "jspi" && !supportsJspi) {
+        throw new Error("The USD JSPI runtime requires WebAssembly.Suspending and WebAssembly.promising. Use asyncRuntime: 'asyncify' in this environment.");
+    }
+    if (requested !== "auto") return requested;
+    // Applications can supply a legacy factory before importing the loader.
+    // Keep using that factory instead of silently replacing its runtime.
+    if (!isNodeRuntime() && typeof globalThis["NEEDLE:USD:GET"] === "function") return "asyncify";
+    return supportsJspi ? "jspi" : "asyncify";
+}
+
+/** @param {"jspi" | "asyncify"} runtime */
+async function getNodeUsdModuleFn(runtime) {
     if (node_get_usd_module_promise) {
         return node_get_usd_module_promise;
     }
@@ -32,7 +51,9 @@ async function getNodeUsdModuleFn() {
             import(/* @vite-ignore */ "node:url"),
         ]);
 
-        const sourcePath = fileURLToPath(new URL("./emHdBindings.js", import.meta.url));
+        const sourcePath = fileURLToPath(runtime === "jspi"
+            ? new URL("./emHdBindings.jspi.js", import.meta.url)
+            : new URL("./emHdBindings.js", import.meta.url));
         const tempDir = await mkdtemp(join(tmpdir(), "needle-usd-bindings-"));
         const cjsPath = join(tempDir, "emHdBindings.cjs");
         await writeFile(cjsPath, await readFile(sourcePath));
@@ -46,11 +67,14 @@ async function getNodeUsdModuleFn() {
     return node_get_usd_module_promise;
 }
 
-async function ensureBrowserBindingsImported() {
-    if (globalThis["NEEDLE:USD:GET"]) {
+/** @param {"jspi" | "asyncify"} runtime */
+async function ensureBrowserBindingsImported(runtime) {
+    const key = runtime === "jspi" ? "NEEDLE:USD:GET:JSPI" : "NEEDLE:USD:GET";
+    if (typeof globalThis[key] === "function") {
         return;
     }
-    await import("./emHdBindings.js");
+    if (runtime === "jspi") await import("./emHdBindings.jspi.js");
+    else await import("./emHdBindings.js");
 }
 
 
@@ -67,13 +91,14 @@ export async function getUsdModule(opts) {
 
 /** @param {undefined | import("..").GetUsdModuleOptions} opts */
 async function createUsdModule(opts) {
+    const runtime = selectAsyncRuntime(opts);
     if (isNodeRuntime()) {
         const [
             { join },
             getUsdModuleFn,
         ] = await Promise.all([
             import(/* @vite-ignore */ "node:path"),
-            getNodeUsdModuleFn(),
+            getNodeUsdModuleFn(runtime),
         ]);
 
         return getUsdModuleFn({
@@ -88,18 +113,25 @@ async function createUsdModule(opts) {
         });
     }
 
-    await ensureBrowserBindingsImported();
+    await ensureBrowserBindingsImported(runtime);
 
+    const factoryKey = runtime === "jspi" ? "NEEDLE:USD:GET:JSPI" : "NEEDLE:USD:GET";
     /**
      * @type {import("..").getUsdModule}
      */
-    const getUsdModuleFn = globalThis["NEEDLE:USD:GET"];
+    const getUsdModuleFn = globalThis[factoryKey];
     if (!getUsdModuleFn) {
-        throw new Error("\"NEEDLE:USD:GET\" not found in globalThis - please modify \"emHdBindings.js\" and add: globalThis[\"NEEDLE:USD:GET\"] = getUsdModule;");
+        throw new Error(`USD ${runtime} bindings did not register the ${factoryKey} factory.`);
     }
 
-    const bindingsUrl = new URL("./emHdBindings.js", import.meta.url).href;
-    const wasmUrl = new URL("./emHdBindings.wasm", import.meta.url).href;
+    // Keep literal URLs in both branches so bundlers emit both selectable
+    // runtimes; only the selected JS module and wasm file are downloaded.
+    const bindingsUrl = runtime === "jspi"
+        ? new URL("./emHdBindings.jspi.js", import.meta.url).href
+        : new URL("./emHdBindings.js", import.meta.url).href;
+    const wasmUrl = runtime === "jspi"
+        ? new URL("./emHdBindings.jspi.wasm", import.meta.url).href
+        : new URL("./emHdBindings.wasm", import.meta.url).href;
     const assetFetches = new Map();
 
     /**
@@ -168,7 +200,7 @@ async function createUsdModule(opts) {
             /** resolved filepath */
             let res = null;
 
-            if (file.includes("emHdBindings.wasm")) {
+            if (file.includes(runtime === "jspi" ? "emHdBindings.jspi.wasm" : "emHdBindings.wasm")) {
                 res = wasmUrl;
             }
             // if (url?.startsWith("data:text/javascript;base64")) {

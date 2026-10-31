@@ -16,29 +16,34 @@ export const flags = [
     '--merge-similar-functions', '-Oz', '--strip-debug', '--strip-producers',
 ];
 
-export async function describeOptimization(input, output, optimizer = process.env.WASM_OPT || 'wasm-opt') {
+export function optimizationFlags({ nativeExceptions = false } = {}) {
+    return nativeExceptions ? ['--enable-exception-handling', ...flags] : [...flags];
+}
+
+export async function describeOptimization(input, output, optimizer = process.env.WASM_OPT || 'wasm-opt', options = {}) {
     const [before, after, version] = await Promise.all([
         readFile(input), readFile(output), execute(optimizer, ['--version']),
     ]);
     const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
     return {
-        schema: 1, optimizer: version.stdout.trim(), arguments: flags,
+        schema: 1, optimizer: version.stdout.trim(), arguments: optimizationFlags(options),
         input: { bytes: before.length, sha256: sha256(before) },
         output: { bytes: after.length, sha256: sha256(after) },
     };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-    const [input, output] = process.argv.slice(2);
-    if (!input || !output || resolve(input) === resolve(output)) {
-        throw new Error('Usage: WASM_OPT=/path/to/wasm-opt node scripts/optimize-runtime.mjs input.wasm output.wasm');
+    const [input, output, ...options] = process.argv.slice(2);
+    if (!input || !output || resolve(input) === resolve(output) || options.some(option => option !== '--native-exceptions')) {
+        throw new Error('Usage: WASM_OPT=/path/to/wasm-opt node scripts/optimize-runtime.mjs input.wasm output.wasm [--native-exceptions]');
     }
     const optimizer = process.env.WASM_OPT || 'wasm-opt';
-    await execute(optimizer, [input, ...flags, '-o', output], {
+    const optimization = { nativeExceptions: options.includes('--native-exceptions') };
+    await execute(optimizer, [input, ...optimizationFlags(optimization), '-o', output], {
         env: { ...process.env, BINARYEN_CORES: process.env.BINARYEN_CORES || '2' },
         maxBuffer: 1024 * 1024,
     });
-    const info = await describeOptimization(input, output, optimizer);
+    const info = await describeOptimization(input, output, optimizer, optimization);
     await writeFile(`${output}.optimization.json`, JSON.stringify(info, null, 2) + '\n');
     console.log(JSON.stringify(info, null, 2));
 }

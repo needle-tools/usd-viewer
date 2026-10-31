@@ -54,7 +54,7 @@ for(const blocked of [false,true])test(`${blocked?'blocked':'invalid'} storage l
   const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('beauty');await expect(page.getByRole('combobox',{name:'USD detail',exact:true})).toHaveValue('adaptive');
   await mode.selectOption('basic');await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('basic');
   await page.getByRole('combobox',{name:'USD detail',exact:true}).selectOption('low');await expect.poll(()=>page.evaluate(()=>(window as any).usdHydra.driver.GetComplexity())).toBe(1);
-  if(!blocked)expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')!))).toMatchObject({mode:'basic',detail:'low'});
+  if(!blocked)await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')!))).toMatchObject({mode:'basic',detail:'low'});
 });
 
 test('a mode chosen before opening a file remains selected when it loads',async({page})=>{

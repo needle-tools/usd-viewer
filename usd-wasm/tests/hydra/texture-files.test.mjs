@@ -33,6 +33,7 @@ test('packaged JPEG with a PSD suffix uses the image loader, correct blob MIME, 
     assert.equal(await pending, result);
     assert.equal(mime, 'image/jpeg');
     assert.equal(loaded, 1);
+    assert.equal(registry.textureDecoders.size, 0, 'ordinary images do not initialize uncommon decoders');
     assert.equal(registry.objectUrls.size, 0, 'successful decode releases its blob URL');
   } finally { delegate.dispose(); }
 });
@@ -136,5 +137,72 @@ test('resource text owns native bytes before the getFile callback returns', asyn
     USD: { ReadFile: () => null }, driver: () => driver });
   try {
     assert.equal(await delegate.registry.readResourceText('document.mtlx'), '<materialx/>');
+  } finally { delegate.dispose(); }
+});
+
+test('uncommon texture decoders initialize once and decode real EXR, TGA, and HDR files', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const fixtures = [
+    ['textures/neon.exr', 'image/x-exr'],
+    ['textures/signal.tga', 'image/tga'],
+    ['lighting-mdl/studio-night.hdr', 'image/vnd.radiance'],
+  ];
+  for (const [fixture, mime] of fixtures) {
+    const bytes = new Uint8Array(await readFile(new URL('../fixtures/coverage/' + fixture, import.meta.url)));
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), USD: { ReadFile: () => bytes } });
+    const registry = delegate.registry;
+    try {
+      assert.equal(registry.textureDecoders.size, 0);
+      const pending = registry.getTextureDecoder(mime);
+      assert.equal(registry.getTextureDecoder(mime), pending);
+      const loader = await pending;
+      // Parsing the fixture also exercises the dynamically imported decoder's
+      // dependencies without requiring DOM image or progress-event APIs.
+      const decoded = loader.parse(bytes.buffer);
+      assert.ok(decoded.width > 0 && decoded.height > 0, fixture);
+      assert.ok(decoded.data.length > 0, fixture);
+      const texture = new Texture();
+      loader.load = (_url, resolve) => resolve(texture);
+      assert.equal(await registry.getTexture(fixture), texture);
+      assert.equal(registry.objectUrls.size, 0);
+      assert.equal(registry.textureDecoders.size, 1);
+    } finally { delegate.dispose(); }
+  }
+});
+
+test('lazy decoder failures reject cached textures and revoke source blob URLs', async () => {
+  const failure = new Error('Decoder import failed');
+  const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), USD: { ReadFile: () => new Uint8Array([118, 47, 49, 1]) } });
+  const registry = delegate.registry;
+  registry.getTextureDecoder = () => Promise.reject(failure);
+  try {
+    const pending = registry.getTexture('texture.exr');
+    assert.equal(registry.getTexture('texture.exr'), pending);
+    await assert.rejects(pending, error => error === failure);
+    assert.equal(registry.objectUrls.size, 0);
+  } finally { delegate.dispose(); }
+});
+
+test('disposing during decoder initialization cancels decoding and settles the texture promise', async () => {
+  const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), USD: { ReadFile: () => new Uint8Array([118, 47, 49, 1]) } });
+  const registry = delegate.registry;
+  let initialize;
+  registry.getTextureDecoder = () => new Promise(resolve => { initialize = resolve; });
+  const pending = registry.getTexture('texture.exr');
+  const rejected = assert.rejects(pending, /Texture registry disposed/);
+  delegate.dispose();
+  initialize({ load() { assert.fail('disposed registry must not start decoding'); } });
+  await rejected;
+  assert.equal(registry.objectUrls.size, 0);
+});
+
+test('synchronous lazy decoder errors release blob URLs and reject the texture', async () => {
+  const failure = new Error('Decoder failed');
+  const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), USD: { ReadFile: () => new Uint8Array([118, 47, 49, 1]) } });
+  const registry = delegate.registry;
+  registry.getTextureDecoder = () => Promise.resolve({ load() { throw failure; } });
+  try {
+    await assert.rejects(registry.getTexture('texture.exr'), error => error === failure);
+    assert.equal(registry.objectUrls.size, 0);
   } finally { delegate.dispose(); }
 });

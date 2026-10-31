@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "optimizer": "wasm-opt version 125 (version_123-585-gf4138bbbe)",
+  "arguments": [
+    "--enable-exception-handling",
+    "--enable-threads",
+    "--enable-bulk-memory",
+    "--enable-bulk-memory-opt",
+    "--enable-call-indirect-overlong",
+    "--enable-multivalue",
+    "--enable-mutable-globals",
+    "--enable-nontrapping-float-to-int",
+    "--enable-reference-types",
+    "--enable-sign-ext",
+    "--merge-similar-functions",
+    "-Oz",
+    "--strip-debug",
+    "--strip-producers"
+  ],
+  "input": {
+    "bytes": 19532538,
+    "sha256": "02715157dedd1b2d387cb6ff261189f6d0a87d5c2982ac4600b743db62cbddc5"
+  },
+  "output": {
+    "bytes": 19507622,
+    "sha256": "ca6490b72406a96c7a1f6590b7619d729ef178f87ac7fbc091fad5664b9bd4f7"
+  }
+}
