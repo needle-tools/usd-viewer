@@ -2,7 +2,7 @@ import { installViewerStyle } from './style.js';
 import { transportIcon, viewerIcon, primIcon } from './icons.js';
 import { createSelection } from './selection.js';
 import { mountPropertyInspector } from './propertyInspector.js';
-import { inspectStage, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
+import { inspectStageAsync, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
 
 function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text) el.textContent = text; return el; }
 /** Plain DOM panels can be hosted in Dockview or embedded without a framework. Native handles remain owned by Hydra. */
@@ -56,21 +56,30 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     select.value = value; select.onchange = () => change(select.value); const field = row(parent, caption, select); field.parentElement.title = label; return select;
   }
   let editQueue = Promise.resolve();
+  function assertCurrent() {
+    if (disposed || !isCurrent()) throw new Error('USD stage is no longer current.');
+  }
+  // The native edit queue may wait behind another owner after the panel's own
+  // queue and host preparation have finished. Recheck at the mutation boundary.
+  const authoringHandle = {
+    getTime: () => handle.getTime?.() || 0,
+    editStage: action => handle.editStage((...args) => { assertCurrent(); return action(...args); }),
+  };
   function edit(action, {rethrow = false} = {}) {
     const result = editQueue.then(() => performEdit(action));
     editQueue = result.catch(() => {});
     return rethrow ? result : result.catch(() => {});
   }
   async function performEdit(action) {
-    if (disposed || !isCurrent()) throw new Error('USD stage is no longer current.');
+    assertCurrent();
     editing = true; status.textContent = '';
     for (const group of sections) group.querySelectorAll('select,input,button').forEach(control => { control.disabled = true; });
     let result, failure, failed = false;
-    try {await beforeEdit(); result = await action(stage, handle.driver); await handle.materialsReady?.();}
+    try {await beforeEdit(); assertCurrent(); result = await action(stage, handle.driver); await handle.materialsReady?.();}
     catch (error) {failure = error; failed = true;}
     finally {
       if (!disposed && isCurrent()) {
-        try {await afterEdit(); if (!disposed && isCurrent()) refresh();}
+        try {await afterEdit(); if (!disposed && isCurrent()) await refresh();}
         catch (error) {if (!failed) {failure = error; failed = true;}}
       }
       editing = false;
@@ -182,9 +191,9 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         button.setAttribute('aria-pressed', String(checked)); button.setAttribute('aria-label', `${checked ? off : on} ${prim.path}`); button.title = `${checked ? off : on} ${prim.path}`;
         button.onclick = async () => { await edit(() => change(button.getAttribute('aria-pressed') !== 'true')); tree.querySelector(`[data-prim-path="${CSS.escape(prim.path)}"]`)?.parentElement.querySelector(`[data-prim-action="${kind}"]`)?.focus({preventScroll:true}); }; return button;
       }
-      const visibility = toggleState('visibility', 'Show', 'Hide', prim.visible, prim.visible ? 'visibility' : 'visibility_off', value => setPrimVisible(handle, prim.path, value));
+      const visibility = toggleState('visibility', 'Show', 'Hide', prim.visible, prim.visible ? 'visibility' : 'visibility_off', value => setPrimVisible(authoringHandle, prim.path, value));
       visibility.disabled = !prim.active || !prim.imageable; visibility.dataset.unavailable = String(!prim.active || !prim.imageable);
-      const activation = toggleState('activation', 'Activate', 'Deactivate', prim.active, prim.active ? 'power_settings_new' : 'block', value => setPrimActive(handle, prim.path, value));
+      const activation = toggleState('activation', 'Activate', 'Deactivate', prim.active, prim.active ? 'power_settings_new' : 'block', value => setPrimActive(authoringHandle, prim.path, value));
       function toggleBranch() { if (collapsed.has(prim.path)) collapsed.delete(prim.path); else collapsed.add(prim.path); persist(); drawTree(prim.path); }
       button.onclick = event => { if (disclosure.contains(event.target) && hasChildren) toggleBranch(); else selectPrim(prim.path, {toggle: event.ctrlKey || event.metaKey, range: event.shiftKey}); };
       button.onkeydown = event => {
@@ -216,18 +225,29 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   }
   document.fonts?.ready.then(()=>{if(!disposed)fitTypes();});
   search.oninput = () => { drawTree(); persist(); };
+  let refreshRevision = 0, sampling;
   function refreshSampledState(time = handle.getTime?.() || 0) {
-    if (disposed || !isCurrent()) return;
-    // Playback changes values, not composition. Refresh only when paused/seeked,
-    // retaining the tree, inspector cells, scroll positions and keyboard focus.
-    showProperties(selectedPath, false);
-    for (const item of info?.prims || []) {
-      if (!item.imageable) continue;
-      const prim = stage.GetPrimAtPath(item.path);
-      let attribute;
-      try {
-        attribute = prim.GetAttribute('visibility');
-        const visible = attribute.GetValueStringAtTime(time) !== 'invisible';
+    if (disposed || !isCurrent()) return Promise.resolve();
+    if (sampling) return sampling;
+    const revision = refreshRevision, currentInfo = info;
+    // Keep native wrappers alive and serialize reads with edits, draws and disposal.
+    sampling = handle.readStage(async () => {
+      if (disposed || !isCurrent() || revision !== refreshRevision) return [];
+      const values = [];
+      for (const item of currentInfo?.prims || []) {
+        if (!item.imageable) continue;
+        const prim = stage.GetPrimAtPath(item.path);
+        let attribute;
+        try {
+          attribute = prim.GetAttribute('visibility');
+          values.push([item, await attribute.GetValueStringAtTime(time) !== 'invisible']);
+        } finally { attribute?.delete?.(); prim?.delete?.(); }
+      }
+      return values;
+    }).then(values => {
+      if (disposed || !isCurrent() || revision !== refreshRevision || time !== (handle.getTime?.() || 0)) return;
+      showProperties(selectedPath, false);
+      for (const [item, visible] of values) {
         if (visible === item.visible) continue;
         item.visible = visible;
         const entry = tree.querySelector(`[data-prim-path="${CSS.escape(item.path)}"]`)?.parentElement;
@@ -238,13 +258,21 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         button.title = `${visible ? 'Hide' : 'Show'} ${item.path}`;
         button.setAttribute('aria-label', button.title);
         button.replaceChildren(viewerIcon(visible ? 'visibility' : 'visibility_off'));
-      } finally { attribute?.delete?.(); prim?.delete?.(); }
-    }
-    inspectedTime = time;
+      }
+      inspectedTime = time;
+    }).catch(error => { if (!disposed && isCurrent()) status.textContent = error.message; })
+      .finally(() => { sampling = undefined; });
+    return sampling;
   }
-  function refresh() {
+  async function refresh() {
     if (disposed || !isCurrent()) return;
-    info = inspectStage(stage, handle.getTime?.() || 0); primPaths = new Set(info.prims.map(prim => prim.path)); updateTimeline(info.time); onStage(info);
+    const revision = ++refreshRevision, time = handle.getTime?.() || 0;
+    const nextInfo = await handle.readStage(currentStage => {
+      if (disposed || !isCurrent() || revision !== refreshRevision) return null;
+      return inspectStageAsync(currentStage, time);
+    });
+    if (disposed || !isCurrent() || revision !== refreshRevision || !nextInfo) return;
+    info = nextInfo; inspectedTime = time; primPaths = new Set(info.prims.map(prim => prim.path)); updateTimeline(info.time); onStage(info);
     if (!saved.initialized) { if (!saved.collapsed) for (const prim of info.prims) if (['Looks', 'Materials'].includes(prim.name)) collapsed.add(prim.path); saved.initialized = true; }
     for (const group of [view, variants, payloads, layers]) group.replaceChildren(...(group === containers?.view ? [] : [group.firstElementChild]));
     authoredCameras = stageCameras(scene);
@@ -256,13 +284,13 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     dropdown(view, 'Purpose', purposes, purpose, value => edit(async () => { await handle.setIncludedPurposes(value.split(',')); currentPurpose = value; }));
     for (const variant of info.variants) {
       const select = dropdown(variants, `${variant.path} · ${variant.setName}`, variant.choices.map(value => [value, value]), variant.selection,
-        value => edit(async () => { await setVariant(handle, variant.path, variant.setName, value); onVariantChange(variant.path, variant.setName, value); }), variant.setName);
+        value => edit(async () => { await setVariant(authoringHandle, variant.path, variant.setName, value); onVariantChange(variant.path, variant.setName, value); }), variant.setName);
       select.dataset.stageVariant = variant.setName;
     }
     variants.hidden = !info.variants.length;
     for (const payload of info.payloads) {
       const input = node('input'); input.type = 'checkbox'; input.checked = payload.loaded; input.setAttribute('aria-label', `Load ${payload.path}`);
-      input.onchange = () => edit(() => setPayloadLoaded(handle, payload.path, input.checked)); row(payloads, payload.name, input).parentElement.title = payload.path;
+      input.onchange = () => edit(() => setPayloadLoaded(authoringHandle, payload.path, input.checked)); row(payloads, payload.name, input).parentElement.title = payload.path;
     }
     payloads.hidden = !info.payloads.length; drawTree();
     for (const layer of info.layers) layers.append(node('div', 'usd-layer', layer.identifier || layer.realPath || JSON.stringify(layer)));
@@ -270,7 +298,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     const pruned = selection.prune(validItem); selectedPath = selection.primary?.path || '';
     if (pruned) { drawTree(); onSelect(selectedPath, selection.items); }
     showProperties(selectedPath, false);
-    inspectedTime = handle.getTime?.() || 0;
+    inspectedTime = time;
   }
   const timeline = node('div', 'usd-timeline');
   let rulerObserver, rulerFrame, rangeKey = '';
@@ -285,7 +313,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     const clamp=value=>Math.max(first,Math.min(last,value));
     async function seek() {
       if (seeking) return;seeking=true;
-      try {while(pendingTime!==undefined&&!disposed&&isCurrent()){const time=pendingTime;pendingTime=undefined;await handle.setTime(time);}if(!handle.isPlaying())refreshSampledState();}
+      try {while(pendingTime!==undefined&&!disposed&&isCurrent()){const time=pendingTime;pendingTime=undefined;await handle.setTime(time);}if(!handle.isPlaying())await refreshSampledState();}
       catch(error){status.textContent=error.message;}
       finally{seeking=false;}
     }
@@ -333,8 +361,8 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     }
     tick();
   }
-  refresh();
-  return { refresh, selectPrim, selectMany, navigate, edit: action => edit(() => handle.editStage(action), {rethrow: true}),
+  await refresh();
+  return { refresh, selectPrim, selectMany, navigate, edit: action => edit(() => authoringHandle.editStage(action), {rethrow: true}),
     get selection() {return selection.items;}, get selectedProperty() {return inspector.target.includes('.') ? inspector.target : '';}, revealSelection, useFreeCamera() { selectCamera(''); const input=view.querySelector('select[aria-label="Camera"]'); if(input)input.value=''; }, get selectedPath(){return selectedPath;}, dispose() {
     if (disposed) return; disposed = true; cancelAnimationFrame(frame); cancelAnimationFrame(rulerFrame); rulerObserver?.disconnect(); selectCamera('');
     inspector.dispose(); panel.remove(); toggle.remove(); timeline.remove(); containers?.view?.replaceChildren(); for (const group of sections) group.remove(); setCamera(camera); onStage(null);

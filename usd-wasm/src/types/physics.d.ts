@@ -64,6 +64,8 @@ export interface UsdPhysicsSimulation {
     dispose(): void;
 }
 export function readUsdPhysics(handle: NeedleThreeHydraHandle): Promise<UsdPhysicsSnapshot>;
+/** Body flags and scene paths only; does not allocate collider geometry. */
+export function inspectUsdPhysics(handle: NeedleThreeHydraHandle): Promise<{scenes:{path:string}[];dynamic:boolean}>;
 export function createUsdPhysics(options: {
     handle: NeedleThreeHydraHandle;
     /** An initialized @dimforge/rapier3d-compat module (tested with 0.19.3 and 0.21.0). */

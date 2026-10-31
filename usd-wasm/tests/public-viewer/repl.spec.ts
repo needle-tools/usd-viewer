@@ -45,6 +45,26 @@ test('results produced in a hidden dock follow its output when the dock opens an
   await expect.poll(()=>output.evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop)).toBeLessThanOrEqual(2);
 });
 
+test('resizing preserves a reader position and only scrolls the Console output when pinned', async ({page}) => {
+  await page.addStyleTag({content:'body {min-height:3000px;} main {margin-top:700px;} .usd-repl-output {height:80px;overflow:auto;}'});
+  for (let index = 0; index < 8; index++) await run(page, String(index));
+  const output = page.getByRole('log', {name:'JavaScript output'});
+  await expect.poll(() => output.evaluate(el => el.scrollHeight-el.clientHeight-el.scrollTop)).toBeLessThanOrEqual(2);
+  await page.evaluate(() => window.scrollTo(0, 450));
+  await output.evaluate(el => { el.dispatchEvent(new WheelEvent('wheel', {deltaY:-40})); el.scrollTop=40; });
+  await expect.poll(() => output.evaluate(el => el.scrollTop)).toBe(40);
+  await page.addStyleTag({content:'.usd-repl-output {height:45px;}'});
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await output.evaluate(el => el.scrollTop)).toBe(40);
+  expect(await page.evaluate(() => window.scrollY)).toBe(450);
+  // Scrolling back to the end enables following later size changes again.
+  await output.evaluate(el => { el.scrollTop=el.scrollHeight; });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.addStyleTag({content:'.usd-repl-output {height:25px;}'});
+  await expect.poll(() => output.evaluate(el => el.scrollHeight-el.clientHeight-el.scrollTop)).toBeLessThanOrEqual(2);
+  expect(await page.evaluate(() => window.scrollY)).toBe(450);
+});
+
 test('expressions, top-level await, statements and recovery without duplicate evaluation', async ({ page }) => {
   expect(await run(page, '2 + 3')).toBe(5);
   expect(await run(page, 'await Promise.resolve(7)')).toBe(7);

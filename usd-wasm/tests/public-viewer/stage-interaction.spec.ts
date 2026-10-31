@@ -27,7 +27,7 @@ for(const [viewer,backend] of [['three',''],['needle',''],['three','webgl']]){
     await page.goto(`/?viewer=${viewer}&backend=${backend}&file=${asset}`);await stageReady(page);
     await page.locator('[data-prim-path="/World/Sphere1"]').hover();
     await page.getByRole('button',{name:'Hide /World/Sphere1',exact:true}).click();
-    await expect.poll(()=>page.evaluate(()=>{const p=(window as any).usdStage.GetPrimAtPath('/World/Sphere1'),a=p.GetAttribute('visibility');try{return a.GetValueStringAtTime(0);}finally{a.delete();p.delete();}})).toBe('invisible');
+    await expect.poll(()=>page.evaluate(async()=>{const p=(window as any).usdStage.GetPrimAtPath('/World/Sphere1'),a=p.GetAttribute('visibility');try{return await a.GetValueStringAtTime(0);}finally{a.delete();p.delete();}})).toBe('invisible');
     const show=page.getByRole('button',{name:'Show /World/Sphere1',exact:true});await expect(show).toBeFocused();await show.press('Enter');await expect(page.getByRole('button',{name:'Hide /World/Sphere1',exact:true})).toHaveAttribute('aria-pressed','true');
     await page.locator('[data-prim-path="/World"]').hover();await page.getByRole('button',{name:'Deactivate /World',exact:true}).click();await expect(page.locator('[data-prim-path="/World/Sphere1"]')).toHaveCount(0);const activate=page.getByRole('button',{name:'Activate /World',exact:true});await expect(activate).toHaveAttribute('aria-pressed','false');
     await activate.click();await expect(page.locator('[data-prim-path="/World/Sphere1"]')).toBeVisible();expect(errors).toEqual([]);

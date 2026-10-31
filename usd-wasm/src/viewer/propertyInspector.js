@@ -1,4 +1,4 @@
-import { inspectPrim } from '../scene/index.js';
+import { inspectPrimAsync } from '../scene/index.js';
 import { viewerIcon } from './icons.js';
 
 const node = (tag, className = '', text = '') => {
@@ -22,6 +22,17 @@ function vectorValues(vector, read = value => value) {
       const value = vector.get(index);
       try { return read(value); } finally { value?.delete?.(); }
     });
+  } finally { vector.delete?.(); }
+}
+async function vectorValuesAsync(vector, read) {
+  if (!vector) return [];
+  const values = [];
+  try {
+    for (let index = 0; index < (Array.isArray(vector) ? vector.length : vector.size()); index++) {
+      const value = Array.isArray(vector) ? vector[index] : vector.get(index);
+      try { values.push(await read(value)); } finally { if (!Array.isArray(vector)) value?.delete?.(); }
+    }
+    return values;
   } finally { vector.delete?.(); }
 }
 function parts(path) {
@@ -53,6 +64,7 @@ function absolutePath(path, owner = '/') {
  * onNavigate must call show(target, options) when it accepts navigation.
  */
 export function mountPropertyInspector({ stage, handle, container, isCurrent = () => true, onNavigate }) {
+  let revision = 0;
   let disposed = false, current = '', context = {}, primPath, table, snapshot;
   let history = [], historyIndex = -1, pendingHistory = null;
   const rows = new Map();
@@ -116,14 +128,14 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   }
   // Older runtime snapshots may omit navigation fields. Read only missing fields,
   // and guard metadata access for bindings built without GetAllMetadata.
-  function inspect(path, time) {
+  async function inspect(path, time) {
     if (!path) return { metadata: handle.stageMetadata?.() || {}, attributes: [], relationships: [] };
     const prim = stage.GetPrimAtPath(path);
     try {
       if (!prim?.IsValid()) return null;
-      const data = typeof prim.GetAllMetadata === 'function' ? inspectPrim(stage, path, time) : {
+      const data = typeof prim.GetAllMetadata === 'function' ? await inspectPrimAsync(stage, path, time) : {
         path, type: prim.GetTypeName?.(), metadata: {},
-        attributes: vectorValues(prim.GetAttributes?.(), attr => ({ name: attr.GetName(), type: attr.GetTypeName(), value: attr.GetValueStringAtTime(time) })),
+        attributes: await vectorValuesAsync(prim.GetAttributes?.(), async attr => ({ name: attr.GetName(), type: attr.GetTypeName(), value: await attr.GetValueStringAtTime(time) })),
         relationships: vectorValues(prim.GetRelationships?.(), rel => ({ name: rel.GetName(), targets: vectorValues(rel.GetTargets?.()) })),
       };
       for (const attr of data.attributes || []) {
@@ -138,25 +150,33 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       return data;
     } finally { prim?.delete?.(); }
   }
-  function details(time) {
-    const row = selectedRow();
-    provenance.hidden = !row;
-    if (!row) { provenance.replaceChildren(); delete provenance.dataset.signature; return; }
+  async function readDetails(data, target, time) {
+    const { prim: path, property: name } = parts(target);
+    const attribute = data.attributes?.find(item => item.name === name);
+    const relation = data.relationships?.find(item => item.name === name);
+    if (!attribute && !relation) return null;
+    const kind = attribute ? 'attribute' : 'relationship', type = attribute?.type || kind;
     let prim, property;
     try {
-      prim = stage.GetPrimAtPath(primPath);
-      property = row.kind === 'attribute' ? prim.GetAttribute(row.name) : prim.GetRelationship(row.name);
-      const resolve = plain(property.GetResolveInfo?.(time));
-      const stack = plain(property.GetPropertyStackWithLayerOffsets?.(time)) || [];
-      const summary = [row.type || row.kind, resolve?.source, resolve?.valueIsBlocked ? 'Blocked' : ''].filter(Boolean).join(' · ');
-      const entries = stack.map(spec => [spec.path, spec.layer?.identifier, spec.layerOffset ? `offset ${spec.layerOffset.offset}, scale ${spec.layerOffset.scale}` : ''].filter(Boolean).join('\n'));
-      const signature = JSON.stringify([summary, entries]);
-      if (provenance.dataset.signature === signature) return;
-      provenance.dataset.signature = signature;
-      provenance.replaceChildren(node('summary', '', summary));
-      for (const text of entries) provenance.append(node('pre', '', text));
-    } catch { provenance.replaceChildren(node('summary', '', row.type || row.kind)); }
+      prim = stage.GetPrimAtPath(path);
+      property = attribute ? prim.GetAttribute(name) : prim.GetRelationship(name);
+      const resolve = plain(await property.GetResolveInfo?.(time));
+      const stack = plain(await property.GetPropertyStackWithLayerOffsets?.(time)) || [];
+      return {
+        summary: [type, resolve?.source, resolve?.valueIsBlocked ? 'Blocked' : ''].filter(Boolean).join(' · '),
+        entries: stack.map(spec => [spec.path, spec.layer?.identifier, spec.layerOffset ? `offset ${spec.layerOffset.offset}, scale ${spec.layerOffset.scale}` : ''].filter(Boolean).join('\n')),
+      };
+    } catch { return { summary: type, entries: [] }; }
     finally { property?.delete?.(); prim?.delete?.(); }
+  }
+  function details(value) {
+    provenance.hidden = !value;
+    if (!value) { provenance.replaceChildren(); delete provenance.dataset.signature; return; }
+    const signature = JSON.stringify(value);
+    if (provenance.dataset.signature === signature) return;
+    provenance.dataset.signature = signature;
+    provenance.replaceChildren(node('summary', '', value.summary));
+    for (const text of value.entries) provenance.append(node('pre', '', text));
   }
   function link(path, label = path, owner = primPath) {
     const button = makeButton(`Follow ${path}`, null, () => navigate(absolutePath(path, owner) ?? path));
@@ -234,14 +254,10 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     if (!alive()) return false;
     const resolved = absolutePath(target, primPath || '/');
     if (resolved === null || !valid(resolved)) { message(`Unavailable target: ${target}`); return false; }
-    const path = parts(resolved).prim, time = handle.getTime?.() || 0;
-    let data;
-    try { data = inspect(path, time); }
-    catch (error) { message(`Could not inspect ${resolved}: ${error.message}`); return false; }
-    if (!data) { message(`Unavailable target: ${resolved}`); return false; }
     const nextContext = options.instance ? { instance: plain(options.instance) } : {};
     const changed = current !== resolved || JSON.stringify(context) !== JSON.stringify(nextContext);
-    current = resolved; context = nextContext; snapshot = data; message();
+    current = resolved; context = nextContext; message();
+    if (changed) snapshot = null;
     if (options.recordHistory !== false && (changed || historyIndex < 0)) {
       history = history.slice(0, historyIndex + 1); history.push({ target: current, context }); historyIndex = history.length - 1;
     } else if (options.recordHistory === false) {
@@ -249,23 +265,31 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       if (index >= 0) historyIndex = index;
     }
     pendingHistory = null;
-    render(data, path); details(time); buttons();
-    const active = selectedRow();
-    if (active?.tr.hidden) { filter.value = ''; applyFilter(); }
-    if (parts(current).property) reveal(active);
+    buttons(); void refresh({ revealTarget: true });
     return true;
   }
-  function refresh() {
+  async function refresh({ revealTarget = false } = {}) {
     if (!alive()) return;
-    const time = handle.getTime?.() || 0;
+    const request = ++revision, target = current, time = handle.getTime?.() || 0;
+    const isLatest = () => alive() && revision === request;
     try {
-      const data = inspect(parts(current).prim, time);
-      if (!data) { message(`Unavailable target: ${current}`); return; }
-      snapshot = data; render(data, parts(current).prim); details(time); buttons();
-      if (parts(current).property && !selectedRow()) message(`Unavailable target: ${current}`);
-    } catch (error) { message(`Could not refresh properties: ${error.message}`); }
+      const result = await handle.readStage(async () => {
+        if (!isLatest()) return null;
+        const data = await inspect(parts(target).prim, time);
+        return data ? { data, provenance: await readDetails(data, target, time) } : null;
+      });
+      if (!isLatest()) return;
+      if (!result) { message(`Unavailable target: ${target}`); return; }
+      snapshot = result.data; render(result.data, parts(target).prim); details(result.provenance); buttons();
+      const active = selectedRow();
+      if (parts(target).property && !active) message(`Unavailable target: ${target}`);
+      if (revealTarget) {
+        if (active?.tr.hidden) { filter.value = ''; applyFilter(); }
+        if (parts(target).property) reveal(active);
+      }
+    } catch (error) { if (isLatest()) message(`Could not refresh properties: ${error.message}`); }
   }
   filter.oninput = applyFilter;
   buttons(); show('', { recordHistory: false });
-  return { show, refresh, get target() { return current; }, dispose() { disposed = true; rows.clear(); history = []; snapshot = null; root.remove(); } };
+  return { show, refresh, get target() { return current; }, dispose() { disposed = true; revision++; rows.clear(); history = []; snapshot = null; root.remove(); } };
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getUsdModule } from '../../src/bindings/index.js';
+import { getUsdModule } from '../runtime.mjs';
 
 const assembly = `#usda 1.0
 (defaultPrim = "Rig")
@@ -92,9 +92,10 @@ test('physics export preserves composed body/collider/joint frames, units and op
     for (const [name, text] of [['physics-assembly.usda', assembly], ['physics-scene.usda', source]])
         USD.FS_createDataFile('/', name, new TextEncoder().encode(text), true, true, true);
     const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
-    const driver = new USD.HdWebSyncDriver(delegate, 'physics-scene.usda');
+    const driver = await (USD.CreateHdWebSyncDriver?.(delegate, 'physics-scene.usda')
+        ?? new USD.HdWebSyncDriver(delegate, 'physics-scene.usda'));
     try {
-        const raw = driver.GetPhysicsSceneJson();
+        const raw = await driver.GetPhysicsSceneJson();
         assert.doesNotMatch(raw, /\b(?:NaN|Infinity)\b/);
         const data = JSON.parse(raw);
         assert.equal(data.metersPerUnit, 0.01); assert.equal(data.kilogramsPerUnit, 0.001); assert.equal(data.upAxis, 'Z');
@@ -127,7 +128,7 @@ test('physics export preserves composed body/collider/joint frames, units and op
         assert.equal(data.materials.length, 1); assert.ok(Math.abs(data.materials[0].dynamicFriction - .4) < 1e-6);
         assert.ok(data.unsupported.some(issue => issue.path === '/World/UnknownCollider' && issue.reason.includes('not recognized')));
         assert.ok(data.unsupported.some(issue => issue.path === '/World/InvalidArticulation' && issue.reason.includes('Invalid OpenUSD')));
-        assert.equal(driver.GetPhysicsSceneJson(), raw, 'read-only extraction must be deterministic');
+        assert.equal(await driver.GetPhysicsSceneJson(), raw, 'read-only extraction must be deterministic');
     } finally {
         driver.delete();
         USD.FS_unlink('/physics-assembly.usda'); USD.FS_unlink('/physics-scene.usda');
@@ -145,10 +146,12 @@ def PhysicsCollisionGroup "Inverted" {
 }
 `;
     USD.FS_createDataFile('/', 'physics-defaults.usda', new TextEncoder().encode(source), true, true, true);
-    const driver = new USD.HdWebSyncDriver({createRPrim(){}, createSPrim(){}, createBPrim(){}, CommitResources(){}}, 'physics-defaults.usda');
+    const delegate = {createRPrim(){}, createSPrim(){}, createBPrim(){}, CommitResources(){}};
+    const driver = await (USD.CreateHdWebSyncDriver?.(delegate, 'physics-defaults.usda')
+        ?? new USD.HdWebSyncDriver(delegate, 'physics-defaults.usda'));
     try {
         for (let i=0; i<20; i++) {
-            const data=JSON.parse(driver.GetPhysicsSceneJson());
+            const data=JSON.parse(await driver.GetPhysicsSceneJson());
             assert.deepEqual(data.scenes.map(scene=>scene.path), ['/ZFirst','/ASecond']);
             assert.equal(data.groups.find(group=>group.path==='/Default').invertFilteredGroups, false);
             assert.equal(data.groups.find(group=>group.path==='/Inverted').invertFilteredGroups, true);

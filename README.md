@@ -50,6 +50,12 @@ the private server has its own version.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 
+The app owns its workspace, catalogs, URL state and input policy. Reusable USD
+loading, scene operations, source reads, editing commands and export live in the
+package. Code and Console load when opened. Embedded viewers can use `/runtime`,
+`/three` and `/viewer/inspect`, then import `/editing`, `/viewer/repl` or
+`/viewer/download` on demand; see the package README for the loading boundary.
+
 ## Examples and render settings
 
 Use **Examples** to browse local Needle fixtures, the 14 NVIDIA SimReady assets,

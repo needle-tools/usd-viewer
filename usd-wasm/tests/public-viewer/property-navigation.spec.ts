@@ -143,3 +143,29 @@ test('refresh preserves table, expanded raw value, focus and scroll while updati
   await page.evaluate(() => (window as any).testInspector.show('.back'));
   await expect.poll(() => target(page)).toBe('/Other.back');
 });
+
+test('delayed property snapshots cannot replace a newer navigation or a disposed inspector', async ({page}) => {
+  await openFixture(page); await mount(page, '/Test');
+  await expect(host(page).locator('tr[data-property-path="/Test.typeName"] td')).toHaveText('custom-value');
+  await page.evaluate(() => {
+    const w = window as any, readStage = w.usdHydra.readStage.bind(w.usdHydra);
+    let delayNext = true;
+    w.usdHydra.readStage = async (action: unknown) => {
+      const delay = delayNext; delayNext = false;
+      const result = await readStage(action);
+      if (delay) await new Promise<void>(resolve => { w.releaseInspection = resolve; });
+      return result;
+    };
+    w.testInspector.show('/Test.documentation');
+  });
+  await expect.poll(() => page.evaluate(() => typeof (window as any).releaseInspection)).toBe('function');
+  await page.evaluate(() => (window as any).testInspector.show('/Other'));
+  await expect(host(page).locator('.usd-property-address code')).toHaveText('/Other');
+  await page.evaluate(() => (window as any).releaseInspection());
+  await expect(host(page).locator('.usd-property-address code')).toHaveText('/Other');
+  await page.evaluate(() => {
+    const w = window as any;
+    w.testInspector.show('/Test'); w.testInspector.dispose();
+  });
+  await expect(host(page).locator('.usd-property-inspector')).toHaveCount(0);
+});

@@ -5,12 +5,23 @@ import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from '@
 import { needleUSD } from '@needle-tools/usd/vite';
 import { createMaterialXVolumeMaterial, createVdbVolumeMesh } from '@needle-tools/usd/volumes';
 import { readUsdPhysics, createUsdPhysics } from '@needle-tools/usd/physics';
+import { inspectUsdPhysics } from '@needle-tools/usd/physics';
+import { getUsdModule as loadRuntime } from '@needle-tools/usd/runtime';
+import { createArrayEdits, type ArrayEdits } from '@needle-tools/usd/editing';
+import { mountStagePanel as mountInspection } from '@needle-tools/usd/viewer/inspect';
+import { mountRepl as mountOptionalConsole } from '@needle-tools/usd/viewer/repl';
 import { Scene } from 'three';
 
 const USD = await getUsdModule();
+void getUsdModule({asyncRuntime:'auto'});
+void loadRuntime({asyncRuntime:'jspi', mainScriptUrlOrBlob:new Blob(['worker'])});
+void loadRuntime({asyncRuntime:'asyncify'});
+// @ts-expect-error Unsupported runtime selection must be rejected.
+void getUsdModule({asyncRuntime:'unknown'});
 const info = getOpenUsdBuildInfo(USD);
 const loaded = await loadOpenUsdBuildInfo();
 const scene = new Scene();
+void [inspectUsdPhysics, loadRuntime, mountInspection, mountOptionalConsole];
 const stage = await createThreeHydra({ USD, scene, complexity: 'high',
     materialXVolumeFactory: createMaterialXVolumeMaterial, usdVolumeFactory: createVdbVolumeMesh });
 await stage.setComplexity('medium');
@@ -94,3 +105,19 @@ const typedRotations: unknown = rotations.Get(Number.NaN); void typedRotations;
 
 const layerView=await authored.OpenLayerStage(authored.GetRootLayer().GetIdentifier());
 if(layerView)USD.ReleaseStage(layerView);
+
+const edits: ArrayEdits = createArrayEdits({usd:USD,stage:authored,edit:action=>stage.editStage(action),isCurrent:()=>true});
+await edits.apply(authored.GetRootLayer().GetIdentifier(),{property:{primPath:'/World',name:'rotations',type:'quatf[]',time:NaN}},'',[[1,0,0,0]]);
+await edits.undo(); await edits.redo(); edits.dispose();
+await stage.readStage(current=>current.GetRootLayer().ExportToString());
+import { readStageAsset, readStageLayer, stageLayers, stageVariants, hasAuthoredUsdLights } from '@needle-tools/usd/scene';
+const layerText: string = await readStageLayer(stage,USD,'scene.usda',{allowUncomposed:true});
+const resource: Uint8Array = await readStageAsset(stage,USD,'texture.png',{signal:new AbortController().signal});
+void [layerText,resource,stageLayers(authored),stageVariants(authored),hasAuthoredUsdLights(scene,authored)];
+import * as runtimeOnly from '@needle-tools/usd/runtime';
+// Native constructors belong to the initialized module, not the JS loader entry.
+// @ts-expect-error Runtime loader does not export a native CreateStage function.
+runtimeOnly.CreateStage('/stage.usda');
+import * as packageApi from '@needle-tools/usd';
+// @ts-expect-error The package root also exposes native authoring through USD only.
+packageApi.CreateStage('/stage.usda');

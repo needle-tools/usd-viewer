@@ -4,6 +4,33 @@ The viewer shares authored USD selection identities between Stage, Properties,
 viewport picking, outlines, framing and the JavaScript console. This is view
 context, separate from authored stage data.
 
+## Package and application responsibilities
+
+The SDK owns OpenUSD lifetime, asset resolution, Hydra synchronization, composed
+scene inspection, variant/payload operations and dependency-preserving export.
+`/viewer/inspect` provides embeddable inspection controls. `/editing` provides
+document-scoped array commands; `/viewer/repl` and `/viewer/download` are optional
+UI. Hosts can build their own interfaces without importing the hosted app.
+
+The application owns Dockview panels, menus, URL/history state, example catalogs,
+uploaded-file inventory and host lighting/camera preferences. It chooses when to
+load tools and passes document identity and refresh hooks to SDK operations.
+Picking events and outlines live in the host; native authored identities and
+instance mapping come from `handle.resolvePick()` and `handle.resolveSelection()`.
+
+Use `handle.readStage(callback)` for native reads that may cross an asynchronous
+resolver boundary. Reads share the native operation queue with edits and export,
+wait for draws and reject if the document closes. They do not increment the scene
+revision or redraw. The callback must not author data or nest another queued
+handle operation. Use `editStage()` for mutations. This is lifecycle coordination,
+not a read-only security sandbox.
+
+`readStageAsset()` returns owned bytes for HTTP, mounted and package assets;
+`readStageLayer()` returns live authored USDA without replacing the loaded root.
+Both are exported from `/scene` and support cancellation and current-document
+checks. The host chooses which files appear in its browser. Disposing a document
+must invalidate those readers and its command owner.
+
 ## Navigation
 
 Property names, relationship targets and attribute connections in Properties

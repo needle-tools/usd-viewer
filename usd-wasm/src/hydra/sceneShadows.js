@@ -17,7 +17,7 @@ export class UsdSceneShadows {
         this.corner = new Vector3();
     }
 
-    update(timeCode) {
+    async update(timeCode) {
         if (!this.stage) return;
         const primitives = this.delegate.scenePrimitives;
         for (const [path, record] of this.records) {
@@ -41,7 +41,7 @@ export class UsdSceneShadows {
                 } finally { prim?.delete?.(); }
             }
             const attribute = record.enabledAttribute;
-            const value = attribute?.IsValid?.() ? attribute.GetValueStringAtTime(timeCode) : '';
+            const value = attribute?.IsValid?.() ? await attribute.GetValueStringAtTime(timeCode) : '';
             const enabled = value !== '0' && value !== 'false'; // UsdLuxShadowAPI fallback is true.
             light.userData.usdShadowEnabled = enabled;
             let visible = true;

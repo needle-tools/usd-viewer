@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Group} from 'three';
-import {getUsdModule} from '../../src/bindings/index.js';
+import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 
 const points=[[-.65,-.65,.65],[.65,-.65,.65],[-.65,.65,.65],[.65,.65,.65],[-.65,.65,-.65],[.65,.65,-.65],[-.65,-.65,-.65],[.65,-.65,-.65]];

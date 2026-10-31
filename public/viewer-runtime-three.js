@@ -17,7 +17,8 @@ export {
   WebGLRenderer,
 } from 'three';
 
-export { createThreeHydra, getUsdModule } from './usd/index.js';
+export { createThreeHydra } from './usd/create.three.js';
+export { getUsdModule } from './usd/bindings/index.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 export { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';

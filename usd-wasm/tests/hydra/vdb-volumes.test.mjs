@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
-import { getUsdModule } from '../../src/bindings/index.js';
+import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
 import { createVdbVolumeMesh } from '../../src/hydra/materialxVolume.js';
 import { VDBLoader } from '../../src/vendor/vdb/VDBLoader.js';

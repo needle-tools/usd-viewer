@@ -26,8 +26,8 @@ export function createSelection(options?: {items?: readonly (string | SelectionI
   choose(item: string | SelectionItem | null, options?: SelectionOptions & {order?: string[]}): boolean;
   prune(predicate: (item: SelectionItem) => boolean): boolean; clear(): boolean;
 };
-export function mountPropertyInspector(options: {stage: USDStage; handle: Pick<NeedleThreeHydraHandle, 'getTime' | 'stageMetadata'>; container: HTMLElement; isCurrent?: () => boolean; onNavigate?: (target: string, options: NavigationOptions) => void}): {
-  show(target: string, options?: NavigationOptions): boolean; refresh(): void; readonly target: string; dispose(): void;
+export function mountPropertyInspector(options: {stage: USDStage; handle: Pick<NeedleThreeHydraHandle, 'getTime' | 'stageMetadata' | 'readStage'>; container: HTMLElement; isCurrent?: () => boolean; onNavigate?: (target: string, options: NavigationOptions) => void}): {
+  show(target: string, options?: NavigationOptions): boolean; refresh(): Promise<void>; readonly target: string; dispose(): void;
 };
 export interface StagePanel {
   readonly selectedPath: string;
@@ -35,7 +35,7 @@ export interface StagePanel {
   readonly selectedProperty: string;
   /** Reveal the selected row inside a visible hierarchy without scrolling host containers. */
   revealSelection(): void;
-  refresh(): void;
+  refresh(): Promise<void>;
   selectPrim(path: string | SelectionItem | null, options?: SelectionOptions): boolean;
   selectMany(items: readonly (string | SelectionItem)[]): void;
   navigate(target: string, options?: NavigationOptions): boolean;

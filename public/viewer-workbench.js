@@ -2,7 +2,7 @@ import { createDockview } from 'dockview-core';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { mountExamplesBrowser } from './viewer-examples.js';
 import { mountDownloadButton } from './usd/viewer/downloadButton.js';
-import { mountCodePane, codeIcon } from './viewer-code.js';
+import { mountLazyCodePane } from './viewer-lazy-code.js';
 
 const STORAGE = 'needle-usd-workspace-v2';
 const THEME = 'needle-usd-theme';
@@ -19,6 +19,13 @@ const definitions = {
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; } }
 function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 function element(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text) node.textContent = text; return node; }
+function codeIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox','0 0 16 16'); svg.setAttribute('width','16'); svg.setAttribute('height','16');
+  svg.setAttribute('class','usd-icon'); svg.dataset.icon='code'; svg.setAttribute('aria-hidden','true'); svg.setAttribute('focusable','false');
+  svg.innerHTML='<path fill="currentColor" stroke="none" transform="translate(0 16) scale(0.016666666667)" d="M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z"/>';
+  return svg;
+}
 const commandIcons = { 'Open…': 'folder_open', 'Frame selection': 'filter_center_focus', 'Viewport': 'web_asset', 'Float active panel': 'web_asset', 'Maximize / restore': 'fullscreen', 'Open panel in window': 'open_in_new', 'Reset layout': 'restart_alt', 'Save': 'save' };
 function commandIcon(node, name) {
   node.querySelectorAll(':scope > svg, :scope > img').forEach(icon => icon.remove());
@@ -190,6 +197,7 @@ export async function mountWorkbench() {
   for (const id of ['stage', 'properties', 'layers', 'timeline']) { const text = element('div', 'usd-panel-empty', id === 'timeline' ? 'No animation' : 'No stage loaded'); placeholders.set(id, text); hosts[id].append(text); }
   document.getElementById('top-center')?.remove(); document.body.prepend(root);
   let restoring = true, persistTimer, disposed = false, layoutFrame, resizeFrame, stageRevealFrame;
+  const visibilityListeners = new Set(), disposeListeners = new Set();
   let state = read(STORAGE, null);
   const migrating = !state;
   state ||= read('needle-usd-workspace-v1', { current: null, presets: {} });
@@ -221,7 +229,7 @@ export async function mountWorkbench() {
     ],
   });
   dock.layout(desktopWidth, desktopHeight);
-  const codePane=mountCodePane(hosts.code,{isVisible:()=>isPanelVisible('code')});
+  const codePane=mountLazyCodePane(hosts.code,{isVisible:()=>!restoring && isPanelVisible('code')});
   function add(id, position) { const [title, minimumWidth, minimumHeight] = definitions[id]; return dock.addPanel({ id, title, component: id, minimumWidth, minimumHeight, renderer: 'always', ...(position ? { position } : {}) }); }
   function defaultKind() { return workspace.clientWidth < COMPACT_WIDTH ? 'viewport' : workspace.clientWidth < 1100 ? 'review' : 'inspect'; }
   function defaults(kind = defaultKind(), explicit = true) {
@@ -260,6 +268,14 @@ export async function mountWorkbench() {
   }
   function showCompact(id) { compactPanel = id; renderCompact(); }
   function isPanelVisible(id) { const panel=dock.getPanel(id); return !!panel && (isCompact ? compactPanel===id : panel.api.isVisible); }
+  function notifyVisibility() {
+    if (disposed || restoring) return;
+    codePane.refreshVisibility();
+    for (const subscription of visibilityListeners) {
+      const visible = isPanelVisible(subscription.id);
+      if (visible !== subscription.visible) { subscription.visible = visible; subscription.callback(visible); }
+    }
+  }
   function notifyExamples() { const visible=isPanelVisible('examples'); if(samplePicker.dataset.visible===String(visible))return; samplePicker.dataset.visible=String(visible); samples.setAttribute('aria-pressed',String(visible)); samplePicker.dispatchEvent(new CustomEvent('usd-examples-visibility',{detail:visible})); }
   function renderCompact() {
     // Move only when the destination changes, preserving focus and scroll state.
@@ -273,7 +289,7 @@ export async function mountWorkbench() {
         else target.append(hosts[id]);
       }
     }
-    compact.hidden = !isCompact; notifyExamples(); codePane.refreshVisibility();
+    compact.hidden = !isCompact; notifyExamples(); notifyVisibility();
     if (!isCompact) return;
     compactHeader.hidden = compactPanel === 'viewport';
     compactPicker.replaceChildren();
@@ -344,7 +360,7 @@ export async function mountWorkbench() {
       });
     });
   }
-  const subscriptions = [dock.onDidActivePanelChange(()=>{notifyExamples();codePane.refreshVisibility();revealStageAfterLayout();persist();}), dock.onDidLayoutChange(() => { if (hideViewportHeader()) scheduleLayout(); persist(); }), dock.onDidRemovePanel(() => { scheduleLayout(); persist(); })];
+  const subscriptions = [dock.onDidActivePanelChange(()=>{notifyExamples();notifyVisibility();revealStageAfterLayout();persist();}), dock.onDidLayoutChange(() => { if (hideViewportHeader()) scheduleLayout(); notifyVisibility(); persist(); }), dock.onDidRemovePanel(() => { scheduleLayout(); notifyVisibility(); persist(); })];
   const presets = element('select'); presets.setAttribute('aria-label', 'Workspace layout');
   function refreshPresets() {
     presets.replaceChildren();
@@ -361,7 +377,7 @@ export async function mountWorkbench() {
   for (const [id, [title]] of Object.entries(definitions)) {
     if (id === 'viewport' || id === 'settings') continue;
     const label = element('label', 'usd-menu-row', title), check = element('input'); check.type = 'checkbox'; check.setAttribute('aria-label', `Show ${title}`);
-    label.prepend(id==='code'?codeIcon('code'):viewerIcon(panelIcons[id])); label.classList.add('usd-panel-menu-item'); label.append(check); check.onchange = () => { if (check.checked) openPanel(id); else closePanel(id); closeMenus(); };
+    label.prepend(id==='code'?codeIcon():viewerIcon(panelIcons[id])); label.classList.add('usd-panel-menu-item'); label.append(check); check.onchange = () => { if (check.checked) openPanel(id); else closePanel(id); closeMenus(); };
     panelChecks.push([id,check]); menu.append(label);
   }
   const floatCommand = button('Float active panel', () => { const panel = dock.activePanel; if (panel) dock.addFloatingGroup(panel, { width: 440, height: 420, dragHandle: panel.id === 'viewport' ? 'titlebar' : 'tabbar' }); closeMenus(); });
@@ -419,6 +435,13 @@ export async function mountWorkbench() {
   }); loadedObserver.observe(header, { attributes: true }); loadedObserver.observe(fileBar, { subtree: true, characterData: true, childList: true });
   const api = {
     dock, viewport, code: codePane,
+    onPanelVisibility(id, callback) {
+      if (disposed) return () => {};
+      const subscription = {id, callback, visible:isPanelVisible(id)}; visibilityListeners.add(subscription);
+      callback(subscription.visible);
+      return () => visibilityListeners.delete(subscription);
+    },
+    onDispose(callback) { if (disposed) { callback(); return () => {}; } disposeListeners.add(callback); return () => disposeListeners.delete(callback); },
     setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
     containers: { settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
     openPanel, isPanelVisible, exampleChosen() { if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
@@ -436,8 +459,8 @@ export async function mountWorkbench() {
       placeholders.get('timeline').hidden = !!info?.time;
     },
     selectPrim(path) { if(path && !isCompact) openPanel('properties'); },
-    dispose() { downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); disposed = true; cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
+    dispose() { if (disposed) return; disposed = true; for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };
-  window.addEventListener('pagehide', () => { state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state); }, { once: true });
+  window.addEventListener('pagehide', () => { if (disposed) return; state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state); }, { once: true });
   return api;
 }

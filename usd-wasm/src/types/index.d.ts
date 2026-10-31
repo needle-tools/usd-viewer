@@ -1,4 +1,4 @@
-export * from "./bindings.js"
+export * from "./runtime.js"
 export * from "./hydra.js"
 export * from "./create.three.js"
 export * from "./vite.js";

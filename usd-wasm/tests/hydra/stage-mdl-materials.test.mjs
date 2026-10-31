@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Group } from 'three';
-import { getUsdModule } from '../../src/bindings/index.js';
+import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
 
 const stage = (material, shaders, meshProperties = '') => `#usda 1.0

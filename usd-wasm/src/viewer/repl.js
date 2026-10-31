@@ -5,7 +5,7 @@ import {attachArrayInput} from './arrayEditor.js';
 const OUTPUT_LIMIT = 160, TEXT_LIMIT = 8000, HISTORY_LIMIT = 100;
 const HELP = Object.freeze({
   symbols: 'USD, stage, handle, scene, selection, panel, api, three, context',
-  commands: 'await edit(async stage => { … }); select(identity); follow(identity); inspect(identity); print(value); clear()',
+  commands: 'await edit(async stage => { … }); select(identity); follow(identity); await inspect(identity); print(value); clear()',
   persistence: 'scratch.name = value persists for this document; let/const/var are command-local.',
   keys: 'Ctrl/Cmd+Enter runs; Enter inserts a newline; Alt+Up/Down browses history.',
 });
@@ -79,16 +79,24 @@ export function mountRepl({ container, getContext, edit, stateKey, style = true 
   root.append(output, input, actions); container.append(root);
   const arrayInput=attachArrayInput(input,arrayButton,root);
   let disposed = false, current = null, queue = Promise.resolve(), history = [], cursor = 0, draft = '';
-  let scrollFrame = 0, pinned = true;
+  let scrollFrame = 0, pinned = true, lastScrollTop = output.scrollTop;
+  function scrollOutputToEnd() { output.scrollTop = output.scrollHeight; lastScrollTop = output.scrollTop; }
   function scrollToEnd() {
     if (disposed || !pinned) return;
     doc.defaultView.cancelAnimationFrame(scrollFrame);
     scrollFrame = doc.defaultView.requestAnimationFrame(() => {
       scrollFrame = 0;
-      if (!disposed && pinned) output.scrollTop = output.scrollHeight;
+      if (!disposed && pinned) scrollOutputToEnd();
     });
   }
-  function onScroll() { if (!scrollFrame) pinned = output.scrollHeight - output.clientHeight - output.scrollTop <= 2; }
+  function onScroll() {
+    const top = output.scrollTop;
+    // Our scroll event can arrive after a resize changes the bottom distance.
+    // Only movement, not that delayed event, can change the reading position.
+    if (top === lastScrollTop) return;
+    lastScrollTop = top;
+    if (!scrollFrame) pinned = output.scrollHeight - output.clientHeight - top <= 2;
+  }
   function readingHistory() { pinned = false; }
   output.addEventListener('scroll', onScroll, {passive: true});
   output.addEventListener('wheel', readingHistory, {passive: true});
@@ -106,7 +114,7 @@ export function mountRepl({ container, getContext, edit, stateKey, style = true 
     if (disposed) return;
     const row = node('pre', `usd-repl-entry usd-repl-${kind}`); row.textContent = text.slice(0, TEXT_LIMIT); output.append(row);
     while (output.childElementCount > OUTPUT_LIMIT) output.firstElementChild.remove();
-    pinned = true; output.scrollTop = output.scrollHeight; scrollToEnd();
+    pinned = true; scrollOutputToEnd(); scrollToEnd();
   }
   function remember(source) {
     if (source.length <= TEXT_LIMIT && history.at(-1) !== source) history.push(source);

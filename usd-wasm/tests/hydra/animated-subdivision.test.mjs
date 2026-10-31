@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {createHash} from 'node:crypto';
 import {Group, Raycaster, Vector3} from 'three';
-import {getUsdModule} from '../../src/bindings/index.js';
+import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 
 const source = await readFile(new URL('../fixtures/coverage/curved-surfaces/animated-subdivision-buddies.usda', import.meta.url));

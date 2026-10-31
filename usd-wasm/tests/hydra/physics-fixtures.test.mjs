@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { Group, Quaternion, Vector3 } from 'three';
 import R from '@dimforge/rapier3d-compat';
-import { getUsdModule } from '../../src/bindings/index.js';
+import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
 import { createUsdPhysics, readUsdPhysics } from '../../src/physics/createPhysics.js';
 

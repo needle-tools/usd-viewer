@@ -73,6 +73,8 @@ declare type USD = {
     UsdShadeOutput: new(attr: USDAttribute) => UsdShadeOutput,
     UsdShadeMaterialBindingAPI: new(prim: USDPrim) => UsdShadeMaterialBindingAPI,
     HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
+    /** Asynchronous driver creation, available in the JSPI runtime. */
+    CreateHdWebSyncDriver?: (delegate: hydraDelegate, filepath: string) => Promise<HdWebSyncDriver>,
     flushPendingDeletes: () => void,
     ready: Promise<any>,
     debug: boolean;
@@ -96,6 +98,8 @@ export type OpenUsdBuildInfo = {
         emscripten: string,
         cxxCompiler: string,
         cmakeBuildType: string,
+        /** Absent in older runtime metadata. */
+        asyncRuntime?: 'ASYNCIFY' | 'JSPI',
     },
     modules: {
         usdImaging: boolean,
@@ -248,7 +252,7 @@ declare type UsdGeomXformOp = {
     GetOpName(): string,
     GetTypeName(): string,
     Set(value: unknown, timeCode: number): boolean,
-    Get(timeCode: number): string,
+    Get(timeCode: number): MaybePromise<string>,
     delete(): void,
 }
 
@@ -309,16 +313,16 @@ declare type USDAttribute = {
     GetAllMetadata(): Record<string, string>,
     GetMetadataString(key: string): string,
     HasAuthoredMetadata(key: string): boolean,
-    GetValueString(): string,
-    GetValueStringAtTime(timeCode: number): string,
+    GetValueString(): MaybePromise<string>,
+    GetValueStringAtTime(timeCode: number): MaybePromise<string>,
     GetConnections(): StringVector,
-    GetResolveInfo(timeCode: number): USDResolveInfo,
+    GetResolveInfo(timeCode: number): MaybePromise<USDResolveInfo>,
     HasAuthoredValue(): boolean,
     HasAuthoredValueOpinion(): boolean,
-    GetNumTimeSamples(): number,
-    GetTimeSamples(): DoubleVector,
-    GetPropertyStack(timeCode: number): USDSpecStack,
-    GetPropertyStackWithLayerOffsets(timeCode: number): USDSpecStack,
+    GetNumTimeSamples(): MaybePromise<number>,
+    GetTimeSamples(): MaybePromise<DoubleVector>,
+    GetPropertyStack(timeCode: number): MaybePromise<USDSpecStack>,
+    GetPropertyStackWithLayerOffsets(timeCode: number): MaybePromise<USDSpecStack>,
     SetBool(value: boolean, timeCode: number): boolean,
     SetInt(value: number, timeCode: number): boolean,
     SetFloat(value: number, timeCode: number): boolean,
@@ -376,7 +380,7 @@ declare type USDPrim = {
     HasAuthoredInstanceable(): boolean,
     Load(): MaybePromise<void>,
     Unload(): MaybePromise<void>,
-    AddPayload(assetPath: string, primPath: string): boolean,
+    AddPayload(assetPath: string, primPath: string): MaybePromise<boolean>,
     GetParent(): USDPrim,
     GetChildren(): USDPrimVector,
     GetAttributes(): USDAttributeVector,
@@ -393,11 +397,11 @@ declare type USDPrim = {
     AddVariant(variantSetName: string, variantName: string): boolean,
     SetVariantSelection(variantSetName: string, variantName: string): MaybePromise<boolean>,
     GetVariantSelection(variantSetName: string): string,
-    ClearVariantSelection(variantSetName: string): boolean,
-    BlockVariantSelection(variantSetName: string): boolean,
+    ClearVariantSelection(variantSetName: string): MaybePromise<boolean>,
+    BlockVariantSelection(variantSetName: string): MaybePromise<boolean>,
     GetVariantSetNames(): StringVector,
     GetVariantNames(variantSetName: string): StringVector,
-    DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): USDPrim,
+    DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): MaybePromise<USDPrim>,
     SetMetadata(key: string, value: unknown): MaybePromise<boolean>,
     AddReference(assetPath: string, primPath: string): MaybePromise<boolean>,
     SetInstanceable(instanceable: boolean): MaybePromise<boolean>,
@@ -425,8 +429,8 @@ declare type USDStage = {
     SetTimeCodesPerSecond(timeCodesPerSecond: number): void,
     GetUpAxis(): number,
     SetUpAxis(upAxis: string): boolean,
-    Export(path: string): boolean,
-    ExportToString(): string,
+    Export(path: string): MaybePromise<boolean>,
+    ExportToString(): MaybePromise<string>,
     GetEditTarget(): USDEditTarget,
     SetEditTarget(target: USDEditTarget): void,
 }
@@ -553,15 +557,15 @@ declare function CreateUsdzPackage(assetPath: string, usdzPath: string): MaybePr
 declare function ReadFile(path: string): Uint8Array
 
 declare type HdWebSyncDriver = {
-    getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => void,
+    getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => MaybePromise<void>,
     resolveAssetUrl: (path: string) => string,
     HasStage(): boolean,
-    ResolvePick(renderPath: string, instanceIndex: number): {path: string; instances: {path: string; index: number; id?: string}[]} | null,
-    ResolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): number[] | null,
+    ResolvePick(renderPath: string, instanceIndex: number): MaybePromise<{path: string; instances: {path: string; index: number; id?: string}[]} | null>,
+    ResolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): MaybePromise<number[] | null>,
     HasScopedHttpCache?(): boolean,
     GetStage(): USDStage,
     /** Read-only composed UsdPhysics descriptors, serialized as JSON. */
-    GetPhysicsSceneJson(): string,
+    GetPhysicsSceneJson(): MaybePromise<string>,
     GetStageUpAxis(): number,
     GetStageStartTimeCode(): number,
     GetStageEndTimeCode(): number,
@@ -598,7 +602,10 @@ declare type HdWebSyncDriver = {
 
 export type GetUsdModuleOptions = {
     debug?: boolean,
-    mainScriptUrlOrBlob?: string,
+    /** Defaults to Asyncify for binding compatibility. Auto opts into JSPI when supported. The first call selects the shared runtime. */
+    asyncRuntime?: "auto" | "jspi" | "asyncify",
+    /** Override the selected runtime's worker script URL or Blob. */
+    mainScriptUrlOrBlob?: string | Blob,
     wasmBinary?: ArrayBufferLike,
     locateFile?: (path: string) => string,
     getPreloadedPackage?: (file: string, size: number) => ArrayBuffer | null,

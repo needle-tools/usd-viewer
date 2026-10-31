@@ -11,7 +11,7 @@ export async function materialXDefinitionsFor(registry, nodeDefNames, shaderPath
         try {
             prim = stage?.GetPrimAtPath(path);
             attribute = prim?.GetAttribute('info:mtlx:sourceAsset');
-            const value = attribute?.GetValueString?.();
+            const value = await attribute?.GetValueString?.();
             const asset = /^@([^@]+)@/.exec(value || '')?.[1];
             if (asset) paths.add(asset);
         } finally {

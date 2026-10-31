@@ -8,11 +8,42 @@ const axis = name => new Vector3(...(name === 'X' ? [1, 0, 0] : name === 'Z' ? [
 const pose = (p, r) => new Matrix4().compose(new Vector3().copy(p), new Quaternion().copy(r), new Vector3(1, 1, 1));
 const contains = (parent, child) => child === parent || child.startsWith(parent + '/');
 
+// Loading a scene only needs body flags and scene names. Extracting the full
+// collider snapshot here also copies every collision mesh into JSON.
+export async function inspectUsdPhysics(handle) {
+  await handle.ready();
+  return handle.readStage(async stage => {
+  // The Hydra handle owns the stage; only the child/attribute wrappers below are temporary.
+  const pending=[stage.GetPrimAtPath('/')],scenes=[];
+  let dynamic=false;
+  const flag=async(prim,name,fallback)=>{
+    const attribute=prim.GetAttribute(name);
+    try{return attribute.IsValid()? !['0','false'].includes(await attribute.GetValueStringAtTime(handle.getTime())):fallback;}
+    finally{attribute.delete?.();}
+  };
+  try{
+    while(pending.length){
+      const prim=pending.pop();
+      try{
+        if(prim.GetTypeName()==='PhysicsScene')scenes.push({path:prim.GetPath()});
+        if(await flag(prim,'physics:rigidBodyEnabled',false)&&!await flag(prim,'physics:kinematicEnabled',false))dynamic=true;
+        const children=prim.GetChildren();
+        try{for(let i=0;i<children.size();i++)pending.push(children.get(i));}
+        finally{children.delete?.();}
+      }finally{prim.delete?.();}
+    }
+    return {scenes,dynamic};
+  }finally{for(const prim of pending)prim.delete?.();}
+  });
+}
+
 /** Read physics from the composed stage, including referenced layers and relationships. */
 export async function readUsdPhysics(handle) {
     await handle.ready();
-    if (!handle.driver.GetPhysicsSceneJson) throw new Error('This USD runtime does not include physics extraction.');
-    return JSON.parse(await handle.driver.GetPhysicsSceneJson());
+    return handle.readStage(async (_stage, driver) => {
+        if (!driver.GetPhysicsSceneJson) throw new Error('This USD runtime does not include physics extraction.');
+        return JSON.parse(await driver.GetPhysicsSceneJson());
+    });
 }
 
 /**

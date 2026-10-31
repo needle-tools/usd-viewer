@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { Worker } from 'node:worker_threads';
 import { test } from 'node:test';
 import { Group } from 'three';
-import { getUsdModule } from '../../src/bindings/index.js';
+import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
 
 test('sequential HTTP stages reload distinct payloads sharing a relative filename', async () => {
@@ -249,7 +249,7 @@ test('mixed relative and absolute HTTP sibling sublayers compose in authored ord
         await handle.ready();
         const stage = handle.driver.GetStage();
         assert.equal(stage.GetPrimAtPath('/Metadata').GetName(), 'Metadata', 'absolute sibling is composed');
-        assert.equal(stage.GetPrimAtPath('/Composed').GetAttribute('user:strength').GetValueString(), 'relative',
+        assert.equal(await stage.GetPrimAtPath('/Composed').GetAttribute('user:strength').GetValueString(), 'relative',
             'earlier sibling retains its stronger authored opinion');
         const mesh = scene.children.find(object => object.isMesh);
         assert.equal(mesh?.name, 'Triangle', 'relative sibling contributes geometry');

@@ -1,4 +1,4 @@
-import { mountStagePanel } from './usd/viewer/index.js';
+import { mountStagePanel } from './usd/viewer/inspect.js';
 export async function mountUsdSuite(options) {
   const context = window.needleEngineContext;
   const originalCamera = context?.mainCamera;

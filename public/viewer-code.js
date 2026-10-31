@@ -1,7 +1,9 @@
 import {viewerIcon} from './usd/viewer/icons.js';
+import {stageLayers} from './usd/scene/inspection.js';
+import {readStageLayer} from './usd/scene/sources.js';
 import {findArrays, arrayLayout, serializeArray} from './usd/viewer/arrayData.js';
 import {mountArrayEditor, attachArrayInput} from './usd/viewer/arrayEditor.js';
-import {createArrayEdits} from './viewer-array-edits.js';
+import {createArrayEdits} from './usd/editing/index.js';
 import {sourceLocations, referencedSource, referencePaths} from './viewer-source-links.js';
 
 // Inspect sources and edit typed array data without rewriting USD layers.
@@ -56,16 +58,6 @@ function highlight(text, language, decorate, offset = 0) {
 }
 
 function element(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text) node.textContent = text; return node; }
-function layerInfos(stage) {
-  // Root layer stack first, then session layers, then layers reached through composition.
-  const rootStack = stage.GetLayerStack(false) || [], fullStack = stage.GetLayerStack(true) || [], used = stage.GetUsedLayers(false) || [];
-  const local = new Set(rootStack.map(layer => layer.identifier)), seen = new Set(), layers = [];
-  const add = (layer, role) => { if (!layer?.identifier || seen.has(layer.identifier)) return; seen.add(layer.identifier); layers.push({ ...layer, role }); };
-  rootStack.forEach((layer, index) => add(layer, index ? 'sublayer' : 'root'));
-  fullStack.forEach(layer => { if (!local.has(layer.identifier)) add(layer, 'session'); });
-  used.forEach(layer => add(layer, 'layer'));
-  return layers;
-}
 
 /** Mount Code with independent file inspection and stage ownership. */
 export function mountCodePane(container, {stateKey = 'needle-usd-code-source', isVisible = () => true} = {}) {
@@ -205,7 +197,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     sources = [];
     if (binding?.example) sources.push({kind:'example',label:binding.example.title,path:binding.example.path || 'examples.js',language:'javascript',read:()=>drafts.get(contextKey()+'|example')??binding.example.code});
     let layers = [];
-    try { if (binding?.stage) layers = layerInfos(binding.stage); } catch (error) { console.warn('Code pane could not list layers',error); }
+    try { if (binding?.stage) layers = stageLayers(binding.stage); } catch (error) { console.warn('Code pane could not list layers',error); }
     const usedFiles = new Set();
     for (const layer of layers) {
       const file = layer.role !== 'session' && files.find(file => matches(layer.identifier,file.path) || matches(layer.realPath,file.path));
@@ -213,7 +205,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       let url;
       try { url = binding?.handle?.driver?.resolveAssetUrl?.(layer.realPath || layer.identifier); } catch {}
       const path = file?.path || (layer.role === 'session' ? layer.displayName : /^https?:\/\//i.test(url || '') ? url : layer.identifier);
-      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path,label:layer.displayName || basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:()=>exportLayer(layer.identifier,layer.role)});
+      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path,label:layer.displayName || basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:signal=>exportLayer(layer.identifier,layer.role,signal)});
     }
     const rootLayer = layers.find(layer=>layer.role === 'root'), rootFile = files.find(file=>rootLayer && matches(rootLayer.identifier,file.path));
     const mount = rootFile ? rootLayer.identifier.slice(0,-rootFile.path.length) : '';
@@ -221,7 +213,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       if (usedFiles.has(file) || sources.some(source=>canonical(source.path) === canonical(file.path))) continue;
       const layer = /\.(?:usd[acz]?|usdz)(?:[?#]|$)/i.test(file.path);
       sources.push({...file,kind:'file',role:'file',label:basename(file.path),language:layer?'usda':language(file.path),
-        read:layer && binding?.usd ? ()=>exportLayer(file.identifier || (mount ? mount + file.path : file.url || file.path)) : signal=>file.read(signal)});
+        read:layer && binding?.usd ? signal=>exportLayer(file.identifier || (mount ? mount + file.path : file.url || file.path),undefined,signal) : signal=>file.read(signal)});
     }
     picker.replaceChildren();
     for (const [kind,label] of [['example','JavaScript'],['layer','Layers'],['file','Files']]) {
@@ -245,14 +237,12 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     match ||= sources.find(source=>source.kind === 'example') || sources.find(source=>source.role === 'root') || sources[0];
     return match ? sourceKey(match) : '';
   }
-  async function exportLayer(identifier, role) {
-    const {stage,usd} = binding;
-    if (role === 'root') return stage.GetRootLayer().ExportToString();
-    // OpenStage resolves the registered live layer, including unsaved opinions.
-    const temporary = role?await stage.OpenLayerStage(identifier):await usd.OpenStage(identifier);
-    if (!temporary) throw new Error(`Layer ${identifier} is not available.`);
-    try { return temporary.GetRootLayer().ExportToString(); }
-    finally { usd.ReleaseStage(temporary); }
+  async function exportLayer(identifier, role, signal) {
+    const bound = binding;
+    return readStageLayer(bound.handle, bound.usd, identifier, {
+      signal, allowUncomposed: !role,
+      isCurrent: () => !disposed && binding === bound && (!bound.isCurrent || bound.isCurrent()),
+    });
   }
   function language(path) {
     const ext = extension(path);

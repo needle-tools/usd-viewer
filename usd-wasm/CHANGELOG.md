@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Narrow `/runtime`, `/viewer/inspect`, `/viewer/repl` and `/editing` entry points. Archive packaging loads on the first export; the app loads Code and Console tools only when opened.
+- Serialized `handle.readStage()` and reusable resolver-aware source reads, scene/layer/variant inspection and lightweight physics overview for embedded consumers.
+- Reusable typed array commands in `/editing`, with conflict-safe rollback that preserves newer edits and the original failure. Stage controls reject stale document mutations after asynchronous preparation or queue waits.
+- Correct loader declarations distinguish JavaScript exports from methods on the initialized native USD module. REPL output keeps its scroll position and bottom-following state through resizing.
 - Structured literal-array tables in Code’s resizable right sidebar and the JavaScript REPL: paged rows, vector/color columns, matrix grids, spreadsheet paste, validation and draft undo/redo. Code can apply typed USD array edits with reversible commands or run edited JavaScript lessons in the isolated worker.
 - Native authoring for UV, four-component color/vector, integer-vector and boolean arrays, with numeric shape and range validation.
 

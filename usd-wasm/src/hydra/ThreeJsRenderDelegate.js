@@ -395,7 +395,8 @@ class TextureRegistry {
     for (const candidate of candidates) {
       const file = await new Promise(resolve => {
         try {
-          this.config.driver().getFile(candidate, resolve);
+          // getFile lends a native byte view only for the callback's duration.
+          Promise.resolve(this.config.driver().getFile(candidate, file => resolve(file?.slice()))).catch(() => resolve(null));
         } catch {
           resolve(null);
         }
@@ -639,15 +640,21 @@ class TextureRegistry {
 
     const loadFromDriverFile = () => {
       this.driverFileQueue = this.driverFileQueue.catch(() => {}).then(() => new Promise((resolveQueue) => {
-        this.config.driver().getFile(resourcePath, async (loadedFile) => {
+        const fail = error => {
           resolveQueue();
-          if (!loadedFile) {
-            textureReject(new Error('Unknown file: ' + resourcePath));
-            return;
-          }
-
-          loadFromFile(loadedFile);
-        });
+          textureReject(error);
+        };
+        try {
+          Promise.resolve(this.config.driver().getFile(resourcePath, loadedFile => {
+            resolveQueue();
+            if (!loadedFile) {
+              textureReject(new Error('Unknown file: ' + resourcePath));
+              return;
+            }
+            try { loadFromFile(loadedFile); }
+            catch (error) { textureReject(error); }
+          })).catch(fail);
+        } catch (error) { fail(error); }
       }));
     };
 

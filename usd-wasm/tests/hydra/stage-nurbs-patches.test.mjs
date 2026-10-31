@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {Group, DoubleSide} from 'three';
-import {getUsdModule} from '../../src/bindings/index.js';
+import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 async function inspect(source, callback){

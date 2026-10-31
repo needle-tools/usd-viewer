@@ -1,7 +1,8 @@
-import { getUsdModule } from '@needle-tools/usd';
+import { getUsdModule } from '@needle-tools/usd/runtime';
 import { createThreeHydra } from '@needle-tools/usd/three';
 import { createWebGpuSupport, configureNeedleAgx, configureNeedleAgxDisplay } from '@needle-tools/usd/renderers';
-import { mountStagePanel, mountRenderModePicker, mountRepl, createSelection } from '@needle-tools/usd/viewer';
+import { mountStagePanel, mountRenderModePicker, createSelection } from '@needle-tools/usd/viewer/inspect';
+import { mountRepl } from '@needle-tools/usd/viewer/repl';
 import { mountDownloadButton } from '@needle-tools/usd/viewer/download';
 import { setPrimActive, setPrimVisible, setVariant } from '@needle-tools/usd/scene';
 import { Scene, Group, PerspectiveCamera, WebGPURenderer, AgXToneMapping, Color, AmbientLight } from 'three/webgpu';
@@ -29,7 +30,7 @@ const downloadHost = document.createElement('div'); downloadHost.style.cssText='
 const exportProgress = [];
 const downloads = mountDownloadButton({container:downloadHost,getSource:()=>current?{handle,filename:'scene.usda'}:null,stateKey:'packed-download-format',onProgress:value=>exportProgress.push(value)});
 let maskHandle, maskRoot, ktxHandle, ktxRoot;
-window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, downloads, exportProgress, setPrimActive, setPrimVisible, get status(){return status;},
+window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, downloads, exportProgress, setPrimActive, setPrimVisible, loadEditing:()=>import('@needle-tools/usd/editing'), get status(){return status;},
   async cutout(value) {
     if (!maskHandle) {
       await picker.modes.setMode('basic');panel.dispose();await handle.dispose();scene.remove(root);

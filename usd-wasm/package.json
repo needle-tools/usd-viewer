@@ -14,6 +14,14 @@
       "types": "./src/types/create.three.d.ts",
       "import": "./src/create.three.js"
     },
+    "./runtime": {
+      "types": "./src/types/runtime.d.ts",
+      "import": "./src/bindings/index.js"
+    },
+    "./editing": {
+      "types": "./src/types/editing.d.ts",
+      "import": "./src/editing/index.js"
+    },
     "./volumes": {
       "types": "./src/types/volumes.d.ts",
       "import": "./src/hydra/materialxVolume.js"
@@ -41,6 +49,14 @@
     "./viewer": {
       "types": "./src/types/viewer.d.ts",
       "import": "./src/viewer/index.js"
+    },
+    "./viewer/inspect": {
+      "types": "./src/types/viewer-inspect.d.ts",
+      "import": "./src/viewer/inspect.js"
+    },
+    "./viewer/repl": {
+      "types": "./src/types/repl.d.ts",
+      "import": "./src/viewer/repl.js"
     },
     "./viewer/download": {
       "types": "./src/types/downloadButton.d.ts",

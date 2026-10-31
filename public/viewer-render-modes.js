@@ -1,6 +1,6 @@
 import {readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
 import {configureNeedleAgxDisplay} from './usd/renderers/index.js';
-import { mountRenderModePicker } from './usd/viewer/index.js';
+import { mountRenderModePicker } from './usd/viewer/inspect.js';
 
 export async function mountRenderModes({ renderer, scene, camera, controls, preference }) {
   let selectedMode = preference;

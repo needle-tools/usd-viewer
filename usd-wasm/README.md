@@ -35,6 +35,54 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
 
+## Load only the tools you need
+
+One package serves both embedded viewers and authoring applications. Use narrow
+entry points, and import optional tools when the user opens them:
+
+| Entry point | Purpose |
+| --- | --- |
+| `@needle-tools/usd/runtime` | Load OpenUSD, without importing Three.js or UI modules |
+| `@needle-tools/usd/three` | Load and synchronize a USD stage into a host-owned Three.js scene |
+| `@needle-tools/usd/viewer/inspect` | Stage, property, selection and renderer controls, without the REPL or download UI |
+| `@needle-tools/usd/editing` | Typed array commands with sparse undo/redo |
+| `@needle-tools/usd/viewer/repl` | Optional JavaScript console and array table |
+| `@needle-tools/usd/viewer/download` | Optional ZIP/USDZ download control |
+| `@needle-tools/usd/scene` | Scene inspection, variant/payload changes and resolver-aware source reads |
+
+```js
+import { getUsdModule } from '@needle-tools/usd/runtime';
+import { createThreeHydra } from '@needle-tools/usd/three';
+
+const USD = await getUsdModule();
+const handle = await createThreeHydra({ USD, scene, url: 'model.usdz' });
+await handle.ready();
+
+// When your application opens its editing tools:
+let currentHandle = handle; // Set to null before replacing or closing the document.
+const { createArrayEdits } = await import('@needle-tools/usd/editing');
+const stage = await handle.driver.GetStage();
+const edits = createArrayEdits({
+  usd: USD, stage,
+  edit: action => handle.editStage(action),
+  isCurrent: () => currentHandle === handle,
+});
+// Keep one command owner per document; dispose it before closing the document.
+```
+
+The package root and `/viewer` remain compatible convenience exports. Native
+authoring methods such as `USD.CreateStage()` belong to the initialized OpenUSD
+module, not the JavaScript loader. These entry points share one WASM runtime:
+lazy imports defer JavaScript and UI initialization, not a second native download.
+The native runtime already contains both composition and authoring support.
+ZIP/USDZ packaging code loads on the first `handle.exportUsdz()` call. Physics,
+path tracing and volume support remain separate opt-in features.
+
+The hosted viewer uses the same SDK operations. Its Code and Console panels
+load when opened, including when restored from a saved workspace. Docking,
+example catalogs, URL state and host camera/light preferences belong to the
+application; stage mutations, source resolution and export belong to the SDK.
+
 ## Core authoring
 
 The low-level API returned by `getUsdModule()` authors rig data directly through

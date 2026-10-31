@@ -1,5 +1,6 @@
 import { Loader, Object3D } from "three";
-import { createThreeHydra, getUsdModule } from "../index.js";
+import { createThreeHydra } from "../create.three.js";
+import { getUsdModule } from "../bindings/index.js";
 
 const hydraHandlesByRoot = new WeakMap();
 

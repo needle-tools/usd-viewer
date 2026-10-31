@@ -177,6 +177,11 @@ export declare type NeedleThreeHydraHandle = {
      * USD object-change notices and Hydra dirty/resync processing drive the update.
      */
     editStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T | undefined>,
+    /** Inspect after pending native draws and stage operations, pausing animation
+     * until the callback settles. Does not refresh or change the scene revision.
+     * The callback must not author or enqueue another handle operation, and must
+     * not retain native wrappers. Rejects if the stage closes before completion. */
+    readStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T>,
     /** Resolves after the initial Hydra draw has settled.
      * If createThreeHydra was called with waitForMaterials, also waits for
      * asynchronous material generation and texture assignment.

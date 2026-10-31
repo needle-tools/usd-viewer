@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Group} from 'three';
 import {unzipSync} from 'three/addons/libs/fflate.module.js';
-import {getUsdModule} from '../../src/bindings/index.js';
+import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 
 const encoder = new TextEncoder();

@@ -19,30 +19,30 @@ function setup() {
     return {root,mesh,state,delegate,shadows:new UsdSceneShadows(stage,delegate)};
 }
 
-test('composed shadow enable defaults true and updates time/variants through cached, owned attributes', () => {
+test('composed shadow enable defaults true and updates time/variants through cached, owned attributes', async () => {
     const {root,state,delegate,shadows} = setup();
     const light = new PointLight(); root.add(light); delegate.scenePrimitives['/Light']={_object:light};
-    shadows.update(0); assert.equal(light.castShadow,true);
-    state.valid=true; state.value='false'; shadows.update(12); assert.equal(light.castShadow,false);
-    state.value='1'; shadows.update(24); assert.equal(light.castShadow,true);
+    await shadows.update(0); assert.equal(light.castShadow,true);
+    state.valid=true; state.value='false'; await shadows.update(12); assert.equal(light.castShadow,false);
+    state.value='1'; await shadows.update(24); assert.equal(light.castShadow,true);
     assert.deepEqual(state.reads,[12,24]);
     assert.equal(state.primGets,1); assert.equal(state.attributeGets,1); assert.equal(state.deletedPrim,1);
     shadows.dispose(); shadows.dispose(); assert.equal(state.deletedAttribute,1);
 });
 
-test('hidden, zero-intensity and unsupported area lights do not render shadow maps; replacement frees resources', () => {
+test('hidden, zero-intensity and unsupported area lights do not render shadow maps; replacement frees resources', async () => {
     const {root,state,delegate,shadows} = setup();
     const light = new SpotLight(); root.add(light); delegate.scenePrimitives['/Light']={_object:light};
-    shadows.update(0); assert.equal(light.castShadow,true);
-    light.intensity=0; shadows.update(0); assert.equal(light.castShadow,false);
-    light.intensity=1; root.visible=false; shadows.update(0); assert.equal(light.castShadow,false);
+    await shadows.update(0); assert.equal(light.castShadow,true);
+    light.intensity=0; await shadows.update(0); assert.equal(light.castShadow,false);
+    light.intensity=1; root.visible=false; await shadows.update(0); assert.equal(light.castShadow,false);
     root.visible=true; let freed=0; light.shadow.dispose=()=>freed++;
     const area = new RectAreaLight(); root.add(area); delegate.scenePrimitives['/Light']={_object:area};
-    shadows.update(0); assert.equal(area.castShadow,false); assert.equal(freed,1); assert.equal(state.deletedAttribute,1);
+    await shadows.update(0); assert.equal(area.castShadow,false); assert.equal(freed,1); assert.equal(state.deletedAttribute,1);
     shadows.dispose(); assert.equal(freed,1);
 });
 
-test('directional frustum includes stage bounds behind the light and transformed instanced geometry', () => {
+test('directional frustum includes stage bounds behind the light and transformed instanced geometry', async () => {
     const {root,delegate,shadows} = setup();
     root.rotation.x = -Math.PI/2; root.scale.setScalar(0.01);
     const instances = new InstancedMesh(new BoxGeometry(1,1,1), new MeshStandardMaterial(),2);
@@ -51,7 +51,7 @@ test('directional frustum includes stage bounds behind the light and transformed
     instances.userData.usdPath='/World/Instances'; root.add(instances);
     const light = new DirectionalLight(); light.position.set(0,0,0); light.target.position.set(0,0,-1); light.add(light.target); root.add(light);
     delegate.scenePrimitives['/Light']={_object:light};
-    shadows.update(0);
+    await shadows.update(0);
     assert.ok(light.shadow.camera.near < 0);
     light.shadow.updateMatrices(light);
     const bounds=shadows.bounds, camera=light.shadow.camera;
@@ -62,24 +62,24 @@ test('directional frustum includes stage bounds behind the light and transformed
     shadows.dispose();
 });
 
-test('scenes without active supported shadow lights never scan geometry bounds', () => {
+test('scenes without active supported shadow lights never scan geometry bounds', async () => {
     const {root,delegate,shadows,state} = setup();
     root.traverseVisible = () => { throw new Error('unexpected geometry scan'); };
-    shadows.update(0);
+    await shadows.update(0);
     const area = new RectAreaLight(); root.add(area); delegate.scenePrimitives['/Area']={_object:area};
-    shadows.update(0);
+    await shadows.update(0);
     const light = new PointLight(); light.intensity=0; root.add(light); delegate.scenePrimitives['/Light']={_object:light};
-    shadows.update(0);
-    light.intensity=1;light.visible=false;shadows.update(0);
-    light.visible=true;state.valid=true;state.value='false';shadows.update(0);
+    await shadows.update(0);
+    light.intensity=1;light.visible=false;await shadows.update(0);
+    light.visible=true;state.valid=true;state.value='false';await shadows.update(0);
     shadows.dispose();
 });
 
-test('late geometry visibility refits bounds without rereading the composed attribute', () => {
+test('late geometry visibility refits bounds without rereading the composed attribute', async () => {
     const {root,mesh,state,delegate,shadows} = setup();
     const light = new PointLight(); root.add(light); delegate.scenePrimitives['/Light']={_object:light};
     state.valid=true;state.value='true';mesh.visible=false;
-    shadows.update(3);assert.equal(light.castShadow,false);
+    await shadows.update(3);assert.equal(light.castShadow,false);
     mesh.visible=true;shadows.refreshBounds();assert.equal(light.castShadow,true);
     assert.deepEqual(state.reads,[3]);
     const hidden = new Group();hidden.visible=false;
@@ -88,15 +88,15 @@ test('late geometry visibility refits bounds without rereading the composed attr
     shadows.dispose();shadows.refreshBounds();
 });
 
-test('MaterialX light ordering refreshes on changes, not every frame', () => {
+test('MaterialX light ordering refreshes on changes, not every frame', async () => {
     const {root,state,delegate,shadows} = setup();let refreshes=0;
     delegate.refreshMaterialXLighting=()=>refreshes++;
     const light=new PointLight();root.add(light);delegate.scenePrimitives['/Light']={_object:light};
-    shadows.update(0);assert.equal(refreshes,1);
-    shadows.update(1);shadows.refreshBounds();assert.equal(refreshes,1);
-    state.valid=true;state.value='false';shadows.update(2);assert.equal(refreshes,2);
-    shadows.update(3);assert.equal(refreshes,2);
-    light.visible=false;shadows.update(4);assert.equal(refreshes,3);
-    delete delegate.scenePrimitives['/Light'];shadows.update(5);assert.equal(refreshes,4);
+    await shadows.update(0);assert.equal(refreshes,1);
+    await shadows.update(1);shadows.refreshBounds();assert.equal(refreshes,1);
+    state.valid=true;state.value='false';await shadows.update(2);assert.equal(refreshes,2);
+    await shadows.update(3);assert.equal(refreshes,2);
+    light.visible=false;await shadows.update(4);assert.equal(refreshes,3);
+    delete delegate.scenePrimitives['/Light'];await shadows.update(5);assert.equal(refreshes,4);
     shadows.dispose();
 });

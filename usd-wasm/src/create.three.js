@@ -2,7 +2,6 @@ import { UsdSceneShadows } from "./hydra/sceneShadows.js";
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
 import { Object3D } from "three";
-import { packageStage } from "./scene/archive.js";
 
 /**
  * @param {string} url
@@ -418,7 +417,9 @@ async function createScopedThreeHydra(config, lifetime) {
     const hydraTiming = hydraTimingEnabled();
     const useAsyncDraw = hydraAsyncDrawEnabled();
     if (hydraTiming) console.time("Hydra driver constructor");
-    driverOrPromise = new config.USD.HdWebSyncDriver(renderInterface, file);
+    driverOrPromise = typeof USD.CreateHdWebSyncDriver === "function"
+        ? USD.CreateHdWebSyncDriver(renderInterface, file)
+        : new USD.HdWebSyncDriver(renderInterface, file);
     if (hydraTiming) console.timeEnd("Hydra driver constructor");
     if (driverOrPromise instanceof Promise) {
         if (hydraTiming) console.time("Hydra driver constructor promise");
@@ -445,23 +446,11 @@ async function createScopedThreeHydra(config, lifetime) {
     let editInFlight = false;
     let drawPromise = Promise.resolve();
     let activeDrawPromise = Promise.resolve();
-    const refreshDrawInFlight = () => {
-        if (!drawInFlight || typeof driver.IsDrawPending !== "function") return;
-        try {
-            if (!driver.IsDrawPending()) {
-                drawInFlight = false;
-            }
-        }
-        catch {
-        }
-    };
     const waitForDrawCompletion = async () => {
         await drawPromise;
-        refreshDrawInFlight();
-        if (drawInFlight) {
-            await activeDrawPromise;
-            refreshDrawInFlight();
-        }
+        // A timeout warning or a completed native draw does not finish the
+        // asynchronous shadow reads that still own stage/attribute wrappers.
+        await activeDrawPromise;
     };
     let shadows;
     let time = 0;
@@ -472,7 +461,7 @@ async function createScopedThreeHydra(config, lifetime) {
     const finishDraw = () => {
         completedTimeCode = currentTimeCode;
         renderInterface.endHydraDraw?.();
-        shadows?.update(currentTimeCode);
+        return shadows?.update(currentTimeCode);
     };
     const draw = (force = false) => {
         if (disposed || drawInFlight || driver.isDeleted() || (editInFlight && !force)) {
@@ -489,11 +478,15 @@ async function createScopedThreeHydra(config, lifetime) {
                         if (hydraTiming) console.timeEnd("Hydra DrawAsync");
                     })
                     .catch((error) => console.error("Hydra draw failed", error))
-                    .finally(() => {
-                        try { finishDraw(); }
+                    .finally(async () => {
+                        try { await finishDraw(); }
                         finally { drawInFlight = false; }
                     });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw", 30000);
+                // Animation callers do not consume the returned promise. Observe
+                // failures without replacing the rejection seen by ready/edits.
+                void activeDrawPromise.catch(error => console.error("Hydra draw failed", error));
+                void drawPromise.catch(() => {});
                 return drawPromise;
             }
 
@@ -502,23 +495,27 @@ async function createScopedThreeHydra(config, lifetime) {
                 drawInFlight = true;
                 activeDrawPromise = result
                     .catch((error) => console.error("Hydra draw failed", error))
-                    .finally(() => {
-                        try { finishDraw(); }
+                    .finally(async () => {
+                        try { await finishDraw(); }
                         finally { drawInFlight = false; }
                     });
                 drawPromise = withTimeout(activeDrawPromise, "Hydra draw");
             }
             else {
-                finishDraw();
-                drawPromise = Promise.resolve();
+                drawInFlight = true;
+                activeDrawPromise = Promise.resolve().then(finishDraw).finally(() => { drawInFlight = false; });
+                drawPromise = activeDrawPromise;
             }
         }
         catch (error) {
-            finishDraw();
+            drawInFlight = true;
+            activeDrawPromise = Promise.resolve().then(finishDraw).finally(() => { drawInFlight = false; });
             console.error("Hydra draw failed", error);
-            drawPromise = Promise.resolve();
+            drawPromise = activeDrawPromise;
         }
 
+        void activeDrawPromise.catch(error => console.error("Hydra draw failed", error));
+        void drawPromise.catch(() => {});
         return drawPromise;
     };
 
@@ -579,7 +576,9 @@ async function createScopedThreeHydra(config, lifetime) {
     currentTimeCode = stageStartTimeCode;
     driver.SetTime(stageStartTimeCode);
     draw();
-    lifetime.waitForDrawCompletion = waitForDrawCompletion;
+    // Cleanup must wait the actual operation even if the public draw wait has
+    // already warned, timed out, or rejected.
+    lifetime.waitForDrawCompletion = () => activeDrawPromise;
     lifetime.waitForStageOperations = () => stageEditQueue;
     const readyPromise = waitForDrawCompletion()
         .then(() => renderInterface.waitForRprimsReady())
@@ -587,6 +586,9 @@ async function createScopedThreeHydra(config, lifetime) {
             ? renderInterface.waitForMaterialsReady()
             : undefined)
         .then(() => shadows.refreshBounds());
+    // draw() reports failures; preserve this rejection for ready() while also
+    // allowing hosts to dispose a failed load without first awaiting ready().
+    void readyPromise.catch(() => {});
 
     const stageDuration = () => stageEndTimeCode - stageStartTimeCode;
 
@@ -603,6 +605,30 @@ async function createScopedThreeHydra(config, lifetime) {
             ? (currentTimeCode - stageStartTimeCode) / stageTimeCodesPerSecond
             : 0;
         driver.SetTime(currentTimeCode);
+    };
+
+    const readStage = (callback) => {
+        const assertOpen = () => {
+            if (disposed || driver.isDeleted()) throw new Error("Cannot inspect a closed stage");
+        };
+        const result = stageEditQueue.then(async () => {
+            assertOpen();
+            await waitForDrawCompletion();
+            assertOpen();
+            editInFlight = true;
+            try {
+                const value = await callback(stage, driver);
+                assertOpen();
+                return value;
+            } finally { editInFlight = false; }
+        });
+        stageEditQueue = result.catch(() => {});
+        return result;
+    };
+    const readSelection = async (callback) => {
+        if (disposed || driver.isDeleted()) return null;
+        try { return await readStage(callback); }
+        catch (error) { if (disposed || driver.isDeleted()) return null; throw error; }
     };
 
     if (debug) {
@@ -666,20 +692,16 @@ async function createScopedThreeHydra(config, lifetime) {
         get renderedTime() { return completedTimeCode; },
         refresh: () => { sceneRevision++; return draw(); },
         /** Query authored identity only after Hydra finishes its current sync. */
-        resolvePick: async (renderPath, instanceIndex = 0) => {
-            await waitForDrawCompletion();
-            if (disposed || editInFlight || driver.isDeleted()) return null;
+        resolvePick: (renderPath, instanceIndex = 0) => readSelection(() => {
             const stride = renderInterface.getInstanceStride?.(renderPath) || 1;
             return driver.ResolvePick?.(renderPath, Math.floor(instanceIndex / stride)) || null;
-        },
-        resolveSelection: async (renderPath, count, selections) => {
-            await waitForDrawCompletion();
-            if (disposed || editInFlight || driver.isDeleted()) return null;
+        }),
+        resolveSelection: (renderPath, count, selections) => readSelection(async () => {
             const stride = renderInterface.getInstanceStride?.(renderPath) || 1;
-            const indices = driver.ResolveSelection?.(renderPath, Math.ceil(count / stride), selections);
+            const indices = await driver.ResolveSelection?.(renderPath, Math.ceil(count / stride), selections);
             if (!indices || stride === 1) return indices ?? null;
             return indices.flatMap(index => Array.from({length: stride}, (_, point) => index * stride + point)).filter(index => index < count);
-        },
+        }),
         setIncludedPurposes: async (includedPurposes) => {
             await stageEditQueue;
             if (disposed || driver.isDeleted() || typeof driver.SetIncludedPurposes !== "function") {
@@ -702,6 +724,8 @@ async function createScopedThreeHydra(config, lifetime) {
             sceneRevision++;
             return draw(true);
         },
+        /** Serialize inspection with native draws and edits without authoring or refreshing. */
+        readStage,
         editStage: (callback) => {
             const result = stageEditQueue.then(async () => {
                 if (disposed || driver.isDeleted()) return undefined;
@@ -735,6 +759,7 @@ async function createScopedThreeHydra(config, lifetime) {
                 await waitForDrawCompletion();
                 editInFlight = true;
                 try {
+                    const { packageStage } = await import("./scene/archive.js");
                     let directory;
                     do { directory = "/" + directoryForFiles + `.needle-export-${++exportSequence}`; }
                     while (USD.FS_analyzePath(directory).exists);

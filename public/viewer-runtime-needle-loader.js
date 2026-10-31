@@ -17,7 +17,8 @@ export {
   WebGLRenderer,
 } from 'three';
 
-export { createThreeHydra, getUsdModule } from './usd/index.js';
+export { createThreeHydra } from './usd/create.three.js';
+export { getUsdModule } from './usd/bindings/index.js';
 export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from './usd/plugins/index.js';
 export { EXRLoader, GLTFExporter, GLTFLoader } from 'three-examples';
 export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';

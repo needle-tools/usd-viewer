@@ -76,3 +76,65 @@ test('KTX2 container signatures override misleading image suffixes', () => {
   assert.equal(textureFileType('ktx2'), 'image/ktx2');
   assert.notEqual(textureFileType('png', magic.subarray(0, 11)), 'image/ktx2');
 });
+
+test('native texture read failures reject the texture and release the next queued read', { timeout: 2000 }, async () => {
+  for (const asynchronous of [false, true]) {
+    const failure = new Error('Native read failed');
+    const calls = [];
+    const driver = { getFile(path, callback) {
+      calls.push(path);
+      if (path === 'missing.png') {
+        if (asynchronous) return Promise.reject(failure);
+        throw failure;
+      }
+      callback(new Uint8Array([137, 80, 78, 71]));
+      return asynchronous ? Promise.resolve() : undefined;
+    } };
+    const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(),
+      USD: { ReadFile: () => null }, driver: () => driver });
+    const texture = new Texture();
+    delegate.registry.loader = { load: (_url, resolve) => resolve(texture) };
+    try {
+      const failed = assert.rejects(delegate.registry.getTexture('missing.png'), error => error === failure);
+      const next = delegate.registry.getTexture('present.png');
+      await failed;
+      assert.equal(await next, texture);
+      await delegate.registry.driverFileQueue;
+      assert.deepEqual(calls, ['missing.png', 'present.png']);
+      assert.equal(delegate.registry.objectUrls.size, 0);
+    } finally { delegate.dispose(); }
+  }
+});
+
+test('resource text falls back after rejected native reads and settles when every candidate fails', { timeout: 2000 }, async () => {
+  const calls = [];
+  let alwaysFail = false;
+  const driver = { getFile(path, callback) {
+    calls.push(path);
+    if (alwaysFail || path === 'document.mtlx') return Promise.reject(new Error('Missing native resource'));
+    callback(new TextEncoder().encode('<materialx/>'));
+    return Promise.resolve();
+  } };
+  const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(),
+    USD: { ReadFile: () => null }, driver: () => driver });
+  try {
+    assert.equal(await delegate.registry.readResourceText('document.mtlx'), '<materialx/>');
+    assert.deepEqual(calls, ['document.mtlx', '/document.mtlx']);
+    alwaysFail = true;
+    assert.equal(await delegate.registry.readResourceText('document.mtlx'), '');
+  } finally { delegate.dispose(); }
+});
+
+test('resource text owns native bytes before the getFile callback returns', async () => {
+  const bytes = new TextEncoder().encode('<materialx/>');
+  const driver = { getFile(_path, callback) {
+    callback(bytes);
+    bytes.fill(0); // Native ArAsset storage can be released/reused after the callback.
+    return Promise.resolve();
+  } };
+  const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(),
+    USD: { ReadFile: () => null }, driver: () => driver });
+  try {
+    assert.equal(await delegate.registry.readResourceText('document.mtlx'), '<materialx/>');
+  } finally { delegate.dispose(); }
+});

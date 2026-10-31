@@ -71,8 +71,10 @@ export class VdbVolumeRprim {
             if (!response.ok) throw new Error(`USD VDB field request failed (${response.status}): ${url}`);
             return response.arrayBuffer();
         }
-        const bytes = registry.readResolvedResource(path) || await new Promise(resolve =>
-            this._interface.config.driver().getFile(path, resolve));
+        const bytes = registry.readResolvedResource(path) || await new Promise((resolve, reject) => {
+            // Preserve native bytes before getFile releases its temporary asset.
+            Promise.resolve(this._interface.config.driver().getFile(path, file => resolve(file?.slice()))).catch(reject);
+        });
         if (!bytes) throw new Error(`USD VDB field is unavailable: ${path}`);
         return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }

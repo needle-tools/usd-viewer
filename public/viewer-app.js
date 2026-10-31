@@ -40,6 +40,7 @@ import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { setupViewerPhysics } from './viewer-physics.js';
 import { createViewerLighting } from './viewer-lighting.js';
+import { stageVariants, setVariant } from './usd/scene/index.js';
 
 let viewerPhysics = null;
 let viewerLighting = null;
@@ -1549,26 +1550,13 @@ async function showUsdVariants(stage, handle) {
   if (!container) return;
   container.replaceChildren(); container.hidden = true;
   if (!stage?.Traverse || !handle?.editStage) return;
-  const prims = arrayFromUsdVector(stage.Traverse());
-  const variants = [];
-  for (const prim of prims) {
-    try {
-      const path = prim.GetPath();
-      for (const setName of arrayFromUsdVector(prim.GetVariantSetNames())) {
-        const choices = arrayFromUsdVector(prim.GetVariantNames(setName));
-        if (choices.length) variants.push({ path, setName, choices, selected: prim.GetVariantSelection(setName) });
-      }
-    } finally { prim.delete?.(); }
-  }
+  const variants = stageVariants(stage).map(variant => ({...variant, selected:variant.selection}));
   const requested = new URL(location.href).searchParams.get('stageVariant');
   for (const variant of variants) {
     const parts = requested?.includes('|') ? requested.split('|') : null;
     const requestedChoice = parts ? (parts[0] === variant.path && parts[1] === variant.setName ? parts[2] : null) : requested;
     if (requestedChoice && variant.choices.includes(requestedChoice) && requestedChoice !== variant.selected) {
-      await handle.editStage(async editingStage => {
-        const prim = editingStage.GetPrimAtPath(variant.path);
-        try { await prim.SetVariantSelection(variant.setName, requestedChoice); } finally { prim.delete?.(); }
-      });
+      await setVariant(handle, variant.path, variant.setName, requestedChoice);
       variant.selected = requestedChoice;
     }
     const label = document.createElement('label'); label.textContent = variant.setName + ' ';
@@ -1585,10 +1573,7 @@ async function showUsdVariants(stage, handle) {
       const generation = loadGeneration;
       try {
         viewerPhysics?.dispose(); viewerPhysics = null;
-        await handle.editStage(async editingStage => {
-          const prim = editingStage.GetPrimAtPath(variant.path);
-          try { await prim.SetVariantSelection(variant.setName, select.value); } finally { prim.delete?.(); }
-        });
+        await setVariant(handle, variant.path, variant.setName, select.value);
         await handle.materialsReady?.();
         if (generation !== loadGeneration || currentHydraHandle !== handle) return;
         await applyStageLighting(handle, window.needleEngineContext, stage, generation);
@@ -2519,22 +2504,50 @@ async function init() {
   });
   window.addEventListener('pagehide', () => viewportInteraction?.dispose(), {once:true});
   if (window.usdWorkbench?.containers.console) {
-    const [{mountRepl}, api, three] = await Promise.all([import('./usd/viewer/repl.js'), import('./usd/scene/index.js'), import('three')]);
-    window.usdRepl = mountRepl({container:window.usdWorkbench.containers.console, stateKey:'needle-usd-repl-history',
-      getContext:()=>currentHydraHandle && suiteControls && window.usdStage ? {
-        USD, stage:window.usdStage, handle:currentHydraHandle, generation:loadGeneration,
-        scene:window.needleEngineContext?.scene || window.scene, selection:suiteControls.selection, panel:suiteControls, api, three,
-        select:value=>Array.isArray(value)?suiteControls.selectMany(value):suiteControls.selectPrim(value),
-        follow:target=>suiteControls.navigate(target),
-        inspect:(value=suiteControls.selectedPath)=>api.inspectPrim(window.usdStage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime()),
-      }:null,
-      edit:callback=>{
-        const panel=suiteControls, handle=currentHydraHandle;
-        if(!panel || !handle)return Promise.reject(new Error('No USD stage is open.'));
-        return panel.edit(callback);
-      },
-    });
-    window.addEventListener('pagehide',()=>window.usdRepl?.dispose(),{once:true});
+    const workbench = window.usdWorkbench;
+    let repl, loading, disposeMounted, disposed = false, unsubscribeVisibility, unsubscribeDispose;
+    async function ensureRepl(force = false) {
+      if (disposed) throw new Error('REPL is disposed.');
+      if (repl) return repl;
+      const [{mountRepl}, api, three] = await (loading ||= Promise.all([import('./usd/viewer/repl.js'), import('./usd/scene/index.js'), import('three')]).catch(error => { loading = null; throw error; }));
+      if (disposed) throw new Error('REPL is disposed.');
+      if (!force && !workbench.isPanelVisible('console')) return;
+      if (repl) return repl;
+      repl = mountRepl({container:workbench.containers.console, stateKey:'needle-usd-repl-history',
+        getContext:()=>currentHydraHandle && suiteControls && window.usdStage ? {
+          USD, stage:window.usdStage, handle:currentHydraHandle, generation:loadGeneration,
+          scene:window.needleEngineContext?.scene || window.scene, selection:suiteControls.selection, panel:suiteControls, api, three,
+          select:value=>Array.isArray(value)?suiteControls.selectMany(value):suiteControls.selectPrim(value),
+          follow:target=>suiteControls.navigate(target),
+          inspect:(value=suiteControls.selectedPath)=>api.inspectPrim(window.usdStage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime()),
+        }:null,
+        edit:callback=>{
+          const panel=suiteControls, handle=currentHydraHandle;
+          if(!panel || !handle)return Promise.reject(new Error('No USD stage is open.'));
+          return panel.edit(callback);
+        },
+      });
+      disposeMounted = repl.dispose;
+      repl.dispose = dispose;
+      window.usdRepl = repl;
+      return repl;
+    }
+    function dispose() {
+      if (disposed) return;
+      disposed = true; unsubscribeVisibility?.(); unsubscribeDispose?.();
+      window.removeEventListener('pagehide', dispose);
+      disposeMounted?.();
+    }
+    const reportLoadError = error => { if (!disposed) console.warn('Console could not load', error); };
+    // Programmatic users can still run before the panel has ever been opened.
+    window.usdRepl = {
+      run: async (...args) => (await ensureRepl(true)).run(...args),
+      focus() { if (!disposed) void ensureRepl(true).then(value => value?.focus()).catch(reportLoadError); },
+      dispose,
+    };
+    unsubscribeVisibility = workbench.onPanelVisibility('console', visible => { if (visible) void ensureRepl().catch(reportLoadError); });
+    unsubscribeDispose = workbench.onDispose(dispose);
+    window.addEventListener('pagehide', dispose, {once:true});
   }
   renderer.domElement.addEventListener("drop", dropHandler);
   renderer.domElement.addEventListener("dragover", dragOverHandler);

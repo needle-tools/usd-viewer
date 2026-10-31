@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {Group} from 'three';
-import {getUsdModule} from '../../src/bindings/index.js';
+import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 import {createInstanceMaskCache} from '../../src/viewer/instanceSelection.js';
 
@@ -43,9 +43,9 @@ test('failed edits synchronize authored state and leave the edit queue usable',a
   const visible=()=>scene.children.filter(o=>o.isMesh&&o.visible).length;
   try{
     await handle.ready();assert.equal(visible(),1);const revision=handle.revision;
-    await assert.rejects(handle.editStage(stage=>{const p=stage.GetPrimAtPath('/Cube');try{p.SetActive(false);}finally{p.delete();}throw new Error('after mutation');}),/after mutation/);
+    await assert.rejects(handle.editStage(async stage=>{const p=stage.GetPrimAtPath('/Cube');try{await p.SetActive(false);}finally{p.delete();}throw new Error('after mutation');}),/after mutation/);
     assert.equal(visible(),0);assert.ok(handle.revision>revision);
-    await handle.editStage(stage=>{const p=stage.GetPrimAtPath('/Cube');try{p.SetActive(true);}finally{p.delete();}});assert.equal(visible(),1);
+    await handle.editStage(async stage=>{const p=stage.GetPrimAtPath('/Cube');try{await p.SetActive(true);}finally{p.delete();}});assert.equal(visible(),1);
     const events=[];
     await Promise.all([handle.editStage(async()=>{events.push(1);await new Promise(resolve=>setTimeout(resolve,10));events.push(2);}),handle.editStage(()=>events.push(3))]);
     assert.deepEqual(events,[1,2,3]);

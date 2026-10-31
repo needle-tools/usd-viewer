@@ -1,26 +1,5 @@
-const lightTypes = new Set(['DistantLight', 'SphereLight', 'RectLight', 'DiskLight', 'CylinderLight', 'DomeLight', 'PortalLight', 'GeometryLight']);
-
-/** Inspect the composed stage, including unsupported emitters and lights authored on meshes/volumes. */
-export function hasAuthoredUsdLights(root, stage) {
-  let found = false;
-  root?.traverse(object => { if (lightTypes.has(object.userData?.usdTypeName)) found = true; });
-  if (found || !stage?.Traverse) return found;
-  const prims = stage.Traverse();
-  try {
-    for (let i = 0; i < prims.size(); i++) {
-      const prim = prims.get(i);
-      try {
-        if (lightTypes.has(prim.GetTypeName())) return true;
-        const schemas = prim.GetAppliedSchemas?.();
-        if (schemas) {
-          try { for (let j = 0; j < schemas.size(); j++) if (['LightAPI', 'MeshLightAPI', 'VolumeLightAPI'].includes(schemas.get(j))) return true; }
-          finally { schemas.delete?.(); }
-        }
-      } finally { prim.delete?.(); }
-    }
-  } finally { prims.delete?.(); }
-  return false;
-}
+import { hasAuthoredUsdLights } from './usd/scene/index.js';
+export { hasAuthoredUsdLights };
 
 /** Own only the viewer's fallback illumination; USD dome textures remain owned by Hydra. */
 export function createViewerLighting({ scene, loadEnvironment, isCurrent = () => true }) {

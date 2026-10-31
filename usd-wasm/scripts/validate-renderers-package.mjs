@@ -61,6 +61,12 @@ try {
         matrices.Set([[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,2,0,1]]],Number.NaN);
         const rotations=prototype.CreateAttribute('rotations','quatf[]',true);
         rotations.Set([[1,0,0,0]],Number.NaN);
+        const {createArrayEdits}=await window.packed.loadEditing();
+        const edits=createArrayEdits({usd:USD,stage,edit:action=>action(),isCurrent:()=>true});
+        try {
+          await edits.apply(stage.GetRootLayer().GetIdentifier(),{property:{primPath:'/Asset',name:'rotations',type:'quatf[]',time:NaN}},stage.GetRootLayer().ExportToString(),[[0,1,0,0]]);
+          await edits.undo();await edits.redo();await edits.undo();
+        }finally{edits.dispose();}
         const weights=prototype.CreateAttribute('primvars:weights','float[]',false);
         weights.SetMetadata('interpolation','vertex');weights.SetMetadata('elementSize',3);
         await stage.GetRootLayer().SetSubLayerPaths([]);
