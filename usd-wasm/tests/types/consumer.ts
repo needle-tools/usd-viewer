@@ -5,7 +5,8 @@ import { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from '@
 import { needleUSD } from '@needle-tools/usd/vite';
 import { createMaterialXVolumeMaterial, createVdbVolumeMesh } from '@needle-tools/usd/volumes';
 import { readUsdPhysics, createUsdPhysics } from '@needle-tools/usd/physics';
-import { inspectUsdPhysics } from '@needle-tools/usd/physics';
+import { inspectUsdPhysics, getUsdPhysicsLimitations } from '@needle-tools/usd/physics';
+import {createUsdMechanism,createJointHelpers,mountJointControls} from '@needle-tools/usd/kinematics';
 import { getUsdModule as loadRuntime } from '@needle-tools/usd/runtime';
 import { createArrayEdits, type ArrayEdits } from '@needle-tools/usd/editing';
 import { mountStagePanel as mountInspection } from '@needle-tools/usd/viewer/inspect';
@@ -21,7 +22,7 @@ void getUsdModule({asyncRuntime:'unknown'});
 const info = getOpenUsdBuildInfo(USD);
 const loaded = await loadOpenUsdBuildInfo();
 const scene = new Scene();
-void [inspectUsdPhysics, loadRuntime, mountInspection, mountOptionalConsole];
+void [inspectUsdPhysics, getUsdPhysicsLimitations, createUsdMechanism, createJointHelpers, mountJointControls, loadRuntime, mountInspection, mountOptionalConsole];
 const stage = await createThreeHydra({ USD, scene, complexity: 'high',
     materialXVolumeFactory: createMaterialXVolumeMaterial, usdVolumeFactory: createVdbVolumeMesh });
 await stage.setComplexity('medium');

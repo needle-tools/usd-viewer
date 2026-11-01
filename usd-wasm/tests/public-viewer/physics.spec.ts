@@ -22,6 +22,7 @@ for(const dynamic of [false,true])test(`collider extraction waits for simulation
   });
   expect(await page.evaluate(()=>(window as any).physicsExtractions)).toBe(0);
   if(dynamic){
+    await expect(page.getByRole('button',{name:'Interact',exact:true})).toBeDisabled();
     await page.getByRole('button',{name:'Simulate',exact:true}).click();
     await expect.poll(()=>page.evaluate(()=>(window as any).physicsExtractions)).toBe(1);
     await expect.poll(()=>page.evaluate(()=>(window as any).physicsShapes)).toBeGreaterThan(0);
@@ -119,4 +120,42 @@ test('host configuration can disable physics without a URL parameter', async ({ 
   await page.goto('/?viewer=three&file=/test-fixtures/coverage/advanced/physics-dominoes.usda');
   await page.waitForFunction(() => !!(window as any).usdHydra);
   await expect(page.locator('#usd-physics-controls')).toBeHidden(); expect(physicsRequests).toEqual([]);
+});
+
+test('selecting a joint or movable body offers Interact without opening Simulation first',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/?workspace=studio&viewer=three&render=basic&file=/test-fixtures/coverage/advanced/physics-prismatic-joint.usda');await stageReady(page);
+  const joint=await page.evaluate(async()=>{
+    const w=window as any,{inspectUsdPhysics}=await import('/usd/physics/createPhysics.js'),overview=await inspectUsdPhysics(w.usdHydra);
+    w.usdStagePanel.selectPrim(overview.joints[0]);return overview.joints[0];
+  });
+  expect(joint).toBeTruthy();
+  const shortcut=page.locator('.usd-physics-shortcut').getByRole('button',{name:'Interact',exact:true});
+  await expect(shortcut).toBeVisible();await shortcut.click();
+  await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect.poll(()=>page.evaluate(()=>(window as any).usdPhysics?.simulation?.joints.size)).toBeGreaterThan(0);
+  // Repeated use of the shortcut must not pause an already active interaction.
+  await page.evaluate(()=>(window as any).usdStagePanel.selectPrim('/World/BodyB/Visual'));
+  await shortcut.click();expect(await page.evaluate(()=>(window as any).usdPhysics.simulation.isPlaying())).toBe(true);
+  await page.evaluate(()=>(window as any).usdStagePanel.selectPrim('/World/Floor'));
+  await expect(shortcut).toBeHidden();
+  await clearStage(page);await expect(page.locator('.usd-physics-shortcut')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+for(const viewer of ['three','needle'])test(`${viewer}: Interact uses kinematics without Rapier and exposes joint axes and limits in View helpers`,async({page})=>{
+ const rapier:string[]=[],errors:string[]=[];page.on('request',r=>{if(r.url().includes('/rapier/'))rapier.push(r.url());});page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`/?workspace=studio&viewer=${viewer}&render=beauty&file=/test-fixtures/coverage/advanced/physics-prismatic-joint.usda`);await stageReady(page);
+ await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).usdPhysics?.simulation?.mode)).toBe('interaction');
+ const helpers=()=>page.evaluate(()=>{const values:any[]=[];(window as any).usdHydra.scene.traverse((o:any)=>{if(o.userData.usdJointPath)values.push({visible:o.visible,points:o.geometry.attributes.position.count,excluded:o.userData.usdExcludeFromBounds});});return values;});
+ await expect.poll(helpers).toEqual([{visible:true,points:20,excluded:true}]);
+ await openAppMenu(page,'view');const details=page.locator('[data-usd-menu=view] .usd-settings-section').filter({hasText:'Helpers'});await details.locator('summary').click();
+ await page.getByRole('checkbox',{name:'Show joint constraints',exact:true}).uncheck();await expect.poll(async()=>(await helpers())[0].visible).toBe(false);
+ await page.getByRole('checkbox',{name:'Show joint constraints',exact:true}).check();await expect.poll(async()=>(await helpers())[0].visible).toBe(true);
+ await page.keyboard.press('Escape');
+ await page.evaluate(()=>{const sim=(window as any).usdPhysics.simulation;sim.setJointValue([...sim.joints.keys()][0],.25);});
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Reset',exact:true}).click();
+ await expect.poll(helpers).toEqual([]);expect(rapier).toEqual([]);expect(errors).toEqual([]);
 });

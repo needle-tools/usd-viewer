@@ -81,3 +81,9 @@
 .usd-tree-row[data-active=false] .usd-tree-name,.usd-tree-row[data-defined=false] .usd-tree-name,.usd-tree-row[data-abstract=true] .usd-tree-name {color:var(--usd-tree-source-color,var(--text-secondary,#647578))}
 .usd-tree-row[data-selected=true] .usd-tree-name {color:inherit}
 .usd-tree-row[data-prototype=true] {border-top:1px solid var(--border-subtle,#ccd4d4)}
+
+.usd-joint-controls { display:grid; gap:var(--usd-space-2,8px); width:100%; }
+.usd-joint-control { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:var(--usd-space-field,4px) var(--usd-space-2,8px); margin:0; }
+.usd-joint-control > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.usd-joint-control > output { font-variant-numeric:tabular-nums; color:var(--text-secondary,inherit); }
+.usd-joint-control > input { grid-column:1/-1; min-width:0; width:100%; margin:0; }

@@ -167,6 +167,7 @@
       imports["oidn-webgpu"] = "/oidn-webgpu/dist/oidn.js";
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
+      imports["closed-chain-ik/core"] = "/modules/kinematics.js";
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });
       document.currentScript.after(importMap);

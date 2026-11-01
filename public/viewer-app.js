@@ -48,6 +48,11 @@ import { createViewerLighting } from './viewer-lighting.js';
 import { stageVariants, setVariant } from './usd/scene/index.js';
 
 let viewerPhysics = null;
+function setViewerPhysics(physics) {
+  viewerPhysics=physics;
+  window.usdPhysics=physics || undefined;
+  window.usdWorkbench?.setPhysics(physics);
+}
 let viewerLighting = null;
 
 const SHOW_OPENUSD_TEST_ASSETS = false;
@@ -1627,7 +1632,7 @@ function showUsdDetail(stage, handle) {
     controls.forEach(control => { control.disabled = true; });
     const generation = loadGeneration;
     try {
-      viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined;
+      viewerPhysics?.dispose(); setViewerPhysics(null);
       await handle.setComplexity(select.value);
       if (generation !== loadGeneration || currentHydraHandle !== handle) return;
       selected = select.value;
@@ -1638,7 +1643,7 @@ function showUsdDetail(stage, handle) {
       await applyStageLighting(handle, window.needleEngineContext, stage, generation);
       const physics = await setupViewerPhysics(handle, window.needleEngineContext, window.camera, window._controls, () => generation === loadGeneration && currentHydraHandle === handle, options.physics);
       if (generation !== loadGeneration || currentHydraHandle !== handle) { physics?.dispose(); return; }
-      viewerPhysics = physics; window.usdPhysics = physics;
+      setViewerPhysics(physics);
     } catch (error) { select.value = selected; console.error('Failed to change USD detail', error); }
     finally { controls.forEach(control => { control.disabled = false; }); }
   });
@@ -1672,14 +1677,13 @@ async function showUsdVariants(stage, handle) {
       controls.forEach(control => { control.disabled = true; });
       const generation = loadGeneration;
       try {
-        viewerPhysics?.dispose(); viewerPhysics = null;
+        viewerPhysics?.dispose(); setViewerPhysics(null);
         await setVariant(handle, variant.path, variant.setName, select.value);
         if (generation !== loadGeneration || currentHydraHandle !== handle) return;
         await applyStageLighting(handle, window.needleEngineContext, stage, generation);
         const physics = await setupViewerPhysics(handle, window.needleEngineContext, window.camera, window._controls, () => generation === loadGeneration && currentHydraHandle === handle, options.physics);
         if (generation !== loadGeneration || currentHydraHandle !== handle) { physics?.dispose(); return; }
-        viewerPhysics = physics;
-        window.usdPhysics = viewerPhysics;
+        setViewerPhysics(physics);
         const url = new URL(location.href);
         url.searchParams.set('stageVariant', [variant.path, variant.setName, select.value].join('|'));
         history.replaceState({}, '', url);
@@ -1705,9 +1709,8 @@ async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = 
   viewportInteraction?.clear();
   suiteControls?.dispose(); suiteControls = null; window.usdStagePanel = null;
   ready = false;
-  viewerPhysics?.dispose(); viewerPhysics = null;
+  viewerPhysics?.dispose(); setViewerPhysics(null);
   viewerLighting?.dispose(); viewerLighting = null;
-  window.usdPhysics = undefined;
   const variantControls = document.getElementById('usd-variant-controls');
   if (variantControls) { variantControls.replaceChildren(); variantControls.hidden = true; }
   await showViewportHelpers(window.usdWorkbench?.containers.helpers, null);
@@ -2234,8 +2237,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     }
     const physics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
     if (generation !== loadGeneration) { physics?.dispose(); return; }
-    viewerPhysics = physics;
-    window.usdPhysics = physics;
+    setViewerPhysics(physics);
 
     await showViewportHelpers(window.usdWorkbench?.containers.helpers, handle, async () => {if(currentHydraHandle === handle) await suiteControls?.refresh();});
     if(generation !== loadGeneration || currentHydraHandle !== handle)return;
@@ -2252,16 +2254,16 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       onPickModeChange: mode => viewportInteraction?.setPickMode(mode),
       onOpen: () => window.usdWorkbench?.openPanel('stage'),
       onStage: info => window.usdWorkbench?.setStage(info),
-      scene: needleContext?.scene || window.scene, camera: window.camera, controls: window._controls, beforeEdit: () => { viewerPhysics?.dispose(); viewerPhysics = null; window.usdPhysics = undefined; }, afterEdit: async () => {
+      scene: needleContext?.scene || window.scene, camera: window.camera, controls: window._controls, beforeEdit: () => { viewerPhysics?.dispose(); setViewerPhysics(null); }, afterEdit: async () => {
       if (generation !== loadGeneration || currentHydraHandle !== handle) return;
       await applyStageLighting(handle, needleContext, stage, generation);
-      viewerPhysics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
-      window.usdPhysics = viewerPhysics;
+      setViewerPhysics(await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics));
       await showUsdVariants(stage, handle);
       syncViewportHelpers(window.usdWorkbench?.containers.helpers);
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
     window.usdStagePanel = suiteControls;
+    window.usdWorkbench?.setPhysics(viewerPhysics,suiteControls.selectedPath);
     window.usdWorkbench?.code.show({ stage, usd: USD, handle, edit:callback=>suiteControls.edit(callback), navigate:target=>{followingSource=true;try{return suiteControls.navigate(target);}finally{followingSource=false;}}, runExample:activeCatalogAsset?.executable?source=>runEditedApiExample(activeCatalogAsset,source):undefined, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     viewportInteraction?.select(suiteControls.selection);
     await lightingReady;

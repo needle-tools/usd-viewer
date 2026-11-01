@@ -65,3 +65,20 @@ test('interaction holds the assembly base and solves a dependent fixed link whil
   sim.endDrag();assert.equal(base.isDynamic(),true,'temporary base hold is released');
  }finally{sim.dispose();}
 });
+
+test('off-axis dragging yields to a slider limit instead of pulling the mechanism apart',async()=>{
+ const root=new Group(),base=body('/Base',[0,0,0]);base.mass=40;base.diagonalInertia=[9,6,5];
+ const s=snapshot([base,body('/Drawer',[.3,0,.8]),body('/Other',[.3,0,.6])]);
+ s.joints=['Drawer','Other'].map((name,i)=>({path:'/Slide'+i,type:'prismatic',body0:'/Base',body1:'/'+name,axis:'X',position0:[.3,0,i?.6:.8],position1:[0,0,0],rotation0:identity,rotation1:identity,limit:{enabled:true,lower:0,upper:.46}}));
+ const sim=await createUsdPhysics({handle:handle(root),snapshot:s,rapier:R,mode:'interaction'});
+ try{
+  sim.play();sim.beginDrag('/Drawer',new Vector3(.4,-.3,.7));sim.moveDrag(new Vector3(2,3,1));
+  for(let frame=0;frame<240;frame++){
+   sim.update(1/120);const drawer=sim.bodies.get('/Drawer').body.translation();
+   assert.ok(drawer.x<=.761&&drawer.x>=.299,'drag does not override the authored travel range');
+  }
+  assert.ok(sim.bodies.get('/Drawer').body.translation().x>.74,'drawer reaches its stop');
+  assert.ok(new Vector3().copy(sim.bodies.get('/Base').body.translation()).length()<1e-5);
+  assert.ok(new Vector3().copy(sim.bodies.get('/Other').body.translation()).distanceTo(new Vector3(.3,0,.6))<.001);
+ }finally{sim.dispose();}
+});

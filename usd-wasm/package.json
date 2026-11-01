@@ -65,6 +65,10 @@
     "./viewer/style.css": {
       "types": "./src/types/viewer-style.d.ts",
       "default": "./src/viewer/style.css"
+    },
+    "./kinematics": {
+      "types": "./src/types/kinematics.d.ts",
+      "import": "./src/physics/kinematics.js"
     }
   },
   "files": [
@@ -106,7 +110,8 @@
     "@sparkjsdev/spark": ">=2.2.0",
     "three": ">=0.160.0",
     "@meimu/mutracer": "^0.2.0",
-    "three-gpu-pathtracer": "^0.0.27"
+    "three-gpu-pathtracer": "^0.0.27",
+    "closed-chain-ik": ">=0.0.7"
   },
   "peerDependenciesMeta": {
     "@needle-tools/engine": {
@@ -119,6 +124,9 @@
       "optional": true
     },
     "three-gpu-pathtracer": {
+      "optional": true
+    },
+    "closed-chain-ik": {
       "optional": true
     }
   },

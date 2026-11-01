@@ -58,6 +58,7 @@ export type UsdViewportHelpers = {
     points?: boolean;
     lights?: boolean;
     cameras?: boolean;
+    joints?: boolean;
 };
 
 export type threeJsRenderDelegateConfig = {

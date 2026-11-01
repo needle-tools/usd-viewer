@@ -214,6 +214,11 @@ export async function mountWorkbench() {
   const simulationControls = document.getElementById('usd-physics-controls');
   if (simulationControls) hosts.simulation.append(simulationControls);
   const simulationEmpty = element('div', 'usd-panel-empty', 'No simulation'); hosts.simulation.append(simulationEmpty);
+  let physicsController=null, selectedPrim='';
+  const physicsShortcut=element('div','usd-physics-shortcut');physicsShortcut.hidden=true;
+  const interactSelection=button('Interact',async()=>{openPanel('simulation');await physicsController?.interact();},'Drag movable parts within their joint limits','play_arrow');
+  physicsShortcut.append(interactSelection);hosts.properties.append(physicsShortcut);
+  function updatePhysicsShortcut(){physicsShortcut.hidden=!physicsController?.canInteract(selectedPrim);hosts.properties.append(physicsShortcut);}
   const updateSimulation = () => { simulationEmpty.hidden = !!simulationControls && !simulationControls.hidden; };
   const simulationObserver = new MutationObserver(updateSimulation);
   if (simulationControls) simulationObserver.observe(simulationControls, {attributes:true,attributeFilter:['hidden']}); updateSimulation();
@@ -542,7 +547,8 @@ export async function mountWorkbench() {
       // belong to the saved workspace, including when the stage has no animation.
       placeholders.get('timeline').hidden = !!info?.time;
     },
-    selectPrim(path) { codePane.follow(path); if(productMode === 'studio' && path && !isCompact && !isPanelVisible('code')) openPanel('properties'); },
+    setPhysics(controller,path=selectedPrim) { physicsController=controller;selectedPrim=path;updatePhysicsShortcut(); },
+    selectPrim(path) { selectedPrim=path;updatePhysicsShortcut();codePane.follow(path); if(productMode === 'studio' && path && !isCompact && !isPanelVisible('code')) openPanel('properties'); },
     dispose() { if (disposed) return; disposed = true; examplesDialog.close(); for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };
   window.addEventListener('pagehide', () => { if (!disposed && productMode === 'studio') saveStudioLayout(); }, { once: true });

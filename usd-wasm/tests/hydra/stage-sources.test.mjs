@@ -207,20 +207,20 @@ test('stageResources reports unique loaded texture identities without retaining 
 
 test('physics overview uses the native read boundary without extracting collider geometry', async () => {
   const USD = await getUsdModule({ print() {}, printErr() {} });
-  const buffer = encode('#usda 1.0\ndef PhysicsScene "Physics" {}\ndef Cube "Body" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]) {\n bool physics:rigidBodyEnabled = true\n}\n');
+  const buffer = encode('#usda 1.0\ndef PhysicsScene "Physics" {}\ndef Cube "Body" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]) {\n bool physics:rigidBodyEnabled = true\n}\ndef PhysicsPrismaticJoint "Joint" {}\n');
   const handle = await createThreeHydra({ USD, scene: new Group(), buffer, url: 'overview.usda' });
   let fullReads = 0;
   const original = handle.driver.GetPhysicsSceneJson;
   handle.driver.GetPhysicsSceneJson = function () { fullReads++; return original.call(this); };
   try {
-    assert.deepEqual(await inspectUsdPhysics(handle), { scenes: [{ path: '/Physics' }], dynamic: true });
+    assert.deepEqual(await inspectUsdPhysics(handle), { scenes: [{ path: '/Physics' }], dynamic: true, bodies: ['/Body'], joints: ['/Joint'] });
     assert.equal(fullReads, 0);
     const queued = handle.editStage(stage => {
       const prim = stage.GetPrimAtPath('/Body'), attribute = prim.GetAttribute('physics:rigidBodyEnabled');
       try { assert.equal(attribute.SetBool(false, NaN), true); }
       finally { attribute.delete(); prim.delete(); }
     });
-    assert.deepEqual(await inspectUsdPhysics(handle), { scenes: [{ path: '/Physics' }], dynamic: false });
+    assert.deepEqual(await inspectUsdPhysics(handle), { scenes: [{ path: '/Physics' }], dynamic: false, bodies: [], joints: ['/Joint'] });
     await queued;
     assert.equal(fullReads, 0, 'overview never allocates the full physics snapshot');
     await readUsdPhysics(handle);

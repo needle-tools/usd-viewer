@@ -153,6 +153,13 @@ expressions remain source code and are never evaluated for inspection.
 a geometry payload, separate material layers, finish variants and shot lighting.
 **Texture Formats** contains real KTX2 UASTC, linear EXR, PNG, JPEG and TGA inputs.
 
+For movable assemblies, select a rigid body or joint and click **Interact** in
+Properties, or open **Window → Simulation → Interact**. Drag the part in the
+viewport; joints keep their authored limits and attachments. **Reset** restores
+the scene. Joint sliders are also available in Simulation, and **View → Helpers →
+Joint constraints** controls viewport axes and limits. Interact uses an optional
+kinematics core; **Simulate** loads Rapier for supported contact simulations.
+
 Fresh viewer settings select Beauty and Adaptive. Render mode, quality and detail
 choices are remembered; an explicit URL overrides them. Scene background and UI
 light/dark theme are separate settings. The Examples panel preserves selection,

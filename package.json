@@ -18,6 +18,7 @@
     "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
     "@needle-tools/materialx": "1.8.0",
     "@sparkjsdev/spark": "2.2.0",
+    "closed-chain-ik": "https://codeload.github.com/gkjohnson/closed-chain-ik-js/tar.gz/3e01f7ba953daea5b0388135d9390504fd4ea0e2",
     "dockview-core": "7.0.4",
     "fastify": "^5.8.5",
     "three": "npm:@needle-tools/three@0.185.2-alpha.6",
@@ -41,5 +42,8 @@
     "usd",
     "usdz",
     "viewer"
-  ]
+  ],
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
 }

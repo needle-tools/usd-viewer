@@ -823,32 +823,70 @@ implemented. Reset/dispose before changing time or variants, then recreate
 the simulation from the updated stage.
 
 In the public viewer, open **Window → Simulation**, then choose **Interact**
-to drag movable parts within authored joint limits. The assembly base is held
-while dragging a connected part; fixed attachments and dependent joints remain
-in the same solver. This mode disables gravity and contact collision, so PhysX
-SDF collision meshes are not needed to inspect a mechanism. Choose **Simulate**
-for contact dynamics and gravity. **Reset** restores the authored scene.
-Both actions load the existing optional Rapier runtime on demand.
+to drag movable parts within authored joint limits. Selecting a movable rigid
+body or joint also offers **Interact** in Properties. The Simulation pane also
+provides bounded joint controls. **View → Helpers → Joint constraints** toggles
+axes, fixed anchors, slider stops and hinge arcs; the handles can be dragged.
 
-SDK hosts select the same behavior with
-`createUsdPhysics({handle, rapier, mode: 'interaction'})`. Picking accepts
-`bodyForObject(object, instanceIndex)`; each render instance resolves to its
-composed USD body instead of borrowing its prototype's transform. Interaction
-uses authored mass/inertia where available, with unit weights for missing
-values; its motion is for joint inspection, not a dynamics reference.
+Interact uses kinematics, without Rapier, gravity, contacts or time integration.
+The base stays fixed. Fixed links, reversed joint frames, native instance picks,
+PhysX/SimReady mimic relationships and closed linkage constraints use the USD
+body relationships, independently of the prim hierarchy. Inconsistent authored
+frames are reported and held in place. Unsupported joint types are reported;
+posing currently supports fixed, revolute and prismatic joints. Poses are
+transient; Reset restores the authored scene.
+
+The optional `@needle-tools/usd/kinematics` entry uses
+[`closed-chain-ik/core`](https://github.com/gkjohnson/closed-chain-ik-js).
+The sample app pins its core-entry-point revision `3e01f7ba953daea5b0388135d9390504fd4ea0e2`
+(version 0.0.7), newer than the npm 0.0.3 release. Install that revision or a
+compatible version with the core entry point:
+
+```sh
+npm install https://codeload.github.com/gkjohnson/closed-chain-ik-js/tar.gz/3e01f7ba953daea5b0388135d9390504fd4ea0e2
+```
+
+```js
+import {createUsdMechanism, createJointHelpers, mountJointControls} from '@needle-tools/usd/kinematics';
+const mechanism = await createUsdMechanism({handle});
+const helpers = createJointHelpers(mechanism);
+const controls = mountJointControls(container, mechanism);
+mechanism.play();
+// On input: beginDrag(bodyPath, stagePoint), moveDrag(stagePoint), endDrag().
+// Explicit poses use degrees for hinges and stage units for sliders:
+mechanism.setJointValue(jointPath, 30);
+// In the viewer's update loop:
+helpers.update(); controls.update();
+// On unload, before disposing the Hydra handle:
+controls.dispose(); helpers.dispose(); mechanism.dispose();
+```
+
+`loadKinematics: async () => module` accepts a host-provided core module. Viewing
+alone loads neither that optional peer nor Rapier. The app's on-demand core
+bundle is 64 KB raw / 20 KB gzip, compared with 4.3 MB / 1.65 MB gzip for the
+standalone Rapier wrapper with embedded WASM.
+
+Choose **Simulate** for contact dynamics and gravity. That action loads Rapier
+on demand. The app rejects incomplete simulations, including unsupported PhysX
+SDF colliders, before starting. SDK callers can use `allowPartial: false` with
+`createUsdPhysics` for the same strict check; `getUsdPhysicsLimitations(snapshot)`
+reports known descriptor limitations before loading a physics runtime.
+`inspectUsdPhysics(handle)` lists scene, movable body and joint paths without
+extracting collider geometry. The legacy `createUsdPhysics({mode:'interaction'})`
+solver mode remains available to SDK callers supplying Rapier.
 
 To disable public-viewer physics completely, use `?physics=off` or set
 `window.usdViewerOptions = { physics: false }` before the entry script loads.
 No physics runtime is downloaded in that mode. In Needle mode, simulation uses
 the engine's shared lazy module registry. The Three viewer loads the standalone
-runtime only after **Interact** or **Simulate** is clicked.
+runtime only after **Simulate** is clicked.
 The public viewer uses Rapier 0.21.0, including an import-map override of the
 pinned engine bundle's older Rapier chunk. Both loaders resolve the same module;
 the newer wrapper fixes the deprecated WASM initialization call.
 
 Hosts can configure `init({ physics: { loadRapier: async () => module } })`, or
 provide `physics.moduleUrl` for a different module location. For another physics
-engine, `physics.createSimulation({ handle, snapshot, scenePath, mode })` can return an
+contact engine, `physics.createSimulation({ handle, snapshot, scenePath, mode })` can return an
 adapter implementing the simulation methods used by the controls (`play`,
 `pause`, `isPlaying`, `update`, `reset`, `dispose`, `bodyForObject`, `beginDrag`,
 `moveDrag`, `endDrag`). This bypasses the Rapier loader. The package's composed

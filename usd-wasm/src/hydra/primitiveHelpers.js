@@ -1,9 +1,9 @@
 import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments, Points, PointsMaterial, Vector3 } from 'three';
 
-export const helperKinds = ['curves', 'controlPoints', 'points', 'lights', 'cameras'];
+export const helperKinds = ['curves', 'controlPoints', 'points', 'lights', 'cameras', 'joints'];
 export function viewportHelpers(config = {}) {
     const all = !!config.showScenePrimitiveHelpers;
-    return { curves:false, controlPoints:false, points:false,
+    return { curves:false, controlPoints:false, points:false, joints:false,
         lights:all || !!config.showLightHelpers, cameras:all || !!config.showCameraHelpers, ...config.helpers };
 }
 

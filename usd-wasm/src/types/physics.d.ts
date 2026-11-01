@@ -32,6 +32,8 @@ export type PhysicsJoint = {
     jointEnabled: boolean; collisionEnabled: boolean; axis?: 'X' | 'Y' | 'Z';
     limit?: PhysicsLimit; drive?: PhysicsDrive; minEnabled?: boolean; maxEnabled?: boolean;
     breakForce: number | null; breakTorque: number | null;
+    /** Optional kinematic coupling: value = multiplier * reference value + offset. */
+    mimic?: {joint:string;multiplier:number;offset:number};
 };
 export type UsdPhysicsSnapshot = {
     metersPerUnit: number; kilogramsPerUnit: number; upAxis: string;
@@ -64,8 +66,9 @@ export interface UsdPhysicsSimulation {
     dispose(): void;
 }
 export function readUsdPhysics(handle: NeedleThreeHydraHandle): Promise<UsdPhysicsSnapshot>;
-/** Body flags and scene paths only; does not allocate collider geometry. */
-export function inspectUsdPhysics(handle: NeedleThreeHydraHandle): Promise<{scenes:{path:string}[];dynamic:boolean}>;
+export function getUsdPhysicsLimitations(snapshot:UsdPhysicsSnapshot):PhysicsIssue[];
+/** Scene, movable body and joint paths; does not allocate collider geometry. */
+export function inspectUsdPhysics(handle: NeedleThreeHydraHandle): Promise<{scenes:{path:string}[];dynamic:boolean;bodies:string[];joints:string[]}>;
 export function createUsdPhysics(options: {
     handle: NeedleThreeHydraHandle;
     /** An initialized @dimforge/rapier3d-compat module (tested with 0.19.3 and 0.21.0). */
@@ -73,6 +76,8 @@ export function createUsdPhysics(options: {
     root?: Object3D;
     snapshot?: UsdPhysicsSnapshot;
     scenePath?: string;
+    /** Reject incomplete simulation when false. Defaults to true for compatibility. */
+    allowPartial?: boolean;
     /** Interaction solves joint constraints with a held base; gravity and contacts are disabled. */
     mode?: 'simulation' | 'interaction';
 }): Promise<UsdPhysicsSimulation>;

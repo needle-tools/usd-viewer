@@ -16,6 +16,7 @@ test('blood bag retains a transmissive shell and visible red contents',async({pa
 
 test('SimReady glasses drag their rendered arm within its hinge limits and keep dependencies attached',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ const rapierRequests:string[]=[];page.on('request',request=>{if(request.url().includes('/rapier/'))rapierRequests.push(request.url());});
  await page.goto(url('accessory_eyeglasses_a01'));await stageReady(page);await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
  await page.getByRole('button',{name:'Interact',exact:true}).click();
  await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -35,22 +36,57 @@ test('SimReady glasses drag their rendered arm within its hinge limits and keep 
    const hinge=sim.bodies.get('/RootNode/Geometry/arm_01_obj_00').body.translation(),local=sim.root.worldToLocal(hit.point.clone()),radius=local.clone().sub(hinge).length();
    if(radius<=lever)continue;lever=radius;
    const target=sim.root.localToWorld(local.sub(hinge).applyAxisAngle(new Vector3(0,0,1),Math.PI/3).add(hinge)).project(camera);
-   best={x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,endX:rect.left+(target.x+1)*rect.width/2,endY:rect.top+(1-target.y)*rect.height/2,joints:sim.world.impulseJoints.len()};
+   best={x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,endX:rect.left+(target.x+1)*rect.width/2,endY:rect.top+(1-target.y)*rect.height/2,joints:sim.joints.size};
   }
   if(best){w.__armBefore=instance.elements.slice();w.__physicsMesh=object;return best;}
   throw new Error('No unobstructed triangle on the arm in the fitted camera');
  });
  await page.mouse.move(point.x,point.y);await page.mouse.down();
- await expect.poll(()=>page.evaluate(()=>(window as any).usdPhysics.simulation.world.impulseJoints.len())).toBe(point.joints+1);
+ await expect(page.locator('.usd-viewport canvas').first()).toHaveCSS('cursor','grabbing');
  await page.mouse.move(point.endX,point.endY,{steps:20});
  await expect.poll(()=>page.evaluate(async()=>{const w=window as any,{Matrix4}=await import('three'),matrix=new Matrix4();w.__physicsMesh.getMatrixAt(0,matrix);return matrix.elements.reduce((sum:number,v:number,i:number)=>sum+Math.abs(v-w.__armBefore[i]),0);})).toBeGreaterThan(.05);
  await page.mouse.up();
  const state=await page.evaluate(async()=>{
   const w=window as any,sim=w.usdPhysics.simulation,{Quaternion,Vector3}=await import('three'),arm=sim.bodies.get('/RootNode/Geometry/arm_01_obj_00').body,frame=sim.bodies.get('/RootNode/Geometry/base_01_obj_00').body,lens=sim.bodies.get('/RootNode/Geometry/glass_01_obj_00').body;
   const q=new Quaternion().copy(frame.rotation()).invert().multiply(new Quaternion().copy(arm.rotation()));
-  return{angle:2*Math.atan2(q.z,q.w)*180/Math.PI,base:new Vector3().copy(frame.translation()).length(),lensDistance:new Vector3().copy(lens.translation()).distanceTo(frame.translation()),joints:sim.world.impulseJoints.len(),unsupported:sim.unsupported};
+  return{angle:2*Math.atan2(q.z,q.w)*180/Math.PI,base:new Vector3().copy(frame.translation()).length(),lensDistance:new Vector3().copy(lens.translation()).distanceTo(frame.translation()),joints:sim.joints.size,unsupported:sim.unsupported};
  });
- expect(state.joints).toBe(point.joints);expect(state.angle).toBeGreaterThanOrEqual(-1);expect(state.angle).toBeLessThanOrEqual(91);expect(state.base).toBeLessThan(.001);expect(state.lensDistance).toBeLessThan(.001);expect(state.unsupported).toEqual([]);
+ expect(rapierRequests).toEqual([]);expect(state.joints).toBe(point.joints);expect(state.angle).toBeGreaterThanOrEqual(-1);expect(state.angle).toBeLessThanOrEqual(91);expect(state.base).toBeLessThan(.001);expect(state.lensDistance).toBeLessThan(.001);expect(state.unsupported).toEqual([]);
  await page.screenshot({path:info.outputPath('glasses-dragged.png')});
  await page.getByRole('button',{name:'Reset',exact:true}).click();expect(await page.evaluate(()=>(window as any).usdPhysics.simulation)).toBeNull();expect(errors).toEqual([]);
+});
+
+test('cabinet drawers preserve every rendered attachment across repeated poses and refuse unsupported contacts',async({page},info)=>{
+ const rapier:string[]=[],errors:string[]=[];page.on('request',r=>{if(r.url().includes('/rapier/'))rapier.push(r.url());});page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(url('fixture_cabinet_b01'));await stageReady(page);await page.evaluate(()=>(window as any).usdHydra.materialsReady());await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+ const interact=page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true});await interact.click();await expect(interact).toHaveAttribute('aria-pressed','true');
+ const capture=()=>page.evaluate(async()=>{
+  const w=window as any,{Matrix4}=await import('three'),root=w.usdHydra.scene;root.updateWorldMatrix(true,true);const inv=root.matrixWorld.clone().invert(),result:any[]=[];
+  root.traverseVisible((object:any)=>{if(!object.isMesh||object.userData.usdHelperFor)return;for(let i=0;i<(object.isInstancedMesh?object.count:1);i++){
+   const local=new Matrix4();if(object.isInstancedMesh)object.getMatrixAt(i,local);
+   const world=inv.clone().multiply(object.matrixWorld);if(object.isInstancedMesh)world.multiply(local);
+   result.push({key:object.uuid+':'+i,owner:w.usdPhysics?.simulation?.bodyForObject(object,i)?.data.path||'',matrix:world.elements});
+  }});return result;
+ });
+ const baseline=await capture();expect(baseline.length).toBeGreaterThanOrEqual(3);
+ const compare=async(active='',travel=0)=>{
+  const current=new Map((await capture()).map((v:any)=>[v.key,v.matrix]));expect(current.size).toBe(baseline.length);
+  for(const item of baseline){const after=current.get(item.key)!;for(let i=0;i<16;i++)expect(after[i],item.owner||item.key).toBeCloseTo(item.matrix[i]+(i===12&&item.owner===active?travel:0),4);}
+ };
+ for(let cycle=0;cycle<3;cycle++){
+  if(cycle)await interact.click();
+  for(const part of ['01','02']){
+   const path=`/RootNode/Joints/joint_part_${part}_joint_00`,slider=page.getByRole('slider',{name:`Joint ${path}`,exact:true});
+   await slider.focus();await page.keyboard.press('End');
+   const travel=await page.evaluate(path=>(window as any).usdPhysics.simulation.getJointValue(path),path);expect(travel).toBeGreaterThan(.46);expect(travel).toBeLessThan(.463);
+   await compare(`/RootNode/Geometry/part_${part}_obj_00`,travel);
+   await page.waitForTimeout(100);await compare(`/RootNode/Geometry/part_${part}_obj_00`,travel);
+   if(cycle===2&&part==='02')await page.screenshot({path:info.outputPath('cabinet-constraints.png')});
+   await page.keyboard.press('Home');await compare();
+  }
+  await page.locator('#usd-physics-controls').getByRole('button',{name:'Reset',exact:true}).click();await compare();
+ }
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Simulate',exact:true}).click();
+ await expect(page.locator('#usd-physics-controls [role=status]')).toContainText(/Simulation unavailable:.*sdf/i);await compare();
+ expect(rapier).toEqual([]);expect(errors).toEqual([]);
 });

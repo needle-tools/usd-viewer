@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Optional `/kinematics` SDK entry using closed-chain-ik/core: bounded hinge/slider manipulation, fixed links, independent frames, native instance identities, mimic dependencies, closed linkages, joint controls and viewport constraint helpers. Interact loads no physics engine.
+
+- Contextual Interact action in Properties for rigid bodies and joints, opening Simulation with viewport dragging enabled. Lightweight physics inspection exposes body and joint paths without extracting collision meshes.
+
 - Native instance/proxy badges, distinct PointInstancer icons, a generated-prototype toggle and links between instances, shared prototypes and instance roots. SDK inspection exposes composition flags and instancing summaries, with lazy read-only prototype traversal.
 
 - Typed metadata reads and edits, dictionary-key authoring with explicit Sdf types, metadata clearing and typed transform-operation reads. Composition-stack `metadataValues` retains authored list-operation buckets, including prepend/delete opinions.
@@ -24,6 +28,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
 
 ### Fixed
+
+- Hold mechanism bases and preserve attached parts without contact integration during Interact; respect occluding surfaces when picking. Reject incomplete contact simulations in the app, including unsupported SDF collision meshes, before downloading Rapier.
+
+- Use a damped grab constraint so dragging beyond a mechanism's range yields to authored joint limits, including off-axis pulls on slider assemblies.
 
 - Align Code file-tree icons and labels across files and folders. Replace the misleading Raw source button with Expand arrays / Compact arrays, shown only when arrays need expansion. Restore the selected USD layer after reload instead of incorrectly selecting the JavaScript example.
 

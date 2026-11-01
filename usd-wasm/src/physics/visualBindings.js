@@ -10,7 +10,7 @@ export async function bindPhysicsVisuals(handle,root,bodies,warn){
   const bindings=[],byObject=new WeakMap(),objects=[];
   root.updateWorldMatrix(true,true);
   const inverseRoot=root.matrixWorld.clone().invert();
-  root.traverse(object=>{if(object.userData.usdPath)objects.push(object);});
+  root.traverse(object=>{if(object.userData.usdPath&&!object.userData.usdHelperFor)objects.push(object);});
   for(const object of objects){
     const instanced=object.isInstancedMesh, identities=new Map();
     for(let index=0;index<(instanced?object.count:1);index++){

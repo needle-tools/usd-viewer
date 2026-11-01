@@ -1,6 +1,7 @@
 import { Quaternion, Vector3 } from 'three';
 import { shiftInertiaToCenterOfMass } from './massProperties.js';
 import {bindPhysicsVisuals} from './visualBindings.js';
+import {readJointMetadata} from './jointMetadata.js';
 
 const vector = (a = [0, 0, 0]) => ({ x: a[0], y: a[1], z: a[2] });
 const rotation = (a = [0, 0, 0, 1]) => ({ x: a[0], y: a[1], z: a[2], w: a[3] });
@@ -14,7 +15,7 @@ export async function inspectUsdPhysics(handle) {
   await handle.ready();
   return handle.readStage(async stage => {
   // The Hydra handle owns the stage; only the child/attribute wrappers below are temporary.
-  const pending=[stage.GetPrimAtPath('/')],scenes=[];
+  const pending=[stage.GetPrimAtPath('/')],scenes=[],bodies=[],joints=[];
   let dynamic=false;
   const flag=async(prim,name,fallback)=>{
     const attribute=prim.GetAttribute(name);
@@ -25,14 +26,16 @@ export async function inspectUsdPhysics(handle) {
     while(pending.length){
       const prim=pending.pop();
       try{
-        if(prim.GetTypeName()==='PhysicsScene')scenes.push({path:prim.GetPath()});
-        if(await flag(prim,'physics:rigidBodyEnabled',false)&&!await flag(prim,'physics:kinematicEnabled',false))dynamic=true;
+        const type=prim.GetTypeName();
+        if(type==='PhysicsScene')scenes.push({path:prim.GetPath()});
+        if(/^Physics.*Joint$/.test(type))joints.push(prim.GetPath());
+        if(await flag(prim,'physics:rigidBodyEnabled',false)&&!await flag(prim,'physics:kinematicEnabled',false)){dynamic=true;bodies.push(prim.GetPath());}
         const children=prim.GetChildren();
         try{for(let i=0;i<children.size();i++)pending.push(children.get(i));}
         finally{children.delete?.();}
       }finally{prim.delete?.();}
     }
-    return {scenes,dynamic};
+    return {scenes,dynamic,bodies,joints};
   }finally{for(const prim of pending)prim.delete?.();}
   });
 }
@@ -40,17 +43,28 @@ export async function inspectUsdPhysics(handle) {
 /** Read physics from the composed stage, including referenced layers and relationships. */
 export async function readUsdPhysics(handle) {
     await handle.ready();
-    return handle.readStage(async (_stage, driver) => {
+    const snapshot=await handle.readStage(async (_stage, driver) => {
         if (!driver.GetPhysicsSceneJson) throw new Error('This USD runtime does not include physics extraction.');
         return JSON.parse(await driver.GetPhysicsSceneJson());
     });
+    await readJointMetadata(handle,snapshot);
+    return snapshot;
+}
+
+/** Descriptors the Rapier adapter cannot simulate, known before loading its runtime. */
+export function getUsdPhysicsLimitations(snapshot) {
+    const issues=[...(snapshot.unsupported||[])];
+    for(const shape of snapshot.shapes||[])if(shape.collisionEnabled!==false && shape.type==='mesh' && shape.approximation && !['none','convexHull'].includes(shape.approximation))
+        issues.push({path:shape.path,type:'mesh',reason:`Mesh approximation ${shape.approximation} is not supported.`});
+    for(const joint of snapshot.joints||[])if(joint.mimic)issues.push({path:joint.path,type:joint.type,reason:"Mimic joint coupling is not supported by this contact adapter."});
+    return issues;
 }
 
 /**
  * Create a simulation in stage coordinates. Supply an initialized Rapier module;
  * importing the USD renderer alone does not download another WASM runtime.
  */
-export async function createUsdPhysics({ handle, rapier: R, root = handle.scene, snapshot, scenePath, mode = 'simulation' }) {
+export async function createUsdPhysics({ handle, rapier: R, root = handle.scene, snapshot, scenePath, mode = 'simulation', allowPartial = true }) {
     snapshot ||= await readUsdPhysics(handle);
     if (!root) throw new Error('A USD scene root is required.');
     const scenes = snapshot.scenes || [];
@@ -72,8 +86,8 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
     // Joint inspection does not solve contacts or require PhysX SDF colliders
     // or a reduced-coordinate articulation. Its dependent joints still share
     // one constraint solver, including closed loops and fixed attachments.
-    const unsupported = (snapshot.unsupported || []).filter(item=>mode!=='interaction'||!/Shape$|^mesh$|^Articulation$/.test(item.type||''));
-    const warn = (item, reason) => unsupported.push({ path: item.path, type: item.type, reason });
+    const unsupported = getUsdPhysicsLimitations(snapshot).filter(item=>mode!=='interaction'||!/Shape$|^mesh$|^Articulation$/.test(item.type||''));
+    const warn = (item, reason) => {if(!unsupported.some(issue=>issue.path===item.path&&issue.reason===reason))unsupported.push({ path: item.path, type: item.type, reason });};
     const inScene = item => item.simulationOwners?.length ? !!scene && item.simulationOwners.includes(scene.path)
         : !scene || scene.path === scenes[0]?.path;
     let playing = false, disposed = false, accumulator = 0, drag = null;
@@ -225,6 +239,7 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
             },
             filterIntersectionPair() { return true; },
         };
+        if(!allowPartial && unsupported.length)throw new Error(`Simulation unavailable: ${unsupported[0].reason}${unsupported.length>1?` (${unsupported.length} unsupported features)`:''}`);
         const visuals = await bindPhysicsVisuals(handle,root,bodies,warn);
         const sync=visuals.sync;
         function endDrag() {
@@ -264,7 +279,11 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
                 if (!body?.isDynamic() || !playing) return false;
                 const local = new Vector3().copy(position).sub(body.translation()).applyQuaternion(new Quaternion().copy(body.rotation()).invert());
                 const anchor = world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(position.x, position.y, position.z));
-                const joint = world.createImpulseJoint(R.JointData.spherical(local, vector()), body, anchor, true);
+                // A rigid mouse constraint fights the mechanism's own limits
+                // when the pointer moves beyond its range. A damped spring
+                // lets the grab yield while the authored joints stay rigid.
+                const mass=Math.max(body.mass(),1e-6);
+                const joint = world.createImpulseJoint(R.JointData.spring(0,400*mass,40*mass,local,vector()), body, anchor, true);
                 const pinned=[];
                 if(mode==='interaction'){
                     // Hold the mechanism's base while inspecting a movable

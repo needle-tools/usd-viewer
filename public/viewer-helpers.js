@@ -3,14 +3,14 @@ import {readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
 const synchronizers=new WeakMap(), owners=new WeakMap();
 export function syncViewportHelpers(container){if(container)synchronizers.get(container)?.();}
 
-const choices = [['curves','Curve centerlines'],['controlPoints','Control points'],['points','Point markers'],['lights','Lights'],['cameras','Cameras']];
+const choices = [['curves','Curve centerlines'],['controlPoints','Control points'],['points','Point markers'],['lights','Lights'],['cameras','Cameras'],['joints','Joint constraints']];
 
 export async function showViewportHelpers(container, handle, onPurposesChange = () => {}) {
   if(!container)return;
   const owner={};owners.set(container,owner);
   container.replaceChildren();synchronizers.delete(container);container.parentElement.ontoggle=null;
   if(!handle?.setHelpers)return;
-  const stored=readRenderSettings().helpers || {}, settings={curves:true};
+  const stored=readRenderSettings().helpers || {}, settings={curves:true,joints:true};
   for(const [key] of choices)if(typeof stored[key]==='boolean')settings[key]=stored[key];
   handle.setHelpers(settings);
   if(stored.guides===true && !handle.includedPurposes.includes('guide'))await handle.setIncludedPurposes([...handle.includedPurposes,'guide']);

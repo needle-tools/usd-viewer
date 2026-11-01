@@ -159,6 +159,9 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-workbench #loaded-converter-toggle { display: flex; flex-wrap: wrap; }
 .usd-workbench #usd-physics-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--usd-space-2); padding: var(--usd-space-field) var(--usd-space-3); }
 .usd-workbench #usd-physics-controls button { min-height: var(--usd-control-height); padding: var(--usd-space-half) var(--usd-space-2); border: 1px solid var(--border-subtle); border-radius: var(--usd-radius-control); background: var(--surface-panel-muted); color: var(--text-primary); }
+.usd-physics-hint { flex-basis:100%; margin:0; color:var(--text-secondary); font-size:var(--usd-text-small); }
+.usd-physics-shortcut { flex:none; padding:var(--usd-space-field) var(--usd-space-3); border-top:1px solid var(--border-subtle); }
+.usd-physics-shortcut[hidden] { display:none; }
 .usd-workbench .viewer-render-modes { position: static; inset: auto; display: block; padding: 0; margin: 0; border: 0; background: none; color: var(--text-secondary); font-size: var(--usd-text-size); border-radius: 0; max-width: none; }
 .usd-workbench .viewer-render-modes [role=status] { display: block; max-width: none; padding: var(--usd-space-small) var(--usd-space-3); font-size: var(--usd-text-small); overflow-wrap: anywhere; }
 .usd-workbench .viewer-render-modes [role=status]:empty { display: none; }

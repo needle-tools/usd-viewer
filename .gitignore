@@ -33,3 +33,6 @@ public/modules/mesh-bvh.umd.js
 /usd-wasm/tests/hydra/runtime-measurements.json
 /usd-wasm/tests/fixtures/coverage/**/*validation.json
 /usd-wasm/tests/fixtures/coverage/lighting-mdl/references/mdl-*.json
+
+# Optional browser kinematics bundle (prepare:public).
+/public/modules/kinematics.js*
