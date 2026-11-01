@@ -1,5 +1,4 @@
-import {clearStage} from './workbench-menus';
-import {openAppMenu,openSamples,openSettings} from './workbench-menus';
+import {selectExampleFolder, clearStage, openAppMenu, openSamples, openSettings} from './workbench-menus';
 import { expect, test, type Page } from '@playwright/test';
 
 const publicSamples = {
@@ -1402,7 +1401,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(initialState.loadedConverter).toBe('three-r185');
 
         await openSamples(page);
-        await page.getByRole('combobox',{name:'Example library'}).selectOption('gltf');
+        await selectExampleFolder(page,'gltf');
         await page.waitForFunction(label => {
             return Array.from(document.querySelectorAll<HTMLAnchorElement>('.gallery-card'))
                 .some(card => card.dataset.name === label && card.href.includes('.three.usdz'));
@@ -1441,7 +1440,7 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(state.loadedConverter).toBe('blender-5-1');
 
         await openSamples(page);
-        await page.getByRole('combobox',{name:'Example library'}).selectOption('gltf');
+        await selectExampleFolder(page,'gltf');
         await expect(page.locator(`.gallery-card[data-name="Antique Camera"]`))
             .toHaveAttribute('href', `?file=${assetExplorerSamples.antiqueCameraBlender.url}`);
 
@@ -2768,9 +2767,9 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?viewer=three&assetCache=0');
         await openSamples(page);
 
-        await expect(page.locator('#example-library option')).toHaveText(['glTF → USD conversions','USD Working Group Assets','Hugging Face test set','Needle']);
+        await expect(page.locator('#sample-group-list > details > summary > span, #sample-group-list > button > span')).toHaveText(['Needle','Hugging Face test set','USD Working Group Assets','glTF → USD conversions']);
         await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label',/glTF.*USD conversions examples/);
-        await expect(page.getByRole('combobox',{name:'Example library'})).toHaveValue('gltf');
+        await expect(page.locator('.sample-library[data-library="gltf"]')).toHaveAttribute('open','');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
         await expect(page.locator('#needle-group-tree')).toBeHidden();
 
@@ -2799,9 +2798,9 @@ test.describe('public usd-viewer lifecycle', () => {
         }
         await expect(page.locator('#gltf-group-tree')).toBeVisible();
 
-        await page.getByRole('combobox',{name:'Example library'}).selectOption('usd-wg');
+        await selectExampleFolder(page,'usd-wg');
         await expect(page.locator('#usd-wg-group-tree')).toBeVisible();
-        await expect(page.locator('#gltf-group-tree')).toBeHidden();
+        await expect(page.locator('#gltf-group-tree')).toBeVisible();
         await expect(page.locator('#needle-group-tree')).toBeHidden();
         await page.waitForFunction(() => {
             const first = document.querySelector('#usd-wg-group-tree [data-sample-group] span');
@@ -2812,9 +2811,9 @@ test.describe('public usd-viewer lifecycle', () => {
             return firstMeta?.textContent?.includes('full_assets');
         });
 
-        await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+        await selectExampleFolder(page,'needle');
         await expect(page.locator('#needle-group-tree')).toBeVisible();
-        await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
+        await expect(page.locator('#usd-wg-group-tree')).toBeVisible();
         await page.waitForFunction(() => {
             const labels = Array.from(document.querySelectorAll('#needle-group-tree [data-sample-group]'))
                 .map((node) => node.querySelector('span')?.textContent?.trim());
@@ -2835,7 +2834,7 @@ test.describe('public usd-viewer lifecycle', () => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three&assetCache=0');
         await openSamples(page);
-        await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+        await selectExampleFolder(page,'needle');
         await page.click('[data-sample-group="needle:cloud"]');
 
         const kitchenThumbnail = page.locator('.gallery-card[data-name="Kitchen Set"] .gallery-thumb');

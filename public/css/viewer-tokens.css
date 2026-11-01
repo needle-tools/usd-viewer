@@ -17,6 +17,14 @@
   --usd-text-micro: 10px;
   --usd-title-size: 17px;
   --usd-product-title-size: 15px;
+  --usd-product-switch-width: 116px;
+  --usd-examples-dialog-width: 1000px;
+  --usd-examples-dialog-height: 680px;
+  --usd-examples-search-width: 150px;
+  --usd-dialog-backdrop: rgb(0 0 0 / .3);
+  --usd-tooltip-width: 240px;
+  --usd-tooltip-background: var(--surface-panel-strong);
+  --usd-tooltip-color: var(--text-primary);
   --usd-control-height: 28px;
   --usd-section-height: 32px;
   --usd-header-height: 44px;

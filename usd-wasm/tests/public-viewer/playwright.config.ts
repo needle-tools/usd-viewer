@@ -14,6 +14,11 @@ export default defineConfig({
         headless: !runHeaded,
         viewport: { width: 1280, height: 900 },
         deviceScaleFactor: 1,
+        // Existing workspace tests exercise Studio. Product-mode tests start
+        // with empty storage to cover the first-visit Viewer experience.
+        storageState: { cookies: [], origins: [{origin: 'http://127.0.0.1:5199', localStorage: [
+            {name: 'needle-usd-product-mode', value: JSON.stringify('studio')},
+        ]}] },
     },
     webServer: {
         command: 'npm run prepare:public && PORT=5199 npm run start',

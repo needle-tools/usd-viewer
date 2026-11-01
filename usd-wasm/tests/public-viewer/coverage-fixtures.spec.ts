@@ -1,4 +1,4 @@
-import {openAppMenu,openSamples} from './workbench-menus';
+import {selectExampleFolder, openAppMenu, openSamples} from './workbench-menus';
 import { test, expect } from '@playwright/test';
 
 // Keep these local rendering checks independent of the web-font CDN.
@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 test('Hugging Face test set is a separate top-level catalog', async ({ page }) => {
     await page.goto('/?viewer=three');
     await openSamples(page);
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Needle examples');
     await expect(page.locator('#gallery-grid .gallery-card').first()).toBeVisible();
     await expect(page.locator('#needle-group-tree [data-sample-group="needle:remote-usd-assets"]')).toHaveCount(0);
@@ -22,8 +22,8 @@ test('Hugging Face test set is a separate top-level catalog', async ({ page }) =
         await item.click();
         await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(count);
     }
-    await expect(page.locator('#example-library option[value=usd-assets]')).toHaveText('Hugging Face test set');
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('usd-assets');
+    await expect(page.locator('[data-sample-group="usd-assets"] span')).toHaveText('Hugging Face test set');
+    await selectExampleFolder(page,'usd-assets');
     await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Hugging Face test set examples');
     await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(14);
     const displayed = await page.locator('#gallery-grid .gallery-card').evaluateAll(nodes => nodes.map(node => new URL((node as HTMLAnchorElement).href).searchParams.get('file')));
@@ -102,13 +102,13 @@ test('bounded volume selects the Three node renderer on direct navigation', asyn
 test('gallery keeps the node renderer when leaving bounded volumes', async ({ page }) => {
     await page.goto('/?viewer=needle');
     await openSamples(page);
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await page.locator('[data-sample-group="needle:MaterialX%20Volumes"]').click();
     await page.locator('.gallery-card[data-name="Ember torus"]').click();
     await page.waitForURL(url => url.searchParams.get('viewer') === 'three' && url.searchParams.get('render') === 'nodes');
     await page.waitForFunction(() => !!(window as any).usdHydra, { timeout: 120_000 });
     await openSamples(page);
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await page.locator('[data-sample-group="needle:Composition"]').click();
     await page.locator('.gallery-card[data-name="External reference"]').click();
     await page.waitForURL(url => url.searchParams.get('file')?.includes('external-reference'));

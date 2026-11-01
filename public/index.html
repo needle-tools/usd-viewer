@@ -213,28 +213,27 @@
     <a href="#" id="about-link" data-open-about><img src="usd-logo.png" alt="" class="usd-logo" /><span class="about-text">About</span></a>
 
     <section class="usd-examples-browser" aria-label="Example browser">
-      <div class="usd-examples-library">
-        <select id="example-library" aria-label="Example library" disabled>
-          <option value="gltf">glTF → USD conversions</option>
-          <option value="usd-wg">USD Working Group Assets</option>
-          <option value="usd-assets">Hugging Face test set</option>
-          <option value="needle">Needle</option>
-        </select>
-      </div>
+      <input type="search" id="examples-search" aria-label="Search examples" placeholder="Search" disabled />
       <div class="usd-examples-content">
         <nav id="example-folders" class="usd-examples-folders" aria-label="Example folders">
-          <button type="button" id="examples-all" class="sample-group-button sample-folder-button">All examples</button>
           <div class="sample-group-list" id="sample-group-list">
-            <div class="sample-group-tree" id="gltf-group-tree" aria-label="glTF Sample Asset tags"></div>
-            <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders" hidden></div>
-            <div class="sample-group-tree" id="needle-group-tree" aria-label="Needle asset folders" hidden></div>
+            <details class="sample-folder sample-library" data-library="needle">
+              <summary class="sample-group-button sample-folder-button" data-sample-group="needle"><span>Needle</span></summary>
+              <div class="sample-group-tree" id="needle-group-tree" aria-label="Needle asset folders"></div>
+            </details>
+            <button type="button" class="sample-library-leaf sample-group-button sample-folder-button" data-library="usd-assets" data-sample-group="usd-assets"><span>Hugging Face test set</span><small>14</small></button>
+            <details class="sample-folder sample-library" data-library="usd-wg">
+              <summary class="sample-group-button sample-folder-button" data-sample-group="usd-wg"><span>USD Working Group Assets</span></summary>
+              <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders"></div>
+            </details>
+            <details class="sample-folder sample-library" data-library="gltf">
+              <summary class="sample-group-button sample-folder-button" data-sample-group="gltf"><span>glTF → USD conversions</span></summary>
+              <div class="sample-group-tree" id="gltf-group-tree" aria-label="glTF Sample Asset tags"></div>
+            </details>
           </div>
         </nav>
         <div class="usd-examples-divider" role="separator" tabindex="0" aria-label="Resize example folders" aria-orientation="horizontal" aria-controls="example-folders gallery-panel"></div>
         <div class="usd-examples-results" id="gallery-panel">
-          <div class="gallery-panel-head">
-            <input type="search" id="examples-search" aria-label="Search examples" placeholder="Search examples" disabled />
-          </div>
           <p id="gallery-status" class="gallery-status">Loading…</p>
           <p id="examples-empty" class="usd-examples-empty" role="status" hidden>No matching examples</p>
           <div id="gallery-grid" class="gallery-grid" aria-label="Example previews"></div>

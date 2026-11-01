@@ -35,6 +35,14 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 #container.usd-app-header .needle-logo-link { display: flex; flex: none; width: auto; margin: 0; padding: var(--usd-space-small) 0; overflow: visible; border: 0; border-radius: 0; }
 .usd-app-header .needle-logo { flex: none; width: var(--usd-logo-width); height: var(--usd-logo-height); object-fit: contain; }
 .usd-app-header .header-tool-title-group { flex: none; }
+.usd-app-header .usd-product-mode {
+  width: var(--usd-product-switch-width); max-width: 100%; height: var(--usd-menubar-height); padding: 0 var(--usd-space-1);
+  border: 1px solid transparent; border-radius: var(--usd-radius-control); background: transparent; color: var(--text-primary);
+  font: 400 var(--usd-product-title-size)/1.4 var(--font-family-body);
+}
+.usd-app-header .usd-product-mode:hover { background: var(--surface-panel-muted); }
+.usd-app-header .usd-product-mode option { background: var(--surface-panel); color: var(--text-primary); }
+#container.usd-app-header button.usd-menubar-toggle { display: none; grid-row: 1; grid-column: 2; }
 .usd-app-header .usd-file-context { grid-row: 1; grid-column: 3; justify-self: end; max-width: 100%; margin-left: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: var(--usd-text-size); }
 .usd-app-header .header-tool-actions { grid-row: 1; grid-column: 2; justify-content: flex-start; flex: none; flex-wrap: nowrap; gap: var(--usd-space-1); }
 .usd-app-header .usd-download { grid-row: 1; grid-column: 4; }
@@ -68,6 +76,19 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 /* Desktop workspace and the compact panel portal share live DOM, never copies. */
 /* Keep Dockview's floating-panel z-indices below the application menus. */
 .usd-workspace { position: relative; isolation: isolate; min-width: 0; min-height: 0; overflow: clip; }
+.usd-viewer-layout { position: absolute; inset: 0; display: flex; min-width: 0; min-height: 0; }
+.usd-workspace[data-mode=viewer] .usd-dock { position: absolute; visibility: hidden; pointer-events: none; }
+.usd-workspace[data-mode=viewer] .usd-dock * { visibility: hidden !important; }
+.usd-examples-dialog {
+  position: fixed; inset: 0; width: min(var(--usd-examples-dialog-width), calc(100vw - 32px)); height: min(var(--usd-examples-dialog-height), calc(100dvh - 64px));
+  max-width: none; max-height: none; padding: 0; overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--usd-radius-dialog);
+  color: var(--text-primary); background: var(--surface-panel); box-shadow: var(--shadow-floating); font: inherit;
+}
+.usd-examples-dialog[open] { display: flex; flex-direction: column; }
+.usd-examples-dialog::backdrop { background: var(--usd-dialog-backdrop); }
+.usd-examples-dialog-header { display: flex; align-items: center; justify-content: space-between; flex: none; min-height: var(--usd-section-height); padding: var(--usd-space-field) var(--usd-space-3); border-bottom: 1px solid var(--border-subtle); }
+.usd-examples-dialog-header .usd-tab-close { width: var(--usd-control-height); height: var(--usd-control-height); }
+.usd-examples-dialog-content { flex: 1; min-height: 0; overflow: hidden; }
 /* The dock clips panels; it must never become a programmatically scrollable viewport. */
 .usd-dock { min-width: 0; min-height: 0; overflow: clip; }
 .usd-workspace[data-compact=true] .usd-dock { position: absolute; visibility: hidden; pointer-events: none; }
@@ -107,6 +128,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-panel-viewport { display: flex; flex-direction: column; overflow: hidden; }
 .usd-viewport { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface-page); isolation: isolate; }
 .usd-workbench .usd-viewport > canvas, .usd-workbench .usd-viewer-needle-engine { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; max-width: none; border-radius: 0; z-index: 0; }
+.usd-workbench .usd-viewport > canvas.usd-load-frame { z-index: 2; pointer-events: none; }
 .usd-workbench #dropzone,.usd-workbench #loading-overlay { position: absolute; inset: 0; width: auto; height: auto; z-index: 4; pointer-events: none; }
 .usd-workbench #loading-overlay button { pointer-events: auto; }
 .usd-workbench #dropzone .dropzone-inner { padding: var(--usd-space-5); border: 0; box-shadow: none; background: none; color: var(--text-secondary); }
@@ -203,8 +225,6 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 /* Examples shares Dockview geometry; navigation, previews and footer have separate owners. */
 .usd-panel-examples { container: examples / inline-size; }
 .usd-examples-browser { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; color: var(--text-primary); background: var(--surface-panel); }
-.usd-examples-library { flex: none; padding: var(--usd-space-2); border-bottom: 1px solid var(--border-subtle); }
-.usd-workbench #example-library { width: 100%; min-width: 0; }
 .usd-examples-content { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .usd-examples-folders { flex: 0 0 var(--usd-examples-folders-height,28%); min-height: 0; min-width: 0; padding: var(--usd-space-field); overflow: auto; }
 .usd-examples-divider { position: relative; flex: 0 0 var(--usd-splitter-size); cursor: row-resize; touch-action: none; user-select: none; outline: none; }
@@ -214,6 +234,8 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-examples-content:has(.usd-examples-divider[data-dragging]) { user-select: none; }
 .usd-examples-browser .sample-group-list { display: flex; flex-direction: column; gap: 0; }
 .usd-examples-browser .sample-group-tree { max-height: none; opacity: 1; margin: 0; padding: 0; border: 0; overflow: visible; transition: none; }
+.usd-examples-browser .sample-library > .sample-group-tree { padding-left: var(--usd-space-3); }
+.usd-examples-browser .sample-library > summary .usd-icon { flex: none; color: var(--usd-icon-color); }
 .usd-examples-browser .sample-group-button { display: flex; align-items: center; gap: var(--usd-space-field); width: 100%; min-height: var(--usd-control-height); margin: 0; padding: var(--usd-space-half) var(--usd-space-field) var(--usd-space-half) calc(var(--usd-space-field) + (var(--depth,1) - 1)*var(--usd-space-3)); border: 0; border-radius: var(--usd-radius-small); color: var(--text-primary); background: transparent; text-align: left; font: inherit; }
 .usd-examples-browser .sample-group-button span { font: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .usd-examples-browser .sample-group-button small { margin-left: auto; color: var(--text-secondary); font: var(--usd-text-small) var(--font-family-body); font-variant-numeric: tabular-nums; }
@@ -221,8 +243,15 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-examples-browser .sample-group-button:hover { background: var(--usd-row-hover-background); }
 .usd-examples-browser .sample-group-button.active:hover { background: var(--usd-row-selected-hover-background); }
 .usd-examples-results { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
-.usd-examples-browser .gallery-panel-head { position: static; display: flex; flex: none; flex-direction: row; align-items: center; gap: var(--usd-space-field); margin: 0; padding: var(--usd-space-2); border-bottom: 1px solid var(--border-subtle); background: var(--surface-panel); backdrop-filter: none; }
-.usd-workbench #examples-search { flex: 1; width: 0; min-width: 0; }
+.usd-examples-search-slot { display: flex; align-items: center; width: 100%; padding-inline: var(--usd-space-field); }
+.usd-workbench .dv-tabs-and-actions-container:has(.usd-examples-search-slot:not([hidden])) { container-type: inline-size; }
+.usd-workbench .dv-right-actions-container:has(.usd-examples-search-slot:not([hidden])) { flex: 0 1 var(--usd-examples-search-width); min-width: 80px; max-width: 45%; }
+.usd-workbench .dv-tabs-and-actions-container:has(.dv-tab:nth-child(2)):has(.usd-examples-search-slot:not([hidden])) .dv-right-actions-container { flex-basis: clamp(80px,calc(100cqw - 220px),var(--usd-examples-search-width)); }
+.usd-workbench .dv-tabs-and-actions-container:has(.usd-examples-search-slot:not([hidden])) .usd-dock-tab { padding-inline: var(--usd-space-field); gap: var(--usd-space-small); }
+.usd-workbench .dv-tabs-and-actions-container:has(.usd-examples-search-slot:not([hidden])) .dv-tab:not(.dv-active-tab) .usd-tab-close { display: none; }
+.usd-workbench #examples-search { width: 100%; min-width: 0; height: var(--usd-control-height); padding: var(--usd-space-half) var(--usd-space-field); border: 1px solid transparent; border-radius: var(--usd-radius-control); color: var(--text-primary); background: var(--surface-panel); font: inherit; }
+.usd-workbench #examples-search:hover { border-color: var(--border-subtle); }
+.usd-examples-dialog-header #examples-search, .usd-compact-header #examples-search { flex: 1; width: 0; margin-left: auto; }
 .usd-examples-empty { margin: 0; padding: var(--usd-space-3); color: var(--text-secondary); }
 .usd-examples-browser .gallery-status { flex: none; margin: 0; padding: var(--usd-space-2); color: var(--text-secondary); font-size: var(--usd-text-small); }
 .usd-examples-browser .gallery-grid { display: grid; flex: 1; min-height: 0; max-height: none; grid-template-columns: repeat(auto-fill,minmax(min(100%,var(--usd-gallery-card-width)),1fr)); gap: var(--usd-space-2); padding: var(--usd-space-2); overflow: auto; scrollbar-gutter: stable; }
@@ -232,6 +261,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-examples-browser .gallery-thumb-wrap { background: var(--surface-panel-muted); }
 .usd-examples-browser .gallery-placeholder-icon { width: 32px; height: 32px; color: var(--text-secondary); }
 .usd-examples-browser .gallery-card.active:hover { background: var(--usd-row-selected-hover-background); }
+.usd-examples-browser .gallery-grid[aria-busy=true] .gallery-card { pointer-events: none; }
 .usd-examples-browser .gallery-card-body { padding: var(--usd-space-field); background: inherit; }
 .usd-examples-browser .gallery-name { color: var(--text-primary); font-size: var(--usd-text-size); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .usd-examples-browser .gallery-meta { color: var(--text-secondary); font-size: var(--usd-text-micro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -268,16 +298,24 @@ body.usd-product #export-download-direct { border-color: var(--border-subtle); b
 body.usd-product #export-download-direct:hover { border-color: var(--border-strong); background: var(--surface-panel-strong); }
 body.usd-product .feedback-status.is-error,body.usd-product .gallery-status.error { color: var(--accent-error); }
 body.usd-product .feedback-status.is-success { color: var(--text-success); }
-body.usd-product .ui-tooltip { background: var(--text-primary); color: var(--surface-panel); border-radius: var(--usd-radius-control); box-shadow: var(--shadow-floating); font-size: var(--usd-text-size); font-weight: 500; line-height: 1.4; }
-body.usd-product .ui-tooltip[data-placement=bottom]::before { border-bottom-color: var(--text-primary); }
-body.usd-product .ui-tooltip[data-placement=top]::before { border-top-color: var(--text-primary); }
+body.usd-product .ui-tooltip { inset: auto; margin: 0; width: max-content; box-sizing: border-box; max-width: min(var(--usd-tooltip-width),calc(100vw - 16px)); padding: var(--usd-space-field) var(--usd-space-2); background: var(--usd-tooltip-background); color: var(--usd-tooltip-color); border: 1px solid var(--border-strong); border-radius: var(--usd-radius-small); box-shadow: var(--shadow-floating); font: 400 var(--usd-text-small)/1.4 var(--font-family-body); overflow-wrap: anywhere; overflow: visible; transition: none; }
+body.usd-product .ui-tooltip::before { display: none; }
 
 @media(max-width:900px) { .usd-app-header .usd-file-context { display: none; } }
 @media(max-width:620px) {
   #container.usd-app-header .usd-download > button { font-size: 0; gap: 0; }
   #container.usd-app-header .usd-download > button .usd-icon { width: var(--usd-icon-size); height: var(--usd-icon-size); }
-  .usd-app-header .header-tool-title-group { display: none; }
-  #container.usd-app-header { padding-inline: var(--usd-space-2); gap: var(--usd-space-2); }
+  #container.usd-app-header { grid-template-columns: minmax(0,1fr) auto auto; padding-inline: var(--usd-space-2); gap: var(--usd-space-2); }
+  #container.usd-app-header .header-tool-title-group { display: flex; }
+  .usd-app-header .usd-product-mode { --usd-product-switch-width: 108px; }
+  #container.usd-app-header button.usd-menubar-toggle { display: inline-flex; }
+  #container.usd-app-header .usd-download { grid-column: 3; }
+  #container.usd-app-header .header-tool-actions { display: none; }
+  .usd-workbench[data-menu-open=true] #container.usd-app-header .header-tool-actions {
+    position: fixed; display: flex; top: calc(var(--usd-header-bottom,44px) + 4px); left: 8px; right: 8px; width: auto;
+    padding: var(--usd-space-field); border: 1px solid var(--border-strong); border-radius: var(--usd-radius-menu); background: var(--surface-panel); box-shadow: var(--shadow-floating);
+  }
+  .usd-examples-dialog { width: calc(100vw - 16px); height: calc(100dvh - 32px); }
   .usd-app-header .needle-logo { width: var(--usd-logo-compact-width); }
   #container.usd-app-header .usd-menu > summary, #container.usd-app-header .usd-examples-menu { padding-inline: var(--usd-space-field); }
   .usd-menu-body { left: 8px !important; width: calc(100vw - 16px); max-width: none; }

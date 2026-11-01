@@ -1,4 +1,4 @@
-import {openAppMenu,openSamples} from './workbench-menus';
+import {selectExampleFolder, openAppMenu, openSamples} from './workbench-menus';
 import { expect, test, type Page } from '@playwright/test';
 
 async function openPicker(page: Page) {
@@ -17,7 +17,7 @@ async function scrollPosition(page: Page) {
 test('picker preserves scroll on reopen and separately for each category', async ({ page }) => {
   await page.goto('/?viewer=three');
   await openPicker(page);
-  await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await expect.poll(() => page.locator('#gallery-grid .gallery-card').count()).toBeGreaterThan(200);
   const cardCount = await page.locator('#gallery-grid .gallery-card').count();
   await page.waitForTimeout(300);
@@ -35,7 +35,7 @@ test('picker preserves scroll on reopen and separately for each category', async
   await page.locator('[data-sample-group="needle:Lights"]').click();
   await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(17);
   await expect.poll(() => page.locator('#gallery-grid').evaluate(el => el.scrollTop)).toBe(0);
-  await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await expect(page.locator('#gallery-grid .gallery-card')).toHaveCount(cardCount);
   await expect.poll(() => page.locator('#gallery-grid').evaluate(el => el.scrollTop)).toBe(position.grid);
 });
@@ -43,7 +43,7 @@ test('picker preserves scroll on reopen and separately for each category', async
 test('picker restores its category, selected card and scroll after reload and renderer changes', async ({ page }) => {
   await page.goto('/?viewer=three');
   await openPicker(page);
-  await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:Lights"]').click();
   const card = page.locator('.gallery-card[data-name="Shaped spotlight"]');
   await page.waitForTimeout(300);
@@ -79,7 +79,7 @@ for (const unavailable of [false, true]) {
     await page.goto('/?viewer=three');
     // Select the local library without waiting for the remote default library.
     await openSamples(page);
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await expect(page.locator('#gallery-grid .gallery-card').first()).toBeVisible();
     await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Needle examples');
     expect(errors).toEqual([]);

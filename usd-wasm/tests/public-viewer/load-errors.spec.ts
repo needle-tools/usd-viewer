@@ -1,5 +1,5 @@
+import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
 import {expect, test} from '@playwright/test';
-import {openAppMenu, openSamples, stageReady} from './workbench-menus';
 
 const animated = '/test-fixtures/coverage/core/animated-translation.usda';
 
@@ -22,11 +22,12 @@ for (const viewer of ['three', 'needle']) {
     await expect(error).not.toContainText('404');
     expect(probes.filter(url => url.includes('invalid.usda'))).toEqual([]);
     await openSamples(page);
-    await page.getByRole('combobox', {name: 'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await page.getByRole('searchbox', {name: 'Search examples'}).fill('animated translation');
     await page.getByRole('link', {name: /Animated translation/}).click();
     await stageReady(page);
     await expect(error).not.toBeVisible();
+    await page.evaluate(()=>(window as any).usdWorkbench.openPanel('timeline'));
     await expect(page.getByRole('spinbutton', {name: 'Current frame'})).toBeVisible();
   });
 }

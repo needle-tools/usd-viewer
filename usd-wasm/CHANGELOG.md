@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
+
 ### Changed
 
+- Organize the app's Examples browser as one folder tree, with search in its pane header. Retain the previous render during sample replacement and use delayed, compact tooltips positioned beside menu items and within screen bounds.
 - Start the viewer's runtime and initial USDZ download alongside the UI module graph, and precompress both runtimes for HTTP delivery without adding compressed duplicates to the npm package.
 - Defer native MaterialX library initialization until a material terminal needs a MaterialX document. PreviewSurface-only assets avoid the extra library parse; mixed materials, custom nodedefs and volumes retain their existing path.
 - Load EXR/HDR/TGA texture decoders and USD area-light lookup tables on demand. `createWebGpuSupport({lazyAreaLights: true})` opts into deferred WebGPU lookup preparation while preserving eager support for host-created lights by default.

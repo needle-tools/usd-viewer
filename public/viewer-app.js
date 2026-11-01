@@ -83,9 +83,11 @@ const ENVIRONMENT_PRESETS = {
 // portal so tooltips are never clipped by segmented controls or dropdowns.
 const TOOLTIP_GAP = 8;
 const TOOLTIP_MARGIN = 8;
+const TOOLTIP_DELAY = 500;
 let tooltipPortal = null;
 let tooltipActiveTarget = null;
 let tooltipFlashTimer = null;
+let tooltipShowTimer = null;
 
 function ensureTooltipPortal() {
   if (tooltipPortal && tooltipPortal.isConnected) return tooltipPortal;
@@ -93,6 +95,8 @@ function ensureTooltipPortal() {
   tooltipPortal.className = 'ui-tooltip';
   tooltipPortal.id = 'ui-tooltip';
   tooltipPortal.setAttribute('role', 'tooltip');
+  // A manual popover lets the same tooltip sit above modal pane headers too.
+  tooltipPortal.setAttribute('popover', 'manual');
   document.body.appendChild(tooltipPortal);
   return tooltipPortal;
 }
@@ -107,13 +111,16 @@ function getTooltipText(target) {
   return target.dataset.tip || '';
 }
 
-function positionTooltip(target, preferredPlacement = 'bottom') {
+function positionTooltip(target, preferredPlacement = target.closest('.usd-menu-body') ? 'right' : 'bottom') {
   const portal = ensureTooltipPortal();
   const targetRect = target.getBoundingClientRect();
   const tipRect = portal.getBoundingClientRect();
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   let placement = preferredPlacement;
+  if (placement === 'right' && targetRect.right + TOOLTIP_GAP + tipRect.width > viewportWidth - TOOLTIP_MARGIN) {
+    placement = targetRect.left - TOOLTIP_GAP - tipRect.width >= TOOLTIP_MARGIN ? 'left' : 'bottom';
+  }
 
   if (placement === 'bottom' && targetRect.bottom + TOOLTIP_GAP + tipRect.height > viewportHeight - TOOLTIP_MARGIN) {
     placement = 'top';
@@ -121,33 +128,31 @@ function positionTooltip(target, preferredPlacement = 'bottom') {
     placement = 'bottom';
   }
 
-  const naturalLeft = targetRect.left + targetRect.width / 2 - tipRect.width / 2;
+  const naturalLeft = placement === 'right' ? targetRect.right + TOOLTIP_GAP : placement === 'left' ? targetRect.left - TOOLTIP_GAP - tipRect.width : targetRect.left + targetRect.width / 2 - tipRect.width / 2;
   const minLeft = TOOLTIP_MARGIN;
   const maxLeft = viewportWidth - tipRect.width - TOOLTIP_MARGIN;
   const left = Math.max(minLeft, Math.min(naturalLeft, Math.max(minLeft, maxLeft)));
-  const top = placement === 'bottom'
+  const top = placement === 'right' || placement === 'left' ? targetRect.top + (targetRect.height-tipRect.height)/2 : placement === 'bottom'
     ? targetRect.bottom + TOOLTIP_GAP
     : targetRect.top - TOOLTIP_GAP - tipRect.height;
   const clampedTop = Math.max(TOOLTIP_MARGIN, Math.min(top, viewportHeight - tipRect.height - TOOLTIP_MARGIN));
-  const targetCenter = targetRect.left + targetRect.width / 2;
-  const arrowLeft = Math.max(10, Math.min(targetCenter - left, tipRect.width - 10));
 
   portal.dataset.placement = placement;
   portal.style.left = `${left}px`;
   portal.style.top = `${clampedTop}px`;
-  portal.style.setProperty('--tooltip-arrow-left', `${arrowLeft}px`);
 }
 
 function showTooltip(target, text = getTooltipText(target), duration = 0) {
-  if (!target || !text) return;
+  if (!target || !text || !target.isConnected || !target.getClientRects().length) return;
   const portal = ensureTooltipPortal();
   if (tooltipActiveTarget && tooltipActiveTarget !== target) {
-    tooltipActiveTarget.removeAttribute('aria-describedby');
+    removeTooltipDescription(tooltipActiveTarget);
   }
   tooltipActiveTarget = target;
-  target.setAttribute('aria-describedby', portal.id);
+  target.setAttribute('aria-describedby', [...new Set([...(target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean), portal.id])].join(' '));
   portal.textContent = text;
   portal.classList.add('visible');
+  portal.showPopover?.();
   positionTooltip(target);
   requestAnimationFrame(() => {
     if (tooltipActiveTarget === target) positionTooltip(target);
@@ -158,12 +163,20 @@ function showTooltip(target, text = getTooltipText(target), duration = 0) {
   }
 }
 
+function removeTooltipDescription(target) {
+  const references=(target.getAttribute('aria-describedby') || '').split(/\s+/).filter(id=>id && id!==tooltipPortal?.id);
+  if (references.length) target.setAttribute('aria-describedby',references.join(' '));
+  else target.removeAttribute('aria-describedby');
+}
+
 function hideTooltip(target = tooltipActiveTarget) {
+  clearTimeout(tooltipShowTimer); tooltipShowTimer = null;
   if (!tooltipPortal || !tooltipActiveTarget) return;
   if (target && target !== tooltipActiveTarget) return;
-  tooltipActiveTarget.removeAttribute('aria-describedby');
+  removeTooltipDescription(tooltipActiveTarget);
   tooltipActiveTarget = null;
   tooltipPortal.classList.remove('visible');
+  tooltipPortal.hidePopover?.();
   if (tooltipFlashTimer) {
     clearTimeout(tooltipFlashTimer);
     tooltipFlashTimer = null;
@@ -171,14 +184,17 @@ function hideTooltip(target = tooltipActiveTarget) {
 }
 
 function tooltipTargetFromEvent(event) {
-  const target = event.target?.closest?.('[data-tip]');
+  const target = event.target?.closest?.('[data-tip],[title]');
   if (!target) return null;
   // Tooltips are used by the header controls, loaded-file row, and dialogs.
   const container = document.getElementById('container');
   const allowed = container?.contains(target) ||
+    target.closest('#usd-workbench') ||
     target.closest('.filename-bar') ||
     target.closest('.dialog-overlay');
-  return allowed ? target : null;
+  if (!allowed) return null;
+  if (target.hasAttribute('title')) { target.dataset.tip=target.getAttribute('title'); target.removeAttribute('title'); }
+  return target;
 }
 
 function isInsideTarget(target, relatedTarget) {
@@ -186,9 +202,10 @@ function isInsideTarget(target, relatedTarget) {
 }
 
 document.addEventListener('pointerover', (event) => {
+  if (event.pointerType === 'touch') return;
   const target = tooltipTargetFromEvent(event);
   if (!target || isInsideTarget(target, event.relatedTarget)) return;
-  showTooltip(target);
+  hideTooltip(); tooltipShowTimer=setTimeout(() => showTooltip(target), TOOLTIP_DELAY);
 });
 
 document.addEventListener('pointerout', (event) => {
@@ -199,7 +216,7 @@ document.addEventListener('pointerout', (event) => {
 
 document.addEventListener('focusin', (event) => {
   const target = tooltipTargetFromEvent(event);
-  if (target) showTooltip(target);
+  if (target?.matches(':focus-visible')) { hideTooltip(); tooltipShowTimer=setTimeout(() => showTooltip(target), TOOLTIP_DELAY); }
 });
 
 document.addEventListener('focusout', (event) => {
@@ -208,15 +225,17 @@ document.addEventListener('focusout', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') hideTooltip();
+  hideTooltip();
 });
+document.addEventListener('pointerdown', () => hideTooltip(), true);
+document.addEventListener('toggle', event => { if (event.target !== tooltipPortal) hideTooltip(); }, true);
 
 window.addEventListener('resize', () => {
-  if (tooltipActiveTarget) hideTooltip();
+  hideTooltip();
 });
 
 window.addEventListener('scroll', () => {
-  if (tooltipActiveTarget) hideTooltip();
+  hideTooltip();
 }, true);
 
 // --- Upload-to-Needle-Cloud capture ---------------------------------------
@@ -527,6 +546,28 @@ onDomReady(function() {
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingOverlayFilename = document.getElementById('loading-overlay-filename');
   const loadingOverlayProgress = document.getElementById('loading-overlay-progress');
+  let loadFrame, loadPresentation = 0;
+  function retainLoadFrame() {
+    if (loadFrame || !(window.usdHydra || window.needleEngineContext || window.usdRoot?.children.length)) return;
+    const source = (window.needleEngineContext?.renderer || window.renderer)?.domElement;
+    const viewport = window.usdWorkbench?.viewport;
+    if (!source?.width || !source.height || !viewport) return;
+    // Keep one screen-sized frame while the previous native stage is disposed.
+    // The new renderer can prepare underneath it without exposing empty frames.
+    const frame=document.createElement('canvas'); frame.className='usd-load-frame'; frame.setAttribute('aria-hidden','true');
+    frame.width=source.width; frame.height=source.height;
+    try {
+      // Drawing buffers are cleared after presentation unless preservation is
+      // enabled. Draw through the active presentation before copying its frame.
+      if (window.needleEngineContext) window.needleEngineContext.renderNow();
+      else if (window.renderUsdFrame) window.renderUsdFrame();
+      else window.renderer.render(window.scene,window.usdRenderCamera || window.camera);
+      frame.getContext('2d').drawImage(source,0,0);
+    }
+    catch { frame.width=frame.height=0; return; }
+    frame.style.background=getComputedStyle(viewport).backgroundColor;
+    loadFrame=frame; viewport.append(frame);
+  }
   function formatLoadingPercent(progress) {
     if (!progress) return '';
     let ratio = Number.NaN;
@@ -540,6 +581,7 @@ onDomReady(function() {
   }
   window.showLoadingOverlay = function(name) {
     if (!loadingOverlay) return;
+    ++loadPresentation; retainLoadFrame();
     // A new load supersedes any previous failure.
     if (window.hideLoadError) window.hideLoadError();
     if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
@@ -557,8 +599,15 @@ onDomReady(function() {
     loadingOverlayProgress.hidden = !text;
   };
   window.hideLoadingOverlay = function() {
-    if (loadingOverlay) loadingOverlay.classList.remove('visible');
-    if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
+    const version=++loadPresentation;
+    // Let the completed scene draw before revealing its canvas. A newer load
+    // invalidates this reveal, including rapid clicks through several examples.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (version!==loadPresentation) return;
+      if (loadingOverlay) loadingOverlay.classList.remove('visible');
+      if (window.updateLoadingOverlayProgress) window.updateLoadingOverlayProgress(null);
+      if (loadFrame) { loadFrame.remove(); loadFrame.width=loadFrame.height=0; loadFrame=null; }
+    }));
   };
 
   // Centered load-error card (shown when a file fails to load, e.g. a 404).
@@ -2661,8 +2710,6 @@ async function init() {
   const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
   const EXCLUDED_ASSET_EXPLORER_MODEL_KEYS = new Set(['nodeperformancetest']);
   const examplesRoot = document.querySelector('.usd-examples-browser');
-  const exampleLibrary=document.getElementById('example-library');
-  const examplesAll=document.getElementById('examples-all');
   const exampleFolders = document.querySelector('.usd-examples-folders');
   const sampleGroupList = document.getElementById('sample-group-list');
   const usdWgGroupTree = document.getElementById('usd-wg-group-tree');
@@ -2720,6 +2767,7 @@ async function init() {
       group: selectedSampleGroup,
       positions: Object.fromEntries(samplePickerPositions),
       expandedFolders: [...expandedSampleFolders],
+      libraryFoldersInitialized: true,
     }));
   }
 
@@ -3196,20 +3244,11 @@ async function init() {
 
   function syncSampleTreeVisibility(groupId = selectedSampleGroup) {
     const activeTopLevel = topLevelSampleGroup(groupId);
-    const treeByGroup = new Map([
-      ['usd-wg', usdWgGroupTree],
-      ['gltf', gltfGroupTree],
-      ['needle', needleGroupTree],
-    ]);
-    for (const [key, tree] of treeByGroup) {
-      if (!tree) continue;
-      const isActive = key === activeTopLevel;
-      // Only the selected library's folders participate in panel layout.
-      tree.hidden = !isActive;
-      tree.classList.toggle('is-open', isActive);
+    for (const folder of sampleGroupList.querySelectorAll('.sample-library')) {
+      // Keep the other libraries available in the same tree. Selecting a child
+      // reveals its ancestors without collapsing folders the user opened.
+      if (groupId !== activeTopLevel && folder.dataset.library === activeTopLevel) folder.open = true;
     }
-    if(exampleLibrary)exampleLibrary.value=activeTopLevel;
-    examplesAll?.classList.toggle('active',groupId===activeTopLevel);
   }
 
   function compareGltfTags(a, b) {
@@ -4003,18 +4042,15 @@ async function init() {
     }
     selectedSampleGroup = groupId;
     renderedSampleGroup = '';
+    galleryGrid.setAttribute('aria-busy','true');
     const loadVersion = ++galleryLoadVersion;
     saveSamplePicker(false);
     galleryGrid.setAttribute('aria-label', `${group.title} examples`);
     if (gallerySubtitle) gallerySubtitle.textContent = group.subtitle;
     if (sampleGroupList) {
-      const activeTopLevel = topLevelSampleGroup(groupId);
       for (const button of sampleGroupList.querySelectorAll('[data-sample-group]')) {
         const buttonGroup = button.dataset.sampleGroup || '';
-        const isTopLevel = sampleGroups.has(buttonGroup);
-        const active = isTopLevel
-          ? buttonGroup === activeTopLevel
-          : buttonGroup === groupId;
+        const active = buttonGroup === groupId;
         button.classList.toggle('active', active);
         button.setAttribute('aria-selected', active ? 'true' : 'false');
       }
@@ -4022,15 +4058,16 @@ async function init() {
     syncSampleTreeVisibility(groupId);
 
     setGalleryStatus(group.load ? 'Loading sample models…' : '');
-    if (galleryGrid) galleryGrid.textContent = '';
     const cards = group.load ? await group.load() : group.cards || [];
     if (selectedSampleGroup !== groupId || galleryLoadVersion !== loadVersion) return;
     buildGalleryCards(cards);
     renderedSampleGroup = groupId;
+    galleryGrid.dataset.exampleGroup=groupId;
+    galleryGrid.setAttribute('aria-busy','false');
     // Async library loading may have created its folder buttons after selection.
     for (const button of sampleGroupList?.querySelectorAll('[data-sample-group]') || []) {
       const buttonGroup = button.dataset.sampleGroup;
-      const active = sampleGroups.has(buttonGroup) ? buttonGroup === topLevelSampleGroup(groupId) : buttonGroup === groupId;
+      const active = buttonGroup === groupId;
       button.classList.toggle('active', active);
       button.setAttribute('aria-selected', String(active));
     }
@@ -4075,8 +4112,16 @@ async function init() {
     if(event.detail){restoreSamplePickerScroll();if(!restoreSamplePickerScroll.tracked){restoreSamplePickerScroll.tracked=true;track('open_gallery');}}
     else {saveSamplePicker(false);++pickerRestoreVersion;restoringPicker=false;}
   });
-  if(exampleLibrary){exampleLibrary.disabled=false;exampleLibrary.onchange=()=>{selectSampleGroup(exampleLibrary.value);track('gallery_select_group',{group:exampleLibrary.value,action:'select'});};}
-  if(examplesAll)examplesAll.onclick=()=>selectSampleGroup(topLevelSampleGroup(selectedSampleGroup));
+  for (const leaf of sampleGroupList.querySelectorAll('.sample-library-leaf')) leaf.prepend(viewerIcon('folder_open'));
+  for (const folder of sampleGroupList.querySelectorAll('.sample-library')) {
+    const id=folder.dataset.library;
+    folder.open=expandedSampleFolders.has(id) || !savedSamplePicker.libraryFoldersInitialized && id===topLevelSampleGroup(selectedSampleGroup);
+    folder.querySelector('summary').prepend(viewerIcon('folder_open'));
+    folder.addEventListener('toggle', () => {
+      if (folder.open) expandedSampleFolders.add(id); else expandedSampleFolders.delete(id);
+      saveSamplePicker(false);
+    });
+  }
   document.getElementById('examples-search').disabled=false;
   const converterToggleActivation = new WeakMap();
 
@@ -4144,6 +4189,7 @@ async function init() {
   function activateFileLink(link) {
     // Keep the library open while replacing the viewport scene.
     if (link.classList.contains('gallery-card')) {
+      if (galleryGrid.getAttribute('aria-busy')==='true') return;
       if (galleryGrid) {
         for (const c of galleryGrid.querySelectorAll('.gallery-card.active')) c.classList.remove('active');
         link.classList.add('active');
@@ -4183,6 +4229,7 @@ async function init() {
           await loadFromFileLink(request);
         } catch (error) {
           console.error("Failed to load linked USD file", error);
+          window.setViewerLoading?.(false); window.hideLoadingOverlay?.();
         }
       }
     } finally {
@@ -4230,6 +4277,7 @@ async function init() {
     if (requestedFilename && requestedFilename === filename && ready && currentHydraHandle && !catalogAssetForUrlPath(requestedFilename)?.executable) {
       return;
     }
+    if (requestedFilename) window.showLoadingOverlay?.(link.dataset.name || requestedFilename);
 
     if (requestedFilename !== filename) {
       const currentUrl = new URL(location.href); currentUrl.searchParams.delete('stageVariant');
@@ -4260,14 +4308,12 @@ async function init() {
     if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
     window._controls.update(0);
 
-    // clear existing objects
-    if (filename !== undefined) {
-      // clearStage();
-      setFilenameText("");
-    }
+    // Keep the current filename with its retained frame until the replacement
+    // has been fetched. Only an explicit Close returns the header to Untitled.
+    if (!filename) setFilenameText("");
 
     const el = document.querySelector("#container");
-    el.classList.remove("have-custom-file");
+    el.classList.toggle("have-custom-file", !!filename);
 
     await clearStage({ clearNeedleEngine: !filename });
 
@@ -4312,7 +4358,6 @@ async function init() {
   });
 
   setupDebugTestButton();
-  exampleLibrary.disabled = false;
   window.__usdViewerUiReady = true;
   
   render();

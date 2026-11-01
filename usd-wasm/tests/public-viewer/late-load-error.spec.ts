@@ -1,5 +1,5 @@
+import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
 import {expect, test} from '@playwright/test';
-import {openAppMenu, openSamples, stageReady} from './workbench-menus';
 
 test.use({video: 'on'});
 for (const viewer of ['three', 'needle']) {
@@ -10,13 +10,14 @@ for (const viewer of ['three', 'needle']) {
     await page.goto(`/?viewer=${viewer}&render=basic&assetCache=0&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda`);
     await stageReady(page);
     await openSamples(page);
-    await page.getByRole('combobox', {name: 'Example library'}).selectOption('usd-assets');
+    await selectExampleFolder(page,'usd-assets');
     const card = page.locator('#gallery-grid a.file').first();
     await card.waitFor();
     const target = new URL(new URL((await card.getAttribute('href'))!, page.url()).searchParams.get('file')!, page.url());
     expect(target.hostname).toBe('huggingface.co');
     expect(target.pathname).toContain('vr_head.usd');
-    await page.route(url => url.href === target.href, async route => {
+    // The native reader can fetch from its worker as well as the page.
+    await page.context().route(url => url.href === target.href, async route => {
       if (route.request().method() === 'HEAD') { probing = true; await gate; }
       await route.fulfill({status: 404, headers: {'access-control-allow-origin': '*'}, body: 'Not found'});
     });

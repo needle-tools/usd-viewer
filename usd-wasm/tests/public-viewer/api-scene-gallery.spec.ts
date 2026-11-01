@@ -1,6 +1,6 @@
+import {selectExampleFolder, openSamples, stageReady} from './workbench-menus';
 import { test, expect } from '@playwright/test';
 import { apiExampleAssets } from '../fixtures/api/examples.js';
-import { openSamples, stageReady } from './workbench-menus';
 test.describe.configure({ mode: 'parallel' });
 const selectedIds = process.env.USD_API_SCENE_IDS?.split(',');
 const cases = selectedIds ? apiExampleAssets.filter(asset => selectedIds.includes(asset.executable)) : apiExampleAssets;
@@ -9,7 +9,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: every API fixture pro
   test.setTimeout(600_000);
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(`/?viewer=${viewer}`); await openSamples(page);
-  await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const results = [];
   for (const asset of cases) {

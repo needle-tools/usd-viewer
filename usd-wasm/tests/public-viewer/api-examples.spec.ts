@@ -1,5 +1,5 @@
+import {selectExampleFolder, stageReady, openSamples} from './workbench-menus';
 import { test, expect } from '@playwright/test';
-import { stageReady, openSamples } from './workbench-menus';
 import {apiExampleAssets} from '../fixtures/api/examples.js';
 
 for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute into the viewport and restore from their URL`, async ({ page }, info) => {
@@ -10,7 +10,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute 
     if (/\/emHdBindings(?:\.jspi)?\.wasm$/.test(path)) runtimeRequests.add(path);
   });
   await page.goto(`/?viewer=${viewer}`); await openSamples(page);
-  await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   await expect(page.locator('.gallery-card')).toHaveCount(apiExampleAssets.length);
   await expect.poll(() => page.locator('.gallery-card .gallery-thumb').count()).toBe(apiExampleAssets.length);
@@ -52,7 +52,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute 
 
 test('API fixture dependency failures recover, and replacing an example terminates its worker', async ({ page, context }) => {
   await page.goto('/?viewer=three'); await openSamples(page);
-  await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const dependency = '**/test-fixtures/materialx/mtlxFiles/texture_noise_surface.mtlx';
   await context.route(dependency, route => route.fulfill({ status: 404, body: 'missing fixture dependency' }));

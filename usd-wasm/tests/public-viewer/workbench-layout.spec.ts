@@ -1,5 +1,5 @@
+import {selectExampleFolder, openAppMenu, openSamples, openSettings, stageReady} from './workbench-menus';
 import {expect, test, type Page} from '@playwright/test';
-import {openAppMenu, openSamples, openSettings, stageReady} from './workbench-menus';
 
 const fixture = '/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const bounds = (page: Page, selector: string) => page.locator(selector).evaluate(el => el.getBoundingClientRect().toJSON());
@@ -79,13 +79,15 @@ for (const theme of ['light','dark']) test(`${theme}: Examples has bounded navig
   await page.goto('/?viewer=three'); await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
   for (const [width,height] of [[1440,960],[700,750],[390,700],[390,420],[320,568]]) {
     await page.setViewportSize({width,height}); await openSamples(page);
-    await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+    await selectExampleFolder(page,'needle');
     await expect(page.locator('.gallery-card').first()).toBeVisible();
     await expect.poll(async()=>(await bounds(page,'.usd-examples-browser')).bottom).toBeLessThanOrEqual(height);
     const header=await bounds(page,'#container'), gallery=await bounds(page,'.usd-examples-browser'), grid=await bounds(page,'.gallery-grid');
     expect(await page.locator('#container').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
     expect(gallery.top).toBeGreaterThanOrEqual(header.bottom); expect(gallery.left).toBeGreaterThanOrEqual(0); expect(gallery.right).toBeLessThanOrEqual(width); expect(gallery.bottom).toBeLessThanOrEqual(height);
-    expect(grid.height).toBeGreaterThan(120); expect(gallery.bottom-grid.bottom).toBeLessThan(60);
+    const footer=await bounds(page,'.usd-examples-footer');
+    // Preview-source controls wrap to a second row in the narrowest panels.
+    expect(grid.height).toBeGreaterThan(120); expect(gallery.bottom-grid.bottom).toBeLessThanOrEqual(footer.height+1); expect(footer.height).toBeLessThan(80);
     const card=await bounds(page,'.gallery-card:first-child'); expect(card.width).toBeGreaterThan(width < 360 ? 120 : 130); expect(card.width).toBeLessThan(250);
     expect(await page.locator('.usd-examples-browser').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
     await page.locator('.gallery-card').last().scrollIntoViewIfNeeded();

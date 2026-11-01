@@ -15,7 +15,7 @@ for(const theme of ['light','dark'])test(`${theme} menus fit without scrollbars 
       expect(box.rect.left).toBeGreaterThanOrEqual(0);expect(box.rect.right).toBeLessThanOrEqual(width);
       await page.screenshot({path:info.outputPath(`${theme}-${name}-${width}.png`)});await page.keyboard.press('Escape');
     }
-    await page.locator('[data-usd-menu=file] > summary').focus();await page.keyboard.press('ArrowRight');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeFocused();await page.keyboard.press('ArrowDown');await expect(page.locator('#sample-group-list')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('combobox',{name:'Example library'})).toBeFocused();
+    await openAppMenu(page,'file');await page.locator('[data-usd-menu=file] > summary').focus();await page.keyboard.press('ArrowRight');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeFocused();await page.keyboard.press('ArrowDown');await expect(page.locator('#sample-group-list')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('searchbox',{name:'Search examples'})).toBeFocused();
     const header=await page.locator('#container').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}));expect(header.scroll).toBeLessThanOrEqual(header.width);
   }
 });

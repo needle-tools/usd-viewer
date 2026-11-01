@@ -1,5 +1,5 @@
+import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
 import {expect,test} from '@playwright/test';
-import {openAppMenu,openSamples,stageReady} from './workbench-menus';
 
 for(const theme of ['light','dark'])test(`${theme}: icons, four navigation states, menu geometry and typography`,async({page},info)=>{
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);
@@ -25,7 +25,7 @@ for(const theme of ['light','dark'])test(`${theme}: icons, four navigation state
   await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Open…',exact:true})).toBeFocused();
   await page.keyboard.press('Escape');await expect(page.locator('[data-usd-menu=file] > summary')).toBeFocused();
   await openAppMenu(page,'help');await page.screenshot({path:info.outputPath(`${theme}-menu.png`)});await page.keyboard.press('Escape');
-  await openSamples(page);await page.locator('#example-library').selectOption('needle');
+  await openSamples(page);await selectExampleFolder(page,'needle');
   const folder=page.locator('.sample-group-button').filter({hasText:'Lights'}).first();await expect(folder).toBeVisible();await folder.click();
   await page.locator('#examples-search').hover();const active=await folder.evaluate(el=>getComputedStyle(el).backgroundColor);await folder.hover();const activeHover=await folder.evaluate(el=>getComputedStyle(el).backgroundColor);expect(activeHover).not.toBe(active);
   await expect(folder).toHaveClass(/active/);await page.screenshot({path:info.outputPath(`${theme}-examples.png`)});

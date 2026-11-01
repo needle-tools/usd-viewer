@@ -1,5 +1,5 @@
+import {selectExampleFolder, openSamples, stageReady} from './workbench-menus';
 import {expect, test} from '@playwright/test';
-import {openSamples, stageReady} from './workbench-menus';
 
 test('Draco overrides retain visible red and blue surfaces under authored lights', async ({page}, info) => {
   await page.goto('/?viewer=three&render=beauty&assetCache=0&file=/test-fixtures/draco/draco_mixed_overrides.usda');
@@ -26,7 +26,7 @@ test('Draco overrides retain visible red and blue surfaces under authored lights
 
 test('Beauty and usdview previews switch in place and persist', async ({page}) => {
   await page.goto('/?viewer=three&assetCache=0'); await openSamples(page);
-  await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const card=page.locator('.gallery-card[data-name="Animated Radius"]'), image=card.locator('img');
   const beauty=page.getByRole('button',{name:'Beauty',exact:true}), storm=page.getByRole('button',{name:'usdview',exact:true});
@@ -46,7 +46,7 @@ test('Beauty and usdview previews switch in place and persist', async ({page}) =
 test('a missing Beauty image falls back to its native preview', async ({page}) => {
   await page.route('**/thumbnails/beauty/api-animated-radius.webp',route=>route.fulfill({status:404}));
   await page.goto('/?viewer=three&assetCache=0'); await openSamples(page);
-  await page.getByRole('combobox',{name:'Example library'}).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const image=page.locator('.gallery-card[data-name="Animated Radius"] img');
   await expect(page.getByRole('button',{name:'Beauty',exact:true})).toBeEnabled();

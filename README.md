@@ -24,6 +24,12 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Arrange Stage, Examples, Properties, Layers, Code, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 
+The header switches between **USD Viewer**, with a full viewport and an Examples
+menu, and **USD Studio**, with the dockable inspection and authoring workspace.
+Switching keeps the loaded scene and Studio layout. The choice is remembered;
+new visitors start in Viewer, while existing saved workspaces open in Studio.
+Use `?workspace=viewer` or `?workspace=studio` to link to a specific mode.
+
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
 COOP/COEP headers:
 

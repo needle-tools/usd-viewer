@@ -1,5 +1,5 @@
+import {selectExampleFolder, openAppMenu, openSamples, stageReady, clearStage} from './workbench-menus';
 import { test, expect, type Page } from '@playwright/test';
-import { openAppMenu, openSamples, stageReady, clearStage } from './workbench-menus';
 import { replExamples, apiExampleAssets } from '../fixtures/api/examples.js';
 
 const exampleCode = (id: string) => replExamples[apiExampleAssets.findIndex(asset => asset.executable === id)].code;
@@ -109,7 +109,7 @@ test('switching, stale loads and closing keep the pane consistent and release th
   await selectLayer(page, 'root');
   // Load two examples back to back; only the second may populate the pane.
   await openSamples(page);
-  await page.getByRole('combobox', { name: 'Example library' }).selectOption('needle');
+  await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const label = (id: string) => apiExampleAssets.find(asset => asset.executable === id)!.label;
   await page.locator(`.gallery-card[data-name="${label('referenced-layer')}"]`).click();

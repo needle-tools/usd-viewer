@@ -5,6 +5,7 @@ import { mountDownloadButton } from './usd/viewer/downloadButton.js';
 import { mountLazyCodePane } from './viewer-lazy-code.js';
 
 const STORAGE = 'needle-usd-workspace-v2';
+const PRODUCT_MODE = 'needle-usd-product-mode';
 const THEME = 'needle-usd-theme';
 const dimension = (name, fallback) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(`--usd-${name}`)) || fallback;
 const COMPACT_WIDTH = dimension('compact-breakpoint', 800);
@@ -35,17 +36,34 @@ function commandIcon(node, name) {
 function button(text, action, title, icon = commandIcons[text]) { const node = element('button', 'header-tool-button', text); node.type = 'button'; if (title) node.title = title; node.onclick = action; if(icon)commandIcon(node,icon); return node; }
 
 export async function mountWorkbench() {
+  const previousWorkspace = read(STORAGE, null);
+  const requestedMode = new URLSearchParams(location.search).get('workspace');
+  const rememberedMode = read(PRODUCT_MODE, null);
+  const validMode = value => value === 'viewer' || value === 'studio';
+  const hasSavedWorkspace = previousWorkspace?.current || read('needle-usd-workspace-v1', null)?.current;
+  let productMode = validMode(requestedMode) ? requestedMode : validMode(rememberedMode) ? rememberedMode : hasSavedWorkspace ? 'studio' : 'viewer';
+  save(PRODUCT_MODE, productMode);
   document.body.classList.add('usd-product');
   const root = element('div', 'usd-workbench'); root.id = 'usd-workbench'; root.dataset.loaded = 'false';
+  root.dataset.mode = productMode;
   const parking = element('div'); parking.hidden = true; root.append(parking);
   const header = document.getElementById('container');
   const identity = element('div', 'header-tool-leading');
   const logo = document.querySelector('.needle-logo-link');
   logo.querySelector('img').src = '/brand/logos/logo_needle_black_no_padding.svg';
-  const title = element('div', 'header-tool-title-group'); title.append(element('strong', '', 'USD Viewer'));
+  const title = element('div', 'header-tool-title-group');
+  const productSelect = element('select', 'usd-product-mode'); productSelect.setAttribute('aria-label', 'Workspace mode');
+  for (const [value, text] of [['viewer', 'USD Viewer'], ['studio', 'USD Studio']]) { const option = element('option', '', text); option.value = value; productSelect.append(option); }
+  productSelect.value = productMode; productSelect.onchange = () => setProductMode(productSelect.value); title.append(productSelect);
   const fileContext = element('span', 'usd-file-context', 'Untitled'); identity.append(logo, title);
   const actions = element('nav', 'header-tool-actions usd-menubar'); actions.setAttribute('aria-label', 'Application menus');
+  actions.id = 'usd-application-menus';
+  const menuToggle = button('Menu', () => setMenubarOpen(root.dataset.menuOpen !== 'true'), 'Application menus');
+  menuToggle.classList.add('usd-menubar-toggle'); menuToggle.setAttribute('aria-label', 'Application menus'); menuToggle.setAttribute('aria-controls', actions.id); menuToggle.setAttribute('aria-expanded', 'false');
+  function setMenubarOpen(open) { root.dataset.menuOpen = String(open); menuToggle.setAttribute('aria-expanded', String(open)); if (open) positionMenus(); }
   const samplePicker = document.querySelector('.usd-examples-browser');
+  const examplesSearch = samplePicker.querySelector('#examples-search');
+  const searchSlots = new Map();
   const engine = document.getElementById('viewer-mode-toggle'); engine.classList.add('segmented-control');
   const share = document.getElementById('export-gltf');
   const about = document.getElementById('about-link'); about.classList.add('header-tool-button');
@@ -63,11 +81,13 @@ export async function mountWorkbench() {
   function menuIsOpen() { return menus.some(menu => menu.open) || downloadControl?.menuOpen; }
   function followMenu(trigger) {
     if (!menuIsOpen() || trigger.matches(':disabled,[aria-disabled=true]')) return;
-    closeMenus();
+    closeMenus(true);
     if (trigger.tagName === 'SUMMARY') openMenu(trigger.parentElement);
   }
   function positionMenus() {
-    const width = root.clientWidth, top = header.getBoundingClientRect().bottom + 4;
+    const width = root.clientWidth, bottom = header.getBoundingClientRect().bottom;
+    root.style.setProperty('--usd-header-bottom', `${bottom}px`);
+    const top = (menuToggle.getClientRects().length && root.dataset.menuOpen === 'true' ? actions.getBoundingClientRect().bottom : bottom) + 4;
     root.style.setProperty('--usd-menu-top', `${top}px`);
     for (const disclosure of menus) {
       if (!disclosure.open) continue;
@@ -76,9 +96,9 @@ export async function mountWorkbench() {
     }
   }
   function nextMenu(trigger, direction, open) {
-    const triggers = [...header.querySelectorAll('.usd-menu > summary, .usd-examples-menu, .usd-download-trigger')].filter(item => !item.matches('[aria-disabled=true]'));
+    const triggers = [...header.querySelectorAll('.usd-menu > summary, .usd-examples-menu, .usd-download-trigger')].filter(item => item.getClientRects().length && !item.matches('[aria-disabled=true]'));
     const next = triggers[(triggers.indexOf(trigger) + direction + triggers.length) % triggers.length];
-    closeMenus(); next.focus();
+    closeMenus(true); next.focus();
     if (open && next.tagName === 'SUMMARY') openMenu(next.parentElement);
   }
   function createMenu(label, parent = actions) {
@@ -125,13 +145,13 @@ export async function mountWorkbench() {
   const downloadGroup = downloadControl.element;
   downloadControl.button.id = 'usd-download';
   downloadControl.menuTrigger.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') followMenu(downloadControl.menuTrigger); });
-  downloadControl.button.addEventListener('click', closeMenus);
-  const samples = button('Examples', () => { closeMenus(); openPanel('examples'); });
+  downloadControl.button.addEventListener('click', () => closeMenus());
+  const samples = button('Examples', () => { closeMenus(); setMenubarOpen(false); openPanel('examples'); });
   samples.disabled = true; samples.classList.add('usd-examples-menu'); fileMenu.after(samples);
   samples.setAttribute('aria-controls','usd-examples-panel');
   samples.addEventListener('keydown', event => {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); nextMenu(samples, event.key === 'ArrowRight' ? 1 : -1, false); }
-    if (event.key === 'ArrowDown') { event.preventDefault(); samples.click(); requestAnimationFrame(()=>samplePicker.querySelector('select')?.focus()); }
+    if (event.key === 'ArrowDown') { event.preventDefault(); samples.click(); requestAnimationFrame(()=>examplesSearch.focus()); }
   });
   fileCommands.append(open, share);
   helpCommands.append(about); if (feedback) helpCommands.append(feedback);
@@ -151,7 +171,7 @@ export async function mountWorkbench() {
   theme.onchange = () => { save(THEME, theme.value); applyTheme(); }; media.addEventListener('change', applyTheme); applyTheme();
   const themeRow = element('label', 'usd-menu-row', 'Theme'); themeRow.append(theme); viewCommands.append(themeRow);
   viewCommands.classList.add('usd-view-menu');
-  header.replaceChildren(identity, actions, fileContext, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
+  header.replaceChildren(identity, menuToggle, actions, fileContext, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
   root.append(header);
   const workspace = element('main', 'usd-workspace'); workspace.setAttribute('aria-label', 'USD workspace'); root.append(workspace);
   const dockHost = element('div', 'usd-dock'); workspace.append(dockHost);
@@ -166,10 +186,21 @@ export async function mountWorkbench() {
   compactHeader.append(back, compactPicker, compactClose);
   const compactContent = element('div', 'usd-compact-content'), compactTimeline = element('div', 'usd-compact-timeline');
   compact.append(compactHeader, compactContent, compactTimeline); workspace.append(compact);
+  const viewerHost = element('div', 'usd-viewer-layout'); workspace.append(viewerHost);
+  const examplesDialog = element('dialog', 'usd-examples-dialog'); examplesDialog.id = 'usd-viewer-examples'; examplesDialog.setAttribute('aria-label', 'Examples');
+  const examplesHeading = element('div', 'usd-examples-dialog-header');
+  const closeExamples = button('', () => examplesDialog.close(), 'Close examples'); closeExamples.className = 'usd-tab-close'; closeExamples.setAttribute('aria-label', 'Close examples'); closeExamples.append(viewerIcon('close'));
+  examplesHeading.append(element('strong', '', 'Examples'), closeExamples);
+  const examplesContent = element('div', 'usd-examples-dialog-content'); examplesDialog.append(examplesHeading, examplesContent); root.append(examplesDialog);
+  examplesDialog.addEventListener('close', () => { if (disposed) return; renderCompact(); if (productMode === 'viewer') (samples.getClientRects().length ? samples : menuToggle).focus({preventScroll:true}); });
+  examplesDialog.addEventListener('click', event => { if (event.target !== examplesDialog) return; const box=examplesDialog.getBoundingClientRect(); if (event.clientX<box.left || event.clientX>box.right || event.clientY<box.top || event.clientY>box.bottom) examplesDialog.close(); });
   const mounts = new Map(); let compactPanel = 'viewport', isCompact = false, responsiveInitialized = false;
   const hosts = Object.fromEntries(Object.keys(definitions).map(id => { const host = element('section', `usd-panel usd-panel-${id}`); host.dataset.panel = id; parking.append(host); return [id, host]; }));
   hosts.examples.id='usd-examples-panel'; hosts.examples.append(samplePicker);
   const examplesBrowser=mountExamplesBrowser(samplePicker);
+  parking.append(examplesSearch);
+  examplesSearch.addEventListener('pointerdown', event => event.stopPropagation());
+  examplesSearch.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); });
   function settingsGroup(title, expanded) {const group=element('details','usd-settings-section');group.open=expanded;const summary=element('summary');summary.append(viewerIcon('chevron_right'),document.createTextNode(title));group.append(summary);const body=element('div');group.append(body);viewCommands.append(group);return body;}
   const rendererSettings=settingsGroup('Rendering', true), viewSettings=settingsGroup('Scene', false);
   const cameraSettings=element('div','usd-camera-settings');viewSettings.append(cameraSettings);
@@ -198,10 +229,11 @@ export async function mountWorkbench() {
   document.getElementById('top-center')?.remove(); document.body.prepend(root);
   let restoring = true, persistTimer, disposed = false, layoutFrame, resizeFrame, stageRevealFrame;
   const visibilityListeners = new Set(), disposeListeners = new Set();
-  let state = read(STORAGE, null);
+  let state = previousWorkspace;
   const migrating = !state;
   state ||= read('needle-usd-workspace-v1', { current: null, presets: {} });
   let awaitingStage = state.awaitingStage ?? !state.current;
+  let stageInfo = null;
   let desktopWidth = state.current?.grid?.width || Math.max(1100, workspace.clientWidth);
   let desktopHeight = state.current?.grid?.height || workspace.clientHeight;
   const dock = createDockview(dockHost, {
@@ -209,6 +241,13 @@ export async function mountWorkbench() {
     theme: { name: 'needle-usd', className: 'dockview-theme-needle-usd', gap: 1 },
     defaultTabComponent: 'usd-tab', keyboardNavigation: true, floatingGroupDragHandle: 'tabbar', disableTabsOverflowList: true,
     popoutUrl: `${location.origin}/viewer-popout.html`,
+    createRightHeaderActionComponent(group) {
+      const slot=element('div','usd-examples-search-slot'); slot.hidden=true;
+      return {element:slot, init() { searchSlots.set(group.id,slot); }, dispose() {
+        if (examplesSearch.parentElement===slot) parking.append(examplesSearch);
+        searchSlots.delete(group.id);
+      }};
+    },
     createComponent({ name }) {
       const wrapper = element('div', 'usd-panel-mount');
       return { element: wrapper, init() { mounts.set(name, wrapper); wrapper.append(hosts[name]); }, dispose() { if (mounts.get(name) === wrapper) { mounts.delete(name); parking.append(hosts[name]); } } };
@@ -261,13 +300,25 @@ export async function mountWorkbench() {
     layoutResponsive();
   }
   function persist() {
-    if (disposed || restoring) return;
+    if (disposed || restoring || productMode !== 'studio') return;
     clearTimeout(persistTimer); persistTimer = setTimeout(() => {
-      state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state);
+      if (productMode === 'studio') saveStudioLayout();
     }, 150);
   }
+  function saveStudioLayout() { clearTimeout(persistTimer); state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state); }
+  function setProductMode(next) {
+    if (!validMode(next) || next === productMode) return;
+    if (productMode === 'studio') saveStudioLayout();
+    if (examplesDialog.open) examplesDialog.close();
+    closeMenus(); setMenubarOpen(false);
+    productMode = next; save(PRODUCT_MODE, next);
+    const url = new URL(location.href); url.searchParams.set('workspace', next); history.replaceState({}, '', url);
+    productSelect.value = next;
+    if (next === 'studio' && awaitingStage && stageInfo) { awaitingStage = false; defaults(defaultKind(), false); }
+    else layoutResponsive();
+  }
   function showCompact(id) { compactPanel = id; renderCompact(); }
-  function isPanelVisible(id) { const panel=dock.getPanel(id); return !!panel && (isCompact ? compactPanel===id : panel.api.isVisible); }
+  function isPanelVisible(id) { if (productMode === 'viewer') return id === 'viewport' || id === 'examples' && examplesDialog.open; const panel=dock.getPanel(id); return !!panel && (isCompact ? compactPanel===id : panel.api.isVisible); }
   function notifyVisibility() {
     if (disposed || restoring) return;
     codePane.refreshVisibility();
@@ -276,18 +327,37 @@ export async function mountWorkbench() {
       if (visible !== subscription.visible) { subscription.visible = visible; subscription.callback(visible); }
     }
   }
-  function notifyExamples() { const visible=isPanelVisible('examples'); if(samplePicker.dataset.visible===String(visible))return; samplePicker.dataset.visible=String(visible); samples.setAttribute('aria-pressed',String(visible)); samplePicker.dispatchEvent(new CustomEvent('usd-examples-visibility',{detail:visible})); }
+  function placeExamplesSearch() {
+    let target=parking;
+    if (productMode==='viewer' && examplesDialog.open) target=examplesHeading;
+    else if (productMode==='studio' && isPanelVisible('examples')) {
+      target=isCompact ? compactHeader : searchSlots.get(dock.getPanel('examples')?.group.id) || parking;
+    }
+    for (const slot of searchSlots.values()) slot.hidden=slot!==target;
+    if (examplesSearch.parentElement!==target) {
+      if (target.moveBefore && examplesSearch.isConnected && target.isConnected && target.ownerDocument===examplesSearch.ownerDocument) target.moveBefore(examplesSearch,target===examplesHeading?closeExamples:target===compactHeader?compactClose:null);
+      else target.insertBefore(examplesSearch,target===examplesHeading?closeExamples:target===compactHeader?compactClose:null);
+    }
+  }
+  function notifyExamples() { placeExamplesSearch(); const visible=isPanelVisible('examples'); samples.setAttribute('aria-controls', productMode === 'viewer' ? examplesDialog.id : hosts.examples.id); samples.setAttribute('aria-expanded', String(visible)); samples.setAttribute('aria-pressed',String(visible)); if(samplePicker.dataset.visible===String(visible))return; samplePicker.dataset.visible=String(visible); samplePicker.dispatchEvent(new CustomEvent('usd-examples-visibility',{detail:visible})); }
+  function moveHost(id, target) {
+    if (hosts[id].parentElement === target) return;
+    if (target.moveBefore && hosts[id].isConnected && target.isConnected && hosts[id].ownerDocument === target.ownerDocument) target.moveBefore(hosts[id], null);
+    else target.append(hosts[id]);
+  }
   function renderCompact() {
+    viewerHost.hidden = productMode !== 'viewer';
+    if (productMode === 'viewer') {
+      moveHost('viewport', viewerHost); moveHost('examples', examplesDialog.open ? examplesContent : parking);
+      compact.hidden = true; updateViewportVisibility(); notifyExamples(); notifyVisibility(); return;
+    }
     // Move only when the destination changes, preserving focus and scroll state.
     if (!dock.getPanel(compactPanel) || dock.getPanel(compactPanel).api.location.type === 'popout') compactPanel = 'viewport';
     updateViewportVisibility();
     const showTimeline = isCompact && compactPanel === 'viewport' && !!dock.getPanel('timeline');
     for (const [id, wrapper] of mounts) {
       const target = isCompact && id === compactPanel ? compactContent : showTimeline && id === 'timeline' ? compactTimeline : wrapper;
-      if (hosts[id].parentElement !== target) {
-        if (target.moveBefore && hosts[id].isConnected && target.isConnected && hosts[id].ownerDocument === target.ownerDocument) target.moveBefore(hosts[id], null);
-        else target.append(hosts[id]);
-      }
+      moveHost(id, target);
     }
     compact.hidden = !isCompact; notifyExamples(); notifyVisibility();
     if (!isCompact) return;
@@ -298,9 +368,11 @@ export async function mountWorkbench() {
       const option = element('option', '', definitions[panel.id][0]); option.value = panel.id; compactPicker.append(option);
     }
     compactPicker.value = compactPanel;
+    compactPicker.hidden = compactPanel === 'examples';
     compactTimeline.hidden = !showTimeline;
   }
   function closePanel(id) {
+    if (productMode === 'viewer' && id === 'examples') { examplesDialog.close(); return; }
     if (id === 'viewport') return;
     if(id==='examples')state.examplesWidth=dock.getPanel(id)?.api.width||state.examplesWidth;
     awaitingStage = false;
@@ -310,7 +382,12 @@ export async function mountWorkbench() {
   }
   function openPanel(id, focus = true) {
     // Compatibility with saved commands: controls now live directly in View.
-    if (id === 'settings') { closeMenus(); const menu = viewCommands.parentElement; menu.open = true; positionMenus(); return; }
+    if (id === 'settings') { closeMenus(true); if (menuToggle.getClientRects().length) setMenubarOpen(true); const menu = viewCommands.parentElement; menu.open = true; positionMenus(); return; }
+    if (productMode === 'viewer') {
+      if (id === 'examples') { if (!examplesDialog.open) examplesDialog.showModal(); renderCompact(); return; }
+      if (id === 'viewport') { examplesDialog.close(); return; }
+      setProductMode('studio');
+    }
     if (!restoring && focus && id !== 'examples') { awaitingStage = false; }
     let panel = dock.getPanel(id);
     if (!panel) {
@@ -392,18 +469,22 @@ export async function mountWorkbench() {
     button('Reset layout', () => { defaults(); layoutMenu.open = false; }));
   const name = element('input'); name.placeholder = 'Layout name'; name.setAttribute('aria-label', 'Layout name');
   const saveRow = element('div', 'usd-menu-save'); saveRow.append(name, button('Save', () => { const key = name.value.trim(); if (!key) return; awaitingStage = false; state.awaitingStage = false; state.presets ||= {}; state.presets[key] = dock.toJSON(); state.preset = 'saved:' + key; save(STORAGE, state); refreshPresets(); presets.value = 'saved:' + key; name.value = ''; })); menu.append(saveRow);
-  function closeMenus() { for (const disclosure of menus) disclosure.open = false; downloadControl?.closeMenu(); }
-  const onOutsideMenu = event => { if (!actions.contains(event.target) && !downloadControl.element.contains(event.target)) closeMenus(); };
-  const onMenuKey = event => { if (event.key === 'Escape') { const active = menus.find(menu => menu.open); closeMenus(); active?.firstElementChild.focus(); } };
+  function closeMenus(keepMenubar = false) { for (const disclosure of menus) disclosure.open = false; downloadControl?.closeMenu(); if (!keepMenubar) setMenubarOpen(false); }
+  const onOutsideMenu = event => { if (!actions.contains(event.target) && !menuToggle.contains(event.target) && !downloadControl.element.contains(event.target)) { closeMenus(); setMenubarOpen(false); } };
+  const onMenuKey = event => { if (event.key === 'Escape') { const active = menus.find(menu => menu.open), mobileOpen = root.dataset.menuOpen === 'true' && menuToggle.getClientRects().length; closeMenus(); if (mobileOpen) menuToggle.focus(); else active?.firstElementChild.focus(); } };
   document.addEventListener('pointerdown', onOutsideMenu);
   document.addEventListener('keydown', onMenuKey);
   for (const body of [fileCommands, helpCommands]) body.addEventListener('click', event => { if (event.target.closest('button,a')) closeMenus(); });
   if (state.current) restore(state.current); else defaults('viewport', false);
-  if (!state.examplesPanelIntroduced) { const active=dock.activePanel; if(state.current && !dock.getPanel('examples'))openPanel('examples',false); active?.api.setActive(); state.examplesPanelIntroduced=true; }
+  if (!state.examplesPanelIntroduced) { const active=dock.activePanel; if(state.current && !dock.getPanel('examples'))add('examples',{referencePanel:'viewport',direction:'left'}).api.setSize({width:state.examplesWidth||dimension('examples-width',360)}); active?.api.setActive(); state.examplesPanelIntroduced=true; }
   if (migrating) dock.getPanel('console')?.api.close();
   restoring = false;
   function layoutResponsive() {
     const width = workspace.clientWidth, height = workspace.clientHeight;
+    root.dataset.mode = workspace.dataset.mode = productMode; layoutMenu.hidden = productMode !== 'studio';
+    document.title = productMode === 'studio' ? 'USD Studio — Needle' : 'USD Viewer — Needle';
+    dockHost.inert = productMode === 'viewer';
+    if (productMode === 'viewer') { workspace.dataset.compact = 'false'; renderCompact(); positionMenus(); return; }
     const compactNext=width < COMPACT_WIDTH;
     if(responsiveInitialized && compactNext && !isCompact && dock.activePanel?.id==='examples')compactPanel='examples';
     isCompact = compactNext;responsiveInitialized=true;
@@ -420,7 +501,7 @@ export async function mountWorkbench() {
   function updateViewportVisibility() {
     // Compact panels retain desktop geometry, so size alone cannot indicate visibility.
     const rect = viewport.getBoundingClientRect();
-    window.usdViewportVisible = (!isCompact || compactPanel === 'viewport') && rect.width > 0 && rect.height > 0;
+    window.usdViewportVisible = (productMode === 'viewer' || !isCompact || compactPanel === 'viewport') && rect.width > 0 && rect.height > 0;
   }
   const viewportObserver = new ResizeObserver(() => {
     const rect = viewport.getBoundingClientRect(), key = `${rect.width}:${rect.height}`;
@@ -434,7 +515,7 @@ export async function mountWorkbench() {
     clear.hidden = root.dataset.loaded !== 'true';
   }); loadedObserver.observe(header, { attributes: true }); loadedObserver.observe(fileBar, { subtree: true, characterData: true, childList: true });
   const api = {
-    dock, viewport, code: codePane,
+    dock, viewport, code: codePane, get mode() { return productMode; }, setMode: setProductMode,
     onPanelVisibility(id, callback) {
       if (disposed) return () => {};
       const subscription = {id, callback, visible:isPanelVisible(id)}; visibilityListeners.add(subscription);
@@ -444,23 +525,25 @@ export async function mountWorkbench() {
     onDispose(callback) { if (disposed) { callback(); return () => {}; } disposeListeners.add(callback); return () => disposeListeners.delete(callback); },
     setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
     containers: { settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
-    openPanel, isPanelVisible, exampleChosen() { if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
+    openPanel, isPanelVisible, exampleChosen() { if (productMode === 'viewer') examplesDialog.close(); else if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
     async prepareStage() {
+      if (productMode === 'viewer') return;
       if (!awaitingStage) return;
       // Establish the canvas dimensions before either loader fits its camera.
       awaitingStage = false; defaults(defaultKind(), false);
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     },
     setStage(info) {
+      stageInfo = info;
       for (const [id, placeholder] of placeholders) placeholder.hidden = !!info;
-      if (info && awaitingStage) { awaitingStage = false; defaults(defaultKind(), false); }
+      if (productMode === 'studio' && info && awaitingStage) { awaitingStage = false; defaults(defaultKind(), false); }
       // Stage metadata updates content only. Timeline visibility and placement
       // belong to the saved workspace, including when the stage has no animation.
       placeholders.get('timeline').hidden = !!info?.time;
     },
-    selectPrim(path) { if(path && !isCompact) openPanel('properties'); },
-    dispose() { if (disposed) return; disposed = true; for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
+    selectPrim(path) { if(productMode === 'studio' && path && !isCompact) openPanel('properties'); },
+    dispose() { if (disposed) return; disposed = true; examplesDialog.close(); for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };
-  window.addEventListener('pagehide', () => { if (disposed) return; state.current = dock.toJSON(); state.awaitingStage = awaitingStage; save(STORAGE, state); }, { once: true });
+  window.addEventListener('pagehide', () => { if (!disposed && productMode === 'studio') saveStudioLayout(); }, { once: true });
   return api;
 }

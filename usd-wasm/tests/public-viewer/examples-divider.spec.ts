@@ -1,5 +1,5 @@
+import {selectExampleFolder, openSamples} from './workbench-menus';
 import { test, expect, type Page } from '@playwright/test';
-import { openSamples } from './workbench-menus';
 
 async function navigationSize(page: Page, axis: 'height' | 'width') {
   return page.locator('.usd-examples-folders').evaluate((element, axis) => element.getBoundingClientRect()[axis], axis);
@@ -15,7 +15,7 @@ for (const theme of ['light', 'dark']) test(`${theme}: example divider resizes b
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(theme => localStorage.setItem('needle-usd-theme', JSON.stringify(theme)), theme);
   await page.setViewportSize({width: 1440, height: 1000}); await page.goto('/?viewer=three');
-  await openSamples(page); await page.getByRole('combobox', {name: 'Example library'}).selectOption('needle');
+  await openSamples(page); await selectExampleFolder(page,'needle');
   await page.locator('[data-sample-group="needle:JavaScript%20API"]').click();
   const divider = page.getByRole('separator', {name: 'Resize example folders'});
   await expect(divider).toHaveAttribute('aria-orientation', 'horizontal');
