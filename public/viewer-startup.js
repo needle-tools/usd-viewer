@@ -1,3 +1,4 @@
+import {loadSimreadyResources,warmSimreadyComposition,simreadyLocation} from './viewer-simready.js';
 import {getUsdModule} from './usd/bindings/index.js';
 
 const listeners = new Set();
@@ -27,9 +28,21 @@ export function takeStartupPackage(url) {
   return bytes;
 }
 
+function reportAssetProgress(progress) {
+  assetProgress=progress;
+  for(const listener of listeners)listener.asset(progress);
+}
+export const startupSimreadyReady = simreadyLocation(file)
+  ? Promise.resolve(window.__usdViewerAssetCacheReady).then(async()=>{
+      if(!navigator.serviceWorker?.controller || params.get('assetCache')==='0')return;
+      const resources=await loadSimreadyResources(file);
+      await warmSimreadyComposition(resources,reportAssetProgress,startupPackageAbort.signal);
+    }).catch(()=>{})
+  : Promise.resolve();
+
 // Start the runtime independently of the renderer, examples and workbench.
 // Progress is replayed when the app's loading controls become available.
-export const viewerUsdReady = getUsdModule({
+const runtimeOptions = {
   asyncRuntime: 'auto',
   printErr: (...args) => {
     const text = args.join(' ');
@@ -40,11 +53,13 @@ export const viewerUsdReady = getUsdModule({
     downloadProgress = [downloaded, total];
     for (const listener of listeners) listener.download(...downloadProgress);
   },
-  onAssetFetchProgress: progress => {
-    assetProgress = progress;
-    for (const listener of listeners) listener.asset(progress);
-  },
-});
+  onAssetFetchProgress: reportAssetProgress,
+};
+// Dedicated workers inherit their owner's controller at creation. For remote
+// SimReady composition, establish it before starting the native worker pool.
+export const viewerUsdReady = simreadyLocation(file) && window.__usdViewerAssetCacheMode
+  ? Promise.resolve(window.__usdViewerAssetCacheReady).then(()=>getUsdModule(runtimeOptions))
+  : getUsdModule(runtimeOptions);
 // The app attaches its error handler after its dependency graph has loaded.
 void viewerUsdReady.catch(() => {});
 

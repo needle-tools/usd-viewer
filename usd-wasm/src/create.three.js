@@ -209,6 +209,7 @@ async function createFile(opts) {
 }
 
 const activeLegacyLoads = new WeakSet();
+const driverFactories = new WeakMap();
 let nextImportedFileScope = 0;
 
 export class USDLoadingManager {
@@ -270,6 +271,7 @@ function removeVirtualDirectory(USD, path) {
 async function disposeHydraLifetime(lifetime) {
     if (lifetime.cleanupPromise) return lifetime.cleanupPromise;
     lifetime.cleanupPromise = (async () => {
+        lifetime.renderInterface?.cancelPendingTextureLoads();
         try {
             await lifetime.waitForStageOperations?.().catch(() => {});
             await lifetime.waitForDrawCompletion?.().catch(() => {});
@@ -293,6 +295,7 @@ async function disposeHydraLifetime(lifetime) {
                         removeVirtualDirectory(lifetime.USD, "/1");
                     }
                 } finally {
+                    lifetime.releaseFactory?.();
                     lifetime.releaseLegacyLoad();
                 }
             }
@@ -398,6 +401,9 @@ async function createScopedThreeHydra(config, lifetime) {
         materialXVolumeFactory: config.materialXVolumeFactory,
         usdVolumeFactory: config.usdVolumeFactory,
         requestRender: config.requestRender,
+        onAssetFetchProgress: config.onAssetFetchProgress,
+        resolveTextureUrl: config.resolveTextureUrl,
+        maxTextureSize: config.maxTextureSize,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         ktx2TranscoderPath: config.ktx2TranscoderPath,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
@@ -417,9 +423,18 @@ async function createScopedThreeHydra(config, lifetime) {
     const hydraTiming = hydraTimingEnabled();
     const useAsyncDraw = hydraAsyncDrawEnabled();
     if (hydraTiming) console.time("Hydra driver constructor");
-    driverOrPromise = typeof USD.CreateHdWebSyncDriver === "function"
+    const openDriver = () => typeof USD.CreateHdWebSyncDriver === "function"
         ? USD.CreateHdWebSyncDriver(renderInterface, file)
         : new USD.HdWebSyncDriver(renderInterface, file);
+    // Keep construction and the first native sync together across handles in
+    // one module. Their JS renderer callbacks must not bind to another open's
+    // temporary values. Asyncify also permits only one suspended native stack.
+    const previous = driverFactories.get(USD) || Promise.resolve();
+    driverOrPromise = previous.then(openDriver);
+    let release;
+    const synchronized = new Promise(resolve => { release = resolve; });
+    lifetime.releaseFactory = release;
+    driverFactories.set(USD, driverOrPromise.then(() => synchronized, () => {}));
     if (hydraTiming) console.timeEnd("Hydra driver constructor");
     if (driverOrPromise instanceof Promise) {
         if (hydraTiming) console.time("Hydra driver constructor promise");
@@ -586,6 +601,7 @@ async function createScopedThreeHydra(config, lifetime) {
             ? renderInterface.waitForMaterialsReady()
             : undefined)
         .then(() => shadows.refreshBounds());
+    readyPromise.then(() => lifetime.releaseFactory?.(), () => lifetime.releaseFactory?.());
     // draw() reports failures; preserve this rejection for ready() while also
     // allowing hosts to dispose a failed load without first awaiting ready().
     void readyPromise.catch(() => {});
@@ -658,7 +674,7 @@ async function createScopedThreeHydra(config, lifetime) {
             if (drawInFlight || editInFlight) {
                 return;
             }
-            if (!playing) {
+            if (!playing || stageDuration() <= 0) {
                 return;
             }
             time += dt;

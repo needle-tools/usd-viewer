@@ -56,7 +56,7 @@ export interface UsdPhysicsSimulation {
     isPlaying(): boolean;
     update(dt: number): void;
     reset(): void;
-    bodyForObject(object: Object3D): { data: PhysicsBody; body: RapierBody } | null;
+    bodyForObject(object: Object3D, instanceIndex?: number): { data: PhysicsBody; body: RapierBody } | null;
     /** Positions are in USD stage coordinates, before the root up-axis transform. */
     beginDrag(path: string, position: { x: number; y: number; z: number }): boolean;
     moveDrag(position: { x: number; y: number; z: number }): void;
@@ -73,4 +73,6 @@ export function createUsdPhysics(options: {
     root?: Object3D;
     snapshot?: UsdPhysicsSnapshot;
     scenePath?: string;
+    /** Interaction solves joint constraints with a held base; gravity and contacts are disabled. */
+    mode?: 'simulation' | 'interaction';
 }): Promise<UsdPhysicsSimulation>;

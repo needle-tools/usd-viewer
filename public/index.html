@@ -222,6 +222,10 @@
               <div class="sample-group-tree" id="needle-group-tree" aria-label="Needle asset folders"></div>
             </details>
             <button type="button" class="sample-library-leaf sample-group-button sample-folder-button" data-library="usd-assets" data-sample-group="usd-assets"><span>Hugging Face test set</span><small>14</small></button>
+            <details class="sample-folder sample-library" data-library="simready">
+              <summary class="sample-group-button sample-folder-button" data-sample-group="simready"><span>NVIDIA SimReady</span><small id="simready-count"></small></summary>
+              <div class="sample-group-tree" id="simready-group-tree" aria-label="NVIDIA SimReady folders"></div>
+            </details>
             <details class="sample-folder sample-library" data-library="usd-wg">
               <summary class="sample-group-button sample-folder-button" data-sample-group="usd-wg"><span>USD Working Group Assets</span></summary>
               <div class="sample-group-tree" id="usd-wg-group-tree" aria-label="USD Working Group asset folders"></div>
@@ -241,6 +245,7 @@
       </div>
       <footer class="usd-examples-footer">
         <output id="examples-count" aria-live="polite">0 examples</output>
+        <a id="examples-source" target="_blank" rel="noopener noreferrer" hidden>NVIDIA · CC BY 4.0</a>
         <div class="usd-preview-renderer" role="group" aria-label="Preview renderer" hidden>
           <button type="button" data-preview-renderer="beauty" aria-pressed="true">Beauty</button>
           <button type="button" data-preview-renderer="storm" aria-pressed="false">usdview</button>
@@ -291,6 +296,7 @@
       <span>converted with</span>
       <div class="converter-toggle converter-toggle-inline" id="loaded-converter-toggle" role="group" aria-label="Converted with"></div>
     </div>
+    <div id="usd-texture-controls" class="loaded-converter-control" hidden></div>
     <div id="usd-detail-controls" class="loaded-converter-control" hidden></div>
     <div id="usd-background-controls" class="loaded-converter-control" hidden></div>
     <div id="usd-variant-controls" class="loaded-converter-control" hidden></div>

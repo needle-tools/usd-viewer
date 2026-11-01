@@ -81,8 +81,8 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   const filter = node('input'); filter.type = 'search'; filter.placeholder = 'Filter properties'; filter.setAttribute('aria-label', 'Filter properties');
   toolbar.append(back, forward, filter);
   const address = node('div', 'usd-property-address'), pathLabel = node('code');
-  const copyPath = makeButton('Copy path', null, () => copy(current));
-  const copyValue = makeButton('Copy value', null, () => copy(selectedRow()?.text ?? rawText(snapshot)));
+  const copyPath = makeButton('Copy path', 'copy_path', () => copy(current));
+  const copyValue = makeButton('Copy value', 'content_copy', () => copy(selectedRow()?.text ?? rawText(snapshot)));
   address.append(pathLabel, copyPath, copyValue);
   const status = node('div', 'usd-property-status'); status.setAttribute('role', 'status'); status.hidden = true;
   const provenance = node('details', 'usd-property-provenance'); provenance.hidden = true;

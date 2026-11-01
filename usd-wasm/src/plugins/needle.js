@@ -137,12 +137,16 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 complexity: opts.getComplexity?.(url) ?? opts.complexity,
                 scenePrimitiveLightIntensityScale: opts.getScenePrimitiveLightIntensityScale?.(url) ?? opts.scenePrimitiveLightIntensityScale,
                 ktx2TranscoderPath: opts.ktx2TranscoderPath,
+                onAssetFetchProgress: opts.onAssetFetchProgress,
+                resolveTextureUrl: opts.resolveTextureUrl,
+                maxTextureSize: opts.getMaxTextureSize?.(url) ?? opts.maxTextureSize,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);
 
             await handle.ready();
-            await handle.materialsReady();
+            if (opts.waitForMaterials) await handle.materialsReady();
+            else void handle.materialsReady().catch(error => console.warn("USD materials failed", error));
 
             if (debug) console.debug("Loaded", this.comp);
 

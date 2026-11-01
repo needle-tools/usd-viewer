@@ -30,6 +30,39 @@ Switching keeps the loaded scene and Studio layout. The choice is remembered;
 new visitors start in Viewer, while existing saved workspaces open in Studio.
 Use `?workspace=viewer` or `?workspace=studio` to link to a specific mode.
 
+Examples includes the complete [NVIDIA SimReady library](https://huggingface.co/datasets/nvidia/simready-assets),
+with NVIDIA's published previews and CC BY 4.0 attribution. The catalog is loaded
+when opened; USD files and their relative dependencies stream from Hugging Face
+when selected. Both asset and preview URLs use the dataset revision recorded in
+[the catalog](public/data/nvidia-simready.json). Refresh it with
+`npm run prepare:simready-manifest` (or pass a full dataset commit SHA after `--`).
+The generator paginates the complete file tree, verifies entry points and preview
+paths, and caches its inventory under `.cache/`. It does not download the asset
+library. To fill missing texture previews for specific packages, run
+`python3 scripts/generate-simready-texture-previews.py <package> ...` (Pillow), then
+regenerate the manifest. Only the derived previews and provenance index are
+shipped; their originals stay under `.cache/`. Folder names group assets by their package-name prefixes.
+
+SimReady browsing defaults to 512 px texture previews where NVIDIA publishes
+those images. Missing previews for the glasses and compressor are generated
+from the pinned originals and included with source URLs, hashes and attribution
+in `public/data/simready-textures/index.json`. Other maps without a preview use
+their original URL and are resized after decoding. **View → Scene → Textures → Original** keeps full source
+resolution; the menu shows the asset's original texture download size. Geometry
+and authored material values appear before textures finish, and download activity
+remains visible in the viewport. The generated resource indexes also let the app
+warm bounded geometry and composition layers while OpenUSD initializes.
+Pinned SimReady URLs are cached without revalidation; cached reloads reuse the
+files across native worker threads. Exports retain the
+original USD dependencies, independently of this display setting.
+
+Both native runtimes are built from OpenUSD commit
+`913db557e9d077094fd4bcfe17e3385930836764` on the local
+`git/openusd` branch `wasm/openusd-26.11.1`. The bridge yields the browser thread
+while opening stages and changing remote variants/payloads, forwards worker
+transfer progress, and delivers change notifications on the JavaScript thread.
+Only the affected bridge files were recompiled; the OpenUSD libraries were reused.
+
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
 COOP/COEP headers:
 

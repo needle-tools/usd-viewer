@@ -127,3 +127,15 @@ test('real Hydra preserves a PreviewSurface with default diffuse color over pair
         assert.equal(material.userData.usdMdlApproximation, undefined);
     } finally { await handle.dispose(); }
 });
+
+test('concurrent local factories preserve independent native stages in both runtime modes', {timeout:10000}, async () => {
+    const USD=await getUsdModule({print(){},printErr(){}});
+    const handles=await Promise.all(['Left','Right'].map(name=>createThreeHydra({USD,scene:new Group(),url:name+'.usda',buffer:new TextEncoder().encode(`#usda 1.0\ndef Cube "${name}" {}\n`)})));
+    try{
+        await Promise.all(handles.map(handle=>handle.ready()));
+        for(let i=0;i<handles.length;i++){
+            const names=[];handles[i].scene.traverse(object=>{if(object.isMesh && object.visible)names.push(object.name);});
+            assert.equal(names.length,1);assert.ok(names[0].includes(i?'Right':'Left'));
+        }
+    }finally{await Promise.all(handles.map(handle=>handle.dispose()));}
+});

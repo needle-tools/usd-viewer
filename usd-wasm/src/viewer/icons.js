@@ -10,6 +10,8 @@
 // class, pencil = over, schema = def. Menus reuse object/action metaphors.
 // Save uses a simplified connected floppy outline at 16px.
 // 16px adaptations: reduced camera iris; simplified bulb base; mesh cube without framing corners.
+// Copy = overlapping sheets; copy path = branching path; link = connected links.
+// Physics joints use joined rigid ends around a lock, hinge, slider or ball.
 // Labels, title and aria-pressed live on controls, never inside decorative SVGs.
 const paths = {
   "first_page": [
@@ -246,6 +248,20 @@ Object.assign(ICONS, {
   }
 });
 
+const stroke = d => `<path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`;
+Object.assign(ICONS, {
+  content_copy: {label:'Copy value',group:'property-actions',svg:stroke('M6 2H14V11H6ZM2 5V14H10')},
+  copy_path: {label:'Copy path',group:'property-actions',svg:stroke('M3 2V11H11M3 6H8M11 3H14V6H11ZM11 10H14V13H11Z')},
+  link: {label:'Follow selection',group:'workspace',svg:stroke('M6 10L10 6M4 7L2.5 8.5A3.2 3.2 0 0 0 7.5 13.5L9 12M7 4L8.5 2.5A3.2 3.2 0 0 1 13.5 7.5L12 9')},
+  'physics-fixed': {label:'Fixed joint',group:'physics-types',svg:stroke('M2 6H5V10H2ZM11 6H14V10H11ZM5 8H11M8 3V13')},
+  'physics-revolute': {label:'Revolute joint',group:'physics-types',svg:stroke('M2 12H6V8A2 2 0 1 1 8 10H12V14M10 2L14 2V6')},
+  'physics-prismatic': {label:'Prismatic joint',group:'physics-types',svg:stroke('M2 4H14M2 12H14M6 7H10V9H6Z')},
+  'physics-spherical': {label:'Spherical joint',group:'physics-types',svg:stroke('M2 8H5M11 8H14M8 5A3 3 0 1 0 8 11A3 3 0 1 0 8 5ZM8 2V5M8 11V14')},
+  'physics-distance': {label:'Distance joint',group:'physics-types',svg:stroke('M2 3V13M14 3V13M3 8H13M6 5L3 8L6 11M10 5L13 8L10 11')},
+  'physics-joint': {label:'Joint',group:'physics-types',svg:stroke('M2 5H5V11H2ZM11 5H14V11H11ZM5 8H11')},
+  'physics-scene': {label:'Physics scene',group:'physics-types',svg:stroke('M2 14H14M8 2V9M5 6L8 9L11 6')},
+});
+
 /** A composed class/over keeps its authoring identity; definitions use their schema. */
 export function primIcon({ type, specifier }) {
   if (specifier === 'class') return 'layers';
@@ -261,8 +277,12 @@ export function primIcon({ type, specifier }) {
     DistantLight: 'light-distant', RectLight: 'light-rect', DiskLight: 'light-disk',
     DomeLight: 'light-dome', GeometryLight: 'light-geometry', CylinderLight: 'light-cylinder',
     SphereLight: 'lightbulb', PortalLight: 'light-rect',
+    PhysicsScene:'physics-scene', PhysicsFixedJoint:'physics-fixed',
+    PhysicsRevoluteJoint:'physics-revolute', PhysicsPrismaticJoint:'physics-prismatic',
+    PhysicsSphericalJoint:'physics-spherical', PhysicsDistanceJoint:'physics-distance',
+    PhysicsJoint:'physics-joint', PhysicsCollisionGroup:'layers',
   };
-  return types[type] || (/Light$/.test(type) ? 'lightbulb' : 'folder_open');
+  return types[type] || (/Joint$/.test(type) ? 'physics-joint' : /Light$/.test(type) ? 'lightbulb' : 'folder_open');
 }
 
 export function viewerIcon(name) {

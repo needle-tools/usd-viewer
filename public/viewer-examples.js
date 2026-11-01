@@ -102,6 +102,11 @@ export function mountExamplesBrowser(root) {
   function previewSource(){
     let available=false,hasBeauty=false,hasStorm=false;
     for(const image of grid.querySelectorAll('img[data-preview-key]')){
+      if (image.dataset.previewDark) {
+        const source=root.ownerDocument.documentElement.dataset.theme==='light'?image.dataset.previewLight:image.dataset.previewDark;
+        if (image.getAttribute('src')!==source) image.src=source;
+        continue;
+      }
       const beauty=beautyPreviews.get(previewKey(image.dataset.previewKey));if(beauty)image.dataset.beauty=beauty;
       if(!image.dataset.beauty&&!image.dataset.storm)continue;
       available=true;hasBeauty ||= !!image.dataset.beauty;hasStorm ||= !!image.dataset.storm;
@@ -122,7 +127,7 @@ export function mountExamplesBrowser(root) {
     let total = 0, visible = 0;
     for (const card of grid.children) {
       total++;
-      card.hidden = !!query && !`${card.dataset.name} ${card.textContent}`.toLocaleLowerCase().includes(query);
+      card.hidden = !!query && !`${card.dataset.name} ${card.dataset.search || ''} ${card.textContent}`.toLocaleLowerCase().includes(query);
       if (!card.hidden) visible++;
     }
     empty.hidden = !!visible || !total || !query;
@@ -141,10 +146,13 @@ export function mountExamplesBrowser(root) {
   details.onclick = () => { showDetails = !showDetails; changeAppearance(); };
   search.oninput = () => { filter(); grid.scrollTop = 0; save(); };
   const observer = new MutationObserver(()=>{filter();previewSource();});
+  const onThemeChange=()=>previewSource();
+  document.addEventListener('usd-theme-change',onThemeChange);
   observer.observe(grid, { childList: true });
   appearance(); filter(); previewSource(); scheduleSplit();
   return { dispose() {
     disposed=true;observer.disconnect(); splitObserver.disconnect();
+    document.removeEventListener('usd-theme-change',onThemeChange);
     if (resizeFrame) frameWindow.cancelAnimationFrame(resizeFrame);
     finishDrag();
     divider.removeEventListener('pointerdown', startDrag); divider.removeEventListener('pointermove', moveDrag);

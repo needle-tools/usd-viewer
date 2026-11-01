@@ -15,10 +15,11 @@ export function mdlToPreview(document) {
   const module = basename(document?.sourceAsset);
   const identifier = String(document?.subIdentifier || module.replace(/\.mdl$/, '')).split('::').pop();
   const omni = ['OmniPBR', 'OmniPBR_ClearCoat', 'OmniPBR_Opacity'].includes(identifier) && module === `${identifier}.mdl`;
+  const glass = identifier === 'OmniGlass' && module === 'OmniGlass.mdl';
   const gltf = gltfModule(module) && identifier === 'gltf_material';
-  if ((!omni && !gltf) || document.unsupportedInputs?.length) return null;
+  if ((!omni && !gltf && !glass) || document.unsupportedInputs?.length) return null;
   const inputs = document.inputs || {};
-  if (omni && (enabled(inputs.project_uvw) || scalar(inputs.uv_space_index, 0) !== 0)) return null;
+  if ((omni || glass) && (enabled(inputs.project_uvw) || scalar(inputs.uv_space_index, 0) !== 0)) return null;
   const lookups = document.textureInputs || {};
   for (const lookup of Object.values(lookups)) {
     const id = String(lookup.subIdentifier || '').split('::').pop();
@@ -41,7 +42,7 @@ export function mdlToPreview(document) {
         wrapS: lookup?.inputs?.wrap_s,
         wrapT: lookup?.inputs?.wrap_t,
         // Keep each map's sampling state; packing unrelated maps destroys it.
-        mdlUV: omni ? {
+        mdlUV: (omni || glass) ? {
           scale: vector(inputs.texture_scale, [1, 1]),
           translation: vector(inputs.texture_translate, [0, 0]),
           rotation: scalar(inputs.texture_rotate, 0) * Math.PI / 180,
@@ -56,7 +57,33 @@ export function mdlToPreview(document) {
     return true;
   };
 
-  if (omni) {
+  if (glass) {
+    // OmniGlass has no diffuse lobe. PreviewSurface cannot encode it; retain
+    // transmission, IOR, roughness and fractional cutout coverage explicitly.
+    main.diffuseColor = vector(inputs.glass_color, [1, 1, 1]);
+    texture('diffuseColor', 'glass_color_texture');
+    main.roughness = unit(inputs.frosting_roughness, 0);
+    main.ior = Math.max(1, scalar(inputs.glass_ior, 1.491));
+    main.opacity = 1;
+    if (enabled(inputs.enable_opacity)) {
+      main.opacity = unit(inputs.cutout_opacity, 1);
+      const mode = inputs.cutout_opacity_mono_source;
+      const channel = mode === 1 || mode === 'mono_average' ? 'average'
+        : mode === 2 || mode === 'mono_luminance' ? 'luminance'
+        : mode === 3 || mode === 'mono_maximum' ? 'maximum' : 'a';
+      if(scalar(inputs.opacity_threshold,0) >= 0){
+        texture('opacity', 'cutout_opacity_texture', channel);
+        main.opacityThreshold = unit(inputs.opacity_threshold, 0);
+      }else main.opacity = 1;
+    }
+    settings.transmission = 1;
+    settings.thickness = 0;
+    settings.transparent = !main.opacityThreshold && (main.opacity < 1 || !!main.opacity?.nodeIn);
+    settings.depthWrite = !settings.transparent;
+    const strength = Math.max(0, scalar(inputs.bump_factor, 1));
+    if(strength > 0)texture('normal','normalmap_texture');
+    settings.normalScale = [enabled(inputs.flip_tangent_u) ? -strength : strength, inputs.flip_tangent_v === false || inputs.flip_tangent_v === 0 ? strength : -strength];
+  } else if (omni) {
     const tint = vector(inputs.diffuse_tint, [1, 1, 1]);
     main.diffuseColor = multiply(vector(inputs.diffuse_color_constant, [0.2, 0.2, 0.2]), tint);
     texture('diffuseColor', 'diffuse_texture', 'rgb', tint.map(value => value * Math.max(0, scalar(inputs.albedo_brightness, 1))));
@@ -132,5 +159,5 @@ export function mdlToPreview(document) {
       main.opacityThreshold = mask ? unit(inputs.alpha_cutoff, 0.5) : 0;
     }
   }
-  return { main, settings, family: omni ? 'OmniPBR' : 'gltf_material' };
+  return { main, settings, family: glass ? 'OmniGlass' : omni ? 'OmniPBR' : 'gltf_material' };
 }

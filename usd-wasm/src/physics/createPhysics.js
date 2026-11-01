@@ -1,11 +1,11 @@
-import { Matrix4, Quaternion, Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 import { shiftInertiaToCenterOfMass } from './massProperties.js';
+import {bindPhysicsVisuals} from './visualBindings.js';
 
 const vector = (a = [0, 0, 0]) => ({ x: a[0], y: a[1], z: a[2] });
 const rotation = (a = [0, 0, 0, 1]) => ({ x: a[0], y: a[1], z: a[2], w: a[3] });
 const q = a => new Quaternion().fromArray(a || [0, 0, 0, 1]);
 const axis = name => new Vector3(...(name === 'X' ? [1, 0, 0] : name === 'Z' ? [0, 0, 1] : [0, 1, 0]));
-const pose = (p, r) => new Matrix4().compose(new Vector3().copy(p), new Quaternion().copy(r), new Vector3(1, 1, 1));
 const contains = (parent, child) => child === parent || child.startsWith(parent + '/');
 
 // Loading a scene only needs body flags and scene names. Extracting the full
@@ -50,9 +50,8 @@ export async function readUsdPhysics(handle) {
  * Create a simulation in stage coordinates. Supply an initialized Rapier module;
  * importing the USD renderer alone does not download another WASM runtime.
  */
-export async function createUsdPhysics({ handle, rapier: R, root = handle.scene, snapshot, scenePath }) {
+export async function createUsdPhysics({ handle, rapier: R, root = handle.scene, snapshot, scenePath, mode = 'simulation' }) {
     snapshot ||= await readUsdPhysics(handle);
-    await handle.materialsReady?.();
     if (!root) throw new Error('A USD scene root is required.');
     const scenes = snapshot.scenes || [];
     if (scenes.length > 1 && !scenePath) throw new Error('Select a USD physics scene before simulating.');
@@ -63,13 +62,17 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
     const direction = scene?.gravityDirection || (snapshot.upAxis === 'Z' ? [0, 0, -1] : [0, -1, 0]);
     const magnitude = Number.isFinite(scene?.gravityMagnitude) && scene.gravityMagnitude >= 0 ? scene.gravityMagnitude : 9.81 / mpu;
     const gravity = new Vector3().fromArray(direction).normalize().multiplyScalar(magnitude);
-    const world = new R.World(gravity);
+    const world = new R.World(mode === 'interaction' ? {x:0,y:0,z:0} : gravity);
     // Rapier dispatches contact hooks only through stepWithEvents.
     const events = new R.EventQueue(true);
     world.timestep = 1 / 120;
     world.lengthUnit = 1 / mpu;
+    world.numSolverIterations = 12;
     const bodies = new Map(), colliders = new Map(), joints = new Map();
-    const unsupported = [...(snapshot.unsupported || [])];
+    // Joint inspection does not solve contacts or require PhysX SDF colliders
+    // or a reduced-coordinate articulation. Its dependent joints still share
+    // one constraint solver, including closed loops and fixed attachments.
+    const unsupported = (snapshot.unsupported || []).filter(item=>mode!=='interaction'||!/Shape$|^mesh$|^Articulation$/.test(item.type||''));
     const warn = (item, reason) => unsupported.push({ path: item.path, type: item.type, reason });
     const inScene = item => item.simulationOwners?.length ? !!scene && item.simulationOwners.includes(scene.path)
         : !scene || scene.path === scenes[0]?.path;
@@ -92,7 +95,7 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
             bodies.set(data.path, { data, body: world.createRigidBody(desc), colliders: [] });
         }
         const materialMap = new Map((snapshot.materials || []).map(m => [m.path, m]));
-        for (const data of snapshot.shapes || []) {
+        for (const data of mode === 'interaction' ? [] : snapshot.shapes || []) {
             if (data.collisionEnabled === false || !inScene(data)) continue;
             const owner = bodies.get(data.body);
             if (data.body && !owner) continue;
@@ -135,12 +138,13 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
         }
         for (const { data, body, colliders: owned } of bodies.values()) {
             body.recomputeMassPropertiesFromColliders();
-            if (!(data.mass > 0) && !data.centerOfMass && !data.diagonalInertia && !data.principalAxes) continue;
-            const oldMass = body.mass(), mass = data.mass > 0 ? data.mass * kgpu : oldMass;
+            if (mode!=='interaction' && !(data.mass > 0) && !data.centerOfMass && !data.diagonalInertia && !data.principalAxes) continue;
+            const oldMass = body.mass(), mass = data.mass > 0 ? data.mass * kgpu : oldMass || (mode==='interaction'?1:0);
             let inertia = data.diagonalInertia ? new Vector3().fromArray(data.diagonalInertia).multiplyScalar(kgpu)
                 : new Vector3().copy(body.principalInertia()).multiplyScalar(oldMass > 0 ? mass / oldMass : 1);
             const com = data.centerOfMass ? new Vector3().fromArray(data.centerOfMass).multiply(new Vector3().fromArray(data.scale || [1, 1, 1])) : body.localCom();
             let frame = body.principalInertiaLocalFrame();
+            if(mode==='interaction'&&!data.diagonalInertia&&inertia.lengthSq()===0)inertia.setScalar(mass);
             if (data.centerOfMass && !data.diagonalInertia) {
                 const shifted = shiftInertiaToCenterOfMass(inertia, frame, mass, body.localCom(), com);
                 inertia = shifted.diagonalInertia; frame = shifted.principalAxes;
@@ -165,8 +169,8 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
             } else if (data.type === 'revolute' || data.type === 'prismatic') {
                 // Rapier's public unit-joint API accepts a shared local axis/frame.
                 // Never discard independently authored frames or their limit origin.
-                if (q(data.rotation0).angleTo(q(data.rotation1)) > 1e-5 ||
-                    (data.type === 'prismatic' && q(data.rotation0).angleTo(new Quaternion()) > 1e-5)) {
+                if (!R.ImpulseJoint?.prototype.setLocalFrame1 && (q(data.rotation0).angleTo(q(data.rotation1)) > 1e-5 ||
+                    (data.type === 'prismatic' && q(data.rotation0).angleTo(new Quaternion()) > 1e-5))) {
                     warn(data, 'Independent joint frame rotations are not supported by this Rapier adapter.'); continue;
                 }
                 const jointAxis = axis(data.axis).applyQuaternion(q(data.rotation0));
@@ -178,12 +182,22 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
                 warn(data, 'Joint breaking thresholds are not supported.');
             }
             const joint = world.createImpulseJoint(desc, b0, b1, true);
+            if ((data.type === 'revolute' || data.type === 'prismatic') && joint.setLocalFrame1) {
+                // Rapier unit joints use X in their local frame. Rotate that
+                // basis into USD's authored axis, then apply each local frame.
+                const basis = new Quaternion().setFromUnitVectors(new Vector3(1,0,0),axis(data.axis));
+                joint.setLocalFrame1(a0,q(data.rotation0).multiply(basis));
+                joint.setLocalFrame2(a1,q(data.rotation1).multiply(basis));
+            }
             joint.setContactsEnabled(!!data.collisionEnabled);
             const angular = data.type === 'revolute', unit = angular ? Math.PI / 180 : 1;
-            if (data.limit?.enabled && joint.setLimits) joint.setLimits(data.limit.lower * unit, data.limit.upper * unit);
+            if (data.limit?.enabled && joint.setLimits) joint.setLimits((data.limit.lower ?? -Infinity) * unit, (data.limit.upper ?? Infinity) * unit);
             if (data.drive?.enabled && joint.configureMotor) {
                 const d = data.drive;
-                if (Number.isFinite(d.forceLimit)) warn(data, 'Drive force limits are not supported.');
+                if (Number.isFinite(d.forceLimit)) {
+                    if(joint.setMotorMaxForce)joint.setMotorMaxForce(d.forceLimit*kgpu);
+                    else warn(data, 'Drive force limits are not supported by this Rapier version.');
+                }
                 joint.configureMotorModel(d.acceleration ? R.MotorModel.AccelerationBased : R.MotorModel.ForceBased);
                 const gainScale = (d.acceleration ? 1 : kgpu) / unit;
                 joint.configureMotor(d.targetPosition * unit, d.targetVelocity * unit, d.stiffness * gainScale, d.damping * gainScale);
@@ -211,29 +225,13 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
             },
             filterIntersectionPair() { return true; },
         };
-        root.updateWorldMatrix(true, true);
-        const inverseRoot = root.matrixWorld.clone().invert(), bindings = [];
-        root.traverse(object => {
-            const path = object.userData.usdPath;
-            if (!path) return;
-            const owner = [...bodies.values()].filter(b => contains(b.data.path, path)).sort((a, b) => b.data.path.length - a.data.path.length)[0];
-            if (!owner) return;
-            if (object.isInstancedMesh && object.count > 1) { warn({ path }, 'Instanced rigid-body visuals are not supported.'); return; }
-            bindings.push({ object, owner, original: object.matrix.clone(), autoUpdate: object.matrixAutoUpdate,
-                offset: pose(owner.body.translation(), owner.body.rotation()).invert().multiply(inverseRoot).multiply(object.matrixWorld) });
-        });
-        function sync() {
-            root.updateWorldMatrix(true, false);
-            for (const { object, owner, offset } of bindings) {
-                object.parent?.updateWorldMatrix(true, false);
-                const target = root.matrixWorld.clone().multiply(pose(owner.body.translation(), owner.body.rotation())).multiply(offset);
-                if (object.parent) target.premultiply(object.parent.matrixWorld.clone().invert());
-                object.matrix.copy(target); object.matrixAutoUpdate = false; object.matrixWorldNeedsUpdate = true;
-            }
-        }
+        const visuals = await bindPhysicsVisuals(handle,root,bodies,warn);
+        const sync=visuals.sync;
         function endDrag() {
             if (!drag) return;
-            world.removeImpulseJoint(drag.joint, true); world.removeRigidBody(drag.anchor); drag = null;
+            world.removeImpulseJoint(drag.joint, true); world.removeRigidBody(drag.anchor);
+            for(const {body,type} of drag.pinned){body.setBodyType(type,true);body.setLinvel(vector(),true);body.setAngvel(vector(),true);}
+            drag = null;
         }
         function reset() {
             if (disposed) return;
@@ -245,9 +243,7 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
                 body.resetForces(true); body.resetTorques(true);
                 if (data.startsAsleep) body.sleep();
             }
-            for (const { object, original, autoUpdate } of bindings) {
-                object.matrix.copy(original); object.matrixAutoUpdate = autoUpdate; object.matrixWorldNeedsUpdate = true;
-            }
+            visuals.reset();
         }
         return {
             world, bodies, joints, unsupported, root,
@@ -261,15 +257,7 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
                 sync();
             },
             reset,
-            bodyForObject(object) {
-                for (let o = object; o; o = o.parent) {
-                    const path = o.userData.usdPath;
-                    if (!path) continue;
-                    const item = [...bodies.values()].filter(b => contains(b.data.path, path)).sort((a, b) => b.data.path.length - a.data.path.length)[0];
-                    if (item?.body.isDynamic()) return item;
-                }
-                return null;
-            },
+            bodyForObject: visuals.bodyForObject,
             beginDrag(path, position) {
                 endDrag();
                 const body = bodies.get(path)?.body;
@@ -277,7 +265,23 @@ export async function createUsdPhysics({ handle, rapier: R, root = handle.scene,
                 const local = new Vector3().copy(position).sub(body.translation()).applyQuaternion(new Quaternion().copy(body.rotation()).invert());
                 const anchor = world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(position.x, position.y, position.z));
                 const joint = world.createImpulseJoint(R.JointData.spherical(local, vector()), body, anchor, true);
-                drag = { anchor, joint }; return true;
+                const pinned=[];
+                if(mode==='interaction'){
+                    // Hold the mechanism's base while inspecting a movable
+                    // part. All dependent links remain in the same solver.
+                    const connected=new Set([path]);let changed=true;
+                    while(changed){changed=false;for(const item of snapshot.joints||[]){
+                      if(!joints.has(item.path)||!connected.has(item.body0)&&!connected.has(item.body1))continue;
+                      for(const target of [item.body0,item.body1])if(target&&!connected.has(target)){connected.add(target);changed=true;}
+                    }}
+                    const links=(snapshot.joints||[]).filter(item=>joints.has(item.path)&&connected.has(item.body0));
+                    const roots=links.filter(item=>!links.some(other=>other.body1===item.body0)).map(item=>item.body0);
+                    const base=[...new Set(roots)].map(key=>bodies.get(key)).find(item=>item&&item.body!==body);
+                    if(base?.body.isDynamic()){
+                      pinned.push({body:base.body,type:base.body.bodyType()});base.body.setBodyType(R.RigidBodyType.Fixed,true);
+                    }
+                }
+                drag = { anchor, joint, pinned }; return true;
             },
             moveDrag(position) { drag?.anchor.setNextKinematicTranslation(position); },
             endDrag,

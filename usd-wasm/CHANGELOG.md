@@ -9,9 +9,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Joint interaction mode for inspecting SimReady mechanisms: held assembly base, authored limits and dependent attachments, with optional Rapier loading on demand.
+- Linked Code navigation follows hierarchy selection to declarations through USD composition, with a remembered link toggle. Property copy actions and physics schemas use dedicated icons.
+- Complete NVIDIA SimReady catalog in the app's Examples tree, with lazy loading, category folders, searchable package IDs, pinned USD URLs, NVIDIA's dark/light previews and source attribution.
 - USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
 
+### Fixed
+
+- Preserve OmniGlass transmission instead of using an opaque exported PreviewSurface; clear shells no longer hide the contents of assets such as blood bags.
+- Resolve physics render instances to composed body identities. Preserve independent hinge/slider frames, unbounded limits and supported motor force limits.
+- Show PreviewSurface/MDL constants while textures stream; prevent disposed or superseded material updates from writing into replacements. Remove stale prototype material warnings after variant and payload resyncs.
+- Stage controls and Needle loader completion no longer wait for textures unless requested. Static stages stop unnecessary animation draws. Pending HTTP textures are cancelled on disposal.
+- Open stages and recompose scoped variants/payloads on workers while yielding the browser thread; forward resolver progress and deliver owned, revocation-safe change notices on the JavaScript thread. Both native runtimes reference OpenUSD `913db557e9d077094fd4bcfe17e3385930836764`.
+
 ### Changed
+
+- SimReady browsing offers published 512 px texture previews with an explicit original-resolution option, bounds raster texture memory, warms small composition layers and reports continuing downloads after geometry appears. Texture resolution and HTTP texture progress hooks are available to SDK consumers.
 
 - Organize the app's Examples browser as one folder tree, with search in its pane header. Retain the previous render during sample replacement and use delayed, compact tooltips positioned beside menu items and within screen bounds.
 - Start the viewer's runtime and initial USDZ download alongside the UI module graph, and precompress both runtimes for HTTP delivery without adding compressed duplicates to the npm package.

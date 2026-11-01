@@ -23,7 +23,7 @@ export { addPluginForNeedleEngine, getHydraHandleFromNeedleEngineAsset } from '.
 export async function loadExrLoader() { return (await import('three-examples')).EXRLoader; }
 export async function loadGltfExporter() { return (await import('three-examples')).GLTFExporter; }
 export async function loadGltfLoader() { return (await import('three-examples')).GLTFLoader; }
-export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+export { HDRLoader as RGBELoader } from 'three/addons/loaders/HDRLoader.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';

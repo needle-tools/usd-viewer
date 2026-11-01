@@ -144,3 +144,38 @@ test('shared empty-path fallback preserves per-mesh colors through later assignm
     assert.deepEqual(mesh._mesh.material.color.toArray(), [1, 0, 0]);
     delegate.dispose();
 });
+
+test('preview constants show before textures finish and disposed updates cannot revive materials', async () => {
+    const {delegate,mesh}=setup();
+    const {Texture}=await import('three');
+    let release;
+    delegate.registry.getTexture=()=>new Promise(resolve=>{release=resolve;});
+    const material=delegate.createSPrim('material','/Surface');
+    mesh.setMaterial('/Surface');
+    material.beginMaterialSync();
+    material.updateNode('surface','/Surface/Preview',{identifier:'UsdPreviewSurface',diffuseColor:[.8,.2,.1]});
+    material.updateNode('surface','/Surface/Texture',{identifier:'UsdUVTexture',file:'color.png'});
+    material.updateFinished('surface',[{inputId:'/Surface/Texture',outputId:'/Surface/Preview',inputName:'rgb',outputName:'diffuseColor',fallback:[.8,.2,.1]}]);
+    assert.equal(mesh._mesh.visible,true,'geometry does not wait for image downloads');
+    assert.deepEqual(mesh._mesh.material.color.toArray(),[.8,.2,.1]);
+    delegate.destroySPrim('/Surface');
+    release(new Texture());
+    await delegate.waitForMaterialsReady();
+    assert.equal(material._material,null,'late textures cannot resurrect a disposed surface');
+    delegate.dispose();
+});
+
+test('retiring prototype meshes does not report their removed materials as unsupported', async () => {
+    const {delegate,mesh}=setup();
+    const material=await preview(delegate,'/OldPrototype/Material',[1,0,0]);
+    mesh.setMaterial('/OldPrototype/Material');
+    delegate.beginHydraDraw();
+    delegate.destroySPrim(material._id);
+    delegate.destroyRPrim('/Panel');
+    const replacement=delegate.createRPrim('mesh','/Panel');
+    replacement.updatePoints([0,0,0,1,0,0,0,1,0]);replacement.updateIndices([0,1,2]);
+    delegate.endHydraDraw();
+    assert.equal(delegate.pendingMaterialAssignments.size,0);
+    assert.equal(delegate.getDiagnostics().materialFallbacks,0);
+    delegate.dispose();
+});

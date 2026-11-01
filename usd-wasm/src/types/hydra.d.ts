@@ -62,6 +62,12 @@ export type threeJsRenderDelegateConfig = {
     materialXVolumeFactory?: MaterialXVolumeFactory,
     usdVolumeFactory?: UsdVolumeFactory,
     requestRender?: () => void,
+    /** Report HTTP texture transfers, including indeterminate downloads. */
+    onAssetFetchProgress?: (progress: {url:string, state:string, loaded:number, total:number, error?:string}) => void,
+    /** Choose a texture URL before downloading it, e.g. a catalog's published resolution variants. */
+    resolveTextureUrl?: (url:string) => string | Promise<string>,
+    /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
+    maxTextureSize?: number,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,
     showLightHelpers?: boolean,

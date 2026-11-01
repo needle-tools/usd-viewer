@@ -4,12 +4,16 @@ export type PluginContext = {
     debug?: boolean,
     /**
      * Include asynchronous material generation and texture assignment in the
-     * Hydra handle's ready() promise. Needle Engine loader completion always
-     * waits for materials so engine autofit and loadfinished consumers see a
-     * presentable scene.
+     * Hydra handle's ready() promise and Needle Engine loader completion.
+     * Otherwise geometry and authored constants appear first, with textures
+     * updating the same materials as they arrive.
      * Defaults to false.
      */
     waitForMaterials?: boolean,
+    onAssetFetchProgress?: import("./create.three.js").createThreeHydraConfig["onAssetFetchProgress"],
+    maxTextureSize?: number,
+    getMaxTextureSize?: (url:string) => number | undefined,
+    resolveTextureUrl?: import("./create.three.js").createThreeHydraConfig["resolveTextureUrl"],
     /**
      * OpenUSD refinement complexity for subdivision surfaces; see
      * createThreeHydraConfig.complexity (includes "adaptive"). Defaults to "low" (1.0).

@@ -1,0 +1,103 @@
+{
+  "revision": "4763fbfaa4f8e97658e68b57d01b4c86659e08b5",
+  "author": "NVIDIA",
+  "license": "CC-BY-4.0",
+  "images": [
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_frame_alb.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_frame_alb.png",
+      "sourceSha256": "c48331c2a6f1ec0c28ff4132192febe829d865c9a78ca63a44ce27f57c0dcaee",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_frame_alb.png",
+      "sha256": "3b612b039c1691a96da92cb25f8dd42e225969f4a964b58d9372d2f32e422104"
+    },
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_frame_nor.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_frame_nor.png",
+      "sourceSha256": "1f548188af655a33a154180257a89ccf264a6b9354ca86b08bba6eed2b590d1f",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_frame_nor.png",
+      "sha256": "e33d587672935c3dd09a60696e0a88fd6e26931affa745ee6fe98d330a8d32a4"
+    },
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_frame_orm.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_frame_orm.png",
+      "sourceSha256": "53eabf6403ec6d12c433a475b5d7b9fbd58c1e07d329bdc2a24921303393889f",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_frame_orm.png",
+      "sha256": "ad95abe2fc09d796082ab1633dce6bc37dc1e782e8229699bf870cb69535e217"
+    },
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_glass_alb.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_glass_alb.png",
+      "sourceSha256": "97b8253581ec6b2e2dc6e8c2a7bdb8bd1825a9943491587a7da0aa1603fc8bca",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_glass_alb.png",
+      "sha256": "ed2f80bcf9aac723afb7428cc0e78ecc5920b1c6eabc708621b3bd705340cab0"
+    },
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_glass_nor.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_glass_nor.png",
+      "sourceSha256": "b432421cbbf3e8d2083ff21da5bb98588450167d73719c203a64f7bd5b0ae9e1",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_glass_nor.png",
+      "sha256": "880a89d142db72dbbc2a5f941f8bf23b4520f6c0af9bc2db5b16a74792f04799"
+    },
+    {
+      "package": "accessory_eyeglasses_a01",
+      "texture": "Textures/t_accessory_eyeglasses_glass_rou.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/Textures/t_accessory_eyeglasses_glass_rou.png",
+      "sourceSha256": "ed151495b7c07f7c5ddb9725adf3cdb3f97ba4a215a2ea3d3c49a199686134be",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/accessory_eyeglasses_a01/Textures/t_accessory_eyeglasses_glass_rou.png",
+      "sha256": "e0418787d20c848ebe8a8a971476c03f93434caf587f7ceab280f3b8062c4c5a"
+    },
+    {
+      "package": "airSystem_compressor_a01",
+      "texture": "Textures/t_metal_steelStainless_a01_tile_alb.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/airSystem_compressor_a01/simready_usd/Textures/t_metal_steelStainless_a01_tile_alb.png",
+      "sourceSha256": "8c9d622cad928e17c3871fd6dfabdc09b7b69b6c2687731a4e319461b14a8468",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/airSystem_compressor_a01/Textures/t_metal_steelStainless_a01_tile_alb.png",
+      "sha256": "a7dda9184235efd734eea4208b886b619f723b8f43a899d60e05b336e9286f1f"
+    },
+    {
+      "package": "airSystem_compressor_a01",
+      "texture": "Textures/t_metal_steelStainless_a01_tile_nor.png",
+      "source": "https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/airSystem_compressor_a01/simready_usd/Textures/t_metal_steelStainless_a01_tile_nor.png",
+      "sourceSha256": "3c40302b07190100b99d55e592a3c6ac8faaeb80dd1236d670f415fbf614a783",
+      "sourceSize": [
+        4096,
+        4096
+      ],
+      "file": "data/simready-textures/airSystem_compressor_a01/Textures/t_metal_steelStainless_a01_tile_nor.png",
+      "sha256": "e1c374d88f1de2bab2229f9470e4b2d84be6787c8738b5b34b9db139925c9978"
+    }
+  ]
+}

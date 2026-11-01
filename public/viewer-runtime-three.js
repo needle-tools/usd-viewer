@@ -22,7 +22,7 @@ export { getUsdModule } from './usd/bindings/index.js';
 export { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 export { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-export { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+export { HDRLoader as RGBELoader } from 'three/addons/loaders/HDRLoader.js';
 
 export const runtimeViewerMode = 'three';
 

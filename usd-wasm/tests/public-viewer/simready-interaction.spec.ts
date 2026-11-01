@@ -1,0 +1,56 @@
+import {test,expect} from '@playwright/test';
+import {stageReady} from './workbench-menus';
+const base='https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/';
+const url=(name:string)=>'/?workspace=studio&viewer=three&render=beauty&file='+encodeURIComponent(`${base}${name}/simready_usd/sm_${name}_01.usd`);
+
+test('blood bag retains a transmissive shell and visible red contents',async({page},info)=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(url('blood_bag_a01'));await stageReady(page);await page.evaluate(()=>(window as any).usdHydra.materialsReady());
+ const materials=await page.evaluate(()=>{
+  const result:any[]=[];(window as any).usdHydra.scene.traverseVisible((o:any)=>{if(o.isMesh)for(const m of [o.material].flat())result.push({name:m.name,transmission:m.transmission,opacity:m.opacity,color:m.color?.toArray(),family:m.userData.usdMdlApproximation});});return result;
+ });
+ expect(materials.some(m=>m.family==='OmniGlass'&&m.transmission===1&&m.opacity===1)).toBe(true);
+ expect(materials.some(m=>m.name==='m_opaque__water__red_a01'&&m.color[0]>m.color[1]*10)).toBe(true);
+ await page.screenshot({path:info.outputPath('blood-bag.png')});expect(errors).toEqual([]);
+});
+
+test('SimReady glasses drag their rendered arm within its hinge limits and keep dependencies attached',async({page},info)=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(url('accessory_eyeglasses_a01'));await stageReady(page);await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+ await page.getByRole('button',{name:'Interact',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+ const point=await page.evaluate(async()=>{
+  const w=window as any,sim=w.usdPhysics.simulation,{Matrix4,Vector3,Vector2,Raycaster}=await import('three');
+  const object=sim.root.children.find((o:any)=>o.visible&&o.isInstancedMesh&&sim.bodyForObject(o,0)?.data.path.endsWith('/arm_01_obj_00'));
+  const instance=new Matrix4();object.getMatrixAt(0,instance);sim.root.updateWorldMatrix(true,true);
+  const camera=w.usdRenderCamera||w.camera,canvas=w.renderer.domElement,rect=canvas.getBoundingClientRect(),ray=new Raycaster(),geometry=object.geometry,position=geometry.attributes.position,index=geometry.index;
+  const candidates:any[]=[];sim.root.traverseVisible((o:any)=>{if(o.isMesh&&!o.userData.usdHelperFor)candidates.push(o);});
+  const count=index?.count||position.count,step=Math.max(1,Math.floor(count/300))*3;let best:any,lever=0;
+  for(let triangle=0;triangle+2<count;triangle+=step){
+   const p=new Vector3();for(let vertex=0;vertex<3;vertex++)p.add(new Vector3().fromBufferAttribute(position,index?index.getX(triangle+vertex):triangle+vertex));
+   p.multiplyScalar(1/3).applyMatrix4(instance).applyMatrix4(object.matrixWorld).project(camera);
+   if(Math.abs(p.x)>.95||Math.abs(p.y)>.95)continue;
+   ray.setFromCamera(new Vector2(p.x,p.y),camera);const hit=ray.intersectObjects(candidates,false)[0];
+   if(hit?.object!==object)continue;
+   const hinge=sim.bodies.get('/RootNode/Geometry/arm_01_obj_00').body.translation(),local=sim.root.worldToLocal(hit.point.clone()),radius=local.clone().sub(hinge).length();
+   if(radius<=lever)continue;lever=radius;
+   const target=sim.root.localToWorld(local.sub(hinge).applyAxisAngle(new Vector3(0,0,1),Math.PI/3).add(hinge)).project(camera);
+   best={x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2,endX:rect.left+(target.x+1)*rect.width/2,endY:rect.top+(1-target.y)*rect.height/2,joints:sim.world.impulseJoints.len()};
+  }
+  if(best){w.__armBefore=instance.elements.slice();w.__physicsMesh=object;return best;}
+  throw new Error('No unobstructed triangle on the arm in the fitted camera');
+ });
+ await page.mouse.move(point.x,point.y);await page.mouse.down();
+ await expect.poll(()=>page.evaluate(()=>(window as any).usdPhysics.simulation.world.impulseJoints.len())).toBe(point.joints+1);
+ await page.mouse.move(point.endX,point.endY,{steps:20});
+ await expect.poll(()=>page.evaluate(async()=>{const w=window as any,{Matrix4}=await import('three'),matrix=new Matrix4();w.__physicsMesh.getMatrixAt(0,matrix);return matrix.elements.reduce((sum:number,v:number,i:number)=>sum+Math.abs(v-w.__armBefore[i]),0);})).toBeGreaterThan(.05);
+ await page.mouse.up();
+ const state=await page.evaluate(async()=>{
+  const w=window as any,sim=w.usdPhysics.simulation,{Quaternion,Vector3}=await import('three'),arm=sim.bodies.get('/RootNode/Geometry/arm_01_obj_00').body,frame=sim.bodies.get('/RootNode/Geometry/base_01_obj_00').body,lens=sim.bodies.get('/RootNode/Geometry/glass_01_obj_00').body;
+  const q=new Quaternion().copy(frame.rotation()).invert().multiply(new Quaternion().copy(arm.rotation()));
+  return{angle:2*Math.atan2(q.z,q.w)*180/Math.PI,base:new Vector3().copy(frame.translation()).length(),lensDistance:new Vector3().copy(lens.translation()).distanceTo(frame.translation()),joints:sim.world.impulseJoints.len(),unsupported:sim.unsupported};
+ });
+ expect(state.joints).toBe(point.joints);expect(state.angle).toBeGreaterThanOrEqual(-1);expect(state.angle).toBeLessThanOrEqual(91);expect(state.base).toBeLessThan(.001);expect(state.lensDistance).toBeLessThan(.001);expect(state.unsupported).toEqual([]);
+ await page.screenshot({path:info.outputPath('glasses-dragged.png')});
+ await page.getByRole('button',{name:'Reset',exact:true}).click();expect(await page.evaluate(()=>(window as any).usdPhysics.simulation)).toBeNull();expect(errors).toEqual([]);
+});

@@ -72,17 +72,18 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   }
   async function performEdit(action) {
     assertCurrent();
-    editing = true; status.textContent = '';
+    editing = true; status.textContent = 'Updating stage…'; panel.setAttribute('aria-busy', 'true');
     for (const group of sections) group.querySelectorAll('select,input,button').forEach(control => { control.disabled = true; });
     let result, failure, failed = false;
-    try {await beforeEdit(); assertCurrent(); result = await action(stage, handle.driver); await handle.materialsReady?.();}
+    try {await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))); assertCurrent(); await beforeEdit(); assertCurrent(); result = await action(stage, handle.driver);}
     catch (error) {failure = error; failed = true;}
     finally {
       if (!disposed && isCurrent()) {
         try {await afterEdit(); if (!disposed && isCurrent()) await refresh();}
         catch (error) {if (!failed) {failure = error; failed = true;}}
       }
-      editing = false;
+      editing = false; panel.removeAttribute('aria-busy');
+      if (!failed && status.textContent === 'Updating stage…') status.textContent = '';
       for (const group of sections) group.querySelectorAll('select,input,button').forEach(control => { control.disabled = control.dataset.unavailable === 'true'; });
     }
     if (failed) {status.textContent = failure?.message || String(failure); console.error('USD stage edit failed', failure); throw failure;}
@@ -126,7 +127,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     persist(); if (notify) onSelect(path, selection.items);
   }
   function selectPrim(value, options = {}) {
-    if (disposed || !isCurrent()) return false;
+    if (disposed || editing || !isCurrent()) return false;
     if (typeof value === 'string' && value.includes('.')) return navigate(value, options);
     const item = typeof value === 'string' ? {path: value} : value;
     if (item?.path && !validItem(item)) return false;
@@ -134,12 +135,12 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     showProperties(selection.primary?.path || '', true); return true;
   }
   function selectMany(values) {
-    if (disposed || !isCurrent()) return;
+    if (disposed || editing || !isCurrent()) return;
     selection.replace(values.map(value => typeof value === 'string' ? {path: value} : value).filter(validItem));
     showProperties(selection.primary?.path || '', true);
   }
   function navigate(target, options = {}) {
-    if (disposed || !isCurrent() || !inspector.show(target, options)) return false;
+    if (disposed || editing || !isCurrent() || !inspector.show(target, options)) return false;
     selectedPath = primPath(inspector.target);
     selection.replace(selectedPath ? [{...options.instance, path: selectedPath}] : []);
     let ancestor = parentOf(selectedPath); while (ancestor) {collapsed.delete(ancestor); ancestor = parentOf(ancestor);}
@@ -305,7 +306,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   function updateTimeline(range) {
     const key = JSON.stringify(range); if (key === rangeKey) return; rangeKey = key;
     cancelAnimationFrame(frame); cancelAnimationFrame(rulerFrame); rulerObserver?.disconnect(); timeline.remove(); timeline.replaceChildren();
-    if (!range || range.end <= range.start) return;
+    if (!range || range.end <= range.start) { handle.setPlaying(false); return; }
     const first=range.start,last=range.end;
     let pendingTime, requestedTime, seeking=false, scrubbing=false, editingFrame=false;
     const transport=node('div','usd-time-transport');

@@ -65,6 +65,12 @@ export declare type createThreeHydraConfig = {
 
     /** Called when an asynchronous render integration needs another frame. */
     requestRender?: () => void,
+    /** Report HTTP texture transfers, including indeterminate downloads. */
+    onAssetFetchProgress?: (progress: {url:string, state:string, loaded:number, total:number, error?:string}) => void,
+    /** Choose a texture URL before downloading it, e.g. a catalog's published resolution variants. */
+    resolveTextureUrl?: (url:string) => string | Promise<string>,
+    /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
+    maxTextureSize?: number,
 
     /**
      * Files to be loaded into the virtual file system.

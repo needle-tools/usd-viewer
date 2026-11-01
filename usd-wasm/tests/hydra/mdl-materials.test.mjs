@@ -461,3 +461,18 @@ test('PreviewSurface identification and defaults take precedence over a paired M
     assert.equal(material.userData.usdMdlApproximation, undefined);
   } finally { context.delegate.dispose(); }
 });
+
+test('OmniGlass retains transmission, IOR, roughness and explicitly enabled cutout coverage', async () => {
+  const context=setup();
+  const glass=inputs=>({sourceAsset:'materials/OmniGlass.mdl',subIdentifier:'OmniGlass',inputs});
+  try{
+    let material=await update(context,glass({glass_color:[.8,.9,1],glass_ior:1.4,frosting_roughness:.1,cutout_opacity:.007}));
+    assert.equal(material.transmission,1);assert.equal(material.opacity,1,'disabled cutout must not erase the glass shell');
+    assert.equal(material.ior,1.4);assert.equal(material.roughness,.1);assert.deepEqual(material.color.toArray(),[.8,.9,1]);
+    assert.equal(material.userData.usdMdlApproximation,'OmniGlass');
+    material=await update(context,glass({enable_opacity:true,cutout_opacity:.25}));
+    assert.equal(material.opacity,.25);assert.equal(material.transparent,true);assert.equal(material.depthWrite,false);
+    material=await update(context,glass({enable_opacity:true,cutout_opacity:.25,opacity_threshold:-1}));
+    assert.equal(material.opacity,1);assert.equal(material.transparent,false);
+  }finally{context.delegate.dispose();}
+});

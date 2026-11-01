@@ -1,4 +1,4 @@
-const CACHE_NAME = "usd-viewer-asset-cache-v2";
+const CACHE_NAME = "usd-viewer-asset-cache-v3";
 const MAX_CACHEABLE_BYTES = 64 * 1024 * 1024;
 
 const SAME_ORIGIN_PREFIXES = [
@@ -19,14 +19,24 @@ function assetCacheEnabled(clientUrl) {
 async function cacheEnabledForClient(clientId) {
   if (!clientId) return true;
   const client = await clients.get(clientId);
-  return client ? assetCacheEnabled(client.url) : true;
+  if (client?.type === 'window') return assetCacheEnabled(client.url);
+  // Worker script URLs do not carry their owning page's debug parameters.
+  // A cache-disabled window conservatively disables worker caching in this
+  // origin's partition, so diagnostics cannot silently read cached USD layers.
+  const windows = await clients.matchAll({type:'window',includeUncontrolled:true});
+  return assetCacheEnabled(client?.url || location.href) && windows.every(window => assetCacheEnabled(window.url));
 }
 
 function isCacheableSameOriginPath(url) {
   return SAME_ORIGIN_PREFIXES.some(prefix => url.pathname.startsWith(prefix));
 }
 
+function isImmutableSimreadyUrl(url) {
+  return url.hostname==='huggingface.co' && /^\/datasets\/nvidia\/simready-assets\/resolve\/[a-f0-9]{40}\//.test(url.pathname);
+}
+
 function isCacheableRemoteUrl(url) {
+  if (isImmutableSimreadyUrl(url)) return true;
   if (url.hostname === "asset-explorer.needle.tools") {
     return url.pathname === "/api/models.json" || url.pathname.startsWith("/downloads/");
   }
@@ -82,7 +92,7 @@ async function cacheFirst(event) {
     cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(event.request);
     if (cached) {
-      event.waitUntil(refreshCache(cache, event.request, event.clientId));
+      if (!isImmutableSimreadyUrl(new URL(event.request.url))) event.waitUntil(refreshCache(cache, event.request, event.clientId));
       event.waitUntil(notifyClient(event.clientId, { type: "hit", url: event.request.url }));
       return cached;
     }

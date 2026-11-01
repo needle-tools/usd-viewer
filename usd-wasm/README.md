@@ -35,6 +35,18 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
 
+### Progressive textures
+
+`createThreeHydra({USD, scene, url, onAssetFetchProgress, resolveTextureUrl, maxTextureSize})`
+can report HTTP texture transfers, choose published texture-resolution URLs, and
+optionally cap ordinary raster images after decoding. Defaults preserve source
+resolution. URL selection belongs to the host's catalog policy; composition and
+material loading remain in the SDK. `waitForMaterials: true` waits for texture
+completion; otherwise PreviewSurface/MDL constants render immediately and maps
+update the same materials in place. Stage edits wait for native sync, independently
+of outstanding texture downloads. Disposal aborts pending HTTP texture transfers.
+The Needle plugin accepts the same options, including `getMaxTextureSize(url)`.
+
 ## Load only the tools you need
 
 One package serves both embedded viewers and authoring applications. Use narrow
@@ -134,11 +146,15 @@ support.
 
 The three.js bridge uses authored USD Preview Surface and MaterialX surfaces
 before trying an MDL approximation. Known `OmniPBR`, `OmniPBR_ClearCoat`,
-`OmniPBR_Opacity`, and glTF `gltf_material` definitions are mapped to a physical
+`OmniPBR_Opacity`, `OmniGlass`, and glTF `gltf_material` definitions are mapped to a physical
 material from their authored inputs. This includes color, metallic/roughness,
 emission, opacity, normal maps, texture color spaces, and UV transforms. glTF
 texture lookup nodes in `gltf_support.mdl` and `pbr.mdl` (including numbered
 copies) are recognized; texture factors and packed channels are preserved.
+OmniGlass retains transmission, glass tint, IOR, roughness and enabled cutout
+opacity, including when an exporter supplies an opaque universal preview that
+cannot express transmission. It uses a thin-shell approximation; volumetric
+absorption and dispersion are not evaluated.
 
 This does not compile or evaluate MDL. Custom modules, connected procedural
 expressions, projected coordinates, and secondary UV sets use the mesh fallback
@@ -697,28 +713,42 @@ static triangle meshes and authored convex-hull meshes. Fixed, spherical,
 revolute and prismatic joints, unit-joint limits/drives and maximum-distance
 ropes are supported. Stage units, gravity, mass/density, body center of mass
 and inertia, materials, filtered pairs and collision groups are preserved.
-Independent unit-joint frames, spherical cone limits, D6/articulations,
-joint breaking, drive force limits, collider-local inertia overrides and other
+Rapier 0.21.0 also preserves independently rotated hinge/slider frames and
+motor force limits. Older supplied runtimes report unsupported frame/force
+features. Spherical cone limits, D6 joints, reduced-coordinate articulations,
+joint breaking, collider-local inertia overrides and other
 mesh approximations appear in `physics.unsupported`. Kinematic bodies retain
 their initial poses during simulation; animated kinematic driving is not yet
 implemented. Reset/dispose before changing time or variants, then recreate
 the simulation from the updated stage.
 
-The public viewer loads Rapier when **Simulate** is clicked. Drag a dynamic
-body while playing; **Reset** returns to the authored scene.
+In the public viewer, open **Window → Simulation**, then choose **Interact**
+to drag movable parts within authored joint limits. The assembly base is held
+while dragging a connected part; fixed attachments and dependent joints remain
+in the same solver. This mode disables gravity and contact collision, so PhysX
+SDF collision meshes are not needed to inspect a mechanism. Choose **Simulate**
+for contact dynamics and gravity. **Reset** restores the authored scene.
+Both actions load the existing optional Rapier runtime on demand.
+
+SDK hosts select the same behavior with
+`createUsdPhysics({handle, rapier, mode: 'interaction'})`. Picking accepts
+`bodyForObject(object, instanceIndex)`; each render instance resolves to its
+composed USD body instead of borrowing its prototype's transform. Interaction
+uses authored mass/inertia where available, with unit weights for missing
+values; its motion is for joint inspection, not a dynamics reference.
 
 To disable public-viewer physics completely, use `?physics=off` or set
 `window.usdViewerOptions = { physics: false }` before the entry script loads.
 No physics runtime is downloaded in that mode. In Needle mode, simulation uses
 the engine's shared lazy module registry. The Three viewer loads the standalone
-runtime only after **Simulate** is clicked.
+runtime only after **Interact** or **Simulate** is clicked.
 The public viewer uses Rapier 0.21.0, including an import-map override of the
 pinned engine bundle's older Rapier chunk. Both loaders resolve the same module;
 the newer wrapper fixes the deprecated WASM initialization call.
 
 Hosts can configure `init({ physics: { loadRapier: async () => module } })`, or
 provide `physics.moduleUrl` for a different module location. For another physics
-engine, `physics.createSimulation({ handle, snapshot, scenePath })` can return an
+engine, `physics.createSimulation({ handle, snapshot, scenePath, mode })` can return an
 adapter implementing the simulation methods used by the controls (`play`,
 `pause`, `isPlaying`, `update`, `reset`, `dispose`, `bodyForObject`, `beginDrag`,
 `moveDrag`, `endDrag`). This bypasses the Rapier loader. The package's composed

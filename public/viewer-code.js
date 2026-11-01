@@ -12,11 +12,11 @@ import {sourceLocations, referencedSource, referencePaths} from './viewer-source
 
 const ICON_PATHS = {
   code: 'M320-240 80-480l240-240 57 57-184 184 183 183-56 56Zm320 0-57-57 184-184-183-183 56-56 240 240-240 240Z',
-  content_copy: 'M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z',
   check: 'M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z',
 };
 /** Same geometry and attributes as the viewer icon set (Material Symbols, 960 grid on 16px). */
 export function codeIcon(name) {
+  if(name==='content_copy')return viewerIcon(name);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 16 16'); svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
   svg.setAttribute('class', 'usd-icon'); svg.dataset.icon = name; svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
@@ -65,6 +65,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   let saved = load(stateKey, {}), preferences = load(stateKey + ':files', {});
   const collapsed = new Set(preferences.collapsed || []), scrolls = preferences.scrolls || {};
   let fileWidth = Number.isFinite(preferences.width) ? preferences.width : null;
+  let followSelection = preferences.followSelection !== false, selectionPath = '', followRevision = 0;
   const root = element('div','usd-code'), browser = element('aside','usd-code-browser');
   browser.setAttribute('aria-label','Files');
   const filter = element('input','usd-code-filter'); filter.type = 'search'; filter.placeholder = 'Filter files'; filter.setAttribute('aria-label','Filter files');
@@ -81,7 +82,10 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   const tool=(label,action)=>{const button=element('button','usd-code-action',label);button.type='button';button.setAttribute('aria-label',label);button.onclick=action;toolbar.append(button);return button;};
   const historyButton=(label,icon)=>{const button=element('button','usd-code-history');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.append(viewerIcon(icon));return button;};
   const back=historyButton('Previous source','arrow_back'),forward=historyButton('Next source','chevron_right');
-  toolbar.append(back,forward,picker,filename,copy,announcer);
+  const linked = historyButton('Follow selection', 'link');
+  linked.setAttribute('aria-pressed',String(followSelection));
+  linked.onclick=()=>{followSelection=!followSelection;linked.setAttribute('aria-pressed',String(followSelection));saveFiles();if(followSelection)void followSelected();else followRevision++;};
+  toolbar.append(back,forward,picker,filename,linked,copy,announcer);
   const rawButton=tool('Raw source',()=>{closeArray();rawSource=!rawSource;rawButton.setAttribute('aria-pressed',String(rawSource));drawSource();});
   const editButton=tool('Edit source',()=>{closeArray();sourceEditing=!sourceEditing;editButton.setAttribute('aria-pressed',String(sourceEditing));sourceInput.value=text;drawSource();if(sourceEditing)sourceInput.focus();});
   const arrayButton=tool('Array',()=>{});
@@ -190,7 +194,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   function contextKey() { return binding?.example?.title || canonical(sources.find(source => source.role === 'root')?.path || ''); }
   function saveFiles() {
     if (contextKey()) scrolls[contextKey()] = tree.scrollTop;
-    try { localStorage.setItem(stateKey + ':files',JSON.stringify({width:fileWidth,arrayWidth,collapsed:[...collapsed],filter:filter.value,scrolls})); } catch {}
+    try { localStorage.setItem(stateKey + ':files',JSON.stringify({width:fileWidth,arrayWidth,followSelection,collapsed:[...collapsed],filter:filter.value,scrolls})); } catch {}
   }
   function rebuildSources() {
     const files = binding?.getFiles?.({includeResources:visible()}) || [];
@@ -303,6 +307,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   async function chooseSource(key,{record=true,target,position}={}){
     const source=sources.find(candidate=>sourceKey(candidate)===key);if(!source)return false;
+    if(record)followRevision++;
     rememberSource();
     if(record){
       if(historyIndex<0&&selected){sourceHistory=[{key:selected,top:view.scrollTop,left:view.scrollLeft}];historyIndex=0;}
@@ -330,13 +335,46 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   function revealDefinition(path){
     code.querySelectorAll('[data-target]').forEach(node=>delete node.dataset.target);
-    const targets=[...code.querySelectorAll('[data-usd-path]')],target=targets.find(node=>node.dataset.usdPath===path)||targets.find(node=>node.dataset.usdPath===path.split('.')[0]);
+    const targets=[...code.querySelectorAll('[data-usd-path]')],target=targets.find(node=>node.dataset.usdPath===path)||targets.find(node=>node.dataset.usdPath===path.split('.')[0])
+      || (sources.find(source=>sourceKey(source)===selected)?.kind==='example' ? [...code.querySelectorAll('[data-reference]')].find(node=>node.dataset.reference===path||node.dataset.reference===path.split('.')[0]) : null);
     if(!target)return false;
     target.dataset.target='true';const rect=target.getBoundingClientRect(),viewport=view.getBoundingClientRect();
     view.scrollTop+=rect.top-viewport.top-view.clientHeight*.3;
     if(rect.left<viewport.left||rect.right>viewport.right)view.scrollLeft+=rect.left-viewport.left-16;
     return true;
   }
+  // Resolve composition identities through USD: a referenced /World/Robot can
+  // be declared as /Robot in its own layer, not under the composed stage path.
+  async function followSelected() {
+    const bound=binding, request=++followRevision, path=selectionPath;
+    const current=()=>!disposed&&bound===binding&&request===followRevision&&followSelection&&visible()&&!sourceEditing;
+    if(!path||!bound?.stage||!current())return;
+    try {
+      if(sources.find(source=>sourceKey(source)===selected)?.kind==='example'&&revealDefinition(path))return;
+      const read=stage=>{
+        const dot=path.indexOf('.'),prim=stage.GetPrimAtPath(dot<0?path:path.slice(0,dot));let property;
+        try{
+          if(!prim?.IsValid())return [];
+          if(dot>=0){property=prim.GetAttribute(path.slice(dot+1));if(!property?.IsValid()){property?.delete?.();property=prim.GetRelationship(path.slice(dot+1));}}
+          return (property?.IsValid()?property.GetPropertyStackWithLayerOffsets?.(bound.handle?.getTime?.()||0):prim.GetPrimStack?.())||[];
+        }finally{property?.delete?.();prim?.delete?.();}
+      };
+      const stack=await (bound.handle?.readStage?bound.handle.readStage(read):read(bound.stage));
+      if(!current())return;
+      if(dirty){dirty=false;cache.clear();rebuildSources();}
+      const opinions=path.includes('.')?stack:[...stack.filter(spec=>/Def$|^def$/.test(spec.specifier||'')),...stack.filter(spec=>!/Def$|^def$/.test(spec.specifier||''))];
+      for(const spec of opinions){
+        if(!current())return;
+        const source=sources.find(candidate=>candidate.kind==='layer'&&candidate.identifier===spec.layer?.identifier);
+        if(!source)continue;
+        const key=sourceKey(source),target=spec.path.replace(/\{[^}]*\}/g,'/').replace(/\/+/g,'/');
+        if(selected!==key||shownKey!==key)await chooseSource(key,{record:false});
+        if(!current())return;
+        if(revealDefinition(target))return;
+      }
+    }catch(error){if(current())status.textContent=error.message;}
+  }
+  function follow(path){selectionPath=path||'';void followSelected();}
   async function followReference(link,source){
     const bound=binding;
     if(link.kind==='prim'&&!link.asset){
@@ -422,7 +460,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   function invalidate() { dirty = true; schedule(); }
   function unbind() {
-    closeArray();sourceEditing=false;sourceInput.hidden=true;editOwner?.dispose();editOwner=null;token++; readAbort?.abort(); clearTimeout(timer); timer = undefined;
+    followRevision++;selectionPath='';closeArray();sourceEditing=false;sourceInput.hidden=true;editOwner?.dispose();editOwner=null;token++; readAbort?.abort(); clearTimeout(timer); timer = undefined;
     if (listener !== null && binding?.stage) { try { binding.stage.RevokeObjectsChanged(listener); } catch {} }
     listener = null; binding = null;
   }
@@ -478,7 +516,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   };
   let wasVisible = false;
   function refreshVisibility() {
-    const now = visible(); if (now && !wasVisible) { dirty = true; void render(); } wasVisible = now;
+    const now = visible(); if (now && !wasVisible) { dirty = true; void render().then(()=>followSelected()); } wasVisible = now;
   }
   const resize = new ResizeObserver(()=>{
     if (resizeFrame) return; resizeWindow = root.ownerDocument.defaultView;
@@ -498,7 +536,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       rebuildSources(); tree.scrollTop = scrolls[contextKey()] || 0; empty.hidden = !!sources.length; view.hidden = !sources.length; preview.hidden = true;
       refreshTools();if (visible()) void render();
     },
-    invalidate,refreshVisibility,
+    invalidate,refreshVisibility,follow,
     get sources() { return sources.map(({kind,role,identifier,label,language,path,canOpenAsRoot})=>({key:sourceKey({kind,identifier,path}),kind,role,identifier,label,language,path,canOpenAsRoot})); },
     get selected() { return selected; }, get text() { return text; }, select:choose,
     dispose() {

@@ -266,8 +266,10 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-examples-browser .gallery-name { color: var(--text-primary); font-size: var(--usd-text-size); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .usd-examples-browser .gallery-meta { color: var(--text-secondary); font-size: var(--usd-text-micro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .usd-examples-browser[data-details=false] .gallery-meta { display: none; }
-.usd-examples-footer { display: flex; align-items: center; gap: var(--usd-space-2); flex: none; min-height: var(--usd-section-height); padding: var(--usd-space-field) var(--usd-space-2); border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: var(--usd-text-small); }
+.usd-examples-footer { display: flex; flex-wrap: wrap; align-items: center; gap: var(--usd-space-2); flex: none; min-height: var(--usd-section-height); padding: var(--usd-space-field) var(--usd-space-2); border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: var(--usd-text-small); }
 .usd-examples-footer output { margin-right: auto; white-space: nowrap; }
+.usd-examples-footer #examples-source { color: var(--text-secondary); white-space: nowrap; text-decoration: none; }
+.usd-examples-footer #examples-source:hover { color: var(--text-primary); text-decoration: underline; }
 .usd-examples-size { display: flex; align-items: center; gap: var(--usd-space-field); }
 .usd-examples-size input { width: 80px; min-width: 0; margin: 0; accent-color: var(--accent-brand-deep); }
 .usd-examples-footer button { padding: var(--usd-space-half) var(--usd-space-field); border: 1px solid var(--border-subtle); border-radius: var(--usd-radius-small); background: transparent; color: var(--text-secondary); font: inherit; }
@@ -449,7 +451,12 @@ body.usd-product ::-webkit-scrollbar-thumb { background: var(--usd-scrollbar-col
 .usd-code-link:hover { color:var(--text-link); text-decoration-color:currentColor; }
 .usd-code-definition[data-target=true] { background:var(--surface-panel-muted); }
 .usd-workbench .usd-code-history { display:inline-flex; align-items:center; justify-content:center; width:var(--usd-control-height); height:var(--usd-control-height); border:0; padding:0; color:var(--text-secondary); background:transparent; }
+.usd-workbench .usd-code-history[aria-pressed=true], .usd-workbench #usd-physics-controls button[aria-pressed=true] { background:var(--usd-row-selected-background); color:var(--usd-row-selected-color); }
+.usd-workbench .usd-code-history:hover { background:var(--usd-row-hover-background); color:var(--text-primary); }
 
 .usd-preview-renderer { display:inline-flex; flex:none; border:1px solid var(--border-subtle); border-radius:var(--usd-radius-control); padding:var(--usd-space-1); gap:var(--usd-space-1); }
 .usd-examples-footer .usd-preview-renderer button { border:0; padding:var(--usd-space-1) var(--usd-space-small); border-radius:var(--usd-radius-small); }
-.usd-examples-footer:has(.usd-preview-renderer:not([hidden])) { flex-wrap:wrap; }
+
+.usd-asset-progress { position:absolute; right:var(--usd-space-3); bottom:var(--usd-space-3); z-index:5; max-width:calc(100% - 24px); padding:var(--usd-space-field) var(--usd-space-2); background:var(--surface-panel); color:var(--text-secondary); border-radius:var(--usd-radius-small); font-size:var(--usd-text-small); pointer-events:none; font-variant-numeric:tabular-nums; }
+.usd-asset-progress[hidden] { display:none; }
+[aria-busy=true] .usd-stage-status { display:block; color:var(--text-secondary); }

@@ -9,7 +9,7 @@
 .usd-property-inspector :is(button, input, tr, td):focus-visible { outline: 1px solid var(--accent-brand, #198500); outline-offset: -1px; }
 .usd-property-address { flex-wrap: wrap; }
 .usd-property-address code { flex: 1 1 150px; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-family-code, monospace); }
-.usd-property-address button { font-size: var(--usd-text-micro, 10px); flex: none; }
+.usd-property-address button { display: grid; place-items: center; flex: none; width: var(--usd-control-height, 28px); height: var(--usd-control-height, 28px); padding: 0; }
 .usd-property-status { padding: 4px 8px; color: var(--text-secondary, #647578); overflow-wrap: anywhere; }
 .usd-property-scroller { min-height: 0; overflow: auto; overscroll-behavior: contain; flex: 1 1 auto; }
 .usd-property-inspector .usd-property-scroller table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: inherit; }

@@ -230,3 +230,23 @@ test('ordinary static MaterialX is not reserialized for transform edits or playb
         assert.equal(handle.diagnostics().materialXCreateAttempts, createCount);
     });
 });
+
+test('real Hydra preserves OmniGlass transmission over its opaque universal preview',async()=>{
+ await inspect(stage('token outputs:surface.connect = </World/Material/Preview.outputs:surface>',shader(`
+   color3f inputs:glass_color = (0.8, 0.9, 1)
+   float inputs:glass_ior = 1.4
+   float inputs:frosting_roughness = 0.1
+   float inputs:cutout_opacity = 0.007
+ `,'OmniGlass')+`
+ def Shader "Preview" {
+  uniform token info:id = "UsdPreviewSurface"
+  color3f inputs:diffuseColor = (1, 1, 1)
+  float inputs:opacity = 1
+  token outputs:surface
+ }
+ `),(material)=>{
+   assert.equal(material.userData.usdMdlApproximation,'OmniGlass');
+   assert.equal(material.transmission,1);assert.equal(material.opacity,1);
+   assert.ok(Math.abs(material.ior-1.4)<1e-6);assert.ok(Math.abs(material.roughness-.1)<1e-6);
+ });
+});

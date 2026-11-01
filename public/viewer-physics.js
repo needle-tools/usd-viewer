@@ -34,11 +34,13 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   container.physicsOwner = owner;
   container.replaceChildren(); container.hidden = true;
   if (!overview.dynamic) return null;
-  let simulation, snapshot, disposed = false, dragging = false, previousControls = [], operation = 0;
+  let simulation, snapshot, disposed = false, dragging = false, previousControls = [], operation = 0, simulationMode = '';
   const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
-  const canvas = context?.renderer?.domElement || fallbackControls.domElement;
+  const canvas = context?.renderer?.domElement || fallbackControls?.domElement;
   const raycaster = new Raycaster(), pointer = new Vector2(), plane = new Plane(), hit = new Vector3();
   const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Simulate';
+  const interact = document.createElement('button');interact.type='button';interact.textContent='Interact';interact.setAttribute('aria-pressed','false');interact.title='Drag movable parts within their joint limits';
+  const status=document.createElement('span');status.setAttribute('role','status');
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Reset'; reset.disabled = true;
   const sceneSelect = document.createElement('select'); sceneSelect.setAttribute('aria-label', 'Physics scene');
   for (const scene of overview.scenes) {
@@ -46,7 +48,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     sceneSelect.append(option);
   }
   if (sceneSelect.options.length > 1) container.append(sceneSelect);
-  container.append(play, reset); container.hidden = false;
+  container.append(interact, play, reset, status); container.hidden = false;
   const controls = context ? (() => {
     const result = [];
     context.scene.traverse(object => {
@@ -56,40 +58,49 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   })() : [fallbackControls];
   function release() {
     if (!dragging) return;
-    dragging = false; simulation?.endDrag();
+    dragging = false; simulation?.endDrag();canvas.style.cursor=simulationMode==='interaction'?'grab':'';
     for (const [control, enabled] of previousControls) control.enabled = enabled;
     previousControls = [];
   }
   function stop() {
     operation++;
     release(); simulation?.dispose(); simulation = null;
+    status.textContent='';status.title='';simulationMode='';interact.setAttribute('aria-pressed','false');canvas.style.removeProperty('cursor');
     play.textContent = 'Simulate'; reset.disabled = true;
   }
-  play.addEventListener('click', async () => {
-    play.disabled = true;
-    const currentOperation = operation;
+  async function start(mode) {
+    if(simulation&&mode!==simulationMode)stop();
+    const currentOperation=operation;
+    play.disabled=interact.disabled=true;status.textContent='Preparing physics…';
     try {
-      if (!simulation) {
+      if(!simulation){
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        if(disposed||currentOperation!==operation||!isCurrent())return;
         snapshot ||= await readUsdPhysics(handle);
-        if(disposed || currentOperation !== operation || !isCurrent())return;
-        const settings = { handle, snapshot, scenePath: sceneSelect.value || undefined };
+        if(disposed||currentOperation!==operation||!isCurrent())return;
+        const settings={handle,snapshot,scenePath:sceneSelect.value||undefined,mode};
         let created;
-        if (options.createSimulation) created = await options.createSimulation(settings);
-        else {
-          const rapier = await loadRapier(context, options);
-          if (disposed || currentOperation !== operation) return;
-          created = await createUsdPhysics({ ...settings, rapier });
+        if(options.createSimulation)created=await options.createSimulation(settings);
+        else{
+          const rapier=await loadRapier(context,options);
+          if(disposed||currentOperation!==operation||!isCurrent())return;
+          created=await createUsdPhysics({...settings,rapier});
         }
-        if (disposed || currentOperation !== operation) { created.dispose(); return; }
-        simulation = created;
-        if (simulation.unsupported?.length) console.warn('Unsupported USD physics:', simulation.unsupported);
+        if(disposed||currentOperation!==operation||!isCurrent()){created.dispose();return;}
+        simulation=created;simulationMode=mode;
       }
-      if (simulation.isPlaying()) { release(); simulation.pause(); }
+      if(simulation.isPlaying()){release();simulation.pause();}
       else simulation.play();
-      play.textContent = simulation.isPlaying() ? 'Pause' : 'Simulate'; reset.disabled = false;
-    } catch (error) { console.error('USD physics failed:', error); }
-    finally { play.disabled = false; }
-  });
+      interact.setAttribute('aria-pressed',String(mode==='interaction'&&simulation.isPlaying()));
+      canvas.style.cursor=mode==='interaction'&&simulation.isPlaying()?'grab':'';
+      play.textContent=mode==='simulation'&&simulation.isPlaying()?'Pause':'Simulate';reset.disabled=false;
+      status.textContent=simulation.unsupported?.length?`${simulation.unsupported.length} unsupported physics features`:'';
+      status.title=simulation.unsupported?.map(item=>`${item.path}: ${item.reason}`).join('\n')||'';
+    }catch(error){status.textContent=error.message;console.error('USD physics failed:',error);}
+    finally{play.disabled=interact.disabled=false;}
+  }
+  play.addEventListener('click',()=>void start('simulation'));
+  interact.addEventListener('click',()=>void start('interaction'));
   reset.addEventListener('click', stop);
   sceneSelect.addEventListener('change', stop);
   function ray(event) {
@@ -104,12 +115,14 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     const camera = ray(event); handle.scene.updateWorldMatrix(true, true);
     const intersections = raycaster.intersectObject(handle.scene, true);
     for (const intersection of intersections) {
-      const body = simulation.bodyForObject(intersection.object);
+      let visible=true;for(let parent=intersection.object;parent;parent=parent.parent)if(!parent.visible||parent.userData.usdHelperFor){visible=false;break;}
+      if(!visible)continue;
+      const body = simulation.bodyForObject(intersection.object,intersection.instanceId);
       if (!body) continue;
       const point = handle.scene.worldToLocal(intersection.point.clone());
       if (!simulation.beginDrag(body.data.path, point)) return;
       plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new Vector3()), intersection.point);
-      dragging = true; previousControls = controls.map(control => [control, control.enabled]);
+      dragging = true;canvas.style.cursor='grabbing'; previousControls = controls.map(control => [control, control.enabled]);
       for (const control of controls) control.enabled = false;
       canvas.setPointerCapture(event.pointerId);
       event.preventDefault(); event.stopImmediatePropagation(); return;

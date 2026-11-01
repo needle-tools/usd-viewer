@@ -206,7 +206,7 @@ export async function mountWorkbench() {
   const cameraSettings=element('div','usd-camera-settings');viewSettings.append(cameraSettings);
 
   const fileBar = document.querySelector('.filename-bar');
-  for (const id of ['usd-detail-controls','usd-background-controls']) {const control=document.getElementById(id);if(control)viewSettings.append(control);}
+  for (const id of ['usd-detail-controls','usd-texture-controls','usd-background-controls']) {const control=document.getElementById(id);if(control)viewSettings.append(control);}
   const legacyVariants=document.getElementById('usd-variant-controls'); if(legacyVariants){legacyVariants.classList.add('usd-legacy-variants');parking.append(legacyVariants);}
   const clear = fileBar.querySelector('.clear-button'); clear.textContent = 'Close file'; commandIcon(clear,'close'); clear.classList.add('header-tool-button'); clear.hidden = true; fileCommands.append(clear);
   const conversion = document.getElementById('loaded-converter-toggle-wrap'); if (conversion) rendererSettings.append(conversion);
@@ -541,7 +541,7 @@ export async function mountWorkbench() {
       // belong to the saved workspace, including when the stage has no animation.
       placeholders.get('timeline').hidden = !!info?.time;
     },
-    selectPrim(path) { if(productMode === 'studio' && path && !isCompact) openPanel('properties'); },
+    selectPrim(path) { codePane.follow(path); if(productMode === 'studio' && path && !isCompact && !isPanelVisible('code')) openPanel('properties'); },
     dispose() { if (disposed) return; disposed = true; examplesDialog.close(); for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };
   window.addEventListener('pagehide', () => { if (!disposed && productMode === 'studio') saveStudioLayout(); }, { once: true });

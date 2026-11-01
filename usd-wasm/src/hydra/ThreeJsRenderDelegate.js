@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fetchAsset } from '../assetFetch.js';
 import { packSparkSphericalHarmonics } from './sparkSphericalHarmonics.js';
 import { HydraStroke } from './HydraStroke.js';
 import { HydraNurbsPatch } from './HydraNurbsPatch.js';
@@ -324,6 +325,7 @@ class TextureRegistry {
     this.disposed = false;
     this.loader = new TextureLoader();
     this.textureDecoders = new Map();
+    this.httpAbort = new AbortController();
     this.driverFileQueue = Promise.resolve();
     this.ktx2Textures = null;
 
@@ -592,11 +594,21 @@ class TextureRegistry {
           if (this.disposed) throw new Error('Texture registry disposed while loading ' + resourcePath);
           if (debugTextures) console.log("Loading texture from", url, "with loader", loader, "resourcePath", resourcePath);
           loader.load(url, texture => {
+            try {
             releaseUrl();
             texture.name = resourcePath;
+            const limit = this.config.maxTextureSize;
+            const image = texture.image;
+            if (limit > 0 && image?.width > 0 && image?.height > 0 && Math.max(image.width,image.height) > limit && typeof document !== 'undefined' && !texture.isDataTexture && !texture.isCompressedTexture) {
+              const canvas=document.createElement('canvas'),scale=limit/Math.max(image.width,image.height);
+              canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+              canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+              texture.userData.usdSourceSize=[image.width,image.height];texture.image=canvas;texture.needsUpdate=true;
+            }
             if (this.disposed) texture.dispose();
             else this.loadedTextures.add(texture);
             textureResolve(texture);
+            } catch (error) { texture.dispose(); fail(error); }
           }, undefined, fail);
         } catch (error) { fail(error); }
       };
@@ -619,14 +631,23 @@ class TextureRegistry {
       loadFromUrl(url, true);
     };
 
+    const loadHttp = url => {
+      const progress = this.config.onAssetFetchProgress || this.config.USD?.onAssetFetchProgress;
+      if (!progress && !this.config.resolveTextureUrl) { loadFromUrl(url); return; }
+      Promise.resolve().then(() => this.config.resolveTextureUrl?.(url) || url)
+        .then(target => fetchAsset(target || url, progress, {signal:this.httpAbort.signal}))
+        .then(bytes => { if (this.disposed) throw new Error('Texture registry disposed'); loadFromFile(bytes); })
+        .catch(textureReject);
+    };
+
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(resourcePath)) {
-      loadFromUrl(resourcePath);
+      loadHttp(resourcePath);
       return this.textures[cacheKey];
     }
 
     const httpResourceUrl = this.resolveHttpResourceUrl(resourcePath);
     if (httpResourceUrl) {
-      loadFromUrl(httpResourceUrl);
+      loadHttp(httpResourceUrl);
       return this.textures[cacheKey];
     }
 
@@ -665,6 +686,7 @@ class TextureRegistry {
 
   dispose() {
     this.disposed = true;
+    this.httpAbort.abort();
     for (const url of this.objectUrls) {
       URL.revokeObjectURL(url);
     }
@@ -2019,6 +2041,8 @@ class HydraMaterial {
 
   constructor(id, hydraInterface) {
     this._id = id;
+    this._syncRevision = 0;
+    this._disposed = false;
     this._nodes = {};
     this._resolvedAssetPaths = new Map();
     this._materialXDocuments = [];
@@ -2072,6 +2096,8 @@ class HydraMaterial {
   }
 
   dispose() {
+    this._disposed = true;
+    this._syncRevision++;
     const previous = this._material;
     // USD variant resync can retire a material before its replacement is ready.
     // Detach its textures from live/retired meshes before freeing GPU resources.
@@ -2153,6 +2179,7 @@ class HydraMaterial {
   }
 
   beginMaterialSync() {
+    this._syncRevision++;
     this._ready = false;
     this._nodes = {};
     this._resolvedAssetPaths.clear();
@@ -2317,7 +2344,7 @@ class HydraMaterial {
   /**
    * @return {Promise<void>}
    */
-  async assignTexture(mainMaterial, parameterName) {
+  async assignTexture(mainMaterial, parameterName, revision = this._syncRevision) {
     const slot = HydraMaterial.usdPreviewToMeshPhysicalTextureMap[parameterName];
     const connection = mainMaterial[parameterName];
     const node = connection?.nodeIn;
@@ -2333,7 +2360,7 @@ class HydraMaterial {
       const remapNormal = slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)
         && (normalScale.some(value => value !== 2) || normalBias.some(value => value !== -1));
       const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal));
-      if (!texture || !this._material) return;
+      if (!texture || this._disposed || revision !== this._syncRevision || !this._material) return;
       // The base-color map already contributes its alpha; adding an alphaMap
       // here would square it. Resolve by authored source, independent of load order.
       if (slot === 'alphaMap' && channel === 'a' && !mainMaterial.diffuseColor?.nodeIn?.ignoreAlpha && node.file === mainMaterial.diffuseColor?.nodeIn?.file) {
@@ -2399,7 +2426,7 @@ class HydraMaterial {
       connection.loaded = true;
       this._material.needsUpdate = true;
     } catch (error) {
-      console.warn(`Error loading USD material texture '${file}'.`, error);
+      if (!this._disposed && !this._interface.registry.httpAbort.signal.aborted) console.warn(`Error loading USD material texture '${file}'.`, error);
     }
   }
 
@@ -2426,6 +2453,9 @@ class HydraMaterial {
   }
 
   async _updateFinished(type, relationships) {
+    const revision = this._syncRevision;
+    const isCurrent = () => !this._disposed && revision === this._syncRevision;
+    if (!isCurrent()) return;
     for (let relationship of relationships) {
       relationship.nodeIn = this._nodes[relationship.inputId];
       relationship.nodeOut = this._nodes[relationship.outputId];
@@ -2442,6 +2472,7 @@ class HydraMaterial {
     const materialXDocument = this._materialXDocuments.find(document => document.terminal === type);
     if (materialXDocument) {
       const materialXMaterial = await this.createMaterialXMaterial(materialXDocument);
+      if (!isCurrent()) { disposeMaterialResources(materialXMaterial); return; }
       if (!materialXMaterial) {
         this._material = defaultMaterial;
         this._ready = true;
@@ -2473,8 +2504,9 @@ class HydraMaterial {
       return;
     }
 
-    // Prefer a supported authored surface over an MDL approximation.
-    const mainMaterialNode = previewSurfaceNode
+    // A universal PreviewSurface cannot encode OmniGlass transmission. Other
+    // supported authored surfaces retain priority over MDL approximations.
+    const mainMaterialNode = previewSurfaceNode && mdlPreview?.family !== 'OmniGlass'
       ? { ...HydraMaterial.usdPreviewDefaults, ...previewSurfaceNode }
       : mdlPreview?.main;
     const usingMdl = mainMaterialNode === mdlPreview?.main;
@@ -2513,17 +2545,6 @@ class HydraMaterial {
       });
     }
 
-    if (!disableTextures) {
-      /** @type {Array<Promise<any>>} */
-      const texturePromises = [];
-      for (let key in HydraMaterial.usdPreviewToMeshPhysicalTextureMap) {
-        texturePromises.push(this.assignTexture(mainMaterialNode, key));
-      }
-      await Promise.all(texturePromises);
-
-      // Each slot already reads its converted channel and keeps its own UV/sampler state.
-    }
-
     // Assign material properties
     for (let key in HydraMaterial.usdPreviewToMeshPhysicalMap) {
       this.assignProperty(mainMaterialNode, key);
@@ -2543,10 +2564,35 @@ class HydraMaterial {
       this._interface.diagnostics.mdlApproximations++;
     }
 
-    if (debugMaterials) console.log("Material Node \"" + this._material.name + "\"", mainMaterialNode, "Resulting Material", this._material);
+    // Publish the authored constants as soon as geometry is ready. Textures
+    // refine the same material in place instead of hiding the whole mesh (and
+    // every subset) behind the slowest image download.
     this._ready = true;
     this._hasResolvedMaterial = true;
     this._applyMaterialToAssignedMeshes();
+
+    if (!disableTextures) {
+      /** @type {Array<Promise<any>>} */
+      const texturePromises = [];
+      for (let key in HydraMaterial.usdPreviewToMeshPhysicalTextureMap) {
+        texturePromises.push(this.assignTexture(mainMaterialNode, key, revision));
+      }
+      await Promise.all(texturePromises);
+
+      // Each slot already reads its converted channel and keeps its own UV/sampler state.
+    }
+
+    if (!isCurrent()) return;
+    for (const key in HydraMaterial.usdPreviewToMeshPhysicalMap) {
+      this.assignProperty(mainMaterialNode, key);
+    }
+    if (!usingMdl) {
+      configurePreviewPrimvars(this._material, mainMaterialNode);
+      this._interface.config.webGpuSupport?.configurePreviewPrimvars?.(this._material);
+    }
+    this._material.needsUpdate = true;
+    this._applyMaterialToAssignedMeshes();
+    this._interface.config.requestRender?.();
   }
 
   async createMaterialXMaterial(materialXDocument) {
@@ -2701,9 +2747,12 @@ export class ThreeRenderDelegateInterface {
     for (const retired of this.retiredMeshes.values()) for (const prim of retired) prim._applyVisibilityState();
   }
 
+  cancelPendingTextureLoads() { this.registry.httpAbort.abort(); }
+
   trackMaterialUpdate(promise) {
     this.pendingMaterialUpdates.add(promise);
-    promise.finally(() => this.pendingMaterialUpdates.delete(promise));
+    const remove = () => this.pendingMaterialUpdates.delete(promise);
+    promise.then(remove, remove);
   }
 
   prepareMeshMaterialGeometry(mesh) {
@@ -2865,11 +2914,18 @@ export class ThreeRenderDelegateInterface {
     this.hydraDrawDepth = Math.max(0, this.hydraDrawDepth - 1);
     if (this.hydraDrawDepth > 0) return;
 
+    for (const id of [...this.retiredMeshes.keys()]) {
+      const replacement = this.meshes[id];
+      if (replacement && !replacement._hasRenderableGeometry?.()) continue;
+      this.releaseRetiredRPrims(id);
+    }
+
     // An MDL-only binding (or another unsupported shader context) may never
     // create a Hydra material sprim. Waiting for it would hide valid geometry
     // forever. Only settle missing sprims after the whole draw; supported
     // materials can still be loading asynchronously and retain their barrier.
     for (const [materialId, assignments] of this.pendingMaterialAssignments) {
+      if (!assignments.size) { this.pendingMaterialAssignments.delete(materialId); continue; }
       if (this.materials[materialId]) continue;
       for (const mesh of assignments.keys()) {
         mesh.userData?.usdHydraSetMaterialPending?.(materialId, false);
@@ -2884,11 +2940,7 @@ export class ThreeRenderDelegateInterface {
       }
     }
 
-    for (const id of [...this.retiredMeshes.keys()]) {
-      const replacement = this.meshes[id];
-      if (replacement && !replacement._hasRenderableGeometry?.()) continue;
-      this.releaseRetiredRPrims(id);
-    }
+
   }
 
   destroyRPrim(id) {
@@ -3057,6 +3109,7 @@ export class ThreeRenderDelegateInterface {
       if (meshes.delete(mesh)) {
         mesh.userData?.usdHydraSetMaterialPending?.(materialId, false);
       }
+      if (!meshes.size) this.pendingMaterialAssignments.delete(materialId);
     }
   }
 

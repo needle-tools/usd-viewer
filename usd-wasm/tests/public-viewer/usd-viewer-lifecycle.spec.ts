@@ -2767,7 +2767,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?viewer=three&assetCache=0');
         await openSamples(page);
 
-        await expect(page.locator('#sample-group-list > details > summary > span, #sample-group-list > button > span')).toHaveText(['Needle','Hugging Face test set','USD Working Group Assets','glTF → USD conversions']);
+        await expect(page.locator('#sample-group-list > details > summary > span, #sample-group-list > button > span')).toHaveText(['Needle','Hugging Face test set','NVIDIA SimReady','USD Working Group Assets','glTF → USD conversions']);
         await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label',/glTF.*USD conversions examples/);
         await expect(page.locator('.sample-library[data-library="gltf"]')).toHaveAttribute('open','');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();

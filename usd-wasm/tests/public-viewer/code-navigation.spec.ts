@@ -14,6 +14,7 @@ test.afterEach(async({page})=>expect((page as any).errors).toEqual([]));
 test('layer references open beside the same stage, with source history and external prim targets',async({page},info)=>{
   await page.goto('/?viewer=three&render=basic&assetCache=0&file=/test-fixtures/coverage/production/shot.usda');await stageReady(page);await openCode(page);
   const stageRoot=await page.evaluate(()=>(window as any).usdStage.GetRootLayer().GetIdentifier());
+  await expect(code(page).getByRole('link',{name:'@lighting.usda@',exact:true})).toBeVisible();
   const original=await text(page);
   await code(page).getByRole('link',{name:'@lighting.usda@',exact:true}).click();
   await expect.poll(()=>path(page)).toMatch(/lighting.usda$/);

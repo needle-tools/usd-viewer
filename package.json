@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "prepare:public": "node scripts/prepare-public-runtime.mjs",
-    "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs"
+    "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs",
+    "prepare:simready-manifest": "node scripts/generate-simready-manifest.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
