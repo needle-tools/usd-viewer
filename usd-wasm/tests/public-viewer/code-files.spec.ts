@@ -188,3 +188,33 @@ def Material "Mat" {
   await choose(page,'Textures/pixel.png');await expect(page.locator('.usd-code-preview img')).toBeVisible();
   await page.screenshot({path:info.outputPath('relative-source-folders.png')});
 });
+
+test('file and folder labels share fixed indentation and array expansion describes its action',async({page},info)=>{
+  await page.goto(sample('api/examples.js#hello-world'));await stageReady(page);await openCode(page);await wide(page);
+  await page.evaluate(()=>{
+    (window as any).usdWorkbench.code.show({
+      example:{title:'Array example',path:'example.js',code:'const values = [1, 2, 3, 4, 5, 6, 7, 8];'},
+      getFiles:()=>['payloads/index.txt','payloads/MuJoCo/disabled.usda','payloads/Newton/disabled.usda','payloads/Physics/disabled.usda'].map(path=>({path,read:async()=>path.endsWith('.txt')?'Notes':'#usda 1.0\ndef Xform "Root" {}'})),
+    });
+  });
+  const rows=await page.locator('.usd-code-file').evaluateAll(rows=>rows.map(row=>({
+    depth:Number(row.getAttribute('aria-level')),left:row.querySelector('.usd-code-file-name')!.getBoundingClientRect().left,
+    icon:row.children[1].getBoundingClientRect().left,
+  })));
+  for(const a of rows)for(const b of rows)if(a.depth===b.depth){expect(a.left).toBeCloseTo(b.left,1);expect(a.icon).toBeCloseTo(b.icon,1);}
+  const left=(depth:number)=>rows.find(row=>row.depth===depth)!.left;
+  expect(left(2)-left(1)).toBeGreaterThan(0);expect(left(3)-left(2)).toBeCloseTo(left(2)-left(1),1);
+  await expect(page.getByRole('button',{name:'Open values array',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Expand arrays',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Open values array',exact:true})).toHaveCount(0);
+  await expect(page.locator('.usd-code-view')).toContainText('[1, 2, 3, 4, 5, 6, 7, 8]');
+  await page.getByRole('button',{name:'Compact arrays',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Open values array',exact:true})).toBeVisible();
+  await page.screenshot({path:info.outputPath('aligned-files-and-arrays.png')});
+  await page.getByRole('treeitem',{name:'index.txt',exact:true}).click();
+  await expect(page.locator('.usd-code-view')).toHaveText('Notes');
+  await expect(page.getByRole('button',{name:'Expand arrays',exact:true})).toBeHidden();
+  await page.getByRole('treeitem',{name:'disabled.usda',exact:true}).first().click();
+  await expect(page.locator('.usd-code-view')).toContainText('#usda 1.0');
+  await expect(page.getByRole('button',{name:'Expand arrays',exact:true})).toBeHidden();
+});

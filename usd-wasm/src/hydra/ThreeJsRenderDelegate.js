@@ -1432,8 +1432,9 @@ class HydraMesh {
     }
   }
 
-  setInstanceTransforms(matrices, count = 0) {
+  setInstanceTransforms(matrices, count = 0, instanced = count > 0 || !!this._isInstanced) {
     if (!this._mesh) return;
+    this._isInstanced = Boolean(instanced);
     const instanceCount = Number(count) || 0;
     if (instanceCount <= 0) {
       this._disposeInstancedMesh();
@@ -1527,7 +1528,7 @@ class HydraMesh {
   _applyVisibilityState() {
     const visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag) && this._pendingMaterialIds.size === 0 && this._hasRenderableGeometry();
     if (this._mesh) {
-      this._mesh.visible = !this._instancedMesh && visible;
+      this._mesh.visible = !this._isInstanced && visible;
       this._mesh.userData.usdRenderTag = this._renderTag;
     }
     if (this._instancedMesh) {
@@ -1535,7 +1536,7 @@ class HydraMesh {
       this._instancedMesh.userData.usdRenderTag = this._renderTag;
     }
     if (this._wireObject) {
-      this._wireObject.visible = visible && !this._instancedMesh;
+      this._wireObject.visible = visible && !this._isInstanced;
       this._wireObject.userData.usdRenderTag = this._renderTag;
     }
   }

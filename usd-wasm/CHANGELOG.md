@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Native instance/proxy badges, distinct PointInstancer icons, a generated-prototype toggle and links between instances, shared prototypes and instance roots. SDK inspection exposes composition flags and instancing summaries, with lazy read-only prototype traversal.
+
+- Typed metadata reads and edits, dictionary-key authoring with explicit Sdf types, metadata clearing and typed transform-operation reads. Composition-stack `metadataValues` retains authored list-operation buckets, including prepend/delete opinions.
+- Typed unsigned/64-bit integer, half, matrix2d/matrix3d, timecode and asset-array authoring, with exact 64-bit input validation and save/reopen coverage.
+- Expandable instance-proxy branches in the hierarchy, including composed material scopes and binding navigation. Instance children are inspectable and read-only.
+- Typed metadata inspection and native `GetAllMetadataValues()`: schema lists display as arrays, with expandable dictionaries and preserved scalar types. Existing string metadata bindings remain compatible.
+
 - View-menu and SDK display helpers for curve centerlines, NURBS/curve control points, point markers, USD light shapes and cameras; remembered app preferences, helper picking and depth-tested overlays in both path tracers.
 
 - Joint interaction mode for inspecting SimReady mechanisms: held assembly base, authored limits and dependent attachments, with optional Rapier loading on demand.
@@ -17,6 +24,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
 
 ### Fixed
+
+- Align Code file-tree icons and labels across files and folders. Replace the misleading Raw source button with Expand arrays / Compact arrays, shown only when arrays need expansion. Restore the selected USD layer after reload instead of incorrectly selecting the JavaScript example.
+
+- Detect animation in collapsed instances by scanning each shared prototype once; unused abstract source animation no longer creates a stage time range.
+- Recompute inherited hierarchy visibility after seeking and preserve the distinction between explicitly and indirectly hidden prims.
+- Distinguish inactive prims, abstract classes and undefined overs in the hierarchy while retaining USD's composed children and variant/payload behavior.
+
+- Preserve root-layer ownership when JavaScript layer handles are deleted or retained after their stage closes.
+- Return typed attribute values from scene inspection; read MaterialX asset paths, shadow flags, physics flags and visibility directly through the typed API instead of parsing display strings.
+- Dim inherited visibility icons in the hierarchy to distinguish children hidden by an ancestor from explicitly hidden prims.
+
+- Keep native mesh prototypes hidden when their visible instance count reaches zero. Hierarchy visibility includes hidden ancestors; showing a child uses OpenUSD MakeVisible and includes its view purpose. Expose unloaded payload state and a guide-geometry toggle.
 
 - Prevent area lights from entering a render before asynchronous lookup-table initialization completes.
 

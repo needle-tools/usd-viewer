@@ -86,7 +86,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   linked.setAttribute('aria-pressed',String(followSelection));
   linked.onclick=()=>{followSelection=!followSelection;linked.setAttribute('aria-pressed',String(followSelection));saveFiles();if(followSelection)void followSelected();else followRevision++;};
   toolbar.append(back,forward,picker,filename,linked,copy,announcer);
-  const rawButton=tool('Raw source',()=>{closeArray();rawSource=!rawSource;rawButton.setAttribute('aria-pressed',String(rawSource));drawSource();});
+  const rawButton=tool('Expand arrays',()=>{closeArray();const {scrollTop,scrollLeft}=view;rawSource=!rawSource;drawSource();view.scrollTop=scrollTop;view.scrollLeft=scrollLeft;});
   const editButton=tool('Edit source',()=>{closeArray();sourceEditing=!sourceEditing;editButton.setAttribute('aria-pressed',String(sourceEditing));sourceInput.value=text;drawSource();if(sourceEditing)sourceInput.focus();});
   const arrayButton=tool('Array',()=>{});
   const runButton=tool('Run',async()=>{const bound=binding;runButton.disabled=true;try{await bound.runExample(text);}catch(error){status.textContent=error.message;}finally{if(bound===binding)refreshTools();}});
@@ -105,7 +105,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   let binding = null, sources = [], selected = '', listener = null, dirty = true, token = 0, text = '', shownKey = '', revision = 0;
   let timer, firstNotice = 0, copiedTimer, disposed = false, imageUrl = '', readAbort, resizeFrame = 0, resizeWindow, layout, drag, scrollTimer;
   const cache = new Map();
-  let shownValue,rawSource=false,sourceEditing=false,arrayEditor,editOwner;
+  let shownValue,rawSource=false,sourceEditing=false,hasArrays=false,arrayEditor,editOwner;
   let sourceHistory=[],historyIndex=-1;
   const drafts=new Map(Object.entries(load(stateKey+':drafts',{})).filter(([,value])=>typeof value==='string'&&value.length<=200000).slice(-10)),draftHistory=new Map();let draftTimer;
   function saveDrafts(){clearTimeout(draftTimer);try{localStorage.setItem(stateKey+':drafts',JSON.stringify(Object.fromEntries([...drafts].filter(([,value])=>value.length<=200000).slice(-10))));}catch{}}
@@ -119,7 +119,9 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     back.disabled=historyIndex<=0;forward.disabled=historyIndex>=sourceHistory.length-1;
     const source=sources.find(source=>sourceKey(source)===selected),js=source?.kind==='example';
     const reading=shownKey!==selected;editButton.disabled=reading;arrayButton.disabled=reading;rawButton.disabled=reading;
-    editButton.setAttribute('aria-pressed',String(sourceEditing));editButton.hidden=!js;arrayButton.hidden=!js||!sourceEditing;runButton.hidden=!js||!binding?.runExample;rawButton.hidden=shownValue?.kind!=='text'||sourceEditing;
+    editButton.setAttribute('aria-pressed',String(sourceEditing));editButton.hidden=!js;arrayButton.hidden=!js||!sourceEditing;runButton.hidden=!js||!binding?.runExample;rawButton.hidden=shownValue?.kind!=='text'||sourceEditing||!hasArrays;
+    rawButton.textContent=rawSource?'Compact arrays':'Expand arrays';rawButton.setAttribute('aria-label',rawButton.textContent);rawButton.setAttribute('aria-pressed',String(rawSource));
+    rawButton.title=rawSource?'Collapse array values to compact table links':'Show array values inline in the code';
     const history=draftHistory.get(draftKey());undoButton.hidden=redoButton.hidden=js?!history?.entries.length:!(editOwner?.canUndo||editOwner?.canRedo);
     undoButton.disabled=js?!history?.cursor:!editOwner?.canUndo;redoButton.disabled=js?!history||history.cursor>=history.entries.length:!editOwner?.canRedo;
     runButton.disabled=reading||text===binding?.example?.code;
@@ -160,7 +162,9 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       }
       if(definition){const span=element('span','usd-code-definition');span.dataset.usdPath=definition;return span;}
     };
-    const fragment=document.createDocumentFragment(),arrays=rawSource?[]:findArrays(text,source.language).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));let last=0;
+    const availableArrays=findArrays(text,source.language).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));
+    hasArrays=availableArrays.some(array=>array.end-array.start>=64||array.value.flat(Infinity).length>4);refreshTools();
+    const fragment=document.createDocumentFragment(),arrays=rawSource?[]:availableArrays;let last=0;
     for(const array of arrays){
       fragment.append(highlight(text.slice(last,array.start),source.language,decorate,last));
       const wrapper=element('span','usd-code-array'),raw=element('span','usd-code-array-literal',text.slice(array.start,array.end));
@@ -231,7 +235,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     let match;
     if (saved.kind === 'example') match = sources.find(source=>source.kind === 'example');
     else if (saved.kind === 'file') match = sources.find(source=>source.kind === 'file' && canonical(source.path) === saved.path);
-    else if (saved.kind === 'layer') match = sources.find(source=>source.path === saved.path || source.identifier === saved.identifier)
+    else if (saved.kind === 'layer') match = sources.find(source=>source.kind==='layer'&&(canonical(source.path) === saved.path || saved.identifier && source.identifier === saved.identifier))
       || sources.find(source=>saved.role === 'session' && source.role === 'session')
       || sources.find(source=>saved.role === 'layer' && source.label === saved.label);
     if (!match && saved.kind === 'layer') match = sources.find(source=>source.role === 'root');
@@ -288,7 +292,8 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       for (const {source,name} of node.files.sort((a,b)=>a.name.localeCompare(b.name))) {
         const key = sourceKey(source), button = row(name,key,depth); button.dataset.sourceKey = key;
         button.setAttribute('aria-selected',String(key === selected)); button.title = source.path;
-        button.prepend(source.kind === 'layer' || source.language === 'usda' ? viewerIcon('layers') : codeIcon('code'));
+        const disclosure=element('span','usd-code-file-disclosure');disclosure.setAttribute('aria-hidden','true');
+        button.prepend(disclosure,source.kind === 'layer' || source.language === 'usda' ? viewerIcon('layers') : codeIcon('code'));
         button.onclick = ()=>choose(key); fragment.append(button);
       }
     }

@@ -54,6 +54,8 @@
   --usd-row-selected-hover-background: color-mix(in srgb, var(--accent-brand) 28%, var(--surface-panel));
   --usd-row-selected-color: var(--text-primary);
   --usd-icon-color: var(--text-secondary);
+  --usd-tree-source-color: var(--text-secondary);
+  --usd-inherited-visibility-opacity: .4;
   --usd-focus-color: color-mix(in srgb, var(--text-primary) 45%, var(--border-subtle));
   --usd-outline-width: 1.5px;
   --usd-outline-hidden-opacity: .45;

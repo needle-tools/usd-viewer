@@ -21,6 +21,8 @@ for (const viewer of ['three', 'needle']) {
     await page.getByRole('button', {name: 'Open…', exact: true}).click();
     await (await chooser).setFiles({name: 'property-domains.usda', mimeType: 'text/plain', buffer: Buffer.from(fixture)});
     await page.locator('[data-prim-path="/Test"]').click();
+    await openAppMenu(page, 'window');
+    await page.getByRole('checkbox', {name: 'Show Timeline', exact: true}).check();
     const play = page.getByRole('button', {name: 'Play or pause'});
     if (await play.getAttribute('aria-pressed') === 'true') await play.click();
     await page.getByRole('button', {name: 'First frame', exact: true}).click();

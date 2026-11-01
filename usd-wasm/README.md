@@ -211,8 +211,8 @@ different runtime. Concurrent calls share one initialization; the first call's
 options select the runtime. Custom `locateFile` and `mainScriptUrlOrBlob`
 overrides must point to matching artifacts for the selected runtime.
 
-The 1.2.0 JSPI Wasm artifact is 19.5 MB, versus 35.9 MB for Asyncify. With
-Brotli quality 11, this is 3.32 MB versus 5.42 MB (39% less transfer). Both
+The 1.2.0 JSPI Wasm artifact is 19.7 MB, versus 36.3 MB for Asyncify. With
+Brotli quality 11, this is 3.39 MB versus 5.47 MB (38% less transfer). Both
 contain the same native feature set. The package includes both runtimes;
 applications download only the selected runtime. The viewer app uses `auto`.
 
@@ -225,6 +225,69 @@ original runtimes without compressed duplicates.
 For inspection with either runtime, use `inspectStageAsync` or
 `inspectPrimAsync` from `/scene` inside `handle.readStage()`. The synchronous
 helpers remain available for existing Asyncify integrations.
+
+Stage inspection includes instance proxies, with `instanceProxy: true` on their
+snapshots. Pass `{expandedInstances: []}` as the third argument to keep instance
+branches closed, or list the instance paths to expand. Set `includePrototypes: true`
+to include generated prototype roots; their expanded paths use the same list.
+`StageInfo.prototypes` reports shared prototype paths and instance-root counts.
+The hierarchy loads branches when opened; proxy children are inspectable but cannot be edited
+independently of their shared prototype.
+
+The hierarchy distinguishes native instances, instance proxies, instanceable flags
+and PointInstancers. Its prototype toggle exposes generated shared data, and
+Properties links between instances, their prototype prims and other instance
+roots. `inspectPrim(stage, path).instancing` exposes the same information, including point
+instance counts and prototype targets. Prototype and proxy controls are read-only.
+
+`PrimInfo` includes `defined`, `abstract`, `instanceable`, `prototype`,
+`inPrototype`, `prototypePath`, `prototypePrimPath` and `prototypeInstanceCount`.
+Inactive prims, abstract classes and undefined overs remain visible. Children of
+inactive prims, unloaded payload contents and unselected variants follow USD's
+composition rules; authored source remains available through layer inspection.
+Stage animation discovery scans shared prototype data once and does not depend
+on which tree branches are expanded. Seeking recomputes inherited visibility.
+
+`inspectPrim` and `inspectPrimAsync` return typed metadata: list operations such as
+`apiSchemas` become arrays, dictionaries become objects, and booleans and numbers
+retain their types. Integers outside JavaScript's safe range remain decimal
+strings. Low-level prim, attribute and relationship bindings expose the same
+values through `GetAllMetadataValues()`; `GetAllMetadata()` retains its existing
+string values.
+
+Attribute snapshots also contain typed `value` data. Read and edit attributes
+through `attribute.Get(time)` / `attribute.Set(value, time)`; use `Number.NaN`
+for the default value. `GetValueString*` methods are display helpers. Transform
+operations expose `GetValue(time)` for typed reads and `Set(value, time)` for
+edits; their older `Get(time)` retains its display-string result.
+
+Metadata has typed `GetMetadata(key)` / `SetMetadata(key, value)` on prims,
+attributes and relationships. For example:
+
+```js
+await prim.SetMetadata('customData', {reviewed: true, tags: ['hero', 'rigged']});
+await prim.SetMetadataByDictKey('customData', 'render:channels', [], 'token[]');
+await prim.SetMetadata('apiSchemas', {prependedItems: ['MaterialBindingAPI']});
+const schemas = prim.GetMetadata('apiSchemas'); // composed array
+```
+
+Plain dictionary edits preserve existing entry types; new entries infer
+bool/string/double and homogeneous arrays. `SetMetadataByDictKey` takes an
+explicit Sdf type for new empty arrays or exact types; pass an empty type name to
+preserve/infer the type. Use `ClearMetadata` / `ClearMetadataByDictKey` to remove
+authored opinions. Exact 64-bit integers accept bigint or decimal strings;
+unsafe JS integer numbers are rejected.
+
+Composition-stack entries expose `metadataValues` alongside legacy `metadata`
+display strings. In this authored view, list operations retain `isExplicit`,
+`explicitItems`, `prependedItems`, `appendedItems`, `deletedItems`, `orderedItems`
+and `addedItems`. Pass that object to `SetMetadata` to preserve the operation;
+passing an array intentionally authors an explicit replacement list.
+
+`stage.GetRootLayer()` returns a reference-counted layer handle. Call
+`layer.delete()` when finished; this releases the wrapper's reference without
+destroying the stage's layer. To preserve authored layers and relative asset
+paths, save/export the layer. `stage.Export()` produces a flattened stage.
 
 Use `handle.sourcePaths.path(identifier)` for public file paths relative to the
 root layer's folder, including `../` for dependencies above it. Pass the result
@@ -531,8 +594,11 @@ The repository also includes 63 executable JavaScript lessons under
 
 Use **View → Helpers** in the app to toggle curve centerlines, curve/NURBS control
 points, point markers, lights and cameras. Choices are remembered. Centerlines
-make zero-width curves visible without changing their authored widths. The Scene
-purpose selector controls whether guide geometry participates in the view.
+make zero-width curves visible without changing their authored widths. The Guide geometry toggle and Scene purpose selector control whether guide
+geometry participates in the view. Hierarchy visibility includes hidden ancestors;
+showing a child uses OpenUSD MakeVisible, preserving hidden siblings and including
+the child's view purpose. Unloaded payload rows are dimmed and marked with a
+download icon; referenced prims can remain in the hierarchy while unloaded.
 
 Embedded viewers can use the same SDK helpers; all are off by default:
 

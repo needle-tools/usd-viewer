@@ -84,10 +84,11 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   const copyPath = makeButton('Copy path', 'copy_path', () => copy(current));
   const copyValue = makeButton('Copy value', 'content_copy', () => copy(selectedRow()?.text ?? rawText(snapshot)));
   address.append(pathLabel, copyPath, copyValue);
+  const instancing=node('dl','usd-property-instancing');instancing.setAttribute('role','group');instancing.setAttribute('aria-label','Instancing');instancing.hidden=true;
   const status = node('div', 'usd-property-status'); status.setAttribute('role', 'status'); status.hidden = true;
   const provenance = node('details', 'usd-property-provenance'); provenance.hidden = true;
   const scroller = node('div', 'usd-property-scroller'); scroller.setAttribute('aria-label', 'Properties');
-  root.append(toolbar, address, status, provenance, scroller); container.append(root);
+  root.append(toolbar, address, instancing, status, provenance, scroller); container.append(root);
   const alive = () => !disposed && isCurrent();
   function message(text = '') { status.textContent = text; status.hidden = !text; }
   async function copy(text) {
@@ -195,10 +196,54 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     if (item.top < bounds.top) scroller.scrollTop += item.top - bounds.top;
     else if (item.bottom > bounds.bottom) scroller.scrollTop += item.bottom - bounds.bottom;
   }
+  function structuredValue(value, label) {
+    if(Array.isArray(value)) {
+      const list=node('ol','usd-property-value-list');list.start=0;list.setAttribute('aria-label',label);
+      let shown=0;
+      const more=makeButton('',null,()=>append());more.className='usd-property-value-more';
+      function append() {
+        const restoreFocus=document.activeElement===more;
+        more.remove();const end=Math.min(value.length,shown+32);
+        for(;shown<end;shown++){const item=node('li');item.append(structuredValue(value[shown],`${label}[${shown}]`));list.append(item);}
+        if(shown<value.length){more.textContent=`Show ${Math.min(32,value.length-shown)} more`;list.after(more);}
+        if(restoreFocus){const target=shown<value.length?more:list;target.tabIndex=0;target.focus({preventScroll:true});}
+      }
+      const host=node('div');host.append(list);append();
+      if(!value.length)host.textContent='[]';return host;
+    }
+    if(value && typeof value==='object') {
+      const entries=Object.entries(value);if(!entries.length)return node('span','','{}');
+      const group=node('details','usd-property-value-object'),summary=node('summary','',`${entries.length} fields`),fields=node('dl');
+      group.append(summary,fields);
+      group.ontoggle=()=>{if(!group.open || fields.childElementCount)return;for(const [key,item] of entries){const name=node('dt','',key),content=node('dd');content.append(structuredValue(item,`${label}.${key}`));fields.append(name,content);}};
+      return group;
+    }
+    return node('span','',value===null?'null':String(value??''));
+  }
+  let instancingKey;
+  function renderInstancing(info,path) {
+    const key=JSON.stringify([path,info]);if(key===instancingKey)return;instancingKey=key;
+    instancing.replaceChildren();instancing.hidden=!info;instancing.dataset.instancingKind=info?.kind || '';
+    if(!info)return;
+    function field(label,value){const term=node('dt','',label),data=node('dd');data.append(typeof value==='string'?document.createTextNode(value):value);instancing.append(term,data);}
+    function paths(items,label){
+      const group=node('details'),summary=node('summary','',`${items.length} ${label}`),list=node('div','usd-property-instance-links');group.append(summary,list);
+      let shown=0;const more=makeButton('Show more',null,append);
+      function append(){const end=Math.min(items.length,shown+32);for(;shown<end;shown++)list.append(link(items[shown],items[shown],path));if(shown===items.length)more.remove();else list.append(more);}
+      group.ontoggle=()=>{if(group.open&&!shown)append();};return group;
+    }
+    if(info.kind==='instance') {field('Prototype',link(info.prototypePath,info.prototypePath,path));field('Instance roots',String(info.instanceCount));}
+    else if(info.kind==='proxy')field('Prototype prim',link(info.prototypePrimPath,info.prototypePrimPath,path));
+    else if(info.kind==='prototype')field('Instance roots',paths(info.instances,'instance roots'));
+    else if(info.kind==='point-instancer'){field('Instances',String(info.instanceCount));field('Prototypes',paths(info.prototypes,'prototypes'));}
+    else if(info.kind==='instanceable')field('Instancing','Instanceable; no shared prototype');
+    else if(info.kind==='prototype-child')field('Instancing','Shared prototype (read-only)');
+  }
   function render(data, path) {
     const samePrim = primPath === path, scrollTop = scroller.scrollTop;
     if (!samePrim) { rows.clear(); table = node('table'); scroller.replaceChildren(table); primPath = path; }
     table.setAttribute('aria-label', path ? `Properties of ${path}` : 'Stage properties');
+    renderInstancing(data.instancing,path);
     pathLabel.textContent = current || 'Stage'; pathLabel.title = current;
     const instances = context.instance?.instances || [];
     if (instances.length) pathLabel.textContent += ' · ' + instances.map(instance => `${instance.path}[${instance.id ?? instance.index}]`).join(' / ');
@@ -222,7 +267,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         row = { tr, th, td, caption, connections }; rows.set(key, row);
       }
       Object.assign(row, { name: value.name, kind: value.kind, path: value.path, type: value.type });
-      row.caption.textContent = [value.type || (value.kind === 'relationship' ? 'Relationship' : ''), value.resolveInfo?.source === 'None' ? '' : value.resolveInfo?.source].filter(Boolean).join(' · ');
+      row.caption.textContent = [Array.isArray(value.value) ? `${value.value.length} ${value.value.length===1?'item':'items'}` : value.type || (value.kind === 'relationship' ? 'Relationship' : ''), value.resolveInfo?.source === 'None' ? '' : value.resolveInfo?.source].filter(Boolean).join(' · ');
       row.tr.dataset.active = String(value.path === current); row.tr.tabIndex = value.path === current ? 0 : -1;
       if (value.path) row.tr.dataset.propertyPath = value.path;
       const connectionKey = JSON.stringify(value.connections || []);
@@ -234,13 +279,16 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       if (row.text === text && row.targetsKey === targetsKey) continue;
       row.text = text; row.targetsKey = targetsKey;
       const { td } = row;
+      const structured=value.kind==='metadata' && value.value!==null && typeof value.value==='object';
+      td.classList.toggle('usd-property-structured',structured);
       const draw = () => {
         if (value.kind === 'relationship' && value.targets?.length) {
           td.replaceChildren(); value.targets.forEach((target, index) => { if (index) td.append(document.createTextNode(', ')); td.append(link(target, target, path)); });
-        } else td.textContent = td.classList.contains('expanded') || text.length <= 200 ? text : text.slice(0, 200) + '…';
+        } else if(structured)td.replaceChildren(structuredValue(value.value,value.name));
+        else td.textContent = td.classList.contains('expanded') || text.length <= 200 ? text : text.slice(0, 200) + '…';
       };
       draw(); td.title = text.length > 500 ? text.slice(0, 500) + '…' : text;
-      if (value.kind !== 'relationship' && (text.length > 80 || td.classList.contains('expanded'))) {
+      if (!structured && value.kind !== 'relationship' && (text.length > 80 || td.classList.contains('expanded'))) {
         td.tabIndex = 0; td.title = 'Double-click or press Enter to expand';
         const expand = () => { td.classList.toggle('expanded'); draw(); };
         td.ondblclick = expand; td.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); expand(); } };

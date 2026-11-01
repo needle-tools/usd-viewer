@@ -531,7 +531,8 @@ test.describe('public usd-viewer lifecycle', () => {
             return types;
         });
 
-        expect(materialTypes).toContain('MaterialXMaterial');
+        expect(materialTypes.some(type => type === 'MaterialXMaterial' || type.endsWith('NodeMaterial'))).toBe(true);
+        expect(await page.evaluate(() => (window as any).usdHydra.diagnostics().materialXCreateSuccess)).toBeGreaterThan(0);
         const authoredTangents = await page.evaluate(() => {
             let result: any;
             (window as any).usdRoot?.traverse?.((object: any) => {

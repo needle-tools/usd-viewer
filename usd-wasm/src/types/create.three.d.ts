@@ -174,6 +174,7 @@ export declare type NeedleThreeHydraHandle = {
     readonly isUpdating: boolean,
     /** Toggle display helpers without changing the stage or triggering a native resync. */
     readonly helpers: Required<UsdViewportHelpers>,
+    readonly includedPurposes: string[],
     setHelpers: (settings: UsdViewportHelpers) => void,
     /** Stage time represented by the last completed Hydra draw. */
     readonly renderedTime: number,

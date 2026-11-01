@@ -41,8 +41,8 @@ export class UsdSceneShadows {
                 } finally { prim?.delete?.(); }
             }
             const attribute = record.enabledAttribute;
-            const value = attribute?.IsValid?.() ? await attribute.GetValueStringAtTime(timeCode) : '';
-            const enabled = value !== '0' && value !== 'false'; // UsdLuxShadowAPI fallback is true.
+            const value = attribute?.IsValid?.() ? await attribute.Get(timeCode) : undefined;
+            const enabled = value !== false; // UsdLuxShadowAPI fallback is true.
             light.userData.usdShadowEnabled = enabled;
             let visible = true;
             for (let parent = light; parent; parent = parent.parent) visible &&= parent.visible;

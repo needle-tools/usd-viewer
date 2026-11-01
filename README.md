@@ -55,10 +55,13 @@ files across native worker threads. Exports retain the
 original USD dependencies, independently of this display setting.
 
 Both native runtimes are built from OpenUSD commit
-`913db557e9d077094fd4bcfe17e3385930836764` on the local
+`3d19b7ee8ce4d8b17017fa1a7a78af26c7b709d4` on the local
 `git/openusd` branch `wasm/openusd-26.11.1`. The bridge yields the browser thread
 while opening stages and changing remote variants/payloads, forwards worker
 transfer progress, and delivers change notifications on the JavaScript thread.
+It also exposes typed reads and authoring for metadata and attributes, reference-counted
+root-layer handles, lazy instance/prototype inspection, and animation ranges independent
+of hierarchy expansion.
 Only the affected bridge files were recompiled; the OpenUSD libraries were reused.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
@@ -135,6 +138,8 @@ Code visible.
 
 Literal arrays collapse to compact controls. Open one to inspect named columns,
 color swatches or matrix grids in a paged table in the resizable right sidebar.
+**Expand arrays** shows their values inline; **Compact arrays** restores the
+table links. This toggle appears only for sources containing expandable arrays.
 The sidebar remembers its width. Cells support spreadsheet paste,
 row insertion/removal, keyboard navigation and a raw view. USD attribute edits
 use the native API and support undo/redo; they are included in stage downloads.

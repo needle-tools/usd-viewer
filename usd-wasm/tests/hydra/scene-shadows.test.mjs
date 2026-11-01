@@ -7,11 +7,11 @@ function setup() {
     const root = new Group();
     const mesh = new Mesh(new BoxGeometry(4, 2, 6), new MeshStandardMaterial());
     mesh.position.set(3,4,5); mesh.userData.usdPath = '/World/Mesh'; root.add(mesh);
-    const state = {value:'', valid:false, primGets:0, attributeGets:0, reads:[], deletedPrim:0, deletedAttribute:0};
+    const state = {value:undefined, valid:false, primGets:0, attributeGets:0, reads:[], deletedPrim:0, deletedAttribute:0};
     const stage = {GetPrimAtPath() { state.primGets++; return {
         GetAttribute(name) { assert.equal(name,'inputs:shadow:enable'); state.attributeGets++; return {
             IsValid: () => state.valid,
-            GetValueStringAtTime(time) {state.reads.push(time); return state.value;},
+            Get(time) {state.reads.push(time); return state.value;},
             delete() {state.deletedAttribute++;},
         }; }, delete() {state.deletedPrim++;},
     }; }};
@@ -23,8 +23,8 @@ test('composed shadow enable defaults true and updates time/variants through cac
     const {root,state,delegate,shadows} = setup();
     const light = new PointLight(); root.add(light); delegate.scenePrimitives['/Light']={_object:light};
     await shadows.update(0); assert.equal(light.castShadow,true);
-    state.valid=true; state.value='false'; await shadows.update(12); assert.equal(light.castShadow,false);
-    state.value='1'; await shadows.update(24); assert.equal(light.castShadow,true);
+    state.valid=true; state.value=false; await shadows.update(12); assert.equal(light.castShadow,false);
+    state.value=true; await shadows.update(24); assert.equal(light.castShadow,true);
     assert.deepEqual(state.reads,[12,24]);
     assert.equal(state.primGets,1); assert.equal(state.attributeGets,1); assert.equal(state.deletedPrim,1);
     shadows.dispose(); shadows.dispose(); assert.equal(state.deletedAttribute,1);
@@ -71,14 +71,14 @@ test('scenes without active supported shadow lights never scan geometry bounds',
     const light = new PointLight(); light.intensity=0; root.add(light); delegate.scenePrimitives['/Light']={_object:light};
     await shadows.update(0);
     light.intensity=1;light.visible=false;await shadows.update(0);
-    light.visible=true;state.valid=true;state.value='false';await shadows.update(0);
+    light.visible=true;state.valid=true;state.value=false;await shadows.update(0);
     shadows.dispose();
 });
 
 test('late geometry visibility refits bounds without rereading the composed attribute', async () => {
     const {root,mesh,state,delegate,shadows} = setup();
     const light = new PointLight(); root.add(light); delegate.scenePrimitives['/Light']={_object:light};
-    state.valid=true;state.value='true';mesh.visible=false;
+    state.valid=true;state.value=true;mesh.visible=false;
     await shadows.update(3);assert.equal(light.castShadow,false);
     mesh.visible=true;shadows.refreshBounds();assert.equal(light.castShadow,true);
     assert.deepEqual(state.reads,[3]);
@@ -94,7 +94,7 @@ test('MaterialX light ordering refreshes on changes, not every frame', async () 
     const light=new PointLight();root.add(light);delegate.scenePrimitives['/Light']={_object:light};
     await shadows.update(0);assert.equal(refreshes,1);
     await shadows.update(1);shadows.refreshBounds();assert.equal(refreshes,1);
-    state.valid=true;state.value='false';await shadows.update(2);assert.equal(refreshes,2);
+    state.valid=true;state.value=false;await shadows.update(2);assert.equal(refreshes,2);
     await shadows.update(3);assert.equal(refreshes,2);
     light.visible=false;await shadows.update(4);assert.equal(refreshes,3);
     delete delegate.scenePrimitives['/Light'];await shadows.update(5);assert.equal(refreshes,4);

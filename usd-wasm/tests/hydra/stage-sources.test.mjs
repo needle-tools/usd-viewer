@@ -38,7 +38,7 @@ test('async inspection preserves composed values, timeline and synchronous-runti
       const ball = await inspectPrimAsync(stage, '/World/Ball', 5);
       assert.deepEqual(overview.time, { start: 0, end: 10 });
       assert.ok(overview.prims.some(prim => prim.path === '/World/Ball' && prim.visible));
-      assert.equal(ball.attributes.find(attribute => attribute.name === 'radius').value, '2');
+      assert.equal(ball.attributes.find(attribute => attribute.name === 'radius').value, 2);
       assert.equal(await inspectPrimAsync(stage, '/Missing'), null);
       if (!USD.CreateHdWebSyncDriver) {
         assert.deepEqual(overview, inspectStage(stage, 5));

@@ -1,4 +1,4 @@
-import {showViewportHelpers} from './viewer-helpers.js';
+import {showViewportHelpers,syncViewportHelpers} from './viewer-helpers.js';
 import {loadSimreadyResources,simreadyLocation,warmSimreadyComposition} from './viewer-simready.js';
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
 import {viewerUsdReady, startupSimreadyReady, subscribeRuntimeProgress, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
@@ -1710,7 +1710,7 @@ async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = 
   window.usdPhysics = undefined;
   const variantControls = document.getElementById('usd-variant-controls');
   if (variantControls) { variantControls.replaceChildren(); variantControls.hidden = true; }
-  showViewportHelpers(window.usdWorkbench?.containers.helpers, null);
+  await showViewportHelpers(window.usdWorkbench?.containers.helpers, null);
   const detailControls = document.getElementById('usd-detail-controls');
   if (detailControls) { detailControls.replaceChildren(); detailControls.hidden = true; }
   const textureControls=document.getElementById('usd-texture-controls');
@@ -2237,7 +2237,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     viewerPhysics = physics;
     window.usdPhysics = physics;
 
-    showViewportHelpers(window.usdWorkbench?.containers.helpers, handle);
+    await showViewportHelpers(window.usdWorkbench?.containers.helpers, handle, async () => {if(currentHydraHandle === handle) await suiteControls?.refresh();});
+    if(generation !== loadGeneration || currentHydraHandle !== handle)return;
     showUsdDetail(stage, handle);
     showTextureResolution();
     showUsdBackground();
@@ -2257,6 +2258,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       viewerPhysics = await setupViewerPhysics(handle, needleContext, window.camera, window._controls, () => generation === loadGeneration, options.physics);
       window.usdPhysics = viewerPhysics;
       await showUsdVariants(stage, handle);
+      syncViewportHelpers(window.usdWorkbench?.containers.helpers);
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
     window.usdStagePanel = suiteControls;

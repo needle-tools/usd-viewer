@@ -1,3 +1,4 @@
+import {resolveHierarchyVisibility} from '../scene/hierarchy.js';
 import { installViewerStyle } from './style.js';
 import { transportIcon, viewerIcon, primIcon } from './icons.js';
 import { createSelection } from './selection.js';
@@ -9,12 +10,15 @@ function node(tag, className, text) { const el = document.createElement(tag); if
 export async function mountStagePanel({ handle, stage, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
   if (style) installViewerStyle();
   let disposed = false, editing = false, activeCamera = '', currentPurpose = 'default,render', frame, info, selectedPath = '';
-  let collapsed = new Set();
+  let collapsed = new Set(), expandedInstances = new Set(), showPrototypes = false;
   let saved = {};
   if (stateKey) try { const value = JSON.parse(localStorage.getItem(stateKey)); if (value && typeof value === 'object' && !Array.isArray(value)) saved = value; } catch {}
   const selection = createSelection({items: Array.isArray(saved.selectedItems) ? saved.selectedItems : (typeof saved.selectedPath === 'string' ? [saved.selectedPath] : [])});
-  selectedPath = selection.primary?.path || ''; collapsed = new Set(Array.isArray(saved.collapsed) ? saved.collapsed : []);
-  function persist() { if (stateKey) try { localStorage.setItem(stateKey, JSON.stringify({ selectedPath, selectedItems: selection.items, pickMode: saved.pickMode || 'prim', collapsed: [...collapsed], search: search.value })); } catch {} }
+  showPrototypes=saved.showPrototypes===true;
+  selectedPath = selection.primary?.path || ''; expandedInstances=new Set(Array.isArray(saved.expandedInstances)?saved.expandedInstances:[]);
+  for(let ancestor=selectedPath.slice(0,selectedPath.lastIndexOf('/'));ancestor;ancestor=ancestor.slice(0,ancestor.lastIndexOf('/')))expandedInstances.add(ancestor);
+  collapsed = new Set(Array.isArray(saved.collapsed) ? saved.collapsed : []);
+  function persist() { if (stateKey) try { localStorage.setItem(stateKey, JSON.stringify({ selectedPath, selectedItems: selection.items, showPrototypes, pickMode: saved.pickMode || 'prim', collapsed: [...collapsed], expandedInstances:[...expandedInstances], search: search.value })); } catch {} }
   const embedded = !!containers;
   const panel = node('aside', 'usd-suite'); panel.id = 'usd-suite';
   const toggle = node('button', 'usd-stage-toggle', 'Stage'); toggle.type = 'button'; toggle.setAttribute('aria-controls', 'usd-suite-content'); toggle.setAttribute('aria-expanded', String(embedded));
@@ -47,7 +51,11 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     const column = node('span', 'usd-tree-column-icon'); column.append(viewerIcon(name)); column.title = title; column.setAttribute('aria-label', title); columns.append(column);
   }
   const tree = node('div', 'usd-prim-tree'); tree.setAttribute('role', 'tree'); tree.setAttribute('aria-label', 'Stage hierarchy'); tree.setAttribute('aria-multiselectable', 'true');
-  hierarchy.append(search, columns, tree);
+  const treeTools=node('div','usd-tree-tools'),prototypeToggle=node('button','usd-tree-prototypes');
+  prototypeToggle.type='button';prototypeToggle.append(viewerIcon('prototype'));
+  function updatePrototypeToggle(){prototypeToggle.setAttribute('aria-pressed',String(showPrototypes));prototypeToggle.setAttribute('aria-label','Show prototypes');prototypeToggle.title=showPrototypes?'Hide generated prototypes':'Show generated prototypes';}
+  updatePrototypeToggle();prototypeToggle.onclick=()=>{showPrototypes=!showPrototypes;updatePrototypeToggle();persist();void refresh().catch(error=>{if(!disposed)status.textContent=error.message;});};
+  treeTools.append(search,prototypeToggle);hierarchy.append(treeTools, columns, tree);
   tree.addEventListener('scroll',()=>{columns.style.transform=`translateX(${-tree.scrollLeft}px)`;},{passive:true});
   function row(parent, text, input) { const label = node('label', 'usd-settings-row', text); label.append(input); parent.append(label); return input; }
   function dropdown(parent, label, choices, value, change, caption = label) {
@@ -110,12 +118,19 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       return target === path;
     });
   }
+  function expandTo(path) {
+    if(!path || primPaths.has(path))return;
+    const target=stage.GetPrimAtPath(path);try{if(target.IsInPrototype?.()){showPrototypes=true;updatePrototypeToggle();}}finally{target.delete?.();}
+    for(let ancestor=parentOf(path);ancestor;ancestor=parentOf(ancestor)){expandedInstances.add(ancestor);collapsed.delete(ancestor);}
+    void refresh().then(revealSelection).catch(error=>{if(!disposed)status.textContent=error.message;});
+  }
   function showProperties(path, notify = true) {
     if (disposed || !isCurrent()) return;
     selectedPath = path;
     if (!notify && primPath(inspector.target) === path) inspector.refresh();
     else inspector.show(path, {instance: selection.primary || undefined, recordHistory: notify});
     if (notify && path) {
+      expandTo(path);
       let ancestor = parentOf(path); while (ancestor) {collapsed.delete(ancestor); ancestor = parentOf(ancestor);}
       drawTree();
     }
@@ -144,7 +159,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     selectedPath = primPath(inspector.target);
     selection.replace(selectedPath ? [{...options.instance, path: selectedPath}] : []);
     let ancestor = parentOf(selectedPath); while (ancestor) {collapsed.delete(ancestor); ancestor = parentOf(ancestor);}
-    drawTree(); revealSelection(); persist(); onSelect(selectedPath, selection.items); return true;
+    expandTo(selectedPath); drawTree(); revealSelection(); persist(); onSelect(selectedPath, selection.items); return true;
   }
   const parentOf = path => path.slice(0, path.lastIndexOf('/'));
   function revealItem(item) {
@@ -177,7 +192,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       let parent = parentOf(prim.path), hidden = false;
       if (!query) while (parent) { if (collapsed.has(parent)) { hidden = true; break; } parent = parentOf(parent); }
       if (hidden) continue;
-      const hasChildren = parents.has(prim.path), expanded = !collapsed.has(prim.path) || !!query;
+      const lazyBranch=prim.instance || prim.prototype,hasChildren = parents.has(prim.path) || lazyBranch, expanded = !!query || (!collapsed.has(prim.path) && (!lazyBranch || expandedInstances.has(prim.path)));
       let cached=treeRows.get(prim.path);
       if(!cached){
         const entry=node('div','usd-tree-row'),button=node('button'),disclosure=node('span','usd-tree-disclosure'),icon=node('span','usd-tree-icon'),name=node('span','usd-tree-name'),type=node('span','usd-tree-type');
@@ -185,14 +200,26 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         cached={entry,button,disclosure,icon,name,type};treeRows.set(prim.path,cached);
       }
       const {entry,button,disclosure,icon,name,type}=cached;
-      entry.dataset.active = String(prim.active); entry.dataset.visible = String(prim.visible); entry.dataset.selected = String(selectedInTree(prim.path));
+      if(prim.payload && !prim.loaded) {
+        if(!cached.loadState){cached.loadState=node('span','usd-tree-load-state');cached.loadState.append(viewerIcon('download'));button.insertBefore(cached.loadState,type);}
+        cached.loadState.title='Payload unloaded';cached.loadState.hidden=false;
+      } else if(cached.loadState)cached.loadState.hidden=true;
+      const purposeIncluded=(handle.includedPurposes || currentPurpose.split(',')).includes(prim.purpose || 'default');
+      entry.dataset.instance=String(prim.instance);entry.dataset.instanceProxy=String(prim.instanceProxy);entry.dataset.prototype=String(prim.prototype);entry.dataset.defined=String(prim.defined);entry.dataset.abstract=String(prim.abstract);
+      entry.dataset.purposeIncluded=String(purposeIncluded); entry.dataset.loaded = String(prim.loaded); entry.dataset.active = String(prim.active); entry.dataset.visible = String(prim.visible); entry.dataset.selected = String(selectedInTree(prim.path));
       button.type = 'button'; button.title = prim.path; button.dataset.primPath = prim.path;
       button.setAttribute('role', 'treeitem'); button.setAttribute('aria-selected', String(selectedInTree(prim.path)));
       button.setAttribute('aria-level', String(prim.path.split('/').length - 1)); if (hasChildren) button.setAttribute('aria-expanded', String(expanded)); else button.removeAttribute('aria-expanded');
       button.style.paddingLeft = `${6 + (prim.path.split('/').length - 2) * 13}px`;
       if(hasChildren)glyph(disclosure,expanded?'expand_more':'chevron_right');else{disclosure.replaceChildren();delete disclosure.dataset.glyph;}disclosure.setAttribute('aria-hidden','true');
       glyph(icon,primIcon(prim));
-      const description = [prim.type || 'Untyped prim', prim.specifier].filter(Boolean).join(' · ');
+      const badgeKind=prim.instance?'instance':prim.instanceProxy?'instance-proxy':prim.inPrototype&&!prim.prototype?'prototype':'';
+      if(badgeKind){
+        if(!cached.instanceBadge){cached.instanceBadge=node('span','usd-tree-instance-badge');button.insertBefore(cached.instanceBadge,type);}
+        cached.instanceBadge.hidden=false;glyph(cached.instanceBadge,badgeKind);
+        cached.instanceBadge.title=prim.instance?`Instance of ${prim.prototypePath} · ${prim.prototypeInstanceCount} shared instances`:prim.instanceProxy?`Shared instance child · ${prim.prototypePrimPath}`:'Shared prototype child (read-only)';
+      }else if(cached.instanceBadge)cached.instanceBadge.hidden=true;
+      const description = [prim.prototype?'Prototype':prim.type || 'Untyped prim', prim.specifier, !prim.defined && !prim.inPrototype && 'Not fully defined', prim.abstract && 'Abstract (not drawn)', !prim.active && 'Inactive (children are not composed)', prim.instance && `Instance of ${prim.prototypePath} · ${prim.prototypeInstanceCount} shared instances`, prim.instanceable && !prim.instance && 'Instanceable (no shared prototype)', prim.instanceProxy && `Instance proxy (read-only) · ${prim.prototypePrimPath}`, prim.inPrototype && 'Generated prototype (read-only)', !prim.loaded && 'Payload unloaded', prim.hiddenBy && `Hidden by ${prim.hiddenBy}`, prim.purpose && prim.purpose !== 'default' && `Purpose: ${prim.purpose}`, !purposeIncluded && 'Excluded by view purpose'].filter(Boolean).join(' · ');
       icon.title = description; button.title = `${prim.path}\n${description}`;
       button.dataset.specifier = prim.specifier; button.setAttribute('aria-description', description);
       text(name,prim.name);text(type,prim.type);
@@ -204,10 +231,24 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         button.disabled=editing;
         button.onclick = async () => { await edit(() => change(button.getAttribute('aria-pressed') !== 'true')); tree.querySelector(`[data-prim-path="${CSS.escape(prim.path)}"]`)?.parentElement.querySelector(`[data-prim-action="${kind}"]`)?.focus({preventScroll:true}); }; return button;
       }
-      const visibility = toggleState('visibility', 'Show', 'Hide', prim.visible, prim.visible ? 'visibility' : 'visibility_off', value => setPrimVisible(authoringHandle, prim.path, value));
-      visibility.disabled = editing || !prim.active || !prim.imageable; visibility.dataset.unavailable = String(!prim.active || !prim.imageable);
+      const visibility = toggleState('visibility', 'Show', 'Hide', prim.visible, prim.visible ? 'visibility' : 'visibility_off', async value => {
+        await setPrimVisible(authoringHandle, prim.path, value);
+        const purposes = handle.includedPurposes || currentPurpose.split(',');
+        if(value && prim.purpose && !purposes.includes(prim.purpose)) {
+          await handle.setIncludedPurposes([...purposes,prim.purpose]); currentPurpose=[...purposes,prim.purpose].join(',');
+        }
+      });
+      visibility.dataset.inherited=String(!prim.visible && prim.localVisible === true);
+      if(visibility.dataset.inherited==='true')visibility.title+=`\nHidden by ${prim.hiddenBy}`;
+      visibility.disabled = editing || !prim.active || !prim.imageable || !prim.loaded || prim.instanceProxy || prim.inPrototype; visibility.dataset.unavailable = String(!prim.active || !prim.imageable || !prim.loaded || prim.instanceProxy || prim.inPrototype);
       const activation = toggleState('activation', 'Activate', 'Deactivate', prim.active, prim.active ? 'power_settings_new' : 'block', value => setPrimActive(authoringHandle, prim.path, value));
-      function toggleBranch() { if (collapsed.has(prim.path)) collapsed.delete(prim.path); else collapsed.add(prim.path); persist(); drawTree(prim.path); }
+      activation.disabled=editing || prim.instanceProxy || prim.inPrototype; activation.dataset.unavailable=String(!!(prim.instanceProxy || prim.inPrototype));
+      function toggleBranch() {
+        if(lazyBranch) {
+          if(expandedInstances.has(prim.path))expandedInstances.delete(prim.path);else expandedInstances.add(prim.path);
+          collapsed.delete(prim.path);persist();void refresh().then(()=>focusItem(tree.querySelector(`[data-prim-path="${CSS.escape(prim.path)}"]`))).catch(error=>{if(!disposed)status.textContent=error.message;});
+        } else {if(collapsed.has(prim.path))collapsed.delete(prim.path);else collapsed.add(prim.path);persist();drawTree(prim.path);}
+      }
       button.onclick = event => { if (disclosure.contains(event.target) && hasChildren) toggleBranch(); else selectPrim(prim.path, {toggle: event.ctrlKey || event.metaKey, range: event.shiftKey}); };
       button.onkeydown = event => {
         if (event.key === ' ' && (event.ctrlKey || event.metaKey)) {event.preventDefault(); selectPrim(prim.path, {toggle: true}); return;}
@@ -218,7 +259,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         }
         const buttons = [...tree.querySelectorAll('[role=treeitem]')], index = buttons.indexOf(button);
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); focusItem(buttons[Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]); }
-        if (event.key === 'ArrowRight' && hasChildren) { event.preventDefault(); if (!expanded) toggleBranch(); else focusItem(buttons[index + 1]); }
+        if (event.key === 'ArrowRight' && hasChildren) { event.preventDefault(); if (!expanded) toggleBranch(); else if(parentOf(buttons[index + 1]?.dataset.primPath || '')===prim.path)focusItem(buttons[index + 1]); }
         if (event.key === 'ArrowLeft') { event.preventDefault(); if (hasChildren && expanded) toggleBranch(); else focusItem(tree.querySelector(`[data-prim-path="${CSS.escape(parentOf(prim.path))}"]`)); }
       };
       if(entry!==cursor)tree.insertBefore(entry,cursor);
@@ -241,7 +282,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     hierarchy.style.setProperty('--usd-tree-type-width',`${width}px`);
   }
   document.fonts?.ready.then(()=>{if(!disposed)fitTypes();});
-  search.oninput = () => { drawTree(); persist(); };
+  search.oninput = () => { persist(); void refresh().catch(error=>{if(!disposed)status.textContent=error.message;}); };
   let refreshRevision = 0, sampling;
   function refreshSampledState(time = handle.getTime?.() || 0) {
     if (disposed || !isCurrent()) return Promise.resolve();
@@ -257,25 +298,15 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         let attribute;
         try {
           attribute = prim.GetAttribute('visibility');
-          values.push([item, await attribute.GetValueStringAtTime(time) !== 'invisible']);
+          values.push([item, await attribute.Get(time) !== 'invisible']);
         } finally { attribute?.delete?.(); prim?.delete?.(); }
       }
       return values;
     }).then(values => {
       if (disposed || !isCurrent() || revision !== refreshRevision || time !== (handle.getTime?.() || 0)) return;
       showProperties(selectedPath, false);
-      for (const [item, visible] of values) {
-        if (visible === item.visible) continue;
-        item.visible = visible;
-        const entry = tree.querySelector(`[data-prim-path="${CSS.escape(item.path)}"]`)?.parentElement;
-        if (!entry) continue;
-        entry.dataset.visible = String(visible);
-        const button = entry.querySelector('[data-prim-action="visibility"]');
-        button.setAttribute('aria-pressed', String(visible));
-        button.title = `${visible ? 'Hide' : 'Show'} ${item.path}`;
-        button.setAttribute('aria-label', button.title);
-        button.replaceChildren(viewerIcon(visible ? 'visibility' : 'visibility_off'));
-      }
+      for (const [item,visible] of values)item.localVisible=visible;
+      resolveHierarchyVisibility(currentInfo.prims);drawTree();
       inspectedTime = time;
     }).catch(error => { if (!disposed && isCurrent()) status.textContent = error.message; })
       .finally(() => { sampling = undefined; });
@@ -286,7 +317,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     const revision = ++refreshRevision, time = handle.getTime?.() || 0;
     const nextInfo = await handle.readStage(currentStage => {
       if (disposed || !isCurrent() || revision !== refreshRevision) return null;
-      return inspectStageAsync(currentStage, time);
+      return inspectStageAsync(currentStage, time, {expandedInstances:search.value.trim()?null:[...expandedInstances],includePrototypes:showPrototypes});
     });
     if (disposed || !isCurrent() || revision !== refreshRevision || !nextInfo) return;
     info = nextInfo; inspectedTime = time; primPaths = new Set(info.prims.map(prim => prim.path)); updateTimeline(info.time); onStage(info);
@@ -295,18 +326,19 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     authoredCameras = stageCameras(scene);
     dropdown(view, 'Camera', [['', 'Free'], ...authoredCameras.map(cam => [cam.userData.usdPath, cam.name || cam.userData.usdPath])], activeCamera, selectCamera); selectCamera(activeCamera);
     dropdown(view, 'Pick', [['prim', 'Prims'], ['instance', 'Instances']], saved.pickMode || 'prim', value => {saved.pickMode = value; persist(); onPickModeChange(value);}); onPickModeChange(saved.pickMode || 'prim');
-    const purposes = [['default,render', 'Default + render'], ['default', 'Default'], ['render', 'Render'], ['proxy', 'Proxy'], ['guide', 'Guide'], ['default,render,proxy,guide', 'All']];
-    const included = handle.driver?.GetIncludedPurposes?.(); let purpose = currentPurpose;
-    if (included) try { purpose = Array.from({ length: included.size() }, (_, i) => included.get(i)).join(','); } finally { included.delete?.(); }
+    const purposes = [['default,render', 'Default + render'], ['default,render,guide','Default + render + guides'], ['default', 'Default'], ['render', 'Render'], ['proxy', 'Proxy'], ['guide', 'Guide'], ['default,render,proxy,guide', 'All']];
+    const included = handle.includedPurposes || handle.driver?.GetIncludedPurposes?.(); let purpose = currentPurpose;
+    if (included) try { purpose = (Array.isArray(included) ? included : Array.from({ length: included.size() }, (_, i) => included.get(i))).join(','); } finally { included.delete?.(); }
+    if(!purposes.some(([value])=>value===purpose))purposes.push([purpose,purpose.split(',').map(value=>value[0].toUpperCase()+value.slice(1)).join(' + ')]);
     dropdown(view, 'Purpose', purposes, purpose, value => edit(async () => { await handle.setIncludedPurposes(value.split(',')); currentPurpose = value; }));
     for (const variant of info.variants) {
       const select = dropdown(variants, `${variant.path} · ${variant.setName}`, variant.choices.map(value => [value, value]), variant.selection,
         value => edit(async () => { await setVariant(authoringHandle, variant.path, variant.setName, value); onVariantChange(variant.path, variant.setName, value); }), variant.setName);
-      select.dataset.stageVariant = variant.setName;
+      select.dataset.stageVariant = variant.setName; select.disabled=!!variant.readOnly; select.dataset.unavailable=String(!!variant.readOnly);
     }
     variants.hidden = !info.variants.length;
     for (const payload of info.payloads) {
-      const input = node('input'); input.type = 'checkbox'; input.checked = payload.loaded; input.setAttribute('aria-label', `Load ${payload.path}`);
+      const input = node('input'); input.type = 'checkbox'; input.checked = payload.loaded; input.setAttribute('aria-label', `Load ${payload.path}`); input.disabled=!!(payload.instanceProxy || payload.inPrototype); input.dataset.unavailable=String(!!(payload.instanceProxy || payload.inPrototype));
       input.onchange = () => edit(() => setPayloadLoaded(authoringHandle, payload.path, input.checked)); row(payloads, payload.name, input).parentElement.title = payload.path;
     }
     payloads.hidden = !info.payloads.length; drawTree();

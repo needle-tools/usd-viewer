@@ -12,6 +12,9 @@
 // 16px adaptations: reduced camera iris; simplified bulb base; mesh cube without framing corners.
 // Copy = overlapping sheets; copy path = branching path; link = connected links.
 // Physics joints use joined rigid ends around a lock, hinge, slider or ball.
+// Instancing: overlapping cubes = native instance; arrow into a shared cell =
+// proxy child; cube on a baseline = generated prototype; grid = PointInstancer.
+// These state glyphs accompany the schema icon rather than replacing its meaning.
 // Labels, title and aria-pressed live on controls, never inside decorative SVGs.
 const paths = {
   "first_page": [
@@ -250,6 +253,10 @@ Object.assign(ICONS, {
 
 const stroke = d => `<path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`;
 Object.assign(ICONS, {
+  instance: {label:'Native instance',group:'instancing',svg:stroke('M2 4.5L6 2.5L10 4.5V6M2 4.5V8.5L3 9M2 4.5L6 6.5L10 4.5M6 6.5V8M6 9L10 7L14 9V12.5L10 14.5L6 12.5ZM6 9L10 11L14 9M10 11V14.5')},
+  'instance-proxy': {label:'Instance proxy',group:'instancing',svg:stroke('M8 2H14V8H8ZM2 8V14H8V11M2 8H5M4 6L2 8L4 10')},
+  prototype: {label:'Shared prototype',group:'instancing',svg:stroke('M3 4L8 1.5L13 4V9L8 11.5L3 9ZM3 4L8 6.5L13 4M8 6.5V11.5M3 14.5H13')},
+  'point-instancer': {label:'Point instancer',group:'instancing',svg:stroke('M2 2H6V6H2ZM10 2H14V6H10ZM2 10H6V14H2ZM10 10H14V14H10Z')},
   content_copy: {label:'Copy value',group:'property-actions',svg:stroke('M6 2H14V11H6ZM2 5V14H10')},
   copy_path: {label:'Copy path',group:'property-actions',svg:stroke('M3 2V11H11M3 6H8M11 3H14V6H11ZM11 10H14V13H11Z')},
   link: {label:'Follow selection',group:'workspace',svg:stroke('M6 10L10 6M4 7L2.5 8.5A3.2 3.2 0 0 0 7.5 13.5L9 12M7 4L8.5 2.5A3.2 3.2 0 0 1 13.5 7.5L12 9')},
@@ -263,7 +270,8 @@ Object.assign(ICONS, {
 });
 
 /** A composed class/over keeps its authoring identity; definitions use their schema. */
-export function primIcon({ type, specifier }) {
+export function primIcon({ type, specifier, prototype }) {
+  if (prototype) return 'prototype';
   if (specifier === 'class') return 'layers';
   if (specifier === 'over') return 'override';
   const types = {
@@ -271,7 +279,7 @@ export function primIcon({ type, specifier }) {
     Cylinder: 'cylinder', Cone: 'cone', Capsule: 'capsule', Plane: 'plane',
     NurbsPatch: 'surface', BasisCurves: 'timeline', NurbsCurves: 'nurbs-curve',
     Camera: 'photo_camera', Material: 'palette', Shader: 'shader', NodeGraph: 'account_tree',
-    Points: 'scatter_plot', PointInstancer: 'animation', GeomSubset: 'mesh',
+    Points: 'scatter_plot', PointInstancer: 'point-instancer', GeomSubset: 'mesh',
     Skeleton: 'skeleton', SkelRoot: 'skeleton', SkelAnimation: 'animation',
     Volume: 'waves', OpenVDBAsset: 'waves', Field3DAsset: 'waves',
     DistantLight: 'light-distant', RectLight: 'light-rect', DiskLight: 'light-disk',

@@ -719,6 +719,7 @@ async function createScopedThreeHydra(config, lifetime) {
         get revision() { return sceneRevision; },
         get isUpdating() { return sceneUpdates > 0; },
         get helpers() { return renderInterface.helpers; },
+        get includedPurposes() { return [...renderInterface.includedRenderTags].map(tag => tag === 'geometry' ? 'default' : tag); },
         setHelpers: settings => renderInterface.setHelpers(settings),
         get renderedTime() { return completedTimeCode; },
         refresh: () => { sceneRevision++; return draw(); },

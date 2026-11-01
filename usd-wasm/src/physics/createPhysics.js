@@ -18,7 +18,7 @@ export async function inspectUsdPhysics(handle) {
   let dynamic=false;
   const flag=async(prim,name,fallback)=>{
     const attribute=prim.GetAttribute(name);
-    try{return attribute.IsValid()? !['0','false'].includes(await attribute.GetValueStringAtTime(handle.getTime())):fallback;}
+    try{const value=attribute.IsValid()?await attribute.Get(handle.getTime()):undefined;return typeof value==='boolean'?value:fallback;}
     finally{attribute.delete?.();}
   };
   try{

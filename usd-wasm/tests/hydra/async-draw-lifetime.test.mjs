@@ -10,10 +10,11 @@ function fixture(options = {}) {
     const query = deferred();
     const state = { draws: 0, reads: 0, attributeDeletes: 0, driverDeletes: 0, query };
     const stage = {
+        GetRootLayer: () => ({GetIdentifier: () => '/tmp/scene.usda', delete() {}}),
         GetUpAxis: () => 'Y', GetStartTimeCode: () => 0, GetEndTimeCode: () => 24, GetTimeCodesPerSecond: () => 24,
         GetPrimAtPath: () => ({ delete() {}, GetAttribute: () => ({
             IsValid: () => true,
-            GetValueStringAtTime: () => { state.reads++; return query.promise; },
+            Get: () => { state.reads++; return query.promise; },
             delete: () => { state.attributeDeletes++; },
         }) }),
     };
@@ -67,7 +68,7 @@ test('draw timeout cannot release shadow-query lifetime or allow overlapping rea
     assert.equal(disposed, false);
     assert.equal(state.driverDeletes, 0);
     assert.equal(state.attributeDeletes, 0);
-    state.query.resolve('true');
+    state.query.resolve(true);
     await Promise.all([readiness, readRejected, disposal]);
     assert.equal(state.driverDeletes, 1);
     assert.equal(state.attributeDeletes, 1);
