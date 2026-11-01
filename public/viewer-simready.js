@@ -52,9 +52,7 @@ export async function loadSimreadyResources(url) {
   const data=await pending;if(data.revision!==location.revision)return null;
   const resources=data.assets[location.asset];if(!resources)return null;
   const textures=new Set(resources.textures.map(path=>new URL(path,location.base).href));
-  const overrides=new Map(Object.entries(resources.textureOverrides||{}).map(([path,preview])=>[new URL(path,location.base).href,preview]));
   return {...resources,location,resolveTextureUrl(url) {
-    if(overrides.has(url))return overrides.get(url);
     if(!textures.has(url))return url;
     const path=new URL(url),file=path.pathname.split('/').pop();
     path.pathname=path.pathname.slice(0,path.pathname.lastIndexOf('/')+1)+`.thumbs/512x512/${file}.png`;

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- View-menu and SDK display helpers for curve centerlines, NURBS/curve control points, point markers, USD light shapes and cameras; remembered app preferences, helper picking and depth-tested overlays in both path tracers.
+
 - Joint interaction mode for inspecting SimReady mechanisms: held assembly base, authored limits and dependent attachments, with optional Rapier loading on demand.
 - Linked Code navigation follows hierarchy selection to declarations through USD composition, with a remembered link toggle. Property copy actions and physics schemas use dedicated icons.
 - Complete NVIDIA SimReady catalog in the app's Examples tree, with lazy loading, category folders, searchable package IDs, pinned USD URLs, NVIDIA's dark/light previews and source attribution.
@@ -16,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Prevent area lights from entering a render before asynchronous lookup-table initialization completes.
+
+- Retain the complete viewport during asynchronous stage edits and preserve hierarchy DOM rows, focus and scroll through refresh instead of blanking or shifting the tree.
+
+- Show concurrent downloads in an expandable list with received/total bytes, percentages, speed and ETA. Preserve progress through initial package loading and distinguish unknown sizes from known totals.
 - Expose source files relative to the root layer's folder, preserving parent dependencies and package members. Code and Layers no longer show resolver mount directories; root-relative source paths also work in SDK reads.
 - Keep Beauty silhouettes in the temporal AA result; using jittered depth to restore raw background pixels caused stationary edges to flicker.
 - App hover picking pauses during camera navigation. Large static meshes use cached worker-built BVHs from private buffer copies, preserving render geometry, material groups and instance identities; edits invalidate the cache.
@@ -27,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Remove bundled SimReady texture replacements. All assets use NVIDIA's published previews where available, otherwise their original source textures.
 - SimReady browsing offers published 512 px texture previews with an explicit original-resolution option, bounds raster texture memory, warms small composition layers and reports continuing downloads after geometry appears. Texture resolution and HTTP texture progress hooks are available to SDK consumers.
 
 - Organize the app's Examples browser as one folder tree, with search in its pane header. Retain the previous render during sample replacement and use delayed, compact tooltips positioned beside menu items and within screen bounds.

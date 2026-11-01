@@ -73,7 +73,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   async function performEdit(action) {
     assertCurrent();
     editing = true; status.textContent = 'Updating stage…'; panel.setAttribute('aria-busy', 'true');
-    for (const group of sections) group.querySelectorAll('select,input,button').forEach(control => { control.disabled = true; });
+    for (const group of sections) group.querySelectorAll('select,input,button[data-prim-action]').forEach(control => { control.disabled = true; });
     let result, failure, failed = false;
     try {await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))); assertCurrent(); await beforeEdit(); assertCurrent(); result = await action(stage, handle.driver);}
     catch (error) {failure = error; failed = true;}
@@ -84,7 +84,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       }
       editing = false; panel.removeAttribute('aria-busy');
       if (!failed && status.textContent === 'Updating stage…') status.textContent = '';
-      for (const group of sections) group.querySelectorAll('select,input,button').forEach(control => { control.disabled = control.dataset.unavailable === 'true'; });
+      for (const group of sections) group.querySelectorAll('select,input,button[data-prim-action]').forEach(control => { control.disabled = control.dataset.unavailable === 'true'; });
     }
     if (failed) {status.textContent = failure?.message || String(failure); console.error('USD stage edit failed', failure); throw failure;}
     return result;
@@ -162,8 +162,12 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   }
   function focusItem(item) { item?.focus({preventScroll:true}); revealItem(item); }
 
+  const treeRows = new Map();
+  const text = (element,value) => {if(element.textContent!==value)element.textContent=value;};
+  const glyph = (element,name) => {if(element.dataset.glyph!==name){element.replaceChildren(viewerIcon(name));element.dataset.glyph=name;}};
   function drawTree(focusPath) {
-    const scrollTop = tree.scrollTop; tree.replaceChildren(); if (!info) return;
+    const scrollTop = tree.scrollTop; if (!info) return;
+    let cursor = tree.firstElementChild;
     // Reserve a shared content-sized column; names may truncate, USD types may not.
     const parents = new Set(info.prims.map(prim => parentOf(prim.path))), query = search.value.trim().toLowerCase();
     const matched = new Set();
@@ -174,26 +178,34 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       if (!query) while (parent) { if (collapsed.has(parent)) { hidden = true; break; } parent = parentOf(parent); }
       if (hidden) continue;
       const hasChildren = parents.has(prim.path), expanded = !collapsed.has(prim.path) || !!query;
-      const entry = node('div', 'usd-tree-row'); entry.dataset.active = String(prim.active); entry.dataset.visible = String(prim.visible); entry.dataset.selected = String(selectedInTree(prim.path));
-      const button = node('button'); button.type = 'button'; button.title = prim.path; button.dataset.primPath = prim.path;
+      let cached=treeRows.get(prim.path);
+      if(!cached){
+        const entry=node('div','usd-tree-row'),button=node('button'),disclosure=node('span','usd-tree-disclosure'),icon=node('span','usd-tree-icon'),name=node('span','usd-tree-name'),type=node('span','usd-tree-type');
+        button.append(disclosure,icon,name,type);entry.append(button);
+        cached={entry,button,disclosure,icon,name,type};treeRows.set(prim.path,cached);
+      }
+      const {entry,button,disclosure,icon,name,type}=cached;
+      entry.dataset.active = String(prim.active); entry.dataset.visible = String(prim.visible); entry.dataset.selected = String(selectedInTree(prim.path));
+      button.type = 'button'; button.title = prim.path; button.dataset.primPath = prim.path;
       button.setAttribute('role', 'treeitem'); button.setAttribute('aria-selected', String(selectedInTree(prim.path)));
-      button.setAttribute('aria-level', String(prim.path.split('/').length - 1)); if (hasChildren) button.setAttribute('aria-expanded', String(expanded));
+      button.setAttribute('aria-level', String(prim.path.split('/').length - 1)); if (hasChildren) button.setAttribute('aria-expanded', String(expanded)); else button.removeAttribute('aria-expanded');
       button.style.paddingLeft = `${6 + (prim.path.split('/').length - 2) * 13}px`;
-      const disclosure = node('span', 'usd-tree-disclosure'); if (hasChildren) disclosure.append(viewerIcon(expanded ? 'expand_more' : 'chevron_right')); disclosure.setAttribute('aria-hidden', 'true');
-      const icon = node('span', 'usd-tree-icon'); icon.append(viewerIcon(primIcon(prim)));
+      if(hasChildren)glyph(disclosure,expanded?'expand_more':'chevron_right');else{disclosure.replaceChildren();delete disclosure.dataset.glyph;}disclosure.setAttribute('aria-hidden','true');
+      glyph(icon,primIcon(prim));
       const description = [prim.type || 'Untyped prim', prim.specifier].filter(Boolean).join(' · ');
       icon.title = description; button.title = `${prim.path}\n${description}`;
       button.dataset.specifier = prim.specifier; button.setAttribute('aria-description', description);
-      const name = node('span', 'usd-tree-name', prim.name), type = node('span', 'usd-tree-type', prim.type);
-      button.append(disclosure, icon, name, type);
+      text(name,prim.name);text(type,prim.type);
       function toggleState(kind, on, off, checked, glyph, change) {
-        const button = node('button', 'usd-tree-action'); button.type = 'button'; button.append(viewerIcon(glyph));
+        let button=cached[kind];if(!button){button=node('button','usd-tree-action');button.type='button';cached[kind]=button;entry.append(button);}
+        if(button.dataset.glyph!==glyph){button.replaceChildren(viewerIcon(glyph));button.dataset.glyph=glyph;}
         button.dataset.primAction = kind;
         button.setAttribute('aria-pressed', String(checked)); button.setAttribute('aria-label', `${checked ? off : on} ${prim.path}`); button.title = `${checked ? off : on} ${prim.path}`;
+        button.disabled=editing;
         button.onclick = async () => { await edit(() => change(button.getAttribute('aria-pressed') !== 'true')); tree.querySelector(`[data-prim-path="${CSS.escape(prim.path)}"]`)?.parentElement.querySelector(`[data-prim-action="${kind}"]`)?.focus({preventScroll:true}); }; return button;
       }
       const visibility = toggleState('visibility', 'Show', 'Hide', prim.visible, prim.visible ? 'visibility' : 'visibility_off', value => setPrimVisible(authoringHandle, prim.path, value));
-      visibility.disabled = !prim.active || !prim.imageable; visibility.dataset.unavailable = String(!prim.active || !prim.imageable);
+      visibility.disabled = editing || !prim.active || !prim.imageable; visibility.dataset.unavailable = String(!prim.active || !prim.imageable);
       const activation = toggleState('activation', 'Activate', 'Deactivate', prim.active, prim.active ? 'power_settings_new' : 'block', value => setPrimActive(authoringHandle, prim.path, value));
       function toggleBranch() { if (collapsed.has(prim.path)) collapsed.delete(prim.path); else collapsed.add(prim.path); persist(); drawTree(prim.path); }
       button.onclick = event => { if (disclosure.contains(event.target) && hasChildren) toggleBranch(); else selectPrim(prim.path, {toggle: event.ctrlKey || event.metaKey, range: event.shiftKey}); };
@@ -209,8 +221,12 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         if (event.key === 'ArrowRight' && hasChildren) { event.preventDefault(); if (!expanded) toggleBranch(); else focusItem(buttons[index + 1]); }
         if (event.key === 'ArrowLeft') { event.preventDefault(); if (hasChildren && expanded) toggleBranch(); else focusItem(tree.querySelector(`[data-prim-path="${CSS.escape(parentOf(prim.path))}"]`)); }
       };
-      entry.append(button, visibility, activation); tree.append(entry);
+      if(entry!==cursor)tree.insertBefore(entry,cursor);
+      cursor=entry.nextElementSibling;
     }
+    while(cursor){const next=cursor.nextElementSibling;cursor.remove();cursor=next;}
+    const currentPaths=new Set(info.prims.map(prim=>prim.path));
+    for(const path of treeRows.keys())if(!currentPaths.has(path))treeRows.delete(path);
     fitTypes();tree.scrollTop = scrollTop;
     if (focusPath) focusItem(tree.querySelector(`[data-prim-path="${CSS.escape(focusPath)}"]`));
   }

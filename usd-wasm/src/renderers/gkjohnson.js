@@ -19,6 +19,7 @@ function snapshot(scene, renderer) {
   scene.updateMatrixWorld(true);
   const shape = [], transforms = [], materials = [], lights = [];
   scene.traverse(object => {
+    if (object.userData.usdHelperFor) return;
     shape.push([object.id, object.parent?.id, object.visible, object.geometry?.id, object.material && [object.material].flat().map(m => m.id)]);
     transforms.push([object.id, object.matrixWorld.elements, attributeKey(object.instanceMatrix), attributeKey(object.instanceColor)]);
     const geometry = object.geometry;
@@ -70,13 +71,15 @@ export async function createGkjohnsonTracer({ api, renderer, scene, camera, sett
     staging = clone(scene);
     const copied = new Map();
     function pair(source, target) {
+      if (source.userData.usdHelperFor) { target.removeFromParent(); return; }
+      const children = target.children.slice();
       pairs.push([source, target]);
       if (source.geometry) {
         if (!copied.has(source.geometry)) { const geometry = source.geometry.clone(); delete geometry.boundsTree; copied.set(source.geometry, geometry); geometries.push(geometry); }
         target.geometry = copied.get(source.geometry);
         if (source.isSkinnedMesh) delete target.boundsTree;
       }
-      source.children.forEach((child, i) => pair(child, target.children[i]));
+      source.children.forEach((child, i) => pair(child, children[i]));
     }
     pair(scene, staging);
     copyLightTargets();

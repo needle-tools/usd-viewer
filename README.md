@@ -38,20 +38,18 @@ when selected. Both asset and preview URLs use the dataset revision recorded in
 `npm run prepare:simready-manifest` (or pass a full dataset commit SHA after `--`).
 The generator paginates the complete file tree, verifies entry points and preview
 paths, and caches its inventory under `.cache/`. It does not download the asset
-library. To fill missing texture previews for specific packages, run
-`python3 scripts/generate-simready-texture-previews.py <package> ...` (Pillow), then
-regenerate the manifest. Only the derived previews and provenance index are
-shipped; their originals stay under `.cache/`. Folder names group assets by their package-name prefixes.
+library. Folder names group assets by their package-name prefixes.
 
 SimReady browsing defaults to 512 px texture previews where NVIDIA publishes
-those images. Missing previews for the glasses and compressor are generated
-from the pinned originals and included with source URLs, hashes and attribution
-in `public/data/simready-textures/index.json`. Other maps without a preview use
-their original URL and are resized after decoding. **View → Scene → Textures → Original** keeps full source
+those images. Maps without a published preview use their original URL and are
+resized after decoding. **View → Scene → Textures → Original** keeps full source
 resolution; the menu shows the asset's original texture download size. Geometry
 and authored material values appear before textures finish, and download activity
 remains visible in the viewport. The generated resource indexes also let the app
 warm bounded geometry and composition layers while OpenUSD initializes.
+The expandable download list shows per-file and combined byte totals,
+percentages, transfer speed and estimated time remaining. Unknown file sizes
+stay indeterminate until reported; totals cover dependencies discovered so far.
 Pinned SimReady URLs are cached without revalidation; cached reloads reuse the
 files across native worker threads. Exports retain the
 original USD dependencies, independently of this display setting.

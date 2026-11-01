@@ -25,7 +25,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
   const orbit = controls ? createOrbitControlUpdater(controls) : null; let lastControlTime = performance.now();
   let mode = 'basic', disposed = false, revision = 0;
   let beauty, beautyPending, basic, basicPending, tracer, loop, sync, sourceCamera;
-  let gk, pathDisplayDispose;
+  let gk, pathDisplayDispose, helperOverlay, helperOverlayPending;
   let lastStatus = '';
   const pathCanvas = canvas || document.createElement('canvas');
   const ownsCanvas = !canvas;
@@ -46,6 +46,15 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
     loop = sync = tracer = sourceCamera = undefined;
     showPath(false);
   }
+  function renderHelpers(activeCamera) {
+    if (helperOverlay) { helperOverlay.render(activeCamera); return; }
+    if (helperOverlayPending) return;
+    let present=false;scene.traverseVisible(object=>{if(object.userData.usdHelperFor)present=true;});
+    if (!present) return;
+    helperOverlayPending = import('./helperOverlay.js').then(({createHelperOverlay}) => createHelperOverlay({renderer,scene,host:renderer.domElement.parentElement}))
+      .then(candidate=>{if(disposed)candidate.dispose();else helperOverlay=candidate;})
+      .catch(error=>notify({status:'error',error:error.message})).finally(()=>helperOverlayPending=null);
+  }
   function releaseBeauty() {
     beauty?.dispose();
     beauty = undefined;
@@ -54,6 +63,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
   function validatePath(gkjohnson = false) {
     const issues = new Set();
     scene.traverseVisible(object => {
+      if (object.userData?.usdHelperFor) return;
       if (object.userData?.usdTypeName === 'ParticleField3DGaussianSplat') issues.add('Gaussian splats');
       if (gkjohnson && object.isLight && object.intensity && !object.isRectAreaLight && !object.isSpotLight && !object.isPointLight && !object.isDirectionalLight) issues.add(object.type);
       if (object.isPoints || object.isLine) issues.add('points and lines');
@@ -188,7 +198,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
         gk?.dispose(); gk = nextGk;
         if (next !== 'beauty') releaseBeauty();
         if (next !== 'basic') releaseBasic();
-        mode = next; showPath(mode === 'pathtraced'); notify();
+        mode = next; if (!mode.startsWith('pathtraced')) helperOverlay?.hide(); showPath(mode === 'pathtraced'); notify();
       } catch (error) { notify({ error: error.message, status: 'error' }); throw error; }
     },
     resize() {
@@ -200,16 +210,17 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
     },
     render(activeCamera = camera) {
       if (disposed) return;
+      if (!mode.startsWith('pathtraced')) helperOverlay?.hide();
       const now = performance.now(); orbit?.update(Math.min(0.1,Math.max(0,(now-lastControlTime)/1000))); lastControlTime=now;
       if (mode === 'pathtraced-gk') {
-        try { validatePath(true); gk.render(activeCamera); notify(); }
+        try { validatePath(true); gk.render(activeCamera); renderHelpers(activeCamera); notify(); }
         catch (error) { gk?.dispose(); gk = undefined; mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); }
       } else if (mode === 'pathtraced') {
         // Stage edits can introduce materials absent when this mode was selected.
         try { validatePath(); } catch (error) { releasePath(); mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); return; }
         if (sourceCamera !== activeCamera) { loop.removeSync(sync); makeSync(pathApi, activeCamera); loop.addSync(sync); }
         tracer.display.toneMappingExposure = renderer.toneMapping === NoToneMapping ? 1 : renderer.toneMappingExposure;
-        loop.tick(); notify();
+        loop.tick(); renderHelpers(activeCamera); notify();
       } else if (mode === 'beauty') {
         if (beauty?.camera !== activeCamera) {
           if (!beautyPending) {
@@ -235,6 +246,6 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
         } else basic.render();
       } else renderer.render(scene, activeCamera);
     },
-    dispose() { if (disposed) return; disposed = true; revision++; orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); releaseBasic(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
+    dispose() { if (disposed) return; disposed = true; revision++; helperOverlay?.dispose(); orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); releaseBasic(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
   };
 }

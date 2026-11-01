@@ -14,6 +14,7 @@ import { VdbVolumeRprim } from './vdbVolumeRprim.js';
 import { hasMaterialXVolume } from './materialxVolumeSupport.js';
 import { materialXDefinitionsFor } from './materialxDefinitions.js';
 import { lightIntensity } from './lightIntensity.js';
+import { helperKinds, viewportHelpers, scenePrimitiveHelper, disposeHelper } from './primitiveHelpers.js';
 
 const {
   TextureLoader,
@@ -39,13 +40,10 @@ const {
   RepeatWrapping,
   LinearSRGBColorSpace,
   Vector2,
-  CameraHelper,
   DirectionalLight,
-  DirectionalLightHelper,
   OrthographicCamera,
   PerspectiveCamera,
   PointLight,
-  PointLightHelper,
   RectAreaLight,
   SpotLight,
   MathUtils,
@@ -806,7 +804,16 @@ class HydraScenePrimitive {
       this._object.angle = MathUtils.degToRad(Math.max(.01, Math.min(90, Number(state.coneAngle))));
       this._object.penumbra = Math.max(0, Math.min(1, Number(state.coneSoftness) || 0));
     }
-    this._object.visible = state?.visible !== false;
+    this._lightVisible = state?.visible !== false;
+    this._object.visible = this._lightVisible && (!area || shaped || !!this._interface.areaLightsPrepared);
+    if (area && !shaped && !this._interface.areaLightsPrepared && this._pendingAreaLight !== this._object) {
+      const object = this._pendingAreaLight = this._object;
+      void this._interface.prepareAreaLights().then(() => {
+        if (this._object !== object) return;
+        object.visible = this._lightVisible; this._syncHelper();
+        this._interface.config.requestRender?.();
+      }).catch(() => {}); // Readiness reports initialization failures to the caller.
+    }
     this._object.name = primNameFromPath(this._id, usdLightTypeNames[typeId] || "UsdLight");
     this._object.userData.usdPath = this._id;
     this._object.userData.usdTypeName = usdLightTypeNames[typeId] || typeId;
@@ -857,53 +864,25 @@ class HydraScenePrimitive {
     this._interface.config.scenePrimitiveRoot?.add(object);
   }
 
-  _syncHelper(state = {}) {
+  _syncHelper(state = this._helperState || {}) {
+    this._helperState = state;
     const object = this._object;
-    if (!object) return;
-    const wantHelper = object.isCamera
-      ? (this._interface.config.showCameraHelpers || this._interface.config.showScenePrimitiveHelpers)
-      : object.isLight
-        ? (this._interface.config.showLightHelpers || this._interface.config.showScenePrimitiveHelpers)
-        : false;
-    if (!wantHelper) {
-      disposeObjectResources(this._helper);
-      this._helper = null;
-      return;
+    if (!object || !viewportHelpers(this._interface.config)[object.isCamera ? 'cameras' : 'lights']) {
+      disposeHelper(this._helper); this._helper = null; return;
     }
-
-    const helperCtor = object.isCamera
-      ? CameraHelper
-      : object.isDirectionalLight
-        ? DirectionalLightHelper
-        : object.isPointLight
-          ? PointLightHelper
-          : null;
-    if (!helperCtor) {
-      disposeObjectResources(this._helper);
-      this._helper = null;
-      return;
-    }
-
-    const needsNewHelper = !this._helper ||
-      (object.isCamera && !this._helper.isCameraHelper) ||
-      (object.isDirectionalLight && this._helper.type !== "DirectionalLightHelper") ||
-      (object.isPointLight && this._helper.type !== "PointLightHelper");
-    if (needsNewHelper) {
-      disposeObjectResources(this._helper);
-      const color = object.color || new Color(1, 1, 1);
-      this._helper = object.isCamera
-        ? new CameraHelper(object)
-        : object.isDirectionalLight
-          ? new DirectionalLightHelper(object, 0.5, color)
-          : new PointLightHelper(object, Number(state?.radius) || 0.25, color);
-      this._helper.name = `${object.name}Helper`;
-      this._helper.userData.usdHelperFor = this._id;
+    const shape = JSON.stringify([state.typeId, state.radius, state.width, state.height, state.length,
+      object.angle, object.fov, object.aspect, object.near, object.left, object.right, object.top, object.bottom]);
+    if (!this._helper || this._helperShape !== shape) {
+      disposeHelper(this._helper);
+      this._helper = scenePrimitiveHelper(object, state, this._id);
+      this._helperShape = shape;
       this._interface.config.scenePrimitiveRoot?.add(this._helper);
     }
-    this._helper.name = `${object.name}Helper`;
-    this._helper.visible = object.visible;
-    this._helper.update?.();
+    this._helper.matrix.copy(object.matrix); this._helper.visible = object.visible;
   }
+
+  updateHelpers() { this._syncHelper(); }
+
 }
 
 const SH_C0 = 0.28209479177387814;
@@ -2742,6 +2721,17 @@ export class ThreeRenderDelegateInterface {
     };
   }
 
+  get helpers() { return viewportHelpers(this.config); }
+
+  setHelpers(settings) {
+    const next = viewportHelpers(this.config);
+    for (const kind of helperKinds) if (typeof settings?.[kind] === 'boolean') next[kind] = settings[kind];
+    this.config.helpers = next;
+    for (const primitive of Object.values(this.meshes)) primitive.updateHelpers?.();
+    for (const primitive of Object.values(this.scenePrimitives)) primitive.updateHelpers?.();
+    this.config.requestRender?.();
+  }
+
   isRenderTagIncluded(tag = 'geometry') {
     return tag !== 'hidden' && this.includedRenderTags.has(tag);
   }
@@ -2800,6 +2790,7 @@ export class ThreeRenderDelegateInterface {
         const support = this.config.webGpuSupport;
         if (support?.prepareAreaLights) await support.prepareAreaLights();
         else await prepareWebGlAreaLights();
+        this.areaLightsPrepared = true;
         if (!this.registry.disposed) this.config.requestRender?.();
       })();
       // Retain failures for readiness, including imports that reject before Draw finishes.

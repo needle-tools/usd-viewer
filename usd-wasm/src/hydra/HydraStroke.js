@@ -1,12 +1,13 @@
 import { BufferGeometry, Color, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, SphereGeometry } from 'three';
 import { buildStrokeCurveGeometry, pointStrokeSamples } from './strokeGeometry.js';
+import { disposeHelper, strokeHelpers, viewportHelpers } from './primitiveHelpers.js';
 
 /** World-space point diameters and tessellated curve widths, independent of mesh topology. */
 export class HydraStroke {
     constructor(type, id, delegate) {
         this._type = type; this._id = id; this._interface = delegate;
         this._visible = false; this._pending = new Set(); this._transform = new Matrix4();
-        this._instanceTransforms = null; this._data = null; this._pointSamples = [];
+        this._helpers = []; this._instanceTransforms = null; this._data = null; this._pointSamples = [];
         this._geometry = type === 'points' ? new SphereGeometry(0.5, 12, 8) : new BufferGeometry();
         this._ownedMaterial = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, vertexColors: type !== 'points' });
         this._materialClones = new Map();
@@ -131,17 +132,28 @@ export class HydraStroke {
         this._mesh.instanceMatrix.needsUpdate = true;
         this._mesh.boundingBox = null; this._mesh.boundingSphere = null;
         if (count && this._geometry.attributes.position) { this._mesh.computeBoundingBox(); this._mesh.computeBoundingSphere(); }
+        this.updateHelpers();
         this._interface.prepareMeshMaterialGeometry(this._mesh);
+        this._applyVisibilityState();
+    }
+    updateHelpers() {
+        for (const helper of this._helpers) disposeHelper(helper);
+        this._helpers = this._mesh.userData.usdStrokeError ? [] : strokeHelpers(this._type, this._id, this._data,
+            this._geometry, this._instanceTransforms || [this._transform], viewportHelpers(this._interface.config), !!this._instanceTransforms, this._interface.config.webGpuSupport?.createPointHelper);
+        for (const helper of this._helpers) this._interface.config.usdRoot.add(helper);
         this._applyVisibilityState();
     }
     setVisibilityState(visible, tag = 'geometry') {
         this._visible = Boolean(visible); this._renderTag = tag; this._mesh.userData.usdRenderTag = tag; this._applyVisibilityState();
     }
     _applyVisibilityState() {
+        for (const helper of this._helpers) helper.visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag) && this._mesh.count > 0;
         this._mesh.visible = this._visible && this._interface.isRenderTagIncluded(this._renderTag) && !this._pending.size && this._mesh.count > 0 && !!this._geometry.attributes.position?.count;
     }
     commit() { this._applyVisibilityState(); }
     dispose() {
+        for (const helper of this._helpers) disposeHelper(helper);
+        this._helpers = [];
         this._interface.unassignMeshFromMaterials(this._mesh);
         this._mesh.removeFromParent(); this._mesh.dispose(); this._geometry.dispose();
         this._ownedMaterial.dispose();

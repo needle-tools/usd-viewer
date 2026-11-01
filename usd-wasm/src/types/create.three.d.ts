@@ -1,6 +1,8 @@
 import { Object3D } from "three"
-import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory } from "./hydra.js"
+import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory, UsdViewportHelpers } from "./hydra.js"
 import { HdWebSyncDriver, USD, USDStage } from "./bindings.js"
+
+export type { UsdViewportHelpers } from "./hydra.js";
 
 export declare type HydraFile = File & { path: string };
 
@@ -95,13 +97,14 @@ export declare type createThreeHydraConfig = {
     complexity?: "low" | "medium" | "high" | "veryhigh" | "very-high" | "adaptive" | number,
 
     /**
-     * Add Three.js helper objects for USD cameras and lights.
+     * Display helpers for curves, control points, points, cameras and lights.
      * The cameras and lights themselves are created through Hydra Sprim sync either way.
      */
+    helpers?: UsdViewportHelpers,
     showScenePrimitiveHelpers?: boolean,
 
     /**
-     * Add Three.js CameraHelper objects for USD Camera prims.
+     * Add display frustums for USD Camera prims.
      */
     showCameraHelpers?: boolean,
 
@@ -166,6 +169,12 @@ export declare type NeedleThreeHydraHandle = {
     refresh: () => Promise<void>,
     /** Changes after synchronized edits, explicit refresh or population changes. */
     readonly revision: number,
+    /** A stage mutation/recomposition is in progress. Hosts can retain their
+     * last frame until false to avoid presenting intermediate scene contents. */
+    readonly isUpdating: boolean,
+    /** Toggle display helpers without changing the stage or triggering a native resync. */
+    readonly helpers: Required<UsdViewportHelpers>,
+    setHelpers: (settings: UsdViewportHelpers) => void,
     /** Stage time represented by the last completed Hydra draw. */
     readonly renderedTime: number,
     /** Resolve a raycast's Hydra path and rendered instance index into authored USD identity. */

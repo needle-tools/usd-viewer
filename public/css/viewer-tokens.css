@@ -23,6 +23,9 @@
   --usd-examples-search-width: 150px;
   --usd-dialog-backdrop: rgb(0 0 0 / .3);
   --usd-tooltip-width: 240px;
+  --usd-download-width: 360px;
+  --usd-download-list-height: 224px;
+  --usd-download-bar-height: 3px;
   --usd-tooltip-background: var(--surface-panel-strong);
   --usd-tooltip-color: var(--text-primary);
   --usd-control-height: 28px;

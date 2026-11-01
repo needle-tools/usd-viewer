@@ -173,7 +173,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 
 /* Navigation owns one scroll area; the filter and column labels stay in place. */
 .usd-workbench #usd-suite { position: static; width: 100%; height: 100%; font-size: var(--usd-text-size); color: var(--text-primary); }
-.usd-workbench #usd-suite-content { display: flex; flex-direction: column; clear: none; width: 100%; height: 100%; max-height: none; overflow: hidden; border: 0; border-radius: 0; padding: 0; background: var(--surface-panel); box-shadow: none; }
+.usd-workbench #usd-suite-content { position:relative; display: flex; flex-direction: column; clear: none; width: 100%; height: 100%; max-height: none; overflow: hidden; border: 0; border-radius: 0; padding: 0; background: var(--surface-panel); box-shadow: none; }
 .usd-workbench .usd-suite-heading { display: none; }
 .usd-workbench .usd-tree-section { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; border: 0; }
 .usd-workbench .usd-tree-section > summary { display: none; }
@@ -190,7 +190,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-workbench .usd-tree-name { overflow: hidden; text-overflow: ellipsis; }
 .usd-workbench .usd-tree-type { margin-left: auto; padding-left: var(--usd-space-field); color: var(--text-secondary); font: var(--usd-text-small) var(--font-family-body); font-variant-numeric: tabular-nums; }
 .usd-workbench .usd-stage-status:empty { display: none; }
-.usd-workbench .usd-stage-status { padding: var(--usd-space-medium); white-space: pre-wrap; }
+.usd-workbench .usd-stage-status { position:absolute; bottom:var(--usd-space-2); left:var(--usd-space-2); right:var(--usd-space-2); z-index:2; max-height:30%; overflow:auto; padding:var(--usd-space-field) var(--usd-space-2); border-radius:var(--usd-radius-small); background:var(--surface-panel); white-space:pre-wrap; pointer-events:none; }
 
 /* Transport and ruler share a baseline; short panels wrap into two useful rows. */
 .usd-workbench .usd-timeline { position: static; inset: auto; transform: none; height: 100%; display: flex; align-items: center; gap: var(--usd-space-medium); padding: var(--usd-space-2) var(--usd-space-3); width: 100%; border: 0; border-radius: 0; background: var(--surface-panel); color: var(--text-secondary); font-size: var(--usd-text-size); }
@@ -457,6 +457,30 @@ body.usd-product ::-webkit-scrollbar-thumb { background: var(--usd-scrollbar-col
 .usd-preview-renderer { display:inline-flex; flex:none; border:1px solid var(--border-subtle); border-radius:var(--usd-radius-control); padding:var(--usd-space-1); gap:var(--usd-space-1); }
 .usd-examples-footer .usd-preview-renderer button { border:0; padding:var(--usd-space-1) var(--usd-space-small); border-radius:var(--usd-radius-small); }
 
-.usd-asset-progress { position:absolute; right:var(--usd-space-3); bottom:var(--usd-space-3); z-index:5; max-width:calc(100% - 24px); padding:var(--usd-space-field) var(--usd-space-2); background:var(--surface-panel); color:var(--text-secondary); border-radius:var(--usd-radius-small); font-size:var(--usd-text-small); pointer-events:none; font-variant-numeric:tabular-nums; }
+.usd-asset-progress { position:absolute; right:var(--usd-space-3); bottom:var(--usd-space-3); z-index:5; width:var(--usd-download-width); max-width:calc(100% - 24px); padding:var(--usd-space-2) var(--usd-space-3); border:1px solid var(--border-subtle); background:var(--surface-panel); color:var(--text-primary); border-radius:var(--usd-radius-control); box-shadow:var(--shadow-floating); font:var(--usd-text-small)/1.5 var(--font-family-body); font-variant-numeric:tabular-nums; }
 .usd-asset-progress[hidden] { display:none; }
+.usd-asset-progress .usd-download-heading { display:flex; align-items:center; gap:var(--usd-space-2); width:100%; min-height:var(--usd-control-height); padding:0; border:0; border-radius:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.usd-download-heading svg { flex:none; width:var(--usd-icon-size); height:var(--usd-icon-size); }
+.usd-download-heading[aria-expanded=false] svg:last-child { transform:rotate(-90deg); }
+.usd-download-heading:disabled { opacity:1; cursor:default; }
+.usd-download-heading:disabled svg:last-child { visibility:hidden; }
+.usd-download-title { flex:1; font-weight:600; }
+.usd-download-summary,.usd-download-file-heading { display:flex; align-items:baseline; justify-content:space-between; gap:var(--usd-space-2); }
+.usd-download-summary { margin-block:var(--usd-space-field); }
+.usd-download-count,.usd-download-file-amount,.usd-download-timing { color:var(--text-secondary); white-space:nowrap; }
+.usd-download-timing { min-height:1.5em; margin-top:var(--usd-space-field); }
+.usd-download-bar { display:block; width:100%; height:var(--usd-download-bar-height); appearance:none; border:0; border-radius:var(--usd-radius-small); overflow:hidden; background:var(--surface-panel-muted); accent-color:var(--accent-brand); }
+.usd-download-bar::-webkit-progress-bar { background:transparent; }
+.usd-download-bar::-webkit-progress-value { background:var(--accent-brand); }
+.usd-download-bar::-moz-progress-bar { background:var(--accent-brand); }
+.usd-download-bar:indeterminate { background:linear-gradient(90deg,var(--surface-panel-muted) 25%,var(--border-strong) 50%,var(--surface-panel-muted) 75%); background-size:200% 100%; animation:usd-download-wait 1.5s linear infinite; }
+.usd-download-files { list-style:none; max-height:var(--usd-download-list-height); overflow:auto; margin:var(--usd-space-field) 0 0; padding:0; border-top:1px solid var(--border-subtle); }
+.usd-download-files[hidden] { display:none; }
+.usd-download-file { padding-block:var(--usd-space-2); }
+.usd-download-file-heading { margin-bottom:var(--usd-space-small); }
+.usd-download-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.usd-download-file[data-state=error] .usd-download-bar { animation:none; background:var(--border-strong); }
+.usd-asset-progress[data-state=error] > .usd-download-bar { animation:none; background:var(--border-strong); }
+@keyframes usd-download-wait { to { background-position:-200% 0; } }
+@media(prefers-reduced-motion:reduce) { .usd-download-bar:indeterminate { animation:none; } }
 [aria-busy=true] .usd-stage-status { display:block; color:var(--text-secondary); }

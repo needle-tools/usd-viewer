@@ -407,6 +407,7 @@ async function createScopedThreeHydra(config, lifetime) {
         maxTextureSize: config.maxTextureSize,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         ktx2TranscoderPath: config.ktx2TranscoderPath,
+        helpers: config.helpers,
         showScenePrimitiveHelpers: config.showScenePrimitiveHelpers,
         showCameraHelpers: config.showCameraHelpers,
         showLightHelpers: config.showLightHelpers,
@@ -460,6 +461,12 @@ async function createScopedThreeHydra(config, lifetime) {
     let disposed = false;
     let drawInFlight = false;
     let editInFlight = false;
+    let sceneUpdates = 0;
+    const updateScene = async action => {
+        sceneUpdates++;
+        try { return await action(); }
+        finally { sceneUpdates--; }
+    };
     let drawPromise = Promise.resolve();
     let activeDrawPromise = Promise.resolve();
     const waitForDrawCompletion = async () => {
@@ -710,6 +717,9 @@ async function createScopedThreeHydra(config, lifetime) {
         },
         isPlaying: () => playing,
         get revision() { return sceneRevision; },
+        get isUpdating() { return sceneUpdates > 0; },
+        get helpers() { return renderInterface.helpers; },
+        setHelpers: settings => renderInterface.setHelpers(settings),
         get renderedTime() { return completedTimeCode; },
         refresh: () => { sceneRevision++; return draw(); },
         /** Query authored identity only after Hydra finishes its current sync. */
@@ -729,10 +739,12 @@ async function createScopedThreeHydra(config, lifetime) {
                 return Promise.resolve();
             }
             await waitForDrawCompletion();
-            driver.SetIncludedPurposes(includedPurposes);
-            renderInterface.setIncludedPurposes(includedPurposes);
-            sceneRevision++;
-            return draw(true);
+            return updateScene(async () => {
+                driver.SetIncludedPurposes(includedPurposes);
+                renderInterface.setIncludedPurposes(includedPurposes);
+                sceneRevision++;
+                await draw(true);
+            });
         },
         setComplexity: async (complexity) => {
             await stageEditQueue;
@@ -741,9 +753,11 @@ async function createScopedThreeHydra(config, lifetime) {
                 return Promise.resolve();
             }
             await waitForDrawCompletion();
-            applyDetail(driver, complexity);
-            sceneRevision++;
-            return draw(true);
+            return updateScene(async () => {
+                applyDetail(driver, complexity);
+                sceneRevision++;
+                await draw(true);
+            });
         },
         /** Serialize inspection with native draws and edits without authoring or refreshing. */
         readStage,
@@ -754,6 +768,7 @@ async function createScopedThreeHydra(config, lifetime) {
                 if (disposed || driver.isDeleted()) return undefined;
                 const stage = await waitMaybeAsync(driver.GetStage());
                 editInFlight = true;
+                sceneUpdates++;
                 let value, failure, failed = false;
                 try {
                     try { value = await callback(stage, driver); }
@@ -768,7 +783,7 @@ async function createScopedThreeHydra(config, lifetime) {
                     }
                     if (failed) throw failure;
                     return value;
-                } finally { editInFlight = false; }
+                } finally { editInFlight = false; sceneUpdates--; }
             });
             stageEditQueue = result.catch(() => {});
             return result;

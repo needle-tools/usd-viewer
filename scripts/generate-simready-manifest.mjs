@@ -105,13 +105,7 @@ async function main() {
   if (!assets.length || new Set(assets.map(asset=>asset.root)).size!==assets.length) throw new Error('Empty or duplicate SimReady entries.');
   const manifest={version:1,repository,revision,source:hub,license:'CC-BY-4.0',packageCount:packages.length,assets};
   await fs.writeFile('public/data/nvidia-simready.json',JSON.stringify(manifest,null,2)+'\n');
-  let localPreviews;
-  try {localPreviews=JSON.parse(await fs.readFile('public/data/simready-textures/index.json','utf8'));} catch { }
   const resources=collectResources(entries);
-  if(localPreviews?.revision===revision)for(const image of localPreviews.images) {
-    const data=resources[image.package];if(!data)continue;
-    (data.textureOverrides ||= {})[image.texture]='/'+image.file;
-  }
   const shards=Array.from({length:16},()=>({revision,assets:{}}));
   for (const [asset,data] of Object.entries(resources)) shards[resourceShard(asset)].assets[asset]=data;
   await fs.mkdir('public/data/simready-resources',{recursive:true});

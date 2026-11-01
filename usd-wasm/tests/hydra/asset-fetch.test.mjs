@@ -12,3 +12,16 @@ test('streaming progress includes bytes with unknown lengths and reports HTTP fa
   await assert.rejects(fetchAsset('data:text/plain,hello',event=>events.push(event),{signal:controller.signal}));
   assert.equal(events.at(-1).state,'error');
 });
+
+test('length is reported when headers arrive, and compressed lengths are not treated as decoded totals',async()=>{
+  const originalFetch=globalThis.fetch;
+  try {
+    for(const encoding of [null,'gzip']){
+      globalThis.fetch=async()=>new Response(new Uint8Array([0,1,2,3]),{headers:{'content-length':'4',...(encoding?{'content-encoding':encoding}:{})}});
+      const events=[];await fetchAsset('https://assets.test/file',event=>events.push(event));
+      assert.equal(events[1].state,'progress');assert.equal(events[1].loaded,0);
+      assert.equal(events[1].total,encoding?0:4);
+      assert.equal(events.at(-1).total,4);
+    }
+  } finally {globalThis.fetch=originalFetch;}
+});

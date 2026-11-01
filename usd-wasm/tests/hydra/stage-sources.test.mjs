@@ -55,6 +55,21 @@ test('source reads propagate asynchronous native failures', async () => {
   await assert.rejects(readStageAsset(handle, USD, 'missing.bin'), /resolver failed/);
 });
 
+test('presentation update state covers edits through synchronization and clears after failure',async()=>{
+  const USD=await getUsdModule({print(){},printErr(){}});
+  const handle=await createThreeHydra({USD,scene:new Group(),files});
+  try{
+    await handle.ready();assert.equal(handle.isUpdating,false);
+    const started=deferred(),finish=deferred();
+    const edit=handle.editStage(async()=>{assert.equal(handle.isUpdating,true);started.resolve();await finish.promise;throw new Error('edit failed');});
+    await started.promise;assert.equal(handle.isUpdating,true);
+    const rejected=assert.rejects(edit,/edit failed/);finish.resolve();await rejected;
+    assert.equal(handle.isUpdating,false);
+    await handle.readStage(()=>assert.equal(handle.isUpdating,false));
+    await handle.setIncludedPurposes(['default','render']);assert.equal(handle.isUpdating,false);
+  }finally{await handle.dispose();}
+});
+
 test('source inspection reads mounted files, authored layers and USDZ members without changing the root', async () => {
   const USD = await getUsdModule({ print() {}, printErr() {} });
   const handle = await createThreeHydra({ USD, scene: new Group(), files });

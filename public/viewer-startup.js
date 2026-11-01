@@ -1,9 +1,10 @@
 import {loadSimreadyResources,warmSimreadyComposition,simreadyLocation} from './viewer-simready.js';
 import {getUsdModule} from './usd/bindings/index.js';
+import {fetchAsset} from './usd/assetFetch.js';
 
 const listeners = new Set();
 let downloadProgress;
-let assetProgress;
+const assetProgress = new Map();
 
 export const startupPackageAbort = new AbortController();
 const params = new URL(location.href).searchParams;
@@ -12,10 +13,7 @@ const file = params.get('file') || '';
 const packageUrl = file.split('?')[0];
 let packageBytes;
 if (viewer !== 'needle' && viewer !== 'needle-loader' && /\.usdz(?:[?#]|$)/i.test(file)) {
-  packageBytes = fetch(packageUrl, {signal: startupPackageAbort.signal}).then(response => {
-    if (!response.ok) throw new Error(`Failed to fetch USD file ${packageUrl}: ${response.status} ${response.statusText}`);
-    return response.arrayBuffer();
-  });
+  packageBytes = fetchAsset(packageUrl, reportAssetProgress, {signal: startupPackageAbort.signal}).then(bytes=>bytes.buffer);
   void packageBytes.catch(() => {});
 }
 startupPackageAbort.signal.addEventListener('abort', () => { packageBytes = undefined; }, {once: true});
@@ -29,7 +27,7 @@ export function takeStartupPackage(url) {
 }
 
 function reportAssetProgress(progress) {
-  assetProgress=progress;
+  if(progress?.url)assetProgress.set(progress.url,progress);
   for(const listener of listeners)listener.asset(progress);
 }
 export const startupSimreadyReady = simreadyLocation(file)
@@ -67,6 +65,6 @@ export function subscribeRuntimeProgress(download, asset) {
   const listener = {download, asset};
   listeners.add(listener);
   if (downloadProgress) download(...downloadProgress);
-  if (assetProgress) asset(assetProgress);
+  for(const progress of assetProgress.values())asset(progress);
   return () => listeners.delete(listener);
 }

@@ -1,3 +1,4 @@
+import {showViewportHelpers} from './viewer-helpers.js';
 import {loadSimreadyResources,simreadyLocation,warmSimreadyComposition} from './viewer-simready.js';
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
 import {viewerUsdReady, startupSimreadyReady, subscribeRuntimeProgress, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
@@ -37,6 +38,8 @@ import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/t
 import { fixtureNavigation } from './viewer-fixture-routing.js';
 import { runApiExample } from './viewer-api-examples.js';
 import { createSourceFiles } from './viewer-source-files.js';
+import {createDownloadProgress} from './viewer-download-progress.js';
+import {fetchAsset} from './usd/assetFetch.js';
 import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { createSimreadyLibrary } from './viewer-simready.js';
@@ -600,13 +603,6 @@ onDomReady(function() {
     loadingOverlayProgress.textContent = text;
     loadingOverlayProgress.hidden = !text;
   };
-  let assetStatus;
-  window.updateAssetDownloadStatus = (text, detail='') => {
-    if(!assetStatus){assetStatus=document.createElement('div');assetStatus.className='usd-asset-progress';assetStatus.setAttribute('role','status');}
-    const host=window.usdWorkbench?.viewport || loadingOverlay?.parentElement;
-    if(host && assetStatus.parentElement!==host)host.append(assetStatus);
-    assetStatus.hidden=!text;assetStatus.textContent=text;assetStatus.title=detail;
-  };
   window.hideLoadingOverlay = function() {
     const version=++loadPresentation;
     // Let the completed scene draw before revealing its canvas. A newer load
@@ -1079,27 +1075,12 @@ function updateLoadingByteProgress(loaded, total, label = currentDisplayFilename
   }
 }
 
-const assetTransfers = new Map();
-let transferFrame;
-function updateUsdAssetFetchProgress(progress) {
-  if (!progress?.url) return;
-  assetTransfers.set(progress.url, progress);
-  if (transferFrame) return;
-  transferFrame = setTimeout(() => {
-    transferFrame = undefined;
-    const transfers=[...assetTransfers.values()],active=transfers.filter(item=>!['done','error'].includes(item.state));
-    const loaded=transfers.reduce((sum,item)=>sum+(item.loaded||0),0);
-    const bytes=loaded<1e6?`${(loaded/1000).toFixed(0)} kB`:`${(loaded/1e6).toFixed(1)} MB`;
-    const text=active.length?`Downloading ${active.length} ${active.length===1?'file':'files'} · ${bytes}`:'';
-    window.updateAssetDownloadStatus?.(text,active.map(item=>item.url.split('/').pop()).join('\n'));
-    // Dependencies are discovered during composition, so a root's 100% does
-    // not describe overall progress. Keep byte counts instead of a false total.
-    window.updateLoadingOverlayProgress?.(text?{text}:null);
-  },100);
-}
-function resetAssetTransfers() {
-  clearTimeout(transferFrame);transferFrame=undefined;assetTransfers.clear();window.updateAssetDownloadStatus?.('');
-}
+const assetDownloads = createDownloadProgress({
+  getHost:()=>window.usdWorkbench?.viewport || document.getElementById('loading-overlay')?.parentElement,
+  onUpdate:snapshot=>window.updateLoadingOverlayProgress?.(snapshot.active?{text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null),
+});
+function updateUsdAssetFetchProgress(progress) {assetDownloads.update(progress);}
+function resetAssetTransfers() {assetDownloads.reset();}
 let simreadyResources = null, compositionWarmupAbort, requestFileLinkLoad;
 const requestedTextureResolution=new URL(location.href).searchParams.get('textures') || readRenderSettings().textures;
 let textureResolution=['preview','original'].includes(requestedTextureResolution)?requestedTextureResolution:'preview';
@@ -1234,10 +1215,7 @@ updateUrl(true);
 // renderer initialize. Pass them to Hydra once, keeping the source URL intact.
 if (viewerMode === VIEWER_MODE_THREE && /\.usdz(?:[?#]|$)/i.test(filename) && !activeCatalogAsset?.files?.length) {
   const url = filename.split('?')[0];
-  startupPackagePromise = takeStartupPackage(url) || fetch(url, { signal: startupPackageAbort.signal }).then(async response => {
-    if (!response.ok) throw new Error(`Failed to fetch USD file ${url}: ${response.status} ${response.statusText}`);
-    return response.arrayBuffer();
-  });
+  startupPackagePromise = takeStartupPackage(url) || fetchAsset(url,updateUsdAssetFetchProgress,{signal:startupPackageAbort.signal}).then(bytes=>bytes.buffer);
   // Startup can be cancelled before the runtime is ready to consume the bytes.
   void startupPackagePromise.catch(() => {});
 }
@@ -1732,6 +1710,7 @@ async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = 
   window.usdPhysics = undefined;
   const variantControls = document.getElementById('usd-variant-controls');
   if (variantControls) { variantControls.replaceChildren(); variantControls.hidden = true; }
+  showViewportHelpers(window.usdWorkbench?.containers.helpers, null);
   const detailControls = document.getElementById('usd-detail-controls');
   if (detailControls) { detailControls.replaceChildren(); detailControls.hidden = true; }
   const textureControls=document.getElementById('usd-texture-controls');
@@ -1775,7 +1754,7 @@ async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = 
     console.warn("Failed to dispose native glTF scene", error);
   }
 
-  resetAssetTransfers();
+  if (!preserveStartupPackage) resetAssetTransfers();
   // A new model is being loaded — drop any previously captured upload set.
   capturedFiles = [];
   capturedRootFilename = null;
@@ -2143,7 +2122,6 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   if (debugFileHandling) console.warn("loading " + path, isRootFile, directory, filename);
   ready = false;
   const generation = loadGeneration;
-  resetAssetTransfers();
   window.showLoadingOverlay?.(filename);
   await prepareSimreadyResources(path);
   await window.usdWorkbench?.prepareStage();
@@ -2259,6 +2237,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     viewerPhysics = physics;
     window.usdPhysics = physics;
 
+    showViewportHelpers(window.usdWorkbench?.containers.helpers, handle);
     showUsdDetail(stage, handle);
     showTextureResolution();
     showUsdBackground();
@@ -2339,24 +2318,6 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   }
 }
 
-async function responseBlobWithProgress(response, onProgress) {
-  const total = Number(response.headers.get('content-length'));
-  if (!response.body || !Number.isFinite(total) || total <= 0) {
-    return response.blob();
-  }
-  const reader = response.body.getReader();
-  const chunks = [];
-  let loaded = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    loaded += value.byteLength;
-    onProgress?.(loaded, total);
-  }
-  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
-}
-
 async function fetchCatalogFile(path, onProgress) {
   const url = testFixtureUrl(path);
   const startup = takeStartupPackage(url);
@@ -2365,13 +2326,9 @@ async function fetchCatalogFile(path, onProgress) {
     onProgress?.(bytes.byteLength, bytes.byteLength);
     return new File([bytes], path.split('/').pop() || path);
   }
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Failed to fetch " + url + ": " + response.status + " " + response.statusText);
-  }
-  const blob = await responseBlobWithProgress(response, onProgress);
+  const bytes = await fetchAsset(url,progress=>{updateUsdAssetFetchProgress(progress);onProgress?.(progress.loaded,progress.total);});
   const name = path.split('/').pop() || path;
-  return new File([blob], name);
+  return new File([bytes], name);
 }
 
 async function loadCatalogAssetBundle(asset, displayName) {
@@ -4517,6 +4474,7 @@ function resizeBeforeRender() {
 }
 
 function render() {
+  if (currentHydraHandle?.isUpdating) return;
   resizeBeforeRender();
   if (window.usdViewportVisible === false) return;
   const time = Date.now() * 0.001;

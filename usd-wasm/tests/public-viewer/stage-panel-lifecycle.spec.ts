@@ -18,7 +18,7 @@ async function mount(page: Page, gate: 'before' | 'driver') {
       GetLayerStack: () => [], GetCompositionErrors: () => [],
     };
     const handle = {
-      driver: {}, getTime: () => 0,
+      driver: {}, getTime: () => 0, setPlaying() {},
       readStage: async (action: (stage: unknown) => unknown) => action(stage),
       editStage: async (action: (stage: unknown, driver: unknown) => unknown) => {
         state.handleCalls++;
@@ -67,5 +67,5 @@ test('stage panel commits and refreshes a current document after waiting', async
     state.release();
     return { result: await state.result, writes: state.writes, refreshed: state.refreshed, afterEdits: state.afterEdits };
   });
-  expect(result).toEqual({ result: { value: 42 }, writes: 1, refreshed: 1, afterEdits: 1 });
+  expect(result).toEqual({ result: { value: 42 }, writes: 1, refreshed: 0, afterEdits: 1 });
 });

@@ -204,6 +204,7 @@ export async function mountWorkbench() {
   function settingsGroup(title, expanded) {const group=element('details','usd-settings-section');group.open=expanded;const summary=element('summary');summary.append(viewerIcon('chevron_right'),document.createTextNode(title));group.append(summary);const body=element('div');group.append(body);viewCommands.append(group);return body;}
   const rendererSettings=settingsGroup('Rendering', true), viewSettings=settingsGroup('Scene', false);
   const cameraSettings=element('div','usd-camera-settings');viewSettings.append(cameraSettings);
+  const helperSettings=settingsGroup('Helpers', false);
 
   const fileBar = document.querySelector('.filename-bar');
   for (const id of ['usd-detail-controls','usd-texture-controls','usd-background-controls']) {const control=document.getElementById(id);if(control)viewSettings.append(control);}
@@ -524,7 +525,7 @@ export async function mountWorkbench() {
     },
     onDispose(callback) { if (disposed) { callback(); return () => {}; } disposeListeners.add(callback); return () => disposeListeners.delete(callback); },
     setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
-    containers: { settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
+    containers: { helpers: helperSettings, settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
     openPanel, isPanelVisible, exampleChosen() { if (productMode === 'viewer') examplesDialog.close(); else if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
     async prepareStage() {
       if (productMode === 'viewer') return;

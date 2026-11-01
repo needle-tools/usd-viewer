@@ -17,17 +17,21 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   function listen(type,handler) {viewport.addEventListener(type,handler,true); listeners.push([type,handler]);}
   function visible(object) {for(let p=object;p;p=p.parent) if(!p.visible)return false; return true;}
   async function pick(event,hover=false) {
-    const state = getState(); if(!state?.scene || !state.camera || event.target.closest?.('button,input,select,summary,.usd-timeline'))return null;
+    const state = getState(); if(!state?.scene || state.handle?.isUpdating || !state.camera || event.target.closest?.('button,input,select,summary,.usd-timeline'))return null;
     const rect = viewport.getBoundingClientRect(); if(!rect.width || !rect.height)return null;
     pointer.set((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2);
     state.scene.updateMatrixWorld(); state.camera.updateMatrixWorld(); ray.setFromCamera(pointer,state.camera);
     // Raycaster traverses hidden objects too. Filter before triangle testing,
     // including hidden Hydra source meshes retained behind visible instances.
+    const distance=state.camera.position.distanceTo(state.getControls?.()?.target || state.scene.position);
+    const height=state.camera.isOrthographicCamera ? (state.camera.top-state.camera.bottom)/state.camera.zoom
+      : 2*Math.tan(state.camera.fov*Math.PI/360)*distance;
+    ray.params.Line.threshold=ray.params.Points.threshold=Math.max(1e-6,height/rect.height*4);
     const candidates=[];
     state.scene.traverseVisible(object=>{
       let path=false;
       for(let parent=object;parent;parent=parent.parent){
-        if(parent.userData.usdHelperFor)return;
+        if(parent.userData.usdHelperFor && !parent.userData.usdHelperPickable)return;
         path ||= !!parent.userData.usdPath;
       }
       if(path && typeof object.raycast==='function')candidates.push(object);
@@ -35,10 +39,11 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
     const result=picking.intersect(ray,candidates,{defer:hover,accelerate:!state.handle?.isPlaying?.()});
     if(result.pending&&hover)return undefined;
     for(const hit of result.hits) {
-      if(!visible(hit.object) || hit.object.userData.usdHelperFor)continue;
+      if(!visible(hit.object))continue;
       let object=hit.object; while(object && !object.userData.usdPath)object=object.parent;
       if(!object)continue;
-      const renderPath=object.userData.usdPath, renderInstanceIndex=hit.instanceId;
+      const renderPath=object.userData.usdPath, renderInstanceIndex=object.userData.usdHelperInstanced
+        ? Math.floor(hit.index/object.userData.usdHelperInstanceStride) : hit.instanceId;
       const resolved=await state.handle?.resolvePick?.(renderPath,renderInstanceIndex??0);
       if(disposed || getState()?.handle!==state.handle)return null;
       if(!resolved && hit.object.isInstancedMesh)return null;
@@ -110,6 +115,7 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   function tick() {
     if(disposed)return;frame=requestAnimationFrame(tick);
     const state=getState(),rect=viewport.getBoundingClientRect();
+    if(state?.handle?.isUpdating)return;
     if(state?.handle!==preparedHandle){picking.reset();preparedHandle=state?.handle;preparedRevision=undefined;}
     if(state?.scene&&!state.handle?.isPlaying?.()&&preparedRevision!==state.handle?.revision){preparedRevision=state.handle?.revision;picking.prepare(state.scene);}
     updateHover(state);

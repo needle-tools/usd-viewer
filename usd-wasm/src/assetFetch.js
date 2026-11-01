@@ -9,7 +9,11 @@ export async function fetchAsset(url, onProgress, options) {
   try {
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
-    total = Number(response.headers.get('content-length')) || 0;
+    // Streams contain decoded bytes; a compressed Content-Length measures a
+    // different quantity and cannot be used as their percentage denominator.
+    const encoding=response.headers.get('content-encoding');
+    total = !encoding || encoding==='identity' ? Number(response.headers.get('content-length')) || 0 : 0;
+    report({state:'progress',loaded,total});
     const chunks = [];
     if (response.body) {
       const reader = response.body.getReader();

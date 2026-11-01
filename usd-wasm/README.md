@@ -527,6 +527,32 @@ winking hole faces and a stationary cage morphing between round and sharp shapes
 The repository also includes 63 executable JavaScript lessons under
 **Examples → Needle → JavaScript API**, with native preview captures.
 
+### Viewport helpers
+
+Use **View → Helpers** in the app to toggle curve centerlines, curve/NURBS control
+points, point markers, lights and cameras. Choices are remembered. Centerlines
+make zero-width curves visible without changing their authored widths. The Scene
+purpose selector controls whether guide geometry participates in the view.
+
+Embedded viewers can use the same SDK helpers; all are off by default:
+
+```js
+const handle = await createThreeHydra({
+  USD, scene, url: './scene.usda',
+  helpers: { curves: true, lights: true },
+});
+handle.setHelpers({ controlPoints: true, cameras: true });
+console.log(handle.helpers);
+```
+
+Helpers follow authored visibility, transforms, instances and animation. They
+are excluded from framing, shadows, traced geometry and USD exports. With
+`createRenderModes`, helpers use a depth-tested display overlay in both path
+tracers. WebGPU point markers use instanced billboards through
+`createWebGpuSupport()` so they remain legible beyond WebGPU's one-pixel point
+primitive limit. A host can use `handle.isUpdating` to retain its last complete
+frame while an asynchronous stage edit or recomposition is in progress.
+
 ### Gaussian Splats
 
 OpenUSD `UsdVolParticleField3DGaussianSplat` prims use the native Three.js Gaussian

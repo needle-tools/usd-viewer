@@ -24,6 +24,8 @@ export interface WebGpuSupport {
     createMaterialXMaterial: MaterialXVolumeFactory;
     configurePreviewPrimvars(material: Material): void;
     configureStrokeMaterial?(material: Material): void;
+    /** Screen-sized instanced markers for WebGPU, whose native points are limited to one pixel. */
+    createPointHelper?(positions: number[], options: object): Object3D;
 }
 export type UsdVolumeField = { name: string, fieldName: string, filePath: string, resolvedPath?: string, resolvedUrl?: string };
 export type UsdVolumeFactory = (state: { fields: UsdVolumeField[] }, options: {
@@ -49,6 +51,15 @@ export declare const consoleRenderDelegate: hydraDelegate;
 
 
 
+/** Display-only geometry; does not affect authored widths, bounds, shadows or export. */
+export type UsdViewportHelpers = {
+    curves?: boolean;
+    controlPoints?: boolean;
+    points?: boolean;
+    lights?: boolean;
+    cameras?: boolean;
+};
+
 export type threeJsRenderDelegateConfig = {
     driver: () => HdWebSyncDriver,
     USD?: USD,
@@ -68,6 +79,7 @@ export type threeJsRenderDelegateConfig = {
     resolveTextureUrl?: (url:string) => string | Promise<string>,
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
+    helpers?: UsdViewportHelpers,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,
     showLightHelpers?: boolean,
@@ -83,6 +95,8 @@ export type threeJsRenderDelegateConfig = {
 }
 export declare class threeJsRenderDelegate implements hydraDelegate {
     constructor(config: threeJsRenderDelegateConfig);
+    readonly helpers: Required<UsdViewportHelpers>;
+    setHelpers(settings: UsdViewportHelpers): void;
     setIncludedPurposes(purposes: string[]): void;
     isRenderTagIncluded(tag?: string): boolean;
     createRPrim(typeId: string, id: string, instancerId: unknown): object;
