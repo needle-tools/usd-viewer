@@ -1,5 +1,6 @@
 import {Raycaster,Vector2} from 'three';
 import {createViewportFraming} from './viewer-framing.js';
+import {createPickingCache} from './viewer-picking.js';
 
 import {selectionItem} from './usd/viewer/selection.js';
 import {createInstanceMaskCache} from './usd/viewer/instanceSelection.js';
@@ -9,15 +10,17 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   const ray = new Raycaster(), pointer = new Vector2();
   let selected = [], hovered = null, start, dragged = false, disposed = false, frame, overlay, pending, hoverEpoch = 0, clickEpoch = 0, pickMode = 'prim';
   let cursor = null, hoverRequest = null, hoverInFlight = false, hoverHandle, hoverTime, hoverRevision, hoverCamera, hoverWorld = [], hoverProjection = [];
+  let movingUntil=0,lastHoverAt=0,motionCamera,motionWorld=[],motionProjection=[],preparedHandle,preparedRevision;
+  const picking=createPickingCache({onReady:()=>{hoverRequest=cursor;}});
   const framing=createViewportFraming({viewport,getState,getSelection:()=>selected});
   const listeners = [];
   function listen(type,handler) {viewport.addEventListener(type,handler,true); listeners.push([type,handler]);}
   function visible(object) {for(let p=object;p;p=p.parent) if(!p.visible)return false; return true;}
-  async function pick(event) {
+  async function pick(event,hover=false) {
     const state = getState(); if(!state?.scene || !state.camera || event.target.closest?.('button,input,select,summary,.usd-timeline'))return null;
     const rect = viewport.getBoundingClientRect(); if(!rect.width || !rect.height)return null;
     pointer.set((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2);
-    state.scene.updateMatrixWorld(true); state.camera.updateMatrixWorld(); ray.setFromCamera(pointer,state.camera);
+    state.scene.updateMatrixWorld(); state.camera.updateMatrixWorld(); ray.setFromCamera(pointer,state.camera);
     // Raycaster traverses hidden objects too. Filter before triangle testing,
     // including hidden Hydra source meshes retained behind visible instances.
     const candidates=[];
@@ -29,7 +32,9 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
       }
       if(path && typeof object.raycast==='function')candidates.push(object);
     });
-    for(const hit of ray.intersectObjects(candidates,false)) {
+    const result=picking.intersect(ray,candidates,{defer:hover,accelerate:!state.handle?.isPlaying?.()});
+    if(result.pending&&hover)return undefined;
+    for(const hit of result.hits) {
       if(!visible(hit.object) || hit.object.userData.usdHelperFor)continue;
       let object=hit.object; while(object && !object.userData.usdPath)object=object.parent;
       if(!object)continue;
@@ -68,18 +73,27 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   function updateHover(state) {
     if(!cursor || hoverInFlight || !state?.camera || window.usdViewportVisible===false)return;
     const camera=state.camera,time=state.handle?.renderedTime,revision=state.handle?.revision;
+    const now=performance.now();
+    const cameraMoved=motionCamera!==camera||camera.matrixWorld.elements.some((v,i)=>v!==motionWorld[i])||camera.projectionMatrix.elements.some((v,i)=>v!==motionProjection[i]);
+    if(cameraMoved){
+      motionCamera=camera;motionWorld=camera.matrixWorld.elements.slice();motionProjection=camera.projectionMatrix.elements.slice();
+      movingUntil=now+120;hoverEpoch++;hovered=null;hoverRequest=cursor;
+    }
+    if(now<movingUntil||now-lastHoverAt<50)return;
     const changed=hoverRequest || hoverHandle!==state.handle || hoverTime!==time || hoverRevision!==revision || hoverCamera!==camera
       || camera.matrixWorld.elements.some((v,i)=>v!==hoverWorld[i]) || camera.projectionMatrix.elements.some((v,i)=>v!==hoverProjection[i]);
     if(!changed)return;
     const request=hoverRequest||cursor,epoch=hoverEpoch;hoverRequest=null;hoverInFlight=true;
+    lastHoverAt=now;
     hoverHandle=state.handle;hoverTime=time;hoverRevision=revision;hoverCamera=camera;
     hoverWorld=camera.matrixWorld.elements.slice();hoverProjection=camera.projectionMatrix.elements.slice();
     // One in-flight pick and one latest pointer sample; animation also rechecks
     // a stationary cursor as the rendered surface moves beneath it.
-    void pick(request).then(next=>{if(!disposed && epoch===hoverEpoch){hovered=next;if(next)void ensureOverlay();}})
+    void pick(request,true).then(next=>{if(!disposed && epoch===hoverEpoch){if(next===undefined){hoverRequest=cursor;return;}hovered=next;if(next)void ensureOverlay();}})
       .catch(()=>{}).finally(()=>{hoverInFlight=false;});
   }
-  listen('pointerdown',event=>{if(event.button!==0)return;start=[event.clientX,event.clientY];dragged=false;clickEpoch++;clearHover();});
+  listen('pointerdown',event=>{clearHover();if(event.button!==0)return;start=[event.clientX,event.clientY];dragged=false;clickEpoch++;});
+  listen('wheel',event=>{hoverEpoch++;hovered=null;cursor=hoverRequest={clientX:event.clientX,clientY:event.clientY,target:event.target};movingUntil=performance.now()+160;});
   listen('pointermove',event=>{
     if(start && Math.hypot(event.clientX-start[0],event.clientY-start[1])>4)dragged=true;
     queueHover(event);
@@ -87,7 +101,7 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   listen('pointerleave',clearHover);
   listen('pointercancel',()=>{clickEpoch++;start=undefined;clearHover();});
   listen('pointerup',event=>{
-    if(!start || event.button!==0)return;
+    if(!start || event.button!==0){queueHover(event);return;}
     const click=!dragged && Math.hypot(event.clientX-start[0],event.clientY-start[1])<=4;start=undefined;
     queueHover(event);
     const epoch=clickEpoch, options={toggle:event.ctrlKey||event.metaKey,range:false};
@@ -96,13 +110,15 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   function tick() {
     if(disposed)return;frame=requestAnimationFrame(tick);
     const state=getState(),rect=viewport.getBoundingClientRect();
+    if(state?.handle!==preparedHandle){picking.reset();preparedHandle=state?.handle;preparedRevision=undefined;}
+    if(state?.scene&&!state.handle?.isPlaying?.()&&preparedRevision!==state.handle?.revision){preparedRevision=state.handle?.revision;picking.prepare(state.scene);}
     updateHover(state);
     if(overlay)overlay.render(state,selected,hovered,rect,window.usdViewportVisible!==false);
   }
   tick();
   return {select:choose,focus:framing.focus,setPickMode(mode){if(['prim','instance'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;hoverRequest=cursor;}},get pickMode(){return pickMode;},
-    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
-    dispose(){disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
+    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();picking.reset();preparedHandle=preparedRevision=undefined;},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
+    dispose(){disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();picking.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
 }
 
 async function makeOutline(viewport) {

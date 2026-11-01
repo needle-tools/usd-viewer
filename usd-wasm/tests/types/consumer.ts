@@ -110,7 +110,11 @@ const edits: ArrayEdits = createArrayEdits({usd:USD,stage:authored,edit:action=>
 await edits.apply(authored.GetRootLayer().GetIdentifier(),{property:{primPath:'/World',name:'rotations',type:'quatf[]',time:NaN}},'',[[1,0,0,0]]);
 await edits.undo(); await edits.redo(); edits.dispose();
 await stage.readStage(current=>current.GetRootLayer().ExportToString());
-import { readStageAsset, readStageLayer, stageLayers, stageVariants, hasAuthoredUsdLights } from '@needle-tools/usd/scene';
+import { readStageAsset, readStageLayer, stageLayers, stageVariants, hasAuthoredUsdLights, stageResources, createStageSourcePaths } from '@needle-tools/usd/scene';
+const sourcePath: string = stage.sourcePaths.path('/some/resolver/path');
+const sourceIdentity: string = stage.sourcePaths.resolve(sourcePath);
+const texturePaths: string[] = stageResources(scene, stage.sourcePaths);
+void [sourceIdentity, texturePaths, createStageSourcePaths('/project/root.usda').resolve('../geo/mesh.usda')];
 const layerText: string = await readStageLayer(stage,USD,'scene.usda',{allowUncomposed:true});
 const resource: Uint8Array = await readStageAsset(stage,USD,'texture.png',{signal:new AbortController().signal});
 void [layerText,resource,stageLayers(authored),stageVariants(authored),hasAuthoredUsdLights(scene,authored)];

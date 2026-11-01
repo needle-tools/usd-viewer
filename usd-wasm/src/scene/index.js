@@ -1,5 +1,6 @@
 export { hasAuthoredUsdLights, stageLayers, stageVariants } from './inspection.js';
 export { readStageAsset, readStageLayer, stageResources } from './sources.js';
+export { createStageSourcePaths } from './source-paths.js';
 
 /** Convert embind vectors without retaining native wrappers. */
 function readVector(vector, read = identity) {

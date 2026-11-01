@@ -19,6 +19,7 @@ public/three-gpu-pathtracer
 public/three-mesh-bvh
 
 public/dockview
+public/modules/mesh-bvh.umd.js
 
 # Local planning, review evidence and release preparation.
 /.cache/

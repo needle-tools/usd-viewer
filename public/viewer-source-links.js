@@ -70,12 +70,13 @@ export function sourceLocations(text, language) {
 }
 
 export function canonicalSourcePath(path) {
+  path = String(path || '').replace(/^(https?):\/(?!\/)/i, '$1://');
   if (/^https?:\/\//i.test(path)) {
     const url = new URL(path);
     path = url.pathname.startsWith('/test-fixtures/') ? url.pathname.slice(15) : url.host + url.pathname;
   }
   try { path = decodeURIComponent(path); } catch {}
-  return String(path || '').replace(/\\/g, '/').replace(/^\/?needle\/\d+\//, '').replace(/^\/+/, '');
+  return path.replace(/\\/g, '/').replace(/^\/+/, '');
 }
 
 function relativeFile(target, anchor) {

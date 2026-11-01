@@ -68,7 +68,7 @@ test('production files deduplicate composed layers and export their live USDA in
   await page.goto(sample('coverage/production/shot.usda'));await stageReady(page);await openCode(page);await wide(page);
   const entries=await sources(page);
   for(const name of ['shot.usda','layout.usda','geometry.usda','looks.usda','model.usda','lighting.usda']) {
-    expect(entries.filter((entry:any)=>entry.path.endsWith('/'+name)),name).toHaveLength(1);
+    expect(entries.filter((entry:any)=>entry.path===name || entry.path.endsWith('/'+name)),name).toHaveLength(1);
   }
   await page.getByRole('treeitem',{name:'looks.usda',exact:true}).click();
   await expect.poll(()=>text(page)).toContain('#usda 1.0');
@@ -84,6 +84,8 @@ test('MDL sidecar text and texture previews are inspectable; compressed images s
   await page.goto(sample('coverage/lighting-mdl/mdl-normal-texture.usda'));await stageReady(page);await openCode(page);await wide(page);
   const entries=await sources(page),mdl=entries.find((entry:any)=>entry.path.endsWith('.mdl')),png=entries.find((entry:any)=>entry.path.endsWith('.png'));
   expect(mdl).toBeTruthy();expect(png).toBeTruthy();
+  expect(entries.filter((entry:any)=>entry.path.endsWith('pattern-normal.png'))).toHaveLength(1);
+  expect(JSON.stringify(entries)).not.toMatch(/needle\/\d+\//);
   await choose(page,mdl.path);await expect.poll(()=>text(page)).toContain('mdl 1.');
   await choose(page,png.path);await expect(page.locator('.usd-code-preview img')).toBeVisible();
   await expect.poll(()=>page.locator('.usd-code-preview img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
@@ -135,4 +137,54 @@ test('dropped projects retain unused root files and same-named sidecars without 
   await expect.poll(()=>text(page)).toContain('def Sphere "Alternate"');
   expect(await page.evaluate(()=>(window as any).usdStage.GetPrimAtPath('/Original').IsValid())).toBe(true);
   expect(await page.evaluate(()=>(window as any).usdStage.GetPrimAtPath('/Alternate').IsValid())).toBe(false);
+});
+
+test('HTTP source inventory exposes root-relative folders and real parent dependencies',async({page},info)=>{
+  const project='/source-path-project/', root=project+'models/shot/root.usda';
+  await page.route('**/source-path-project/**',route=>{
+    const path=new URL(route.request().url()).pathname;
+    if(path===root)return route.fulfill({contentType:'text/plain',body:`#usda 1.0
+(subLayers = [@../../Shared/shape.usda@])
+def Cube "Box" {
+ rel material:binding = </Mat>
+ custom asset notes = @../../Shared/notes.txt@
+}
+def Material "Mat" {
+ token outputs:surface.connect = </Mat/Surface.outputs:surface>
+ def Shader "Surface" {
+  uniform token info:id = "UsdPreviewSurface"
+  color3f inputs:diffuseColor.connect = </Mat/Texture.outputs:rgb>
+  token outputs:surface
+ }
+ def Shader "Texture" {
+  uniform token info:id = "UsdUVTexture"
+  asset inputs:file = @Textures/pixel.png@
+  float2 inputs:st = (0.5, 0.5)
+  float3 outputs:rgb
+ }
+}`});
+    if(path.endsWith('/shape.usda'))return route.fulfill({contentType:'text/plain',body:'#usda 1.0\ndef Sphere "Ball" {}'});
+    if(path.endsWith('/notes.txt'))return route.fulfill({contentType:'text/plain',body:'Shared source outside the shot folder.'});
+    if(path.endsWith('/pixel.png'))return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64')});
+    return route.fulfill({status:404,body:'Missing'});
+  });
+  await page.goto(`/?workspace=studio&viewer=three&render=basic&assetCache=0&file=${encodeURIComponent(root)}`);
+  await stageReady(page);await openCode(page);await wide(page);
+  await expect.poll(async()=>{await page.evaluate(()=>(window as any).usdWorkbench.code.invalidate());return (await sources(page)).map((s:any)=>s.path);}).toContain('Textures/pixel.png');
+  const entries=await sources(page);
+  expect(entries.map((s:any)=>s.path)).toEqual(expect.arrayContaining(['root.usda','../../Shared/shape.usda','Textures/pixel.png']));
+  expect(JSON.stringify(entries)).not.toMatch(/hdEmscripten-http|\/needle\/|1\/1\/1/);
+  expect(await page.evaluate(async()=>{
+    const {readStageLayer}=await import('/usd/scene/sources.js');
+    const {getUsdModule}=await import('/usd/bindings/index.js');
+    return readStageLayer((window as any).usdHydra,await getUsdModule(),'../../Shared/shape.usda');
+  })).toContain('Sphere "Ball"');
+  await expect(page.getByRole('treeitem',{name:'Textures',exact:true})).toBeVisible();
+  await expect(page.getByRole('treeitem',{name:'../../Shared',exact:true})).toBeVisible();
+  await choose(page,'root.usda');
+  await page.locator('.usd-code-view').getByRole('link',{name:'@../../Shared/notes.txt@',exact:true}).click();
+  await expect.poll(()=>text(page)).toBe('Shared source outside the shot folder.');
+  expect((await sources(page)).find((s:any)=>s.path.endsWith('notes.txt')).path).toBe('../../Shared/notes.txt');
+  await choose(page,'Textures/pixel.png');await expect(page.locator('.usd-code-preview img')).toBeVisible();
+  await page.screenshot({path:info.outputPath('relative-source-folders.png')});
 });

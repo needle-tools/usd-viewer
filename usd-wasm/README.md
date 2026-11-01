@@ -226,6 +226,14 @@ For inspection with either runtime, use `inspectStageAsync` or
 `inspectPrimAsync` from `/scene` inside `handle.readStage()`. The synchronous
 helpers remain available for existing Asyncify integrations.
 
+Use `handle.sourcePaths.path(identifier)` for public file paths relative to the
+root layer's folder, including `../` for dependencies above it. Pass the result
+directly to `readStageAsset` or `readStageLayer` from `/scene` to read it.
+`stageResources(handle.scene, handle.sourcePaths)` lists loaded textures in the
+same form. Package members keep their USDZ identity; files on another HTTP
+origin keep their URL. Native OpenUSD identifiers remain available for low-level
+composition and editing operations.
+
 Native JSPI builds use `-DPXR_EMSCRIPTEN_RUNTIME=JSPI` in a separate build
 directory. Exception-using dependencies must also be rebuilt with
 `-fwasm-exceptions` into a separate dependency prefix; mixing exception ABIs

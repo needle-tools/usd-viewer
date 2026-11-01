@@ -138,6 +138,8 @@ export declare type createThreeHydraConfig = {
  * Use the hydra handle to update the usd scene periodically.
  */
 export declare type NeedleThreeHydraHandle = {
+    /** Public root-relative file paths; use with readStageAsset/readStageLayer. */
+    sourcePaths: import('./sources.js').StageSourcePaths,
     /** Rendered stage root, including the stage up-axis transform. */
     readonly scene: Object3D,
     /** The hydra driver

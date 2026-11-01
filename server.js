@@ -21,6 +21,7 @@ function setHeaders(res, path, stat) {
     res.setHeader("Cache-Control", "no-cache");
   }
   const needsHeaders = normalizedPath.includes('/emHd') ||
+    normalizedPath.endsWith('/viewer-picking.worker.js') ||
     normalizedPath.endsWith('/scene/archiveWorker.js') ||
     normalizedPath.endsWith('/api/worker.js') ||
     normalizedPath.includes('/materialx/') ||

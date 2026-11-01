@@ -185,9 +185,9 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       const url = new URL(path); path = url.pathname.startsWith('/test-fixtures/') ? url.pathname.slice(15) : url.host + url.pathname;
       try { path = decodeURIComponent(path); } catch {}
     }
-    return String(path || '').replace(/\\/g,'/').replace(/^\/?needle\/\d+\//,'').replace(/^\/+/, '');
+    return String(path || '').replace(/\\/g,'/').replace(/^\/+/, '');
   }
-  function sourceKey(source) { return source.kind === 'example' ? 'example' : source.kind === 'layer' ? `layer:${source.identifier}` : `file:${canonical(source.path)}`; }
+  function sourceKey(source) { return source.kind === 'example' ? 'example' : `${source.kind}:${canonical(source.path)}`; }
   function matches(a,b) { a = canonical(a); b = canonical(b); return a === b || a.endsWith('/' + b); }
   const basename = path => path.split(/[?#]/)[0].split('/').pop();
   const extension = path => basename(path).split('.').pop().toLowerCase();
@@ -202,22 +202,19 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     if (binding?.example) sources.push({kind:'example',label:binding.example.title,path:binding.example.path || 'examples.js',language:'javascript',read:()=>drafts.get(contextKey()+'|example')??binding.example.code});
     let layers = [];
     try { if (binding?.stage) layers = stageLayers(binding.stage); } catch (error) { console.warn('Code pane could not list layers',error); }
+    const paths = binding?.handle?.sourcePaths;
     const usedFiles = new Set();
     for (const layer of layers) {
-      const file = layer.role !== 'session' && files.find(file => matches(layer.identifier,file.path) || matches(layer.realPath,file.path));
+      const path = layer.role === 'session' ? layer.displayName : paths ? paths.path(layer.identifier) : layer.identifier;
+      const file = layer.role !== 'session' && files.find(file => paths ? file.path === path : matches(layer.identifier,file.path) || matches(layer.realPath,file.path));
       if (file) usedFiles.add(file);
-      let url;
-      try { url = binding?.handle?.driver?.resolveAssetUrl?.(layer.realPath || layer.identifier); } catch {}
-      const path = file?.path || (layer.role === 'session' ? layer.displayName : /^https?:\/\//i.test(url || '') ? url : layer.identifier);
-      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path,label:layer.displayName || basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:signal=>exportLayer(layer.identifier,layer.role,signal)});
+      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path:file?.path || path,label:layer.displayName || basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:signal=>exportLayer(layer.identifier,layer.role,signal)});
     }
-    const rootLayer = layers.find(layer=>layer.role === 'root'), rootFile = files.find(file=>rootLayer && matches(rootLayer.identifier,file.path));
-    const mount = rootFile ? rootLayer.identifier.slice(0,-rootFile.path.length) : '';
     for (const file of files) {
       if (usedFiles.has(file) || sources.some(source=>canonical(source.path) === canonical(file.path))) continue;
       const layer = /\.(?:usd[acz]?|usdz)(?:[?#]|$)/i.test(file.path);
       sources.push({...file,kind:'file',role:'file',label:basename(file.path),language:layer?'usda':language(file.path),
-        read:layer && binding?.usd ? signal=>exportLayer(file.identifier || (mount ? mount + file.path : file.url || file.path),undefined,signal) : signal=>file.read(signal)});
+        read:layer && binding?.usd ? signal=>exportLayer(file.identifier || file.url || file.path,undefined,signal) : signal=>file.read(signal)});
     }
     picker.replaceChildren();
     for (const [kind,label] of [['example','JavaScript'],['layer','Layers'],['file','Files']]) {
@@ -234,7 +231,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     let match;
     if (saved.kind === 'example') match = sources.find(source=>source.kind === 'example');
     else if (saved.kind === 'file') match = sources.find(source=>source.kind === 'file' && canonical(source.path) === saved.path);
-    else if (saved.kind === 'layer') match = sources.find(source=>source.identifier === saved.identifier)
+    else if (saved.kind === 'layer') match = sources.find(source=>source.path === saved.path || source.identifier === saved.identifier)
       || sources.find(source=>saved.role === 'session' && source.role === 'session')
       || sources.find(source=>saved.role === 'layer' && source.label === saved.label);
     if (!match && saved.kind === 'layer') match = sources.find(source=>source.role === 'root');
@@ -254,7 +251,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   function visible() { return !disposed && root.isConnected && root.getClientRects().length > 0 && isVisible(); }
   function persist(source) {
-    saved = {kind:source.kind,role:source.role,identifier:source.identifier,label:source.label,path:canonical(source.path)};
+    saved = {kind:source.kind,role:source.role,label:source.label,path:canonical(source.path)};
     try { localStorage.setItem(stateKey,JSON.stringify(saved)); } catch {}
   }
   function updateSelection() {
@@ -266,12 +263,9 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   function rebuildTree() {
     const focused = tree.querySelector(':focus')?.dataset.itemKey, top = tree.scrollTop;
     const query = filter.value.trim().toLocaleLowerCase(), files = sources.filter(source=>!query || `${source.path} ${source.label}`.toLocaleLowerCase().includes(query));
-    const paths = sources.filter(source=>source.role !== 'session').map(source=>canonical(source.path).split('/'));
-    let prefix = paths[0]?.slice(0,-1) || [];
-    for (const path of paths) while (prefix.length && !prefix.every((part,i)=>part === path[i])) prefix.pop();
     const model = {dirs:new Map(),files:[]};
     for (const source of files) {
-      let parts = source.role === 'session' ? [source.label] : canonical(source.path).split('/').slice(prefix.length), node = model, path = '';
+      let parts = source.role === 'session' ? [source.label] : canonical(source.path).split('/'), node = model, path = '';
       const name = parts.pop();
       for (const part of parts) { path += (path ? '/' : '') + part; if (!node.dirs.has(part)) node.dirs.set(part,{dirs:new Map(),files:[],path}); node = node.dirs.get(part); }
       node.files.push({source,name});
@@ -537,7 +531,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       refreshTools();if (visible()) void render();
     },
     invalidate,refreshVisibility,follow,
-    get sources() { return sources.map(({kind,role,identifier,label,language,path,canOpenAsRoot})=>({key:sourceKey({kind,identifier,path}),kind,role,identifier,label,language,path,canOpenAsRoot})); },
+    get sources() { return sources.map(({kind,role,label,language,path,canOpenAsRoot})=>({key:sourceKey({kind,path}),kind,role,identifier:path,label,language,path,canOpenAsRoot})); },
     get selected() { return selected; }, get text() { return text; }, select:choose,
     dispose() {
       if (disposed) return;

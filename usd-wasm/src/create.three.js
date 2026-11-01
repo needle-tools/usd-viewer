@@ -2,6 +2,7 @@ import { UsdSceneShadows } from "./hydra/sceneShadows.js";
 import { threeJsRenderDelegate } from "./hydra/index.js";
 import { tryDetermineFileFormat } from "./utils.js";
 import { Object3D } from "three";
+import { createStageSourcePaths } from "./scene/source-paths.js";
 
 /**
  * @param {string} url
@@ -657,7 +658,11 @@ async function createScopedThreeHydra(config, lifetime) {
         console.log("VIRTUAL FILESYSTEM", USD.FS_analyzePath("/"));
     }
 
+    const sourceUrl = config.url ? toBrowserFetchableUrl(config.url) : '';
     return {
+        sourcePaths: createStageSourcePaths(stage.GetRootLayer().GetIdentifier(), {resolveUrl: path =>
+            /^https?:\/\//i.test(sourceUrl) && (path === file || path === '/' + file)
+                ? sourceUrl : driver.resolveAssetUrl(path)}),
         scene: delegateConfig.usdRoot,
         driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
         ready: () => readyPromise,

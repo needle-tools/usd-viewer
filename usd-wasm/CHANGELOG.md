@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Expose source files relative to the root layer's folder, preserving parent dependencies and package members. Code and Layers no longer show resolver mount directories; root-relative source paths also work in SDK reads.
+- Keep Beauty silhouettes in the temporal AA result; using jittered depth to restore raw background pixels caused stationary edges to flicker.
+- App hover picking pauses during camera navigation. Large static meshes use cached worker-built BVHs from private buffer copies, preserving render geometry, material groups and instance identities; edits invalidate the cache.
 - Preserve OmniGlass transmission instead of using an opaque exported PreviewSurface; clear shells no longer hide the contents of assets such as blood bags.
 - Resolve physics render instances to composed body identities. Preserve independent hinge/slider frames, unbounded limits and supported motor force limits.
 - Show PreviewSurface/MDL constants while textures stream; prevent disposed or superseded material updates from writing into replacements. Remove stale prototype material warnings after variant and payload resyncs.

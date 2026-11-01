@@ -65,6 +65,9 @@ test('source inspection reads mounted files, authored layers and USDZ members wi
     const base = root.slice(0, root.lastIndexOf('/') + 1);
     const bytes = await readStageAsset(handle, USD, base + 'textures/palette.bin');
     assert.deepEqual([...bytes], [17, 33, 66, 99]);
+    assert.equal(handle.sourcePaths.path(base + 'textures/palette.bin'), 'textures/palette.bin');
+    assert.deepEqual([...await readStageAsset(handle, USD, 'textures/palette.bin')], [17, 33, 66, 99]);
+    assert.match(await readStageLayer(handle, USD, 'layers/shape.usda'), /Sphere "Ball"/);
     USD.FS_analyzePath(base + 'textures/palette.bin').object.contents.set([4, 3, 2, 1]);
     assert.deepEqual([...bytes], [17, 33, 66, 99], 'returned bytes do not alias native memory');
     await handle.editStage(stage => stage.DefinePrim('/World/Unsaved', 'Xform').delete());
@@ -87,6 +90,7 @@ test('source inspection reads mounted files, authored layers and USDZ members wi
     const member = Object.keys(unzipSync(archive)).find(path => path.endsWith('palette.bin'));
     assert.ok(member);
     assert.deepEqual([...await readStageAsset(packaged, USD, `${archivePath}[${member}]`)], [4, 3, 2, 1]);
+    assert.deepEqual([...await readStageAsset(packaged, USD, packaged.sourcePaths.path(`${archivePath}[${member}]`))], [4, 3, 2, 1]);
     assert.match(await readStageLayer(packaged, USD, packageRoot), /Unsaved/);
   } finally { await packaged?.dispose(); await handle.dispose(); }
   await assert.rejects(readStageAsset(handle, USD, 'anything'), /closed stage/);

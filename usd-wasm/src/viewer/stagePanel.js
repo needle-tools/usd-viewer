@@ -294,7 +294,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       input.onchange = () => edit(() => setPayloadLoaded(authoringHandle, payload.path, input.checked)); row(payloads, payload.name, input).parentElement.title = payload.path;
     }
     payloads.hidden = !info.payloads.length; drawTree();
-    for (const layer of info.layers) layers.append(node('div', 'usd-layer', layer.identifier || layer.realPath || JSON.stringify(layer)));
+    for (const layer of info.layers) layers.append(node('div', 'usd-layer', handle.sourcePaths?.path(layer.identifier || layer.realPath) || layer.displayName || layer.identifier));
     status.textContent = info.errors.join('\n');
     const pruned = selection.prune(validItem); selectedPath = selection.primary?.path || '';
     if (pruned) { drawTree(); onSelect(selectedPath, selection.items); }

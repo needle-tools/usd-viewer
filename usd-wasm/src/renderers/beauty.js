@@ -29,12 +29,10 @@ export function createBeauty({ renderer, scene, camera, settings }) {
   // Avoid r185's shared texture-sample initialization inside conditional branches.
   const composite = TSL.rtt(TSL.vec4(TSL.mix(shaded, color.rgb, TSL.float(depth.greaterThanEqual(0.999999))), color.a), null, null, { type: HalfFloatType, depthBuffer: false });
   const temporal = traa(composite, depth, normalVelocity, camera);
-  const resolved = TSL.rtt(TSL.Fn(() => {
-    const aa = temporal.getTextureNode().sample(TSL.screenUV).toVar();
-    const raw = composite.sample(TSL.screenUV).toVar();
-    const z = depth.sample(TSL.screenUV).toVar();
-    return TSL.mix(aa, raw, TSL.float(z.greaterThanEqual(0.999999)));
-  })(), null, null, {type: HalfFloatType, depthBuffer: false});
+  // Resolve silhouettes and their background together. Selecting raw background
+  // pixels with jittered depth after TRAA brings the moving pixel edge back.
+  // The composite already excludes background from the GI calculation.
+  const resolved = TSL.rtt(temporal, null, null, {type: HalfFloatType, depthBuffer: false});
   const target = new RenderTarget(1, 1, { type: HalfFloatType, depthTexture: new DepthTexture(1, 1) });
   const opaque = new RenderPipeline(renderer, resolved); opaque.outputColorTransform = false;
   // RenderPipeline has no public material accessor in r185. Its fullscreen copy

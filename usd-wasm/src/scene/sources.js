@@ -31,12 +31,16 @@ function isPackageMember(path) {
  */
 export async function readStageAsset(handle, usd, path, options = {}) {
   assertCurrent(options);
+  let publicPath = path;
   const resource = await handle.readStage(async (_stage, driver) => {
     assertCurrent(options);
+    publicPath = handle.sourcePaths?.path(path) || path;
+    path = handle.sourcePaths?.resolve(path) || path;
     // Package members are resolver identities, even when their containing
     // archive is an HTTP URL; they cannot be fetched as ordinary web URLs.
     if (!isPackageMember(path)) {
-      let url = /^https?:\/\//i.test(path) ? path : '';
+      const urlPath = path.replace(/^(https?):\/(?!\/)/i, '$1://');
+      let url = /^https?:\/\//i.test(urlPath) ? urlPath : '';
       if (!url) {
         try {
           const resolved = driver.resolveAssetUrl?.(path);
@@ -49,7 +53,7 @@ export async function readStageAsset(handle, usd, path, options = {}) {
     if (node?.exists && !node.object.isFolder) return { bytes: copyBytes(usd.FS_readFile(path)) };
     const bytes = await new Promise((resolve, reject) => {
       Promise.resolve(driver.getFile(path, bytes => bytes == null
-        ? reject(new Error(`File is unavailable: ${path}`)) : resolve(copyBytes(bytes)))).catch(reject);
+        ? reject(new Error(`File is unavailable: ${publicPath}`)) : resolve(copyBytes(bytes)))).catch(reject);
     });
     assertCurrent(options);
     return { bytes };
@@ -59,7 +63,7 @@ export async function readStageAsset(handle, usd, path, options = {}) {
   // Network-only work need not hold the native stage or stop animation. Reenter
   // the read boundary before returning so closing a stage rejects pending reads.
   const response = await fetch(resource.url, { signal: options.signal });
-  if (!response.ok) throw new Error(`HTTP ${response.status}: ${path}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}: ${publicPath}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   return handle.readStage(() => { assertCurrent(options); return bytes; });
 }
@@ -76,10 +80,15 @@ export async function readStageLayer(handle, usd, identifier, options = {}) {
   return handle.readStage(async stage => {
     assertCurrent(options);
     const root = stage.GetRootLayer();
-    if (root.GetIdentifier() === identifier) return root.ExportToString();
+    const paths = handle.sourcePaths, publicPath = paths?.path(identifier);
+    if (root.GetIdentifier() === identifier || paths && paths.path(root.GetIdentifier()) === publicPath) return root.ExportToString();
+    // Keep the exact native identifier for an already composed layer. Sdf can
+    // normalize URL spellings differently from the resolver's fetch URL.
+    const used = paths && stage.GetUsedLayers(false).find(layer => paths.path(layer.identifier) === publicPath);
+    identifier = used?.identifier || paths?.resolve(identifier) || identifier;
     let temporary = await stage.OpenLayerStage(identifier);
     if (!temporary && options.allowUncomposed) temporary = await usd.OpenStage(identifier);
-    if (!temporary) throw new Error(`Layer ${identifier} is not available.`);
+    if (!temporary) throw new Error(`Layer ${publicPath || identifier} is not available.`);
     try {
       assertCurrent(options);
       return temporary.GetRootLayer().ExportToString();
@@ -90,14 +99,15 @@ export async function readStageLayer(handle, usd, identifier, options = {}) {
 /** Texture resource identities currently present in the rendered stage. This is
  * a snapshot of loaded resources, not an inventory of every authored dependency.
  * @param {import('three').Object3D} root
+ * @param {import('../types/sources.js').StageSourcePaths} [sourcePaths] Return public root-relative paths.
  * @returns {string[]}
  */
-export function stageResources(root) {
+export function stageResources(root, sourcePaths) {
   const paths = new Set();
   root?.traverse(object => {
     for (const material of [object.material].flat()) if (material) {
       for (const value of Object.values(material)) {
-        if (value?.isTexture && value.name && !value.name.startsWith('blob:')) paths.add(value.name);
+        if (value?.isTexture && value.name && !value.name.startsWith('blob:')) paths.add(sourcePaths ? sourcePaths.path(value.name) : value.name);
       }
     }
   });

@@ -552,6 +552,14 @@ class TextureRegistry {
 
   getTexture(resourcePath, readable = false) {
     resourcePath = this.resolveResourcePath(resourcePath);
+    // Known uploaded files can be stored as MEMFS paths without a leading slash.
+    // Texture identities must be absolute so a host can relativize them against
+    // the stage root, rather than anchoring the mount path a second time.
+    let sourceIdentity = resourcePath;
+    if (resourcePath && !resourcePath.startsWith('/') && !/^[a-z][a-z\d+.-]*:/i.test(resourcePath)) {
+      const file = resourcePath.split('[')[0];
+      if (this.config.USD?.FS_analyzePath?.(file)?.exists) sourceIdentity = '/' + resourcePath;
+    }
     const cacheKey = resourcePath + (readable ? "#usd-readable" : "");
     if (debugTextures) console.log("get texture", resourcePath);
     if (this.textures[cacheKey]) {
@@ -576,7 +584,7 @@ class TextureRegistry {
         this.ktx2Textures ??= new Ktx2Textures(this.config.renderer, this.config.ktx2TranscoderPath);
         const releaseUrl = () => { if (revokeOnLoad) { URL.revokeObjectURL(url); this.objectUrls.delete(url); } };
         this.ktx2Textures.load(url, readable).then(texture => {
-          releaseUrl(); texture.name = resourcePath; texture.userData.usdKtx2 = true;
+          releaseUrl(); texture.name = sourceIdentity; texture.userData.usdKtx2 = true;
           if (this.disposed) texture.dispose(); else this.loadedTextures.add(texture);
           textureResolve(texture);
         }, error => { releaseUrl(); textureReject(error); });
@@ -596,7 +604,7 @@ class TextureRegistry {
           loader.load(url, texture => {
             try {
             releaseUrl();
-            texture.name = resourcePath;
+            texture.name = sourceIdentity;
             const limit = this.config.maxTextureSize;
             const image = texture.image;
             if (limit > 0 && image?.width > 0 && image?.height > 0 && Math.max(image.width,image.height) > limit && typeof document !== 'undefined' && !texture.isDataTexture && !texture.isCompressedTexture) {
