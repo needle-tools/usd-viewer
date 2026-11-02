@@ -8,6 +8,7 @@ import {createSelectionDrawCache,resolveSubsetPick} from './usd/viewer/selection
 /** Shared authored identities; picking never changes materials or tracer input. */
 export function createViewportInteraction({viewport,getState,onSelect}) {
   const ray = new Raycaster(), pointer = new Vector2();
+  let helperHandle;
   let selected = [], hovered = null, start, dragged = false, disposed = false, frame, overlay, pending, hoverEpoch = 0, clickEpoch = 0, pickMode = 'prim';
   let cursor = null, hoverRequest = null, hoverInFlight = false, hoverHandle, hoverTime, hoverRevision, hoverCamera, hoverWorld = [], hoverProjection = [];
   let movingUntil=0,lastHoverAt=0,motionCamera,motionWorld=[],motionProjection=[],preparedHandle,preparedRevision;
@@ -69,7 +70,13 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
     if(overlay || pending || disposed)return;
     pending=makeOutline(viewport).then(value=>{if(disposed)value.dispose();else overlay=value;}).catch(error=>console.error('Selection outline failed',error)).finally(()=>pending=null);
   }
-  function choose(value) {selected=(Array.isArray(value)?value:value?[value]:[]).map(selectionItem).filter(Boolean);if(selected.length)void ensureOverlay();}
+  function syncHelperSelection() {
+    const handle = getState()?.handle;
+    if (helperHandle !== handle) helperHandle?.setHelperSelection?.([]);
+    helperHandle = handle;
+    handle?.setHelperSelection?.(selected.flatMap(item => [item.path, item.renderPath].filter(Boolean)));
+  }
+  function choose(value) {selected=(Array.isArray(value)?value:value?[value]:[]).map(selectionItem).filter(Boolean);syncHelperSelection();if(selected.length)void ensureOverlay();}
   function clearHover() {hoverEpoch++;cursor=hoverRequest=null;hovered=null;}
   function queueHover(event) {
     hoverEpoch++;
@@ -116,6 +123,7 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   function tick() {
     if(disposed)return;frame=requestAnimationFrame(tick);
     const state=getState(),rect=viewport.getBoundingClientRect();
+    if (state?.handle !== helperHandle) syncHelperSelection();
     if(state?.handle?.isUpdating)return;
     if(state?.handle!==preparedHandle){picking.reset();overlay?.reset();preparedHandle=state?.handle;preparedRevision=undefined;}
     if(state?.scene&&!state.handle?.isPlaying?.()&&preparedRevision!==state.handle?.revision){preparedRevision=state.handle?.revision;picking.prepare(state.scene);}
@@ -124,8 +132,8 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
   }
   tick();
   return {select:choose,hover(value){clearHover();hovered=selectionItem(value);if(hovered)void ensureOverlay();},focus:framing.focus,setPickMode(mode){if(['prim','instance','subset'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;hoverRequest=cursor;}},get pickMode(){return pickMode;},
-    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();picking.reset();overlay?.reset();preparedHandle=preparedRevision=undefined;},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
-    dispose(){disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();picking.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
+    clear(){selected=[];syncHelperSelection();clearHover();clickEpoch++;framing.cancel();picking.reset();overlay?.reset();preparedHandle=preparedRevision=undefined;},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
+    dispose(){helperHandle?.setHelperSelection?.([]);helperHandle=undefined;disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();picking.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
 }
 
 async function makeOutline(viewport) {

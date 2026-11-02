@@ -77,3 +77,14 @@ test('cyclic mimic metadata is reported and cannot recurse or corrupt poses',asy
  const sim=await create([body('/Base'),body('/Left'),body('/Right',[0,1,0])],[a,b]);
  try{assert.ok(sim.unsupported.some(issue=>issue.reason.includes('cyclic')));assert.equal(sim.setJointValue('/A',.4),false);assert.equal(sim.setJointValue('/B',.4),false);close(sim.bodies.get('/Left').body.translation().x,0);}finally{sim.dispose();}
 });
+
+test('selected joint helpers remain visible with helpers off and the mechanism paused',async()=>{
+ const sim=await create([body('/Base'),body('/Door')],[joint('/Hinge','revolute','/Base','/Door')]);
+ let selected=false;const helpers=createJointHelpers(sim,{visible:()=>false,selected:(path,child)=>selected&&path==='/Hinge'&&child==='/Door'});
+ try{
+  assert.equal(sim.isPlaying(),false);assert.equal(helpers.objects[0].visible,false);
+  selected=true;helpers.update();assert.equal(helpers.objects[0].visible,true);assert.ok(helpers.objects[0].geometry.attributes.position.count>0);
+  sim.setJointValue('/Hinge',45);helpers.update();assert.equal(helpers.objects[0].visible,true);
+  selected=false;helpers.update();assert.equal(helpers.objects[0].visible,false);
+ }finally{helpers.dispose();sim.dispose();}
+});

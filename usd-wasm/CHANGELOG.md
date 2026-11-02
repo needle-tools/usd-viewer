@@ -6,6 +6,8 @@
 
 ### Added
 
+- Reveal selected cameras, lights, curves, points and NURBS control cages independently of global helper settings.
+
 - OpenUSD 26.11.1 with Hydra imaging, MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched `usdGltf`, `usdDraco` and glTF Draco plugins. Both runtime artifacts reference OpenUSD commit `87a86c22b16f0dff636021358332576415e818d3`.
 - Optional JSPI runtime with native Wasm exceptions. Its Wasm is 45.9% smaller and its Brotli transfer 39.0% smaller than Asyncify. `getUsdModule({asyncRuntime:'auto'})` selects it where supported; Asyncify remains the default and compatibility fallback.
 - Narrow `/runtime`, `/three`, `/scene`, `/editing`, `/viewer/inspect`, `/viewer/repl` and `/viewer/download` entry points. Inspection can load without the REPL, export controls or archive tools.

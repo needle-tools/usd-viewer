@@ -101,7 +101,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
         if(disposed||currentOperation!==operation||!isCurrent()){created.dispose();return;}
         simulation=created;simulationMode=mode;
         if(mode==='interaction'){
-          jointHelpers=kinematics.createJointHelpers(created,{visible:()=>handle.helpers?.joints!==false});
+          jointHelpers=kinematics.createJointHelpers(created,{visible:()=>handle.helpers?.joints!==false,selected:(path,body)=>handle.isHelperSelected?.(path)||handle.isHelperSelected?.(body)});
           jointControls=kinematics.mountJointControls(container,created,{onError:message=>{status.textContent=message;}});
         }
       }

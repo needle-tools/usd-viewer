@@ -176,6 +176,10 @@ export declare type NeedleThreeHydraHandle = {
     readonly helpers: Required<UsdViewportHelpers>,
     readonly includedPurposes: string[],
     setHelpers: (settings: UsdViewportHelpers) => void,
+    /** Reveal helpers for selected prims/subtrees without changing the global helper settings. */
+    setHelperSelection: (paths: readonly string[]) => void,
+    /** Whether a prim belongs to the selected helper paths. */
+    isHelperSelected: (path: string) => boolean,
     /** Stage time represented by the last completed Hydra draw. */
     readonly renderedTime: number,
     /** Resolve a raycast's Hydra path and rendered instance index into authored USD identity. */

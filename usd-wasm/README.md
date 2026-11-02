@@ -590,6 +590,11 @@ The repository also includes 63 executable JavaScript lessons under
 
 ### Viewport helpers
 
+Selecting a camera, light, curve, point set or NURBS patch reveals its helpers even
+when that helper category is off. Global settings stay unchanged. Hosts can call
+`handle.setHelperSelection(paths)` to apply their selection and
+`handle.isHelperSelected(path)` to query selected subtrees.
+
 Use **View → Helpers** in the app to toggle curve centerlines, curve/NURBS control
 points, point markers, lights and cameras. Choices are remembered. Centerlines
 make zero-width curves visible without changing their authored widths. The Guide geometry toggle and Scene purpose selector control whether guide

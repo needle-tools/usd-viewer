@@ -2,7 +2,7 @@ import {BufferGeometry,Float32BufferAttribute,Matrix4,Quaternion,Vector3} from '
 import {helperGeometry,disposeHelper} from '../hydra/primitiveHelpers.js';
 
 /** Joint axes, stops and angular limits in USD stage coordinates. */
-export function createJointHelpers(mechanism,{visible=()=>true}={}){
+export function createJointHelpers(mechanism,{visible=()=>true,selected=()=>false}={}){
  const objects=[],unit=new Vector3(1,1,1);
  const unitScale=mechanism.metersPerUnit||1;
  const radius=.08/unitScale;
@@ -17,7 +17,7 @@ export function createJointHelpers(mechanism,{visible=()=>true}={}){
  }
  function update(){
   for(const{record,object,markers}of objects){
-   object.visible=visible()&&mechanism.isPlaying();if(!object.visible)continue;
+   object.visible=selected(record.data.path,record.child)||(visible(record.data.path,record.child)&&mechanism.isPlaying());if(!object.visible)continue;
    const parent=record.parent?mechanism.bodies.get(record.parent).body:null;
    const state=[mechanism.getJointValue(record.data.path),...(parent?Object.values(parent.translation()):[]),...(parent?Object.values(parent.rotation()):[])].join(',');
    if(object.userData.jointState===state)continue;object.userData.jointState=state;

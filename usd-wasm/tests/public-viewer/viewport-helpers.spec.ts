@@ -42,3 +42,31 @@ test('light and camera gizmos render in raster and both path tracers without ent
   }
   expect(errors).toEqual([]);
 });
+
+for(const viewer of ['three','needle']) {
+  test(`${viewer}: selecting lights and cameras reveals their helpers with global helpers off`,async({page})=>{
+    const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+    await page.goto(`/?workspace=studio&viewer=${viewer}&render=beauty&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda`);await stageReady(page);
+    await page.evaluate(()=>{const w=window as any;w.usdStagePanel.selectPrim('');w.usdHydra.setHelpers({curves:false,controlPoints:false,points:false,lights:false,cameras:false,joints:false});});
+    const visibleHelpers=()=>page.evaluate(()=>{const result:{path:string;kind:string}[]=[];(window as any).usdHydra.scene.traverseVisible((o:any)=>{if(o.userData.usdHelperFor)result.push({path:o.userData.usdHelperFor,kind:o.userData.usdHelperKind});});return result;});
+    expect(await visibleHelpers()).toEqual([]);
+    await page.locator('[data-prim-path="/World/Camera"]').click();
+    await expect.poll(visibleHelpers).toEqual([{path:'/World/Camera',kind:'cameras'}]);
+    await page.locator('[data-prim-path="/World/Lights"]').click();
+    await expect.poll(async()=>{const helpers=await visibleHelpers();return helpers.length>0&&helpers.every(h=>h.kind==='lights'&&h.path.startsWith('/World/Lights/'));}).toBe(true);
+    expect(await page.evaluate(()=>Object.values((window as any).usdHydra.helpers).every(value=>value===false))).toBe(true);
+    await page.evaluate(()=>{(window as any).usdStagePanel.selectPrim('');});
+    await expect.poll(visibleHelpers).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+  test(`${viewer}: selecting a zero-width curve reveals its centerline and controls without changing preferences`,async({page})=>{
+    await page.goto(`/?workspace=studio&viewer=${viewer}&render=beauty&file=/test-fixtures/coverage/core/bezier-curves.usda`);await stageReady(page);
+    await page.evaluate(async()=>{const w=window as any;w.usdStagePanel.selectPrim('');w.usdHydra.setHelpers({curves:false,controlPoints:false,points:false,lights:false,cameras:false,joints:false});await w.usdHydra.editStage((stage:any)=>{const prim=stage.GetPrimAtPath('/World/Curves'),widths=prim.GetAttribute('widths');try{widths.Set([0]);}finally{widths.delete();prim.delete();}});});
+    await page.locator('[data-prim-path="/World/Curves"]').click();
+    const kinds=()=>page.evaluate(()=>{const result:string[]=[];(window as any).usdHydra.scene.traverseVisible((o:any)=>{if(o.userData.usdHelperFor==='/World/Curves')result.push(o.userData.usdHelperKind);});return result.sort();});
+    await expect.poll(kinds).toEqual(['controlPoints','controlPoints','curves']);
+    expect(await page.evaluate(()=>Object.values((window as any).usdHydra.helpers).every(value=>value===false))).toBe(true);
+    await page.evaluate(()=>{(window as any).usdStagePanel.selectPrim('');});
+    await expect.poll(kinds).toEqual([]);
+  });
+}

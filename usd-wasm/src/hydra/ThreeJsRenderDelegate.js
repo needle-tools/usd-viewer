@@ -890,7 +890,7 @@ class HydraScenePrimitive {
   _syncHelper(state = this._helperState || {}) {
     this._helperState = state;
     const object = this._object;
-    if (!object || !viewportHelpers(this._interface.config)[object.isCamera ? 'cameras' : 'lights']) {
+    if (!object || !this._interface.helpersFor(this._id)[object.isCamera ? 'cameras' : 'lights']) {
       disposeHelper(this._helper); this._helper = null; return;
     }
     const shape = JSON.stringify([state.typeId, state.radius, state.width, state.height, state.length,
@@ -2724,6 +2724,8 @@ export class ThreeRenderDelegateInterface {
     this.retiredMeshReleaseFrames = new Map();
     this.hydraDrawDepth = 0;
     this.scenePrimitives = {};
+    this.helperPrimitives = new Set();
+    this.selectedHelperPaths = new Set();
     this.pendingMaterialUpdates = new Set();
     this.pendingRprimUpdates = new Set();
     this.pendingMaterialAssignments = new Map();
@@ -2758,8 +2760,32 @@ export class ThreeRenderDelegateInterface {
     const next = viewportHelpers(this.config);
     for (const kind of helperKinds) if (typeof settings?.[kind] === 'boolean') next[kind] = settings[kind];
     this.config.helpers = next;
-    for (const primitive of Object.values(this.meshes)) primitive.updateHelpers?.();
-    for (const primitive of Object.values(this.scenePrimitives)) primitive.updateHelpers?.();
+    for (const primitive of this.helperPrimitives) primitive.updateHelpers();
+    this.config.requestRender?.();
+  }
+
+  isHelperSelected(path, selection = this.selectedHelperPaths) {
+    for (let current = path; current; current = current.slice(0, current.lastIndexOf('/'))) {
+      if (selection.has(current)) return true;
+    }
+    return selection.has('/');
+  }
+
+  helpersFor(path) {
+    const settings = this.helpers;
+    if (this.isHelperSelected(path)) for (const kind of helperKinds) settings[kind] = true;
+    return settings;
+  }
+
+  setHelperSelection(paths) {
+    const next = new Set(Array.from(paths || []).filter(path => typeof path === 'string' && path.startsWith('/'))
+      .map(path => path.length > 1 ? path.replace(/\/+$/, '') : path));
+    const previous = this.selectedHelperPaths;
+    if (next.size === previous.size && [...next].every(path => previous.has(path))) return;
+    this.selectedHelperPaths = next;
+    for (const primitive of this.helperPrimitives) {
+      if (this.isHelperSelected(primitive._id, previous) !== this.isHelperSelected(primitive._id, next)) primitive.updateHelpers();
+    }
     this.config.requestRender?.();
   }
 
@@ -2916,6 +2942,7 @@ export class ThreeRenderDelegateInterface {
     if (debugPrims) console.log('Creating RPrim: ', typeId, id, typeof id);
     const existing = this.meshes[id];
     if (existing) {
+      this.helperPrimitives.delete(existing);
       this._retireRPrim(id, existing, false);
       delete this.meshes[id];
     }
@@ -2926,6 +2953,7 @@ export class ThreeRenderDelegateInterface {
         ? new HydraStroke(typeId, id, this)
         : typeId === 'nurbsPatch' ? new HydraNurbsPatch(id, this) : new HydraMesh(id, this);
     this.meshes[id] = mesh;
+    if (mesh.updateHelpers) this.helperPrimitives.add(mesh);
     if (typeId === 'particleField') this.diagnostics.particleFields++;
     return mesh;
   }
@@ -2979,6 +3007,7 @@ export class ThreeRenderDelegateInterface {
     const mesh = this.meshes[id];
     if (!mesh) return;
     delete this.meshes[id];
+    this.helperPrimitives.delete(mesh);
     this._retireRPrim(id, mesh, this.hydraDrawDepth === 0);
   }
 
@@ -3048,6 +3077,7 @@ export class ThreeRenderDelegateInterface {
       }
       this.destroySPrim(id);
       this.scenePrimitives[id] = scenePrimitive;
+      this.helperPrimitives.add(scenePrimitive);
       this.diagnostics.sceneSPrims++;
       if (this.diagnostics.scenePrimitiveIds.length < 20) {
         this.diagnostics.scenePrimitiveIds.push(id);
@@ -3067,6 +3097,7 @@ export class ThreeRenderDelegateInterface {
     }
     const scenePrimitive = this.scenePrimitives[id];
     if (scenePrimitive) {
+      this.helperPrimitives.delete(scenePrimitive);
       scenePrimitive.dispose();
       delete this.scenePrimitives[id];
     }

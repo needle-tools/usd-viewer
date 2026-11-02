@@ -14,5 +14,5 @@ export interface UsdMechanism extends UsdPhysicsSimulation {
 }
 export function createUsdMechanism(options:{handle:NeedleThreeHydraHandle;root?:Object3D;snapshot?:UsdPhysicsSnapshot;loadKinematics?:()=>Promise<unknown>}):Promise<UsdMechanism>;
 /** Display-only joint axes and travel limits, excluded from bounds and tracing. */
-export function createJointHelpers(mechanism:UsdMechanism,options?:{visible?:()=>boolean}):{objects:Object3D[];update():void;dispose():void};
+export function createJointHelpers(mechanism:UsdMechanism,options?:{visible?:(path:string,bodyPath:string)=>boolean;selected?:(path:string,bodyPath:string)=>boolean}):{objects:Object3D[];update():void;dispose():void};
 export function mountJointControls(container:HTMLElement,mechanism:UsdMechanism,options?:{onError?:(message:string)=>void}):{element:HTMLElement;update():void;dispose():void};

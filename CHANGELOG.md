@@ -6,6 +6,8 @@
 
 ### Added
 
+- Reveal selected cameras, lights, curves, points and NURBS control cages independently of global helper settings.
+
 - USD Viewer and USD Studio modes. Viewer presents the viewport and Examples menu; Studio adds a persistent, dockable workspace with Stage, Examples, Properties, Layers, Code, Timeline, Console and Simulation panels.
 - Basic, Beauty, MuTracer and gkjohnson render modes on the Three.js WebGPU surface, with remembered render/detail settings, tone mapping, bloom and optional denoising. New sessions start in Beauty with Adaptive detail.
 - View menus for display/render settings and helpers, standard menu navigation, light/dark themes, thin scrollbars, viewport selection/hover outlines, instance/subset picking, multi-selection and **F** to focus.

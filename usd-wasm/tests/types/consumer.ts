@@ -81,6 +81,10 @@ downloadControl.setFormat('rar');
 import { createWebGpuSupport } from '@needle-tools/usd/renderers';
 const support = await createWebGpuSupport();
 await createThreeHydra({ USD, scene, webGpuSupport: support });
+stage.setHelperSelection(['/World/Camera', '/World/Lights']);
+const selectedHelpers: boolean = stage.isHelperSelected('/World/Camera');
+void selectedHelpers;
+
 const stagePanel = await mountStagePanel({ handle: stage, stage: stage.driver.GetStage(), scene, camera: new PerspectiveCamera(), controls: { enabled: true }, onVariantChange(path, setName, value) { void [path, setName, value]; } });
 stagePanel.dispose();
 void mountRenderModePicker;

@@ -1,6 +1,6 @@
 import { BufferGeometry, Color, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, SphereGeometry } from 'three';
 import { buildStrokeCurveGeometry, pointStrokeSamples } from './strokeGeometry.js';
-import { disposeHelper, strokeHelpers, viewportHelpers } from './primitiveHelpers.js';
+import { disposeHelper, strokeHelpers } from './primitiveHelpers.js';
 
 /** World-space point diameters and tessellated curve widths, independent of mesh topology. */
 export class HydraStroke {
@@ -139,7 +139,7 @@ export class HydraStroke {
     updateHelpers() {
         for (const helper of this._helpers) disposeHelper(helper);
         this._helpers = this._mesh.userData.usdStrokeError ? [] : strokeHelpers(this._type, this._id, this._data,
-            this._geometry, this._instanceTransforms || [this._transform], viewportHelpers(this._interface.config), !!this._instanceTransforms, this._interface.config.webGpuSupport?.createPointHelper);
+            this._geometry, this._instanceTransforms || [this._transform], this._interface.helpersFor(this._id), !!this._instanceTransforms, this._interface.config.webGpuSupport?.createPointHelper);
         for (const helper of this._helpers) this._interface.config.usdRoot.add(helper);
         this._applyVisibilityState();
     }

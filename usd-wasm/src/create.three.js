@@ -721,6 +721,8 @@ async function createScopedThreeHydra(config, lifetime) {
         get helpers() { return renderInterface.helpers; },
         get includedPurposes() { return [...renderInterface.includedRenderTags].map(tag => tag === 'geometry' ? 'default' : tag); },
         setHelpers: settings => renderInterface.setHelpers(settings),
+        setHelperSelection: paths => renderInterface.setHelperSelection(paths),
+        isHelperSelected: path => renderInterface.isHelperSelected(path),
         get renderedTime() { return completedTimeCode; },
         refresh: () => { sceneRevision++; return draw(); },
         /** Query authored identity only after Hydra finishes its current sync. */

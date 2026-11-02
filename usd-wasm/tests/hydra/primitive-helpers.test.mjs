@@ -82,3 +82,40 @@ test('area lights wait for lookup tables and retain the latest authored visibili
   assert.equal(prim._helper,helper);assert.equal(helper.matrix.elements[12],1);
   delegate.dispose();assert.equal(root.children.length,0);
 });
+
+test('selected cameras, lights, curves, points and NURBS cages reveal helpers without changing global settings',()=>{
+  const root=new Group(),delegate=new ThreeRenderDelegateInterface({usdRoot:root,scenePrimitiveRoot:root});
+  const initial={...delegate.helpers};
+  const camera=delegate.createSPrim('camera','/Rig/Camera');camera.updateCameraState({});
+  const light=delegate.createSPrim('sphereLight','/Rig/Light');light.updateLightState({typeId:'sphereLight',intensity:1,visible:true});
+  const other=delegate.createSPrim('sphereLight','/Rigging/Light');other.updateLightState({typeId:'sphereLight',intensity:1,visible:true});
+  const stroke=delegate.createRPrim('basisCurves','/Curve');stroke.setStrokeData(curve);stroke.setVisibilityState(true);
+  const points=delegate.createRPrim('points','/Points');points.setStrokeData({points:[[1,2,3]],primvars:{widths:{values:[0]}}});points.setVisibilityState(true);
+  const patch=delegate.createRPrim('nurbsPatch','/Patch');patch.setStrokeData({uCount:2,vCount:2,uOrder:2,vOrder:2,uKnots:[0,0,1,1],vKnots:[0,0,1,1],points:[[0,0,0],[1,0,0],[0,1,0],[1,1,0]]});patch.setVisibilityState(true);
+  delegate.setHelperSelection(['/Rig','/Curve','/Points','/Patch']);
+  assert.ok(camera._helper?.visible);assert.ok(light._helper?.visible);assert.equal(other._helper,null);
+  assert.equal(stroke._helpers.length,3);assert.equal(points._helpers.length,1);assert.equal(patch._helpers.length,2);
+  assert.deepEqual(delegate.helpers,initial);
+  const retained=camera._helper;let disposed=0;retained.geometry.addEventListener('dispose',()=>disposed++);
+  delegate.setHelperSelection(['/Patch','/Rig','/Points','/Curve']);assert.equal(camera._helper,retained);assert.equal(disposed,0);
+  delegate.setHelpers({cameras:false,lights:false,curves:false,controlPoints:false,points:false});
+  assert.ok(camera._helper.visible);assert.ok(stroke._helpers.every(h=>h.visible));
+  stroke.setVisibilityState(false);assert.ok(stroke._helpers.every(h=>!h.visible));
+  delegate.setHelperSelection([]);
+  assert.equal(camera._helper,null);assert.equal(light._helper,null);assert.equal(stroke._helpers.length,0);assert.equal(points._helpers.length,0);assert.equal(patch._helpers.length,0);assert.equal(disposed,1);
+  delegate.setHelpers({lights:true});delegate.setHelperSelection(['/Rig/Camera']);delegate.setHelperSelection([]);
+  assert.ok(light._helper.visible);assert.equal(camera._helper,null);
+  delegate.dispose();assert.equal(delegate.helperPrimitives.size,0);assert.equal(root.children.length,0);
+});
+
+test('selection applies to helpers created by later stage syncs and releases replaced primitives',()=>{
+  const root=new Group(),delegate=new ThreeRenderDelegateInterface({usdRoot:root,scenePrimitiveRoot:root});
+  delegate.setHelperSelection(['/Rig/Camera','/Curve']);
+  const first=delegate.createSPrim('camera','/Rig/Camera');first.updateCameraState({});assert.ok(first._helper.visible);
+  const replacement=delegate.createSPrim('camera','/Rig/Camera');replacement.updateCameraState({});
+  assert.ok(replacement._helper.visible);assert.equal(first._helper,null);
+  const stroke=delegate.createRPrim('basisCurves','/Curve');stroke.setStrokeData(curve);stroke.setVisibilityState(true);assert.equal(stroke._helpers.length,3);
+  delegate.destroyRPrim('/Curve');assert.ok(!delegate.helperPrimitives.has(stroke));
+  delegate.setHelperSelection([]);assert.equal(replacement._helper,null);
+  delegate.dispose();assert.equal(root.children.length,0);
+});
