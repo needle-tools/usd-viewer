@@ -11,14 +11,15 @@ function createModuleVersions(root) {
     const nested = await Promise.all(entries.map(async entry=>{
       const file = path.join(directory,entry.name);
       if(entry.isDirectory())return recursive?files(file,true):[];
-      return /\.(?:m?js|wasm)$/.test(entry.name)?[file]:[];
+      return /\.(?:m?js|wasm|css)$/.test(entry.name)?[file]:[];
     }));
     return nested.flat();
   }
   return async function moduleVersions() {
     const sdk=path.join(root,'usd-wasm/src'),publicRoot=path.join(root,'public');
-    const [sdkFiles,appFiles]=await Promise.all([files(sdk,true),files(publicRoot,false)]);
-    const entries=await Promise.all([...sdkFiles,...appFiles].map(async file=>{
+    const optionalFiles=directory=>files(directory,true).catch(error=>{if(error.code==='ENOENT')return [];throw error;});
+    const [sdkFiles,appFiles,styles,brand]=await Promise.all([files(sdk,true),files(publicRoot,false),optionalFiles(path.join(publicRoot,'css')),optionalFiles(path.join(publicRoot,'brand'))]);
+    const entries=await Promise.all([...sdkFiles,...appFiles,...styles,...brand].map(async file=>{
       const info=await stat(file),stamp=`${info.size}:${info.mtimeMs}:${info.ctimeMs}`,previous=cached.get(file);
       let hash=previous?.stamp===stamp?previous.hash:undefined;
       if(!hash){hash=createHash('sha256').update(await readFile(file)).digest('hex').slice(0,20);cached.set(file,{stamp,hash});}

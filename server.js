@@ -17,6 +17,7 @@ function setHeaders(res, path, stat) {
   }
 
   const normalizedPath = path.replaceAll("\\", '/');
+  if(normalizedPath.endsWith('.css'))res.setHeader('Cache-Control','no-cache');
   if (normalizedPath.endsWith('/usd-asset-cache-sw.js')) {
     res.setHeader("Service-Worker-Allowed", "/");
     res.setHeader("Cache-Control", "no-cache");

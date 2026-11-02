@@ -6,6 +6,7 @@ import { mountPropertyInspector } from './propertyInspector.js';
 import { inspectStageAsync, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
 
 function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text) el.textContent = text; return el; }
+let inspectorId = 0;
 /** Plain DOM panels can be hosted in Dockview or embedded without a framework. Native handles remain owned by Hydra. */
 export async function mountStagePanel({ handle, stage, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onHover = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
   if (style) installViewerStyle();
@@ -18,7 +19,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   selectedPath = selection.primary?.path || ''; expandedInstances=new Set(Array.isArray(saved.expandedInstances)?saved.expandedInstances:[]);
   for(let ancestor=selectedPath.slice(0,selectedPath.lastIndexOf('/'));ancestor;ancestor=ancestor.slice(0,ancestor.lastIndexOf('/')))expandedInstances.add(ancestor);
   collapsed = new Set(Array.isArray(saved.collapsed) ? saved.collapsed : []);
-  function persist() { if (stateKey) try { localStorage.setItem(stateKey, JSON.stringify({ selectedPath, selectedItems: selection.items, showPrototypes, pickMode: saved.pickMode || 'prim', collapsed: [...collapsed], expandedInstances:[...expandedInstances], search: search.value })); } catch {} }
+  function persist() { if (stateKey) try { localStorage.setItem(stateKey, JSON.stringify({ selectedPath, selectedItems: selection.items, showPrototypes, propertiesExpanded: saved.propertiesExpanded !== false, pickMode: saved.pickMode || 'prim', collapsed: [...collapsed], expandedInstances:[...expandedInstances], search: search.value })); } catch {} }
   const embedded = !!containers;
   const panel = node('aside', 'usd-suite'); panel.id = 'usd-suite';
   const toggle = node('button', 'usd-stage-toggle', 'Stage'); toggle.type = 'button'; toggle.setAttribute('aria-controls', 'usd-suite-content'); toggle.setAttribute('aria-expanded', String(embedded));
@@ -32,7 +33,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   const sections = [];
   function section(title, expanded = true, parent = content) {
     const group = node('details', 'usd-stage-section'); group.open = expanded;
-    const summary = node('summary'); summary.append(viewerIcon('chevron_right'), document.createTextNode(title));
+    const summary = node('summary','section-rail-group-summary'); summary.append(viewerIcon('chevron_right'), document.createTextNode(title));
     group.append(summary); parent.append(group); sections.push(group); return group;
   }
   const propertyHost = containers?.properties || content;
@@ -41,8 +42,20 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   const hierarchy = embedded ? node('section', 'usd-stage-section') : section('Prims');
   if (embedded) { content.append(hierarchy); sections.push(hierarchy); }
   hierarchy.classList.add('usd-tree-section');
-  const properties = embedded ? node('section', 'usd-stage-section usd-inspector-section') : section('Properties', true, propertyHost);
-  if (embedded) { propertyHost.append(properties); sections.push(properties); }
+  // Keep an explicit flex body so collapsing never interferes with table scrolling.
+  const properties = node('section', 'usd-stage-section usd-inspector-section');
+  const propertiesToggle = node('button', 'section-rail-group-summary usd-section-toggle'); propertiesToggle.type = 'button';
+  propertiesToggle.append(viewerIcon('chevron_right'), document.createTextNode('Properties'));
+  const propertiesBody = node('div', 'usd-inspector-body'); propertiesBody.id = `usd-inspector-body-${++inspectorId}`;
+  propertiesToggle.setAttribute('aria-controls', propertiesBody.id);
+  function expandProperties(expanded) {
+    saved.propertiesExpanded = expanded;
+    propertiesToggle.setAttribute('aria-expanded', String(expanded));
+    properties.dataset.expanded = String(expanded); propertiesBody.hidden = !expanded;
+  }
+  expandProperties(saved.propertiesExpanded !== false);
+  propertiesToggle.onclick = () => {expandProperties(propertiesBody.hidden); persist();};
+  properties.append(propertiesToggle, propertiesBody); propertyHost.append(properties); sections.push(properties);
   const layers = section('Layers', !!containers, containers?.layers || content);
   if (containers) layers.firstElementChild.hidden = true;
   const search = node('input', 'usd-prim-filter'); search.type = 'search'; search.placeholder = 'Filter prims'; search.setAttribute('aria-label', 'Filter prims'); search.value = typeof saved.search === 'string' ? saved.search : '';
@@ -103,7 +116,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     if (!selected) activeCamera = ''; setCamera(selected || camera); controls.enabled = !selected;
   }
   let inspectedTime, primPaths = new Set();
-  const inspector = mountPropertyInspector({stage, handle, container: properties, isCurrent: () => !disposed && isCurrent(), onNavigate: navigate});
+  const inspector = mountPropertyInspector({stage, handle, container: propertiesBody, isCurrent: () => !disposed && isCurrent(), onNavigate: navigate});
   const primPath = target => target.includes('.') ? target.slice(0, target.indexOf('.')) : target;
   function validItem(item) {
     if (!item || typeof item.path !== 'string' || !item.path.startsWith('/')) return false;
@@ -156,6 +169,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
   }
   function navigate(target, options = {}) {
     if (disposed || editing || !isCurrent() || !inspector.show(target, options)) return false;
+    expandProperties(true);
     selectedPath = primPath(inspector.target);
     selection.replace(selectedPath ? [{...options.instance, path: selectedPath}] : []);
     let ancestor = parentOf(selectedPath); while (ancestor) {collapsed.delete(ancestor); ancestor = parentOf(ancestor);}

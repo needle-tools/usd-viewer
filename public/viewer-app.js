@@ -42,7 +42,7 @@ import {createDownloadProgress} from './viewer-download-progress.js';
 import {fetchAsset} from './usd/assetFetch.js';
 import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
-import { createSimreadyLibrary } from './viewer-simready.js';
+import { createSimreadyLibrary,searchSimreadyLibrary } from './viewer-simready.js';
 import { setupViewerPhysics } from './viewer-physics.js';
 import { createViewerLighting } from './viewer-lighting.js';
 import { stageVariants, setVariant } from './usd/scene/index.js';
@@ -1082,7 +1082,7 @@ function updateLoadingByteProgress(loaded, total, label = currentDisplayFilename
 
 const assetDownloads = createDownloadProgress({
   getHost:()=>window.usdWorkbench?.viewport || document.getElementById('loading-overlay')?.parentElement,
-  onUpdate:snapshot=>window.updateLoadingOverlayProgress?.(snapshot.active?{text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null),
+  onUpdate:snapshot=>{window.updateLoadingOverlayProgress?.(snapshot.active?{text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null);window.usdStagePanel?.refreshInfoFiles?.();},
 });
 function updateUsdAssetFetchProgress(progress) {assetDownloads.update(progress);}
 function resetAssetTransfers() {assetDownloads.reset();}
@@ -2248,6 +2248,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     const { mountUsdSuite } = await import('./viewer-suite.js');
     let followingSource=false;
     suiteControls = await mountUsdSuite({ handle, stage,
+      usd: USD, getFiles:createSourceFiles({files:filesForHydra,asset:activeCatalogAsset,handle,usd:USD}),getTransfers:()=>assetDownloads.snapshot.files,resolveTextureUrl:resolveViewerTextureUrl,
+      sourceUrl: directory === undefined ? path : undefined,
       containers: window.usdWorkbench?.containers,
       stateKey: 'needle-usd-stage:' + (path || filename),
       onSelect: (selected, items) => { viewportInteraction?.select(items || selected); if(!followingSource)window.usdWorkbench?.selectPrim(selected); },
@@ -2750,6 +2752,35 @@ async function init() {
   const needleGroupTree = document.getElementById('needle-group-tree');
   const simreadyGroupTree = document.getElementById('simready-group-tree');
   const simreadyLibrary=createSimreadyLibrary();
+  let galleryBaseCards=[],searchTimer,searchAbort;
+  const exampleSearch=document.getElementById('examples-search');
+  const searchText=value=>String(value).toLocaleLowerCase().replace(/[_\s-]+/g,' ');
+  function uniqueSearchCards(...lists){
+    const seen=new Set();return lists.flat().filter(card=>{
+      const value=card.url||Object.values(card.conversions||{})[0]||card.name;
+      const key=String(value).replace(/\/(?:resolve|blob)\/[^/]+\//,'/');
+      if(seen.has(key))return false;seen.add(key);return true;
+    });
+  }
+  async function searchExamples(){
+    clearTimeout(searchTimer);searchAbort?.abort();
+    exampleSearch.removeAttribute('aria-busy');
+    const query=exampleSearch.value.trim(),group=selectedSampleGroup;
+    if(!query){buildGalleryCards(galleryBaseCards);setGalleryStatus('');return;}
+    const controller=searchAbort=new AbortController();
+    exampleSearch.setAttribute('aria-busy','true');
+    try{
+      const local=await simreadyLibrary.load();if(controller.signal.aborted)return;
+      const tokens=searchText(query).split(' '),matches=card=>tokens.every(token=>searchText(`${card.name} ${card.search||''}`).includes(token));
+      const localMatches=local.cards.filter(matches);
+      buildGalleryCards(uniqueSearchCards(galleryBaseCards,localMatches));
+      const found=await searchSimreadyLibrary(query,{signal:controller.signal});
+      if(controller.signal.aborted||group!==selectedSampleGroup||query!==exampleSearch.value.trim())return;
+      buildGalleryCards(uniqueSearchCards(galleryBaseCards,localMatches,found));setGalleryStatus('');
+    }catch(error){if(error.name!=='AbortError'&&!controller.signal.aborted)setGalleryStatus('SimReady search unavailable.',true);}
+    finally{if(searchAbort===controller)exampleSearch.removeAttribute('aria-busy');}
+  }
+  exampleSearch.addEventListener('input',()=>{clearTimeout(searchTimer);searchAbort?.abort();searchTimer=setTimeout(()=>void searchExamples(),300);});
   let simreadyTreeRendered=false;
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
@@ -4061,6 +4092,7 @@ async function init() {
 
   async function selectSampleGroup(groupId) {
     if (renderedSampleGroup === groupId && galleryGrid?.children.length) return;
+    clearTimeout(searchTimer);searchAbort?.abort();
     // Corrupt or obsolete stored folder IDs should fall back to a usable library.
     try { decodeURIComponent(groupId); } catch { groupId = 'gltf'; }
     let group = sampleGroups.get(groupId);
@@ -4125,6 +4157,8 @@ async function init() {
     const cards = group.load ? await group.load() : group.cards || [];
     if (selectedSampleGroup !== groupId || galleryLoadVersion !== loadVersion) return;
     buildGalleryCards(cards);
+    galleryBaseCards=cards;
+    if(exampleSearch.value.trim())void searchExamples();
     if (!sourceLink.hidden) sourceLink.href=galleryGrid.querySelector('.gallery-card.active')?.dataset.source || 'https://huggingface.co/datasets/nvidia/simready-assets';
     renderedSampleGroup = groupId;
     galleryGrid.dataset.exampleGroup=groupId;

@@ -7,7 +7,8 @@ export function createJointHelpers(mechanism,{visible=()=>true}={}){
  const unitScale=mechanism.metersPerUnit||1;
  const radius=.08/unitScale;
  for(const record of mechanism.joints.values()){
-  const object=helperGeometry('joints',record.data.path,[],false,record.data.axis==='Y'?0x488c3b:record.data.axis==='Z'?0x337fba:0xc05a38);
+  const object=helperGeometry('joints',record.data.path,[],false,0x99cc33);
+  object.material.opacity=1;
   object.material.depthTest=false;object.renderOrder=1000;object.matrixAutoUpdate=false;
   const markers=helperGeometry('joints',record.data.path,[],true,object.material.color);
   markers.material.depthTest=false;markers.material.size=7;markers.renderOrder=1001;object.add(markers);

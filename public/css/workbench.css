@@ -119,7 +119,18 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-panel-properties { display: flex; flex-direction: column; overflow: hidden; }
 .usd-panel-properties > .usd-stage-section:not(.usd-inspector-section) { flex: none; max-height: 30%; overflow: auto; }
 .usd-workbench .usd-inspector-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.usd-inspector-section > .usd-property-inspector { flex: 1; min-height: 0; }
+.usd-workbench .usd-inspector-section[data-expanded=false] { flex: none; }
+.usd-workbench .usd-asset-info { margin-top: auto; }
+.usd-panel-properties > .usd-asset-info[open] { max-height:45%; }
+.usd-asset-info > summary { position:sticky; top:0; z-index:1; }
+.usd-panel-properties:has(> .usd-inspector-section[data-expanded=false]) > .usd-asset-info[open] { flex:1; min-height:0; max-height:none; }
+.usd-asset-info > .header-tool-button { margin:var(--usd-space-field) var(--usd-space-3); }
+.usd-asset-stats { padding:var(--usd-space-field) var(--usd-space-3); --control-property-row-label-size:var(--usd-text-small); --control-property-row-value-size:var(--usd-text-small); --control-property-row-gap:0; --control-property-list-gap:var(--usd-space-1); }
+.usd-asset-stats > .property-row + .property-row { padding-top:0; border:0; }
+.usd-asset-stats .usd-asset-subline { padding-left:var(--usd-space-3); }
+.usd-asset-schemas { padding:var(--usd-space-field) var(--usd-space-3); font-size:var(--usd-text-small); }
+.usd-asset-schemas > summary { cursor:pointer; color:var(--text-secondary); }
+.usd-asset-schemas .usd-property-value-list { white-space:normal; overflow-wrap:anywhere; }
 .usd-panel-console { display: flex; flex-direction: column; overflow: hidden; }
 .usd-console-editor { flex: 1; min-height: 0; }
 .usd-console-diagnostics { flex: none; max-height: 40%; overflow: auto; border-top: 1px solid var(--border-subtle); }
@@ -140,7 +151,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 
 /* Shared section rhythm and field columns across Settings and Properties. */
 .usd-settings-section, .usd-workbench .usd-stage-section { margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--border-subtle); color: var(--text-primary); }
-.usd-settings-section > summary, .usd-workbench .usd-stage-section > summary { display: flex; align-items: center; gap: var(--usd-space-field); min-height: var(--usd-section-height); margin: 0; padding: var(--usd-space-field) var(--usd-space-3); background: var(--surface-panel-muted); color: var(--text-primary); font-size: var(--usd-text-size); font-weight: 700; cursor: pointer; list-style: none; }
+.usd-workbench :is(.usd-settings-section,.usd-stage-section) > .section-rail-group-summary { justify-content:flex-start; min-height:var(--usd-section-height); margin:0; padding:var(--usd-space-field) var(--usd-space-3); border:0; border-radius:0; text-align:left; font-size:var(--usd-text-size); }
 .usd-settings-section > summary::-webkit-details-marker, .usd-workbench .usd-stage-section > summary::-webkit-details-marker { display: none; }
 .usd-settings-section > summary > .usd-icon, .usd-workbench .usd-stage-section > summary > .usd-icon { color: var(--usd-icon-color); }
 .usd-settings-section[open] > summary > .usd-icon, .usd-workbench .usd-stage-section[open] > summary > .usd-icon { transform: rotate(90deg); }

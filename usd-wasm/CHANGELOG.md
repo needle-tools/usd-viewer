@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Asset Info reads the authored SimReady profile, mass and dimensions, and distinguishes moving parts from independent joints. Examples search also discovers OEM assets in SimReady Central, including datasets outside NVIDIA's own library.
+
+- Asset Info shows source-file counts and byte totals split into USD/geometry, textures and other files; scene counts, colliders, rigid bodies, constraints, and an inspectable schema array. SDK summary inspection includes shared prototypes without reading geometry data.
+
+- Collapsible Properties list with remembered expansion state and property-follow navigation. Asset Info links to the loaded Hugging Face revision and NVIDIA's matching SimReady asset; interaction helpers use Needle green.
+
 - Optional `/kinematics` SDK entry using closed-chain-ik/core: bounded hinge/slider manipulation, fixed links, independent frames, native instance identities, mimic dependencies, closed linkages, joint controls and viewport constraint helpers. Interact loads no physics engine.
 
 - Contextual Interact action in Properties for rigid bodies and joints, opening Simulation with viewport dragging enabled. Lightweight physics inspection exposes body and joint paths without extracting collision meshes.
@@ -28,6 +34,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
 
 ### Fixed
+
+- Reuse shared section headers, property rows and link buttons in Info; version viewer styles with the UI modules and preserve host stylesheet ownership during SDK initialization. NVIDIA links scope the matching asset by publisher as well as file path.
 
 - Page large attribute arrays in Properties instead of eagerly copying and stringifying mesh topology. Expose native `GetValuePage` and optional bounded SDK inspection; retain full-value API reads and correct point-instance counts.
 - Avoid the empty physics JSON error on large assets: Interact reads only body/joint/collider metadata; simulation reads collision geometry through owned typed buffers. Keep interaction and simulation snapshots separate.

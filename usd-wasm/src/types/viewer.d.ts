@@ -47,6 +47,8 @@ export interface StagePanel {
   useFreeCamera(): void;
   dispose(): void;
 }
+/** Read-only paged array and expandable dictionary presentation. */
+export function renderStructuredValue(value: unknown, label: string): HTMLElement;
 /** The host retains ownership of its scene, renderer, controls and handle. */
 export function mountStagePanel(options: {
   handle: NeedleThreeHydraHandle; stage: USDStage; scene: Object3D; camera: Camera;

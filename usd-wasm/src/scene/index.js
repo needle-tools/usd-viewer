@@ -2,6 +2,7 @@ import {resolveHierarchyVisibility,primCompositionFlags,stagePrototypes,primInst
 export { hasAuthoredUsdLights, stageLayers, stageVariants } from './inspection.js';
 export { readStageAsset, readStageLayer, readStageLayerBytes, stageResources } from './sources.js';
 export { createStageSourcePaths } from './source-paths.js';
+export {inspectStageSummary, inspectStageFiles} from './summary.js';
 
 /** Convert embind vectors without retaining native wrappers. */
 function readVector(vector, read = identity) {

@@ -134,6 +134,11 @@
       if (!response.ok) throw new Error(`Could not load viewer module versions: HTTP ${response.status}`);
       const versions = await response.json();
       globalThis.__usdViewerModuleVersions = versions;
+      // Keep product chrome in the same revision as the modules that build it.
+      const stylesReady=Promise.all([...document.querySelectorAll('link[rel=stylesheet]')].map(link=>{
+        const href=versions[new URL(link.href).pathname];if(!href)return;
+        return new Promise((resolve,reject)=>{link.onload=resolve;link.onerror=()=>reject(new Error(`Could not load ${href}`));link.href=href;});
+      }));
       const params = new URLSearchParams(location.search);
       const viewerMode = params.get("viewer") === "needle" || params.get("viewer") === "needle-loader" ? "needle" : "three";
       const useNeedleLoader = viewerMode === "needle";
@@ -177,6 +182,7 @@
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });
       document.head.append(importMap);
+      await stylesReady;
     })();
   </script>
   <script>

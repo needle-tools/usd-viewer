@@ -201,7 +201,7 @@ export async function mountWorkbench() {
   parking.append(examplesSearch);
   examplesSearch.addEventListener('pointerdown', event => event.stopPropagation());
   examplesSearch.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); });
-  function settingsGroup(title, expanded) {const group=element('details','usd-settings-section');group.open=expanded;const summary=element('summary');summary.append(viewerIcon('chevron_right'),document.createTextNode(title));group.append(summary);const body=element('div');group.append(body);viewCommands.append(group);return body;}
+  function settingsGroup(title, expanded) {const group=element('details','usd-settings-section');group.open=expanded;const summary=element('summary','section-rail-group-summary');summary.append(viewerIcon('chevron_right'),document.createTextNode(title));group.append(summary);const body=element('div');group.append(body);viewCommands.append(group);return body;}
   const rendererSettings=settingsGroup('Rendering', true), viewSettings=settingsGroup('Scene', false);
   const cameraSettings=element('div','usd-camera-settings');viewSettings.append(cameraSettings);
   const helperSettings=settingsGroup('Helpers', false);
@@ -218,7 +218,7 @@ export async function mountWorkbench() {
   const physicsShortcut=element('div','usd-physics-shortcut');physicsShortcut.hidden=true;
   const interactSelection=button('Interact',async()=>{openPanel('simulation');await physicsController?.interact();},'Drag movable parts within their joint limits','play_arrow');
   physicsShortcut.append(interactSelection);hosts.properties.append(physicsShortcut);
-  function updatePhysicsShortcut(){physicsShortcut.hidden=!physicsController?.canInteract(selectedPrim);hosts.properties.append(physicsShortcut);}
+  function updatePhysicsShortcut(){physicsShortcut.hidden=!physicsController?.canInteract(selectedPrim);hosts.properties.insertBefore(physicsShortcut,hosts.properties.querySelector('.usd-asset-info'));}
   const updateSimulation = () => { simulationEmpty.hidden = !!simulationControls && !simulationControls.hidden; };
   const simulationObserver = new MutationObserver(updateSimulation);
   if (simulationControls) simulationObserver.observe(simulationControls, {attributes:true,attributeFilter:['hidden']}); updateSimulation();

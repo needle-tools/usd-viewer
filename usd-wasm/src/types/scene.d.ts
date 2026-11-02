@@ -2,6 +2,17 @@ import type { Camera, Object3D } from 'three';
 import type { NeedleThreeHydraHandle } from './create.three.js';
 import type { USDStage } from './bindings.js';
 export * from './sources.js';
+export interface StageSummary {
+  prims: number; meshes: number; materials: number; lights: number;
+  colliders: number; rigidBodies: number; constraints: number;
+  movingParts: number; independentJoints: number; profile: string | null; massKg: number | null;
+  dimensions: number[] | null; metersPerUnit: number;
+  types: string[]; apiSchemas: string[];
+}
+/** Lightweight schema/functionality inventory. Call inside handle.readStage(). */
+export function inspectStageSummary(stage: USDStage, options?: {signal?: AbortSignal}): Promise<StageSummary>;
+/** Sizes of mounted used layers, without loading file contents. */
+export function inspectStageFiles(stage: USDStage, usd: import('./bindings.js').USD, sourcePaths?: import('./sources.js').StageSourcePaths): {path: string; size?: number}[];
 export interface VariantInfo { path: string; setName: string; choices: string[]; selection: string; readOnly?: boolean; }
 export function hasAuthoredUsdLights(root?: Object3D | null, stage?: USDStage | null): boolean;
 export function stageVariants(stage: USDStage): VariantInfo[];

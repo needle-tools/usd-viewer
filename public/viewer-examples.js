@@ -123,11 +123,13 @@ export function mountExamplesBrowser(root) {
     details.setAttribute('aria-pressed', String(showDetails));
   }
   function filter() {
-    const query = search.value.trim().toLocaleLowerCase();
+    const tokens = search.value.trim().toLocaleLowerCase().replace(/[_\s-]+/g,' ').split(' ').filter(Boolean);
+    const query=tokens.length;
     let total = 0, visible = 0;
     for (const card of grid.children) {
       total++;
-      card.hidden = !!query && !`${card.dataset.name} ${card.dataset.search || ''} ${card.textContent}`.toLocaleLowerCase().includes(query);
+      const text=`${card.dataset.name} ${card.dataset.search || ''} ${card.textContent}`.toLocaleLowerCase().replace(/[_\s-]+/g,' ');
+      card.hidden = !!query && !tokens.every(token=>text.includes(token));
       if (!card.hidden) visible++;
     }
     empty.hidden = !!visible || !total || !query;

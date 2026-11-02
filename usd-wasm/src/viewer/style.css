@@ -2,6 +2,14 @@
 @import './propertyInspector.css';
 @import './downloadButton.css';
 
+.usd-inspector-section { display: flex; flex-direction: column; min-height: 0; }
+.usd-inspector-section[data-expanded=false] { flex: none; }
+.usd-section-toggle { display: flex; align-items: center; gap: 6px; flex: none; width: 100%; text-align: left; font: inherit; font-weight: 700; color: inherit; cursor: pointer; }
+.usd-section-toggle[aria-expanded=true] > .usd-icon { transform: rotate(90deg); }
+.usd-inspector-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.usd-inspector-body[hidden] { display: none; }
+.usd-inspector-body > .usd-property-inspector { flex: 1; min-height: 0; }
+
 .viewer-render-modes { position: fixed; left: 16px; bottom: 52px; z-index: 80; display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); padding: 8px 12px; border: 1px solid #bbc4c8; border-radius: 9px; background: #f6f8f6ed; color: #24363b; font-size: 13px; }
 .viewer-render-modes select, .usd-suite select { font: inherit; max-width: 100%; padding: 3px; }
 .viewer-render-modes [role=status] { max-width: 28em; }
