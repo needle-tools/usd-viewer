@@ -1,5 +1,4 @@
 const CACHE_NAME = "usd-viewer-asset-cache-v3";
-const MAX_CACHEABLE_BYTES = 64 * 1024 * 1024;
 
 const SAME_ORIGIN_PREFIXES = [
   "/data/",
@@ -32,7 +31,7 @@ function isCacheableSameOriginPath(url) {
 }
 
 function isImmutableSimreadyUrl(url) {
-  return url.hostname==='huggingface.co' && /^\/datasets\/nvidia\/simready-assets\/resolve\/[a-f0-9]{40}\//.test(url.pathname);
+  return url.hostname==='huggingface.co' && /^\/datasets\/[^/]+\/[^/]+\/resolve\/[a-f0-9]{40}\//.test(url.pathname);
 }
 
 function isCacheableRemoteUrl(url) {
@@ -64,8 +63,9 @@ function isCacheableRequest(request) {
 function canStore(response) {
   if (!response) return false;
   if (response.status !== 200) return false;
-  const contentLength = Number(response.headers.get("content-length"));
-  return !Number.isFinite(contentLength) || contentLength <= MAX_CACHEABLE_BYTES;
+  // Large USDZs and original textures need the same reload behavior as small
+  // assets. Browser storage quota handles capacity; failed writes are optional.
+  return !/\bno-store\b/i.test(response.headers.get('cache-control') || '');
 }
 
 async function notifyClient(clientId, payload) {
@@ -76,8 +76,9 @@ async function notifyClient(clientId, payload) {
 
 async function refreshCache(cache, request, clientId) {
   try {
-    const revalidateRequest = new Request(request, { cache: "no-cache" });
-    const response = await fetch(revalidateRequest);
+    // Let the HTTP cache honor the origin's freshness and validators. A Cache
+    // API hit must not force a second network download on every page refresh.
+    const response = await fetch(request);
     if (!canStore(response)) return;
     await cache.put(request, response.clone());
     await notifyClient(clientId, { type: "refresh", url: request.url });
