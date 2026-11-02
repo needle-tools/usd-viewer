@@ -17,7 +17,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load USD, USDA, USDC, USDZ, and glTF/GLB assets in the browser.
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
-- Load MaterialX materials and Draco-compressed geometry with OpenUSD 26.11.1.
+- Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the OpenUSD 26.11.1 wasm bundle.
 - Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty, MuTracer or gkjohnson path tracing; optional tracers load when selected.
 - Evaluate uniform or adaptive OpenSubdiv surfaces, including animated creases, corners and holes.
 - Inspect and follow individual properties, pick native/point instances, select multiple objects and run the embedded JavaScript REPL.
@@ -103,8 +103,9 @@ package. Code and Console load when opened. Embedded viewers can use `/runtime`,
 
 ## Examples and render settings
 
-Use **Examples** to browse Needle fixtures and executable JavaScript lessons,
-NVIDIA SimReady and AGIBOT collections, USD Working Group assets and glTF samples.
+Use **Examples** to browse 192 Needle coverage fixtures, 63 executable JavaScript lessons,
+the complete NVIDIA SimReady library, the separate 14-asset Hugging Face test set,
+AGIBOT collections, USD Working Group assets and glTF samples.
 The Examples footer switches between Beauty previews and native usdview/Storm
 captures, and remembers your choice.
 The animation collection includes a rolling cube, heartbeat, lighthouse day/night

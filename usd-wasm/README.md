@@ -1,8 +1,8 @@
 # Needle USD
 
-OpenUSD WebAssembly runtime and three.js Hydra render delegate for rendering
+OpenUSD WebAssembly runtime and three.js Hydra render delegate — render real,
 composed USD stages (`.usd`, `.usda`, `.usdc`, `.usdz`) with MaterialX directly
-in the browser. It powers the
+in the browser. The same technology powers the
 [Needle USD Viewer](https://usd-viewer.needle.tools) and
 [OpenUSD support on Needle Cloud](https://cloud.needle.tools).
 
@@ -30,6 +30,7 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 - **Rendering** — WebGPURenderer with Basic, Beauty, MuTracer and gkjohnson modes.
 - **Inspection and authoring** — stage/property navigation, multi-selection,
   instance picking, JavaScript REPL with a paged array table, and serialized in-memory edits.
+  The app’s Code pane opens arrays beside the source in a resizable sidebar, with its width remembered.
 - **glTF-in-USD** — Adobe `usdGltf` file format plugin loads glTF/GLB directly
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
@@ -90,8 +91,10 @@ The native runtime already contains both composition and authoring support.
 ZIP/USDZ packaging code loads on the first `handle.exportUsdz()` call. Physics,
 path tracing and volume support remain separate opt-in features.
 
-The host owns docking and asset catalogs; the SDK handles USD composition,
-source reads, stage edits and export.
+The hosted viewer uses the same SDK operations. Its Code and Console panels
+load when opened, including when restored from a saved workspace. Docking,
+example catalogs, URL state and host camera/light preferences belong to the
+application; stage mutations, source resolution and export belong to the SDK.
 
 ## Core authoring
 
@@ -209,8 +212,8 @@ different runtime. Concurrent calls share one initialization; the first call's
 options select the runtime. Custom `locateFile` and `mainScriptUrlOrBlob`
 overrides must point to matching artifacts for the selected runtime.
 
-The 1.2.0 JSPI Wasm artifact is about 20 MB, versus 36 MB for Asyncify. With
-Brotli quality 11, this is about 3.4 MB versus 5.5 MB (38% less transfer). Both
+The 1.2.0 JSPI Wasm artifact is 19.7 MB, versus 36.4 MB for Asyncify. With
+Brotli quality 11, this is 3.35 MB versus 5.49 MB (39% less transfer). Both
 contain the same native feature set. The package includes both runtimes;
 applications download only the selected runtime. The viewer app uses `auto`.
 
@@ -582,8 +585,8 @@ handle.setPlaying(true);
 
 The public viewer's **Examples → Needle → Subdivision → Pip and Pop** demonstrates
 winking hole faces and a stationary cage morphing between round and sharp shapes.
-Executable JavaScript lessons are available under
-**Examples → Needle → JavaScript API**.
+The repository also includes 63 executable JavaScript lessons under
+**Examples → Needle → JavaScript API**, with native preview captures.
 
 ### Viewport helpers
 
@@ -651,7 +654,7 @@ USD punctual lights cast raster shadows when the host renderer has
 `renderer.shadowMap.enabled = true`. Both public viewer modes enable this.
 Directional, point and shaped spot lights respect `UsdLuxShadowAPI`'s
 `inputs:shadow:enable` (default `true`), including time samples and variants.
-PreviewSurface and MaterialX materials can receive these shadows.
+PreviewSurface and MaterialX receivers are verified in both public viewers.
 Shadow bounds follow the composed USD scene, and the owning handle releases
 the shadow maps and attribute handles on disposal. Stages without active
 shadow lights skip shadow-bound traversal.
@@ -853,8 +856,10 @@ helpers.update(); controls.update();
 controls.dispose(); helpers.dispose(); mechanism.dispose();
 ```
 
-`loadKinematics: async () => module` accepts a host-provided core module. The kinematics
-module loads when requested; viewing alone does not load it or Rapier.
+`loadKinematics: async () => module` accepts a host-provided core module. Viewing
+alone loads neither that optional peer nor Rapier. The app's on-demand core
+bundle is 64 KB raw / 20 KB gzip, compared with 4.3 MB / 1.65 MB gzip for the
+standalone Rapier wrapper with embedded WASM.
 
 Choose **Simulate** for contact dynamics and gravity. That action loads Rapier
 on demand. The app rejects incomplete simulations, including unsupported PhysX
@@ -944,7 +949,7 @@ WebGPU support translates MaterialX surfaces through the bundled TSL loader, inc
 
 For scenes whose rectangular lights come from USD, `createWebGpuSupport({ lazyAreaLights: true })` loads area-light lookup tables when an authored area light needs them. Hydra readiness waits for those tables before rendering. The default eagerly prepares them for host-created Three.js area lights; with the lazy option, call `await support.prepareAreaLights()` before rendering host-created area lights. EXR, HDR and TGA texture decoders also load only when a corresponding texture is encountered.
 
-`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
+`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
 
 `configureNeedleAgxDisplay(engine, () => renderer.toneMapping)` follows changes to the host's AgX (Needle), ACES Filmic, Khronos PBR Neutral, Linear, Reinhard or NoToneMapping choice. Needle AgX remains the default when no callback is supplied. NoToneMapping ignores exposure, matching Three's presentation.
 
@@ -964,7 +969,10 @@ With the bundled runtime, native packaging runs on a WASM thread and archive
 readback yields between bounded chunks. ZIP conversion runs in a module worker,
 including decompression, checksums and compression. The viewport and other UI
 controls remain interactive. Authored stage mutations wait for the export to
-finish so the archive captures a consistent stage. Closing or replacing the source cancels its export.
+finish so the archive captures a consistent stage. The shared button shows an
+animated spinner and an accessible export status, respects reduced motion and
+keeps its width stable. Closing the source discards its export; disposal or source
+replacement also terminates any ZIP compression worker.
 
 `handle.exportUsdz({onProgress})` and `mountDownloadButton({onProgress})` report
 `{phase, completed, total}`. Phases cover preparation, dependency loading,
@@ -1058,6 +1066,11 @@ for static content, including files that only declare frame bounds; otherwise it
 reports the composed animation range. Timeline contents refresh after variant and
 payload edits, with regularly spaced frame ticks. In the public viewer, changing
 files never reopens or redocks a timeline the user closed or arranged.
+
+The development viewer uses Dockview Core for resizable, dockable, floating and
+popout panels, saved workspace layouts and viewport maximization. Its local
+Needle brand assets support system, light and dark UI themes independently of
+the scene background.
 
 ## KTX2 material textures
 
