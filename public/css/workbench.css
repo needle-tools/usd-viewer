@@ -12,7 +12,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-workbench {
   --border-focus: var(--usd-focus-color);
   --control-segmented-track-radius: var(--usd-radius-control); --control-segmented-segment-radius: var(--usd-radius-small);
-  --control-segmented-segment-min-height: var(--usd-control-height); --control-segmented-segment-padding-inline: var(--usd-space-2); --control-segmented-segment-text-size: var(--usd-text-size);
+  --control-segmented-segment-min-height: var(--usd-control-height); --control-segmented-segment-padding-inline: var(--usd-space-2); --control-segmented-segment-text-size: var(--usd-text-size); --control-segmented-segment-text-family: var(--font-family-body);
   position: fixed; inset: 0; display: grid; grid-template-rows: auto minmax(0,1fr); overflow: hidden;
 }
 .usd-workbench *, body.usd-product .dialog-overlay, body.usd-product .dialog-overlay * { box-sizing: border-box; }
@@ -151,7 +151,7 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 
 /* Shared section rhythm and field columns across Settings and Properties. */
 .usd-settings-section, .usd-workbench .usd-stage-section { margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--border-subtle); color: var(--text-primary); }
-.usd-workbench :is(.usd-settings-section,.usd-stage-section) > .section-rail-group-summary { justify-content:flex-start; min-height:var(--usd-section-height); margin:0; padding:var(--usd-space-field) var(--usd-space-3); border:0; border-radius:0; text-align:left; font-size:var(--usd-text-size); }
+.usd-workbench :is(.usd-settings-section,.usd-stage-section) > .section-rail-group-summary { display:flex; align-items:center; justify-content:flex-start; min-height:var(--usd-section-height); margin:0; padding:var(--usd-space-field) var(--usd-space-3); border:0; border-radius:0; text-align:left; font-size:var(--usd-text-size); }
 .usd-settings-section > summary::-webkit-details-marker, .usd-workbench .usd-stage-section > summary::-webkit-details-marker { display: none; }
 .usd-settings-section > summary > .usd-icon, .usd-workbench .usd-stage-section > summary > .usd-icon { color: var(--usd-icon-color); }
 .usd-settings-section[open] > summary > .usd-icon, .usd-workbench .usd-stage-section[open] > summary > .usd-icon { transform: rotate(90deg); }

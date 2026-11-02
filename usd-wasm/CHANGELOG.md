@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Asset Info reads the authored SimReady profile, mass and dimensions, and distinguishes moving parts from independent joints. Examples search also discovers OEM assets in SimReady Central, including datasets outside NVIDIA's own library.
+- Explicit publisher collection folders, including AGIBOT, and additional Hugging Face datasets supplied through repeatable `collection=` URL parameters.
+
+- Asset Info reads the authored SimReady profile, mass and dimensions, and distinguishes moving parts from independent joints.
 
 - Asset Info shows source-file counts and byte totals split into USD/geometry, textures and other files; scene counts, colliders, rigid bodies, constraints, and an inspectable schema array. SDK summary inspection includes shared prototypes without reading geometry data.
 
@@ -34,6 +36,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - USD Viewer / USD Studio switch in the app header. Viewer keeps a full viewport with Examples in a menu; Studio retains its dockable workspace. Mode changes preserve the loaded scene and saved Studio layout, with a remembered preference and `workspace` URL option.
 
 ### Fixed
+
+- Packaged texture loading with shared-memory WASM runtimes, including USDZ JPEG/PNG images; dome lights also accept ordinary image textures with correct sRGB decoding.
+- Empty session edit layers no longer clutter Studio's Code and Layers lists; authored session edits remain available.
+- Asset cache hits honor HTTP freshness rather than forcing revalidation. Large assets and revision-pinned collections from other publishers receive the same caching behavior.
 
 - Reuse shared section headers, property rows and link buttons in Info; version viewer styles with the UI modules and preserve host stylesheet ownership during SDK initialization. NVIDIA links scope the matching asset by publisher as well as file path.
 
