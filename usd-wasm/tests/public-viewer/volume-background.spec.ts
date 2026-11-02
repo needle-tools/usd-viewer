@@ -1,4 +1,4 @@
-import {clearStage} from './workbench-menus';
+import {clearStage, openSettings, stageReady} from './workbench-menus';
 import { expect, test } from '@playwright/test';
 
 // Keep these local rendering checks independent of the web-font CDN.
@@ -11,8 +11,11 @@ test('jade volume composites over the background and receives light without an o
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto('/?viewer=three&render=nodes&backend=webgl&file=/test-fixtures/coverage/materialx/jade-plume.usda&assetCache=0');
+    await stageReady(page);
+    await openSettings(page);
     const background = page.getByRole('combobox', { name: 'Background', exact: true });
     await expect(background).toHaveValue('light');
+    await page.keyboard.press('Escape');
     const initial = await page.evaluate(async () => {
         const w = window as any; await w.usdHydra.ready(); await w.usdHydra.materialsReady();
         w.usdHydra.setPlaying(false); w._controls.autoRotate = false; w._controls.enableDamping = false;
@@ -42,7 +45,9 @@ test('jade volume composites over the background and receives light without an o
     const opaque = await pixel();
     for (let channel = 0; channel < 3; channel++) expect(Math.abs(opaque[channel] - lightBackground[channel])).toBeLessThanOrEqual(2);
     await page.evaluate(() => { (window as any).backdrop.visible = false; });
+    await openSettings(page);
     await background.selectOption('dark');
+    await page.keyboard.press('Escape');
     await expect(page).toHaveURL(/background=dark/);
     const dark = await pixel();
     expect(dark[1]).toBeGreaterThan(dark[0] + 30);
@@ -56,7 +61,10 @@ test('jade volume composites over the background and receives light without an o
     await page.screenshot({ path: testInfo.outputPath('jade-dark-background.png') });
     expect(await page.evaluate(() => (window as any).originalDriver === (window as any).usdHydra.driver)).toBe(true);
     await page.reload();
+    await stageReady(page);
+    await openSettings(page);
     await expect(background).toHaveValue('dark');
+    await page.keyboard.press('Escape');
     await page.screenshot({ path: testInfo.outputPath('jade-default-camera-dark.png') });
     await clearStage(page);
     await expect(page.locator('#usd-background-controls')).toBeHidden();
