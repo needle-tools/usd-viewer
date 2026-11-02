@@ -54,6 +54,12 @@ Pinned SimReady URLs are cached without revalidation; cached reloads reuse the
 files across native worker threads. Exports retain the
 original USD dependencies, independently of this display setting.
 
+App and SDK modules use content-versioned URLs so reloads do not mix cached
+inspection code with a newer UI. `npm run prepare:public` generates
+`public/viewer-module-versions.json` for static uploads; include that file with
+the rest of `public/`. The local server generates the same manifest from the
+current source files.
+
 Both native runtimes are built from OpenUSD commit
 `c34f374d042b1579855f63f142a6082cb95a0cfc` on the local
 `git/openusd` branch `wasm/openusd-26.11.1`. The bridge yields the browser thread

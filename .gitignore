@@ -36,3 +36,6 @@ public/modules/mesh-bvh.umd.js
 
 # Optional browser kinematics bundle (prepare:public).
 /public/modules/kinematics.js*
+
+# Generated module URLs for static uploads.
+/public/viewer-module-versions.json

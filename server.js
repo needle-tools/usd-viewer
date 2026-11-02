@@ -1,7 +1,8 @@
 const fastify = require('fastify')()
 const path = require('path')
 const {runtimeCompressionGuard} = require('./scripts/precompressed-runtime')
-const { injectClientIpIntoAnalyticsTrackBody, maskIpForLog } = require('./scripts/analytics-proxy')
+const {createModuleVersions} = require('./scripts/module-versions')
+const { injectClientIpIntoAnalyticsTrackBody } = require('./scripts/analytics-proxy')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
 // Otherwise we wouldn't need a server at all.
@@ -81,19 +82,6 @@ async function proxyToAnalytics(request, reply) {
   const body = hasBody
     ? injectClientIpIntoAnalyticsTrackBody(request.url, request.body, cfConnectingIp)
     : undefined;
-
-  // Debug the geolocation path via Haystack. Track events only (not a hot path).
-  // We log the COUNTRY Cloudflare detected for the visitor (the decisive signal:
-  // if this disagrees with the analytics dashboard, the IP isn't reaching it)
-  // plus a MASKED IP (first two octets only) so a leaking datacenter prefix is
-  // visible — never the full, PII-carrying address.
-  if (request.url.split("?")[0] === "/api/track") {
-    console.log("[analytics] track", JSON.stringify({
-      cfCountry: request.headers["cf-ipcountry"] || "?",
-      ipPrefix: maskIpForLog(cfConnectingIp),
-      stamped: Boolean(cfConnectingIp),
-    }));
-  }
 
   let upstream;
   try {
@@ -274,6 +262,12 @@ fastify.route({
   method: ["GET", "POST", "OPTIONS"],
   url: "/api/*",
   handler: proxyToAnalytics,
+});
+
+const readModuleVersions = createModuleVersions(__dirname);
+fastify.get('/viewer-module-versions.json', async (_request,reply) => {
+  reply.header('Cache-Control','no-store').type('application/json');
+  return await readModuleVersions();
 });
 
 fastify.register(require('@fastify/static'), {

@@ -129,7 +129,11 @@
 <body class="usd-product">
   <script type="text/javascript" async src="modules/es-module-shims@1.8.0.js"></script>
   <script>
-    (() => {
+    window.__usdViewerImportsReady = (async () => {
+      const response = await fetch('/viewer-module-versions.json', {cache:'no-store'});
+      if (!response.ok) throw new Error(`Could not load viewer module versions: HTTP ${response.status}`);
+      const versions = await response.json();
+      globalThis.__usdViewerModuleVersions = versions;
       const params = new URLSearchParams(location.search);
       const viewerMode = params.get("viewer") === "needle" || params.get("viewer") === "needle-loader" ? "needle" : "three";
       const useNeedleLoader = viewerMode === "needle";
@@ -168,16 +172,20 @@
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
       imports["closed-chain-ik/core"] = "/modules/kinematics.js";
+      for (const key of Object.keys(imports)) imports[key] = versions[imports[key]] || imports[key];
+      Object.assign(imports, versions);
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });
-      document.currentScript.after(importMap);
+      document.head.append(importMap);
     })();
   </script>
   <script>
     globalThis.NEEDLE_MATERIALX_LOCATION = "/materialx/bin/";
   </script>
-  <script type="module">
+  <script>
+    (async () => {
     try {
+      await window.__usdViewerImportsReady;
       // Fetch the viewer graph while the workbench loads; initialization still
       // waits for its viewport and panel containers to exist.
       await Promise.all([
@@ -196,6 +204,7 @@
       message.setAttribute('role', 'alert'); message.textContent = 'Could not start the viewer. Reload to try again.';
       document.body.append(message); console.error(error);
     }
+    })();
   </script>
   <h1 class="sr-only">USD &amp; USDZ Viewer — view and export OpenUSD files online</h1>
 
