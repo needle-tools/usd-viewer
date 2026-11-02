@@ -11,6 +11,14 @@ const body=(path,position,rotation=identity)=>({path,position,rotation,scale:[1,
 const snapshot=bodies=>({bodies,scenes:[{path:'/Scene',gravityMagnitude:0,gravityDirection:[0,-1,0]}],metersPerUnit:1,shapes:[],joints:[],unsupported:[]});
 const step=(sim,seconds=1)=>{for(let i=0;i<seconds*120;i++)sim.update(1/120);};
 
+test('authored convex-hull meshes create contact colliders rather than being skipped',async()=>{
+ const root=new Group(),s=snapshot([body('/Hull',[0,0,0])]);
+ s.shapes=[{path:'/Hull/Shape',body:'/Hull',type:'mesh',approximation:'convexHull',points:[-1,-1,-1,1,-1,-1,0,1,-1,0,0,1],position:[0,0,0],rotation:identity}];
+ const sim=await createUsdPhysics({handle:handle(root),snapshot:s,rapier:R,allowPartial:false});
+ try{assert.deepEqual(sim.unsupported,[]);assert.equal(sim.bodies.get('/Hull').colliders.length,1);assert.equal(sim.world.colliders.len(),1);}
+ finally{sim.dispose();}
+});
+
 test('independent slider frames retain their authored axis, orientation and travel limits',async()=>{
  const root=new Group(),s=snapshot([body('/Slider',[0,0,0],rot)]);
  s.joints=[{path:'/Slide',type:'prismatic',body0:'',body1:'/Slider',axis:'X',position0:[0,0,0],position1:[0,0,0],rotation0:rot,rotation1:identity,limit:{enabled:true,lower:0,upper:1}}];

@@ -9,7 +9,7 @@ import { inspectUsdPhysics, getUsdPhysicsLimitations } from '@needle-tools/usd/p
 import {createUsdMechanism,createJointHelpers,mountJointControls} from '@needle-tools/usd/kinematics';
 import { getUsdModule as loadRuntime } from '@needle-tools/usd/runtime';
 import { createArrayEdits, type ArrayEdits } from '@needle-tools/usd/editing';
-import { mountStagePanel as mountInspection } from '@needle-tools/usd/viewer/inspect';
+import { mountStagePanel as mountInspection, getSelectionBounds } from '@needle-tools/usd/viewer/inspect';
 import { mountRepl as mountOptionalConsole } from '@needle-tools/usd/viewer/repl';
 import { Scene } from 'three';
 
@@ -30,6 +30,8 @@ await stage.setComplexity(1.2);
 // @ts-expect-error Invalid complexity must be rejected.
 await stage.setComplexity({ bad: true });
 await stage.setTime(24);
+const selectionBounds = await getSelectionBounds(stage, [{path:'/World/Mesh/Subset'}] as const);
+selectionBounds.getCenter(scene.position.clone());
 const snapshot = await readUsdPhysics(stage);
 const driver = new USD.HdWebSyncDriver(consoleRenderDelegate, 'scene.usda');
 const config = { driver: () => driver, USD, usdRoot: scene };

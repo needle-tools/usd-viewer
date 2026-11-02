@@ -1,4 +1,4 @@
-import type { Camera, Object3D } from 'three';
+import type { Box3, Camera, Object3D } from 'three';
 import type { NeedleThreeHydraHandle } from './create.three.js';
 import type { USDStage } from './bindings.js';
 import type { RenderModes, RenderMode, createRenderModes } from './renderers.js';
@@ -20,6 +20,8 @@ export interface SelectionOptions { toggle?: boolean; range?: boolean; }
 export interface NavigationOptions {recordHistory?: boolean; instance?: SelectionItem;}
 export function selectionItem(value: string | SelectionItem | null): SelectionItem | null;
 export function selectionKey(item: SelectionItem): string;
+/** World bounds at the current render pose. Subdivision subsets use their control cage. */
+export function getSelectionBounds(handle: NeedleThreeHydraHandle, items?: readonly SelectionItem[], root?: Object3D): Promise<Box3>;
 export function createSelection(options?: {items?: readonly (string | SelectionItem)[]; onChange?: (items: readonly SelectionItem[]) => void}): {
   readonly items: readonly SelectionItem[]; readonly primary: SelectionItem | null; readonly anchor: string;
   replace(items: readonly (string | SelectionItem)[], options?: {notify?: boolean; preserveAnchor?: boolean}): boolean;
@@ -52,7 +54,8 @@ export function mountStagePanel(options: {
   containers?: { settings?: HTMLElement; view?: HTMLElement; stage: HTMLElement; properties: HTMLElement; layers: HTMLElement; timeline: HTMLElement; toolbar?: HTMLElement };
   stateKey?: string;
   onSelect?: (path: string, items: readonly SelectionItem[]) => void;
-  onPickModeChange?: (mode: 'prim' | 'instance') => void;
+  onPickModeChange?: (mode: 'prim' | 'instance' | 'subset') => void;
+  onHover?: (path: string | null) => void;
   onOpen?: () => void;
   onStage?: (info: import('./scene.js').StageInfo | null) => void;
   beforeEdit?: () => void | Promise<void>; afterEdit?: () => void | Promise<void>;

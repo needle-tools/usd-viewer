@@ -1364,8 +1364,14 @@ class HydraMesh {
     this._geometry.setAttribute(attributeName, new BufferAttribute(values, dimension));
   }
 
-  updateIndices(indices) {
+  updateIndices(indices, coarseFaceParams) {
     return timeHydraUpdate(`Hydra updateIndices ${this.usdPath}`, () => {
+      if (coarseFaceParams) {
+        const previous = this._geometry.userData.usdCoarseFaceParams;
+        let same = previous?.length === coarseFaceParams.length;
+        for (let i = 0; same && i < previous.length; i++) same = previous[i] === coarseFaceParams[i];
+        if (!same) this._geometry.userData.usdCoarseFaceParams = Int32Array.from(coarseFaceParams);
+      }
       if (debugMeshes) console.log("updateIndices", indices);
       let unchanged = this._indices && this._indices.length === indices?.length;
       for (let i = 0; unchanged && i < indices.length; i++) unchanged = this._indices[i] === indices[i];
@@ -2766,6 +2772,7 @@ export class ThreeRenderDelegateInterface {
       }
     }
     for (const material of materials) {
+      this.config.webGpuSupport?.prepareMaterial?.(material);
       preparePreviewPrimvars(material, mesh);
       prepareMaterialXPrimvars(material, mesh);
       const promise = prepareMaterialXMaterialForGeometry(material, mesh.geometry);

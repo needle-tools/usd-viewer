@@ -2251,6 +2251,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       containers: window.usdWorkbench?.containers,
       stateKey: 'needle-usd-stage:' + (path || filename),
       onSelect: (selected, items) => { viewportInteraction?.select(items || selected); if(!followingSource)window.usdWorkbench?.selectPrim(selected); },
+      onHover: path => viewportInteraction?.hover(path),
       onPickModeChange: mode => viewportInteraction?.setPickMode(mode),
       onOpen: () => window.usdWorkbench?.openPanel('stage'),
       onStage: info => window.usdWorkbench?.setStage(info),

@@ -90,3 +90,41 @@ test('cabinet drawers preserve every rendered attachment across repeated poses a
  await expect(page.locator('#usd-physics-controls [role=status]')).toContainText(/Simulation unavailable:.*sdf/i);await compare();
  expect(rapier).toEqual([]);expect(errors).toEqual([]);
 });
+
+test('cabinet chrome handle pixels move with the drawer in Beauty',async({page},info)=>{
+ await page.goto(url('fixture_cabinet_b01'));await stageReady(page);
+ await page.evaluate(async()=>{
+  const w=window as any,{Vector3}=await import('three'),h=w.usdHydra;await h.materialsReady();
+  h.scene.updateWorldMatrix(true,true);w.camera.position.copy(h.scene.localToWorld(new Vector3(2,-3,1.4)));w._controls.target.copy(h.scene.localToWorld(new Vector3(.2,0,.55)));w._controls.update();
+  // Mark the actual handle surface before the first pose change, retaining its
+  // original shader, draw groups and textureless material-cache behavior.
+  h.scene.traverseVisible((o:any)=>{if(o.userData.usdPath?.includes('/part_01_obj_00/'))for(const m of [o.material].flat())if(m.name?.includes('chrome')){m.emissive.setRGB(4,0,0);m.emissiveIntensity=1;}});
+  w.usdWorkbench.openPanel('simulation');
+ });
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+ const capture=async(name:string)=>{
+  await page.waitForTimeout(250);
+  const png=await page.locator('#usd-viewport canvas').first().screenshot({path:info.outputPath(name+'.png')});
+  return page.evaluate(async b64=>{
+   const image=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob()),canvas=new OffscreenCanvas(image.width,image.height),ctx=canvas.getContext('2d')!;ctx.drawImage(image,0,0);
+   const data=ctx.getImageData(0,0,image.width,image.height).data;let x=0,y=0,n=0;
+   for(let i=0;i<data.length;i+=4)if(data[i]>100&&data[i]>data[i+1]*1.7&&data[i]>data[i+2]*1.7){x+=(i/4)%image.width;y+=Math.floor(i/4/image.width);n++;}
+   return{x:x/n,y:y/n,n};
+  },png.toString('base64'));
+ };
+ const before=await capture('handle-rest');expect(before.n).toBeGreaterThan(20);
+ await page.evaluate(()=>(window as any).usdPhysics.simulation.setJointValue('/RootNode/Joints/joint_part_01_joint_00',.25));
+ const after=await capture('handle-open');expect(after.n).toBeGreaterThan(20);expect(after.x-before.x).toBeGreaterThan(30);
+ await page.evaluate(()=>(window as any).usdPhysics.simulation.setJointValue('/RootNode/Joints/joint_part_01_joint_00',0));
+ const reset=await capture('handle-returned');expect(Math.abs(reset.x-before.x)).toBeLessThan(4);expect(Math.abs(reset.y-before.y)).toBeLessThan(4);
+ const focus=()=>page.evaluate(async()=>{
+  const w=window as any;w.usdStagePanel.selectPrim('/RootNode/Geometry/part_01_obj_00/part_01_mesh_00/m_opaque__metal__chrome_a01');
+  return w.usdViewportInteraction.focus({instant:true});
+ });
+ const restBounds=(await focus()).bounds;
+ expect(restBounds.max[0]-restBounds.min[0]).toBeLessThan(.1);
+ await page.evaluate(()=>(window as any).usdPhysics.simulation.setJointValue('/RootNode/Joints/joint_part_01_joint_00',.25));
+ const movedBounds=(await focus()).bounds;
+ expect(movedBounds.min[0]-restBounds.min[0]).toBeCloseTo(.25,5);
+ expect(movedBounds.max[0]-restBounds.max[0]).toBeCloseTo(.25,5);
+});

@@ -1,5 +1,6 @@
 import {BufferGeometry,Float32BufferAttribute,InstancedBufferAttribute,InstancedBufferGeometry,Points,Sprite} from 'three';
 import { prepareWebGlAreaLights } from '../hydra/areaLightSupport.js';
+import { prepareInstancedMaterialUpdates } from './instancedMaterialUpdates.js';
 
 /** Modern renderer support stays outside the base loader's dependency graph. */
 export async function createWebGpuSupport({ lazyAreaLights = false } = {}) {
@@ -9,6 +10,7 @@ export async function createWebGpuSupport({ lazyAreaLights = false } = {}) {
   let areaLightPreparation;
   const strokeOpacity = new WeakMap();
   const support = {
+    prepareMaterial: prepareInstancedMaterialUpdates,
     SurfaceMaterial: MeshPhysicalNodeMaterial,
     createPointHelper(positions, options) {
       // Native WebGPU point primitives are limited to one pixel. Instanced

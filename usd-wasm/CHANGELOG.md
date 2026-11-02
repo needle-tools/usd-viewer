@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Outline selected and hovered face GeomSubsets, preserve authored face identities through subdivision, and add viewport Mesh subsets picking. Release selection proxies when clearing or changing scenes.
+
+- Refresh WebGPU instance transforms for textureless material groups as well as textured surfaces, keeping handles and other subsets attached during joint interaction.
+- Frame selected mesh GeomSubsets with **F**, using their authored elements and current instance pose instead of falling back to the whole stage. Expose reusable `getSelectionBounds` from `/viewer/inspect`.
+
 - Hold mechanism bases and preserve attached parts without contact integration during Interact; respect occluding surfaces when picking. Reject incomplete contact simulations in the app, including unsupported SDF collision meshes, before downloading Rapier.
 
 - Use a damped grab constraint so dragging beyond a mechanism's range yields to authored joint limits, including off-axis pulls on slider assemblies.

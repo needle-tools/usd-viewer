@@ -3,7 +3,7 @@ import {createViewportFraming} from './viewer-framing.js';
 import {createPickingCache} from './viewer-picking.js';
 
 import {selectionItem} from './usd/viewer/selection.js';
-import {createInstanceMaskCache} from './usd/viewer/instanceSelection.js';
+import {createSelectionDrawCache,resolveSubsetPick} from './usd/viewer/selectionDraws.js';
 
 /** Shared authored identities; picking never changes materials or tracer input. */
 export function createViewportInteraction({viewport,getState,onSelect}) {
@@ -44,7 +44,8 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
       if(!object)continue;
       const renderPath=object.userData.usdPath, renderInstanceIndex=object.userData.usdHelperInstanced
         ? Math.floor(hit.index/object.userData.usdHelperInstanceStride) : hit.instanceId;
-      const resolved=await state.handle?.resolvePick?.(renderPath,renderInstanceIndex??0);
+      let resolved=await state.handle?.resolvePick?.(renderPath,renderInstanceIndex??0);
+      if(pickMode==='subset' && resolved && Number.isInteger(hit.faceIndex))resolved=await resolveSubsetPick(state.handle,resolved,hit.object.geometry,hit.faceIndex);
       if(disposed || getState()?.handle!==state.handle)return null;
       if(!resolved && hit.object.isInstancedMesh)return null;
       let path=resolved?.path || renderPath;
@@ -116,14 +117,14 @@ export function createViewportInteraction({viewport,getState,onSelect}) {
     if(disposed)return;frame=requestAnimationFrame(tick);
     const state=getState(),rect=viewport.getBoundingClientRect();
     if(state?.handle?.isUpdating)return;
-    if(state?.handle!==preparedHandle){picking.reset();preparedHandle=state?.handle;preparedRevision=undefined;}
+    if(state?.handle!==preparedHandle){picking.reset();overlay?.reset();preparedHandle=state?.handle;preparedRevision=undefined;}
     if(state?.scene&&!state.handle?.isPlaying?.()&&preparedRevision!==state.handle?.revision){preparedRevision=state.handle?.revision;picking.prepare(state.scene);}
     updateHover(state);
     if(overlay)overlay.render(state,selected,hovered,rect,window.usdViewportVisible!==false);
   }
   tick();
-  return {select:choose,focus:framing.focus,setPickMode(mode){if(['prim','instance'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;hoverRequest=cursor;}},get pickMode(){return pickMode;},
-    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();picking.reset();preparedHandle=preparedRevision=undefined;},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
+  return {select:choose,hover(value){clearHover();hovered=selectionItem(value);if(hovered)void ensureOverlay();},focus:framing.focus,setPickMode(mode){if(['prim','instance','subset'].includes(mode)){pickMode=mode;hoverEpoch++;hovered=null;hoverRequest=cursor;}},get pickMode(){return pickMode;},
+    clear(){selected=[];clearHover();clickEpoch++;framing.cancel();picking.reset();overlay?.reset();preparedHandle=preparedRevision=undefined;},get selection(){return selected;},get selectedPath(){return selected.at(-1)?.path||'';},get hoveredPath(){return hovered?.path||'';},
     dispose(){disposed=true;hoverEpoch++;clickEpoch++;framing.dispose();picking.dispose();cancelAnimationFrame(frame);overlay?.dispose();for(const [type,handler]of listeners)viewport.removeEventListener(type,handler,true);}};
 }
 
@@ -136,7 +137,7 @@ async function makeOutline(viewport) {
   const scenes=Array.from({length:3},()=>{const scene=new Scene();scene.background=new Color(0);return scene;});
   const materials=[0,0xffffff].map(color=>new MeshBasicNodeMaterial({color,side:2}));
   let camera,sourceCamera,pipeline,passes=[],pairs=[],sources=[],size='',previousKey='',maskVersion=0,disposed=false;
-  const masks=createInstanceMaskCache(()=>{maskVersion++;});
+  const masks=createSelectionDrawCache(()=>{maskVersion++;});let maskHandle;
   const step=uniform(new Vector2()),selection=uniform(new Color()),hover=uniform(new Color());
   const near=uniform(.1),far=uniform(1000),hiddenOpacity=uniform(.45),dashLength=uniform(4),dashPeriod=uniform(7);
   function createPipeline(nextCamera) {
@@ -176,8 +177,8 @@ async function makeOutline(viewport) {
     pipeline=new RenderPipeline(renderer,vec4(color.mul(alpha),alpha));pipeline.outputColorTransform=false;
   }
   function clear() {
-    for(const [,copies]of pairs)for(let i=0;i<copies.length;i++){scenes[i].remove(copies[i]);if(copies[i].isInstancedMesh){copies[i].morphTexture=null;copies[i].dispose();}}
-    pairs=[];sources=[];previousKey='';
+    for(const [,copies]of pairs)for(const copy of copies){copy.parent?.remove(copy);if(copy.isInstancedMesh){copy.morphTexture=null;copy.dispose();}}
+    pairs=[];sources=[];previousKey='';masks.reset();
   }
   function proxy(source,material) {
     const copy=source.isInstancedMesh ? new InstancedMesh(source.geometry,material,source.count) : source.isSkinnedMesh ? new SkinnedMesh(source.geometry,material) : new Mesh(source.geometry,material);
@@ -186,7 +187,7 @@ async function makeOutline(viewport) {
   return {
     render(state,selected,hovered,rect,shown) {
       const active=shown && (selected.length || hovered) && state?.camera && rect.width>0 && rect.height>0;
-      canvas.hidden=!active;if(!active)return;
+      canvas.hidden=!active;if(!active){if(pairs.length)clear();return;}
       const css=getComputedStyle(viewport),ratio=renderer.getPixelRatio();
       const width=parseFloat(css.getPropertyValue('--usd-outline-width'))||1.5;
       const nextSize=`${rect.width}:${rect.height}:${width}`;
@@ -207,27 +208,32 @@ async function makeOutline(viewport) {
       }
       camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
       const next=[];state.scene.traverseVisible(object=>{if(object.isMesh && !object.userData.usdHelperFor && ![object.material].flat().some(m=>m?.isBoundedVolumeNodeMaterial))next.push(object);});
+      if(maskHandle!==state.handle){masks.reset();maskHandle=state.handle;}
       if(next.length!==sources.length || next.some((object,i)=>object!==sources[i]) || pairs.some(([source,copies])=>source.isInstancedMesh && copies.some(copy=>copy.userData.maskMatrix.count<source.count))){
         clear();sources=next;
         for(const object of sources){
           // Copy render data only: engine userData can contain context cycles.
-          const copies=scenes.map((scene,i)=>{const copy=proxy(object,materials[i?1:0]);scene.add(copy);return copy;});
+          const copies=[];
           pairs.push([object,copies]);
         }
       }
       for(const [source,copies]of pairs){
-        const selectedMask=masks.get(source,selected,state.handle,'selected'),rawHoverMask=masks.get(source,hovered?[hovered]:[],state.handle,'hover');
-        const hoveredMask=selectedMask===null ? new Set() : new Set([...(rawHoverMask===null ? Array.from({length:source.count||1},(_,i)=>i) : rawHoverMask)].filter(i=>!selectedMask.has(i)));
+        const selectedParts=masks.get(source,selected,state.handle,'selected'),hoverParts=masks.get(source,hovered?[hovered]:[],state.handle,'hover');
+        const desired=[{channel:0,geometry:source.geometry,instances:null},...selectedParts.map(part=>({...part,channel:1})),...hoverParts.map(part=>({...part,channel:2,instances:new Set([...part.instances].filter(index=>!selectedParts.some(selected=>selected.instances.has(index)&&(selected.geometry===source.geometry||selected.geometry===part.geometry))))})).filter(part=>part.instances.size)];
+        if(copies.length!==desired.length || copies.some((copy,i)=>copy.userData.channel!==desired[i].channel)){
+          for(const copy of copies){copy.parent?.remove(copy);if(copy.isInstancedMesh){copy.morphTexture=null;copy.dispose();}}
+          copies.length=0;for(const part of desired){const copy=proxy(source,materials[part.channel?1:0]);copy.userData.channel=part.channel;scenes[part.channel].add(copy);copies.push(copy);}previousKey='';
+        }
         const version=`${source.geometry.attributes.position?.version}:${source.geometry.index?.version}:${source.instanceMatrix?.version}:${source.count}:${source.geometry.drawRange.start}:${source.geometry.drawRange.count}`;
         const position=source.geometry.attributes.position,index=source.geometry.index,morph=source.morphTargetInfluences?.join(','),morphTexture=source.morphTexture?.version;
         for(let i=0;i<copies.length;i++){
-          const copy=copies[i],indices=i===1?selectedMask:i===2?hoveredMask:null,visible=i===0 || indices===null || indices.size>0;
-          if(copy.geometry!==source.geometry || copy.userData.position!==position || copy.userData.index!==index
+          const copy=copies[i],part=desired[i],indices=part.instances,visible=true;
+          if(copy.geometry!==part.geometry || copy.userData.position!==position || copy.userData.index!==index
             || !copy.matrixWorld.equals(source.matrixWorld) || copy.visible!==visible || copy.userData.version!==version
             || source.isSkinnedMesh || copy.userData.morph!==morph || copy.userData.morphTexture!==morphTexture)previousKey='';
           copy.userData.position=position;copy.userData.index=index;copy.userData.morph=morph;copy.userData.morphTexture=morphTexture;
           copy.userData.version=version;copy.visible=visible;
-          copy.geometry=source.geometry;copy.matrix.copy(source.matrixWorld);copy.matrixWorld.copy(source.matrixWorld);
+          copy.geometry=part.geometry;copy.matrix.copy(source.matrixWorld);copy.matrixWorld.copy(source.matrixWorld);
           copy.morphTargetInfluences=source.morphTargetInfluences;copy.skeleton=source.skeleton;
           if(copy.isInstancedMesh)copy.morphTexture=source.morphTexture;
           if(source.isSkinnedMesh){copy.bindMode=source.bindMode;copy.bindMatrix.copy(source.bindMatrix);copy.bindMatrixInverse.copy(source.bindMatrixInverse);}
@@ -246,6 +252,7 @@ async function makeOutline(viewport) {
       if(key===previousKey)return;previousKey=key;
       pipeline.render();
     },
-    dispose(){disposed=true;masks.dispose();clear();pipeline?.dispose();passes.forEach(pass=>pass.dispose());materials.forEach(m=>m.dispose());renderer.dispose();canvas.remove();}
+    reset(){clear();maskHandle=null;canvas.hidden=true;},
+    dispose(){disposed=true;clear();masks.dispose();pipeline?.dispose();passes.forEach(pass=>pass.dispose());materials.forEach(m=>m.dispose());renderer.dispose();canvas.remove();}
   };
 }

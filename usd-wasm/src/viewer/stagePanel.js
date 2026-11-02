@@ -7,7 +7,7 @@ import { inspectStageAsync, setVariant, setPayloadLoaded, setPrimActive, setPrim
 
 function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text) el.textContent = text; return el; }
 /** Plain DOM panels can be hosted in Dockview or embedded without a framework. Native handles remain owned by Hydra. */
-export async function mountStagePanel({ handle, stage, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
+export async function mountStagePanel({ handle, stage, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onHover = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
   if (style) installViewerStyle();
   let disposed = false, editing = false, activeCamera = '', currentPurpose = 'default,render', frame, info, selectedPath = '';
   let collapsed = new Set(), expandedInstances = new Set(), showPrototypes = false;
@@ -250,6 +250,8 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
         } else {if(collapsed.has(prim.path))collapsed.delete(prim.path);else collapsed.add(prim.path);persist();drawTree(prim.path);}
       }
       button.onclick = event => { if (disclosure.contains(event.target) && hasChildren) toggleBranch(); else selectPrim(prim.path, {toggle: event.ctrlKey || event.metaKey, range: event.shiftKey}); };
+      button.onpointerenter = () => onHover(prim.path);
+      button.onpointerleave = () => onHover(null);
       button.onkeydown = event => {
         if (event.key === ' ' && (event.ctrlKey || event.metaKey)) {event.preventDefault(); selectPrim(prim.path, {toggle: true}); return;}
         if (event.shiftKey && ['ArrowDown','ArrowUp'].includes(event.key)) {
@@ -325,7 +327,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
     for (const group of [view, variants, payloads, layers]) group.replaceChildren(...(group === containers?.view ? [] : [group.firstElementChild]));
     authoredCameras = stageCameras(scene);
     dropdown(view, 'Camera', [['', 'Free'], ...authoredCameras.map(cam => [cam.userData.usdPath, cam.name || cam.userData.usdPath])], activeCamera, selectCamera); selectCamera(activeCamera);
-    dropdown(view, 'Pick', [['prim', 'Prims'], ['instance', 'Instances']], saved.pickMode || 'prim', value => {saved.pickMode = value; persist(); onPickModeChange(value);}); onPickModeChange(saved.pickMode || 'prim');
+    dropdown(view, 'Pick', [['prim', 'Prims'], ['instance', 'Instances'], ['subset', 'Mesh subsets']], saved.pickMode || 'prim', value => {saved.pickMode = value; persist(); onPickModeChange(value);}); onPickModeChange(saved.pickMode || 'prim');
     const purposes = [['default,render', 'Default + render'], ['default,render,guide','Default + render + guides'], ['default', 'Default'], ['render', 'Render'], ['proxy', 'Proxy'], ['guide', 'Guide'], ['default,render,proxy,guide', 'All']];
     const included = handle.includedPurposes || handle.driver?.GetIncludedPurposes?.(); let purpose = currentPurpose;
     if (included) try { purpose = (Array.isArray(included) ? included : Array.from({ length: included.size() }, (_, i) => included.get(i))).join(','); } finally { included.delete?.(); }

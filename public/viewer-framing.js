@@ -1,5 +1,5 @@
-import {Box3,Vector3,Matrix4} from 'three';
-import {pathContains} from './usd/viewer/selection.js';
+import {Vector3} from 'three';
+import {getSelectionBounds} from './usd/viewer/selectionBounds.js';
 
 /** Selection-or-all framing, with subd-modelling's projected fit and smooth glide. */
 export function createViewportFraming({viewport,getState,getSelection}) {
@@ -10,28 +10,7 @@ export function createViewportFraming({viewport,getState,getSelection}) {
     const request=epoch;
     let state=getState(); if(!state?.scene || !state.camera)return;
     const {scene}=state;scene.updateMatrixWorld(true);
-    async function bounds(items) {
-      const box=new Box3();
-      const objects=[];scene.traverseVisible(object=>{if((object.geometry||typeof object.getBoundingBox==='function')&&!object.userData.usdHelperFor&&!object.userData.usdExcludeFromBounds)objects.push(object);});
-      for(const object of objects){
-        let prim=object;while(prim && !prim.userData.usdPath)prim=prim.parent;
-        const name=prim?.userData.usdPath;
-        if(!name)continue;
-        if(!items.length){
-          const custom=object.getBoundingBox?.();
-          if(custom&&!custom.isEmpty())box.union(custom.clone().applyMatrix4(object.matrixWorld));
-          else box.expandByObject(object);
-          continue;
-        }
-        if(object.isInstancedMesh){
-          const indices=await state.handle?.resolveSelection?.(name,object.count,items);
-          if(indices){
-            object.geometry.computeBoundingBox();const matrix=new Matrix4();
-            for(const index of indices){object.getMatrixAt(index,matrix);matrix.premultiply(object.matrixWorld);box.union(object.geometry.boundingBox.clone().applyMatrix4(matrix));}
-          }
-        } else if(items.some(item=>!item.instances?.length && pathContains(item.path,name)))box.expandByObject(object);
-      }return box;
-    }
+    const bounds=items=>getSelectionBounds(state.handle,items,scene);
     const items=getSelection(),selection=Array.isArray(items)?items:items?[{path:items}]:[];
     let box=await bounds(selection);if(box.isEmpty())box=await bounds([]);
     if(box.isEmpty() || disposed || request!==epoch || getState()?.handle!==state.handle)return;

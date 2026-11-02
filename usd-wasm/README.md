@@ -871,6 +871,17 @@ on demand. The app rejects incomplete simulations, including unsupported PhysX
 SDF colliders, before starting. SDK callers can use `allowPartial: false` with
 `createUsdPhysics` for the same strict check; `getUsdPhysicsLimitations(snapshot)`
 reports known descriptor limitations before loading a physics runtime.
+Collision approximations come from the active composed USD variant: authored
+`convexHull` meshes are supported, whereas PhysX `sdf` meshes are not. A package
+can supply different approximations in different runtime variants; the viewer
+does not silently switch variants or replace SDFs with solid hulls.
+
+SimReady catalog access is not a claim of complete SimReady runtime support.
+Rendering and bounded joint interaction are available, but simulator-specific
+contacts, reduced-coordinate articulations, unsupported joint types and sensor
+execution still require the corresponding simulation runtime. MDL materials
+use web approximations rather than a native MDL renderer.
+
 `inspectUsdPhysics(handle)` lists scene, movable body and joint paths without
 extracting collider geometry. The legacy `createUsdPhysics({mode:'interaction'})`
 solver mode remains available to SDK callers supplying Rapier.
@@ -1020,6 +1031,11 @@ MuTracer's built-in conversion supports ordinary Three.js PBR surfaces, includin
 
 For controls, `mountRenderModePicker` from `/viewer` wraps the same render-mode controller. `mountStagePanel({ handle, stage, scene, camera, controls, setCamera })` adds cameras, purposes, variants, payloads, a searchable prim tree, attributes, relationships, metadata, layers and a timeline. `setCamera` receives the selected, fully composed Hydra camera, or the supplied free camera. Use `beforeEdit`/`afterEdit` to coordinate host integrations such as physics. Dispose the panel before disposing its handle. The default stylesheet loads relative to the installed module; pass `style: false` to provide your own styles. `inspectStage`, `inspectPrim`, `setVariant`, `setPayloadLoaded` and `stageCameras` from `/scene` are available without the UI.
 
+`getSelectionBounds(handle, selection)` from `/viewer/inspect` returns world
+bounds for prims, instances and mesh GeomSubsets at their current render poses.
+Subsets need no material binding; subdivided subsets use their control-cage
+extent. The app's **F** shortcut uses these bounds to frame the selection.
+
 
 Use `mountRenderModePicker({ layout: 'settings', ... })` for mode, exposure and tracer controls in a settings panel. `onSettingsChange` reports preferences for host persistence; the default compact picker remains available.
 
@@ -1042,6 +1058,12 @@ mixed prototypes, masking and nested instancers use the same mapping;
 `handle.resolveSelection(renderPath, count, items)` returns renderer indices for
 outlines/framing. Authored point IDs are exact strings. `panel.selectPrim(item)`
 accepts these identities as well as ordinary prim paths.
+
+The app outlines face GeomSubsets when selected or hovered in Stage. **View →
+Pick → Mesh subsets** enables subset picking in the viewport. Hydra's authored
+face IDs preserve the selection through triangulation and subdivision, including
+subsets without material bindings. `mountStagePanel({onHover})` reports the
+hovered prim path (or `null`) for host viewport integrations.
 
 `mountRepl` from `/viewer` mounts an inline JavaScript console with expression
 results, top-level await, errors and bounded command history. Supply
