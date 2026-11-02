@@ -105,3 +105,15 @@ test('area-light preparation can finish after disposal without requesting anothe
     await ready;
     assert.equal(requests, 0);
 });
+
+test('LDR dome texels decode sRGB before applying the linear light tint',async()=>{
+ const {DataTexture,SRGBColorSpace}=await import('three');
+ const {createDomeTexture}=await import('../../src/hydra/domeEnvironment.js');
+ const source=new DataTexture(new Uint8Array([128,64,255,255]),1,1);source.colorSpace=SRGBColorSpace;
+ const texture=createDomeTexture(source,[0.5,1,0]);
+ try {
+  assert.ok(Math.abs(texture.image.data[0]-0.10793)<0.0001);
+  assert.ok(Math.abs(texture.image.data[1]-0.05127)<0.0001);
+  assert.equal(texture.image.data[2],0);assert.deepEqual([...source.image.data],[128,64,255,255]);
+ } finally {source.dispose();texture.dispose();}
+});

@@ -14,7 +14,8 @@ test('image signatures override source-document suffixes and conflicting image e
 });
 
 test('packaged JPEG with a PSD suffix uses the image loader, correct blob MIME, and shared texture cache', async () => {
-  const bytes = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]);
+  const bytes = new Uint8Array(new SharedArrayBuffer(10));
+  bytes.set([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]);
   const delegate = new ThreeRenderDelegateInterface({ usdRoot: new Group(), USD: { ReadFile: () => bytes } });
   const registry = delegate.registry;
   const result = new Texture();

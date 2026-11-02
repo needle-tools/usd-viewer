@@ -1,4 +1,4 @@
-import { DataTexture, DataUtils, EquirectangularReflectionMapping, FloatType, HalfFloatType,
+import { Color, SRGBColorSpace, DataTexture, DataUtils, EquirectangularReflectionMapping, FloatType, HalfFloatType,
     LinearSRGBColorSpace, Quaternion, RGBAFormat } from 'three';
 
 const environments = new WeakMap();
@@ -42,7 +42,17 @@ export function removeDomeEnvironment(owner, scene) {
 export function createDomeTexture(source, color) {
     // Own the tinted texture; never alter resolver-cached image data shared by
     // materials or another handle. RGBE/EXR loaders supply linear texels.
-    const image = source?.image;
+    let image = source?.image;
+    let srgb = source?.colorSpace === SRGBColorSpace;
+    if (image && !image.data && typeof document !== 'undefined') {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width; canvas.height = image.height;
+        const context = canvas.getContext('2d', {willReadFrequently:true});
+        context.drawImage(image, 0, 0);
+        image = context.getImageData(0, 0, canvas.width, canvas.height);
+        srgb = true;
+    }
+    const texel = new Color();
     let data, width, height;
     if (image?.data) {
         width = image.width; height = image.height;
@@ -53,12 +63,17 @@ export function createDomeTexture(source, color) {
                 const value = image.data[pixel * channels + component];
                 const linear = source.type === HalfFloatType ? DataUtils.fromHalfFloat(value)
                     : image.data instanceof Uint8Array || image.data instanceof Uint8ClampedArray ? value / 255 : value;
-                data[pixel * 4 + component] = linear * color[component];
+                data[pixel * 4 + component] = linear;
             }
+            if (srgb) {
+                texel.setRGB(data[pixel*4], data[pixel*4+1], data[pixel*4+2], SRGBColorSpace);
+                data[pixel*4] = texel.r; data[pixel*4+1] = texel.g; data[pixel*4+2] = texel.b;
+            }
+            for (let component = 0; component < 3; component++) data[pixel*4+component] *= color[component];
             data[pixel * 4 + 3] = 1;
         }
     } else if (source) {
-        throw new Error('USD dome lighting requires a decoded HDR/EXR texture');
+        throw new Error('USD dome lighting requires a decoded image');
     } else {
         // WebGL PMREM needs at least a 16-pixel cube face (64-pixel equirectangular width).
         // Smaller constant maps lose specular illumination in its minimum LOD.

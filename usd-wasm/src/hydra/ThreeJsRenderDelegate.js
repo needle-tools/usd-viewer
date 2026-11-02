@@ -630,6 +630,9 @@ class TextureRegistry {
         return;
       }
 
+      // Native archive reads can alias the shared WASM heap. Blob and image
+      // decoders require ordinary, owned memory; copy before native work resumes.
+      if (!(_loadedFile.buffer instanceof ArrayBuffer)) _loadedFile = new Uint8Array(_loadedFile);
       filetype = textureFileType(extension, _loadedFile);
       const limit=this.config.maxTextureSize;
       if(filetype==='image/png' && limit>0 && typeof document!=='undefined' && typeof Worker!=='undefined' && _loadedFile.byteLength>=33){
