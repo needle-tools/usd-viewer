@@ -14,7 +14,7 @@ export function createSimreadyLibrary({fetchCatalog=()=>fetch('/data/nvidia-simr
       const response=await fetchCatalog();
       if (!response.ok) throw new Error(`SimReady catalog: HTTP ${response.status}`);
       const manifest=await response.json();
-      if (manifest.version!==1 || manifest.repository!=='nvidia/simready-assets' || !/^[a-f0-9]{40}$/.test(manifest.revision) || !manifest.assets?.length) throw new Error('Invalid SimReady catalog');
+      if (manifest.version!==1 || !/^[-\w.]+\/[-\w.]+$/.test(manifest.repository) || !/^[a-f0-9]{40}$/.test(manifest.revision) || !manifest.assets?.length) throw new Error('Invalid SimReady catalog');
       const base=`https://huggingface.co/datasets/${manifest.repository}`;
       const encodePath=value=>value.split('/').map(encodeURIComponent).join('/');
       const resolve=value=>`${base}/resolve/${manifest.revision}/${encodePath(value)}`;
@@ -22,7 +22,7 @@ export function createSimreadyLibrary({fetchCatalog=()=>fetch('/data/nvidia-simr
         const category=simreadyCategory(asset.package);
         return {
           id:asset.root,name:words(asset.package.split('/').at(-1)),category,
-          meta:`${category} · NVIDIA · ${manifest.license}`,
+          meta:`${category} · ${manifest.repository.split('/')[0]}${manifest.license?' · '+manifest.license:''}`,
           search:`${asset.package} ${asset.root}`,
           url:resolve(asset.root),thumbnail:resolve(asset.thumbnail),
           thumbnailLight:asset.lightThumbnail?resolve(asset.lightThumbnail):undefined,
@@ -38,28 +38,6 @@ export function createSimreadyLibrary({fetchCatalog=()=>fetch('/data/nvidia-simr
 }
 
 const resourceLoads=new Map();
-/** SimReady Central also indexes independent OEM datasets. Search those roots
- * directly; importing the whole catalog is unnecessary for a filename lookup. */
-export async function searchSimreadyLibrary(query,{signal,request=globalThis.fetch}={}) {
-  const tokens=String(query).toLowerCase().match(/[a-z0-9]+/g)||[];
-  if(tokens.join('').length<2)return [];
-  const insensitive=value=>[...value].map(letter=>/[a-z]/.test(letter)?`[${letter}${letter.toUpperCase()}]`:letter).join('');
-  const response=await request('https://nvidia-simready-central.hf.space/search_hybrid',{
-    method:'POST',signal,headers:{'Content-Type':'application/json','x-usdsearch-storage-backend':'usdsearch-dev'},
-    body:JSON.stringify({limit:100,filter_url_regexp:'.*'+tokens.map(insensitive).join('.*')+'.*',filter_by_properties:'simready_metadata_validation__profile=',file_extension_include:'usd*',return_usd_properties:false,return_usd_dimensions:false,return_images:false,return_metadata:false}),
-  });
-  if(!response.ok)throw new Error(`SimReady search: HTTP ${response.status}`);
-  const data=await response.json();
-  return(data.hits||[]).flatMap(hit=>{
-    const source=hit.source||{},value=source.base_key||source.url||source.path;
-    let url;try{url=new URL(value.replace(/^hf:\/\//,'https://'));}catch{return [];}
-    const match=url.hostname==='huggingface.co'&&url.pathname.match(/^\/datasets\/([^/]+\/[^/]+)\/(?:blob|resolve)\/([^/]+)\/(.+)$/);
-    if(!match)return [];
-    const [,repository,revision,path]=match,base=`https://huggingface.co/datasets/${repository}`;
-    const filename=path.split('/').pop(),folder=path.slice(0,-filename.length),urlValue=`${base}/resolve/${revision}/${path}`;
-    return[{name:words((source.name||filename).replace(/\.usd[acz]?$/i,'')),url:urlValue,search:`${repository} ${path}`,meta:`${repository.split('/')[0]} · SimReady`,source:`${base}/blob/${revision}/${path}`,thumbnail:`${base}/resolve/${revision}/${folder}.thumbs/256x256/${filename}.png`}];
-  });
-}
 export function simreadyLocation(url) {
   try {
     const value=new URL(url),match=value.pathname.match(/^\/datasets\/nvidia\/simready-assets\/resolve\/([a-f0-9]{40})\/([^/]+)\/simready_usd\/[^/]+\.usd[acz]?$/);

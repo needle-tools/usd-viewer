@@ -40,6 +40,16 @@ The generator paginates the complete file tree, verifies entry points and previe
 paths, and caches its inventory under `.cache/`. It does not download the asset
 library. Folder names group assets by their package-name prefixes.
 
+Additional collections appear as their own Examples folders. AGIBOT is included by
+default. To open a Hugging Face dataset or dataset folder, add
+`collection=https://huggingface.co/datasets/OWNER/DATASET` to the viewer URL
+(repeat `collection=` for multiple folders). For example:
+[AGIBOT collection](http://localhost:3003/?workspace=studio&collection=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fagibot-assets%2Fsimready-assets).
+`/tree/REVISION/FOLDER` URLs are supported as well. Entry points and previews come
+from the dataset's published inventory; USD dependencies use the normal resolver.
+Add built-in collections to `DEFAULT_COLLECTIONS` in
+[viewer-collections.js](public/viewer-collections.js).
+
 SimReady browsing defaults to 512 px texture previews where NVIDIA publishes
 those images. Maps without a published preview use their original URL and are
 resized after decoding. **View → Scene → Textures → Original** keeps full source

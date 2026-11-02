@@ -42,7 +42,8 @@ import {createDownloadProgress} from './viewer-download-progress.js';
 import {fetchAsset} from './usd/assetFetch.js';
 import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
-import { createSimreadyLibrary,searchSimreadyLibrary } from './viewer-simready.js';
+import { createSimreadyLibrary } from './viewer-simready.js';
+import {createCollectionLibrary,parseCollection,DEFAULT_COLLECTIONS} from './viewer-collections.js';
 import { setupViewerPhysics } from './viewer-physics.js';
 import { createViewerLighting } from './viewer-lighting.js';
 import { stageVariants, setVariant } from './usd/scene/index.js';
@@ -2752,35 +2753,7 @@ async function init() {
   const needleGroupTree = document.getElementById('needle-group-tree');
   const simreadyGroupTree = document.getElementById('simready-group-tree');
   const simreadyLibrary=createSimreadyLibrary();
-  let galleryBaseCards=[],searchTimer,searchAbort;
   const exampleSearch=document.getElementById('examples-search');
-  const searchText=value=>String(value).toLocaleLowerCase().replace(/[_\s-]+/g,' ');
-  function uniqueSearchCards(...lists){
-    const seen=new Set();return lists.flat().filter(card=>{
-      const value=card.url||Object.values(card.conversions||{})[0]||card.name;
-      const key=String(value).replace(/\/(?:resolve|blob)\/[^/]+\//,'/');
-      if(seen.has(key))return false;seen.add(key);return true;
-    });
-  }
-  async function searchExamples(){
-    clearTimeout(searchTimer);searchAbort?.abort();
-    exampleSearch.removeAttribute('aria-busy');
-    const query=exampleSearch.value.trim(),group=selectedSampleGroup;
-    if(!query){buildGalleryCards(galleryBaseCards);setGalleryStatus('');return;}
-    const controller=searchAbort=new AbortController();
-    exampleSearch.setAttribute('aria-busy','true');
-    try{
-      const local=await simreadyLibrary.load();if(controller.signal.aborted)return;
-      const tokens=searchText(query).split(' '),matches=card=>tokens.every(token=>searchText(`${card.name} ${card.search||''}`).includes(token));
-      const localMatches=local.cards.filter(matches);
-      buildGalleryCards(uniqueSearchCards(galleryBaseCards,localMatches));
-      const found=await searchSimreadyLibrary(query,{signal:controller.signal});
-      if(controller.signal.aborted||group!==selectedSampleGroup||query!==exampleSearch.value.trim())return;
-      buildGalleryCards(uniqueSearchCards(galleryBaseCards,localMatches,found));setGalleryStatus('');
-    }catch(error){if(error.name!=='AbortError'&&!controller.signal.aborted)setGalleryStatus('SimReady search unavailable.',true);}
-    finally{if(searchAbort===controller)exampleSearch.removeAttribute('aria-busy');}
-  }
-  exampleSearch.addEventListener('input',()=>{clearTimeout(searchTimer);searchAbort?.abort();searchTimer=setTimeout(()=>void searchExamples(),300);});
   let simreadyTreeRendered=false;
   const gallerySubtitle = document.getElementById('gallery-subtitle');
   const galleryGrid = document.getElementById('gallery-grid');
@@ -2792,7 +2765,7 @@ async function init() {
   let savedSamplePicker = {};
   try { savedSamplePicker = JSON.parse(localStorage.getItem(samplePickerStorageKey)) || {}; } catch {}
   const savedGroup = typeof savedSamplePicker.group === 'string' ? savedSamplePicker.group : '';
-  const validSavedGroup = /^(?:gltf|usd-wg|needle|simready)(?::.*)?$|^usd-assets$/.test(savedGroup);
+  const validSavedGroup = /^(?:gltf|usd-wg|needle|simready|collection)(?::.*)?$|^usd-assets$/.test(savedGroup);
   const samplePickerPositions = new Map(Object.entries(savedSamplePicker.positions || {}));
   const expandedSampleFolders = new Set(Array.isArray(savedSamplePicker.expandedFolders) ? savedSamplePicker.expandedFolders : []);
   let renderedSampleGroup = '';
@@ -3025,6 +2998,39 @@ async function init() {
       load: () => loadNeedleCards(''),
     }],
   ]);
+
+  const requestedCollections = new URLSearchParams(location.search).getAll('collection');
+  const collections = [...DEFAULT_COLLECTIONS, ...requestedCollections.map(url=>({url}))];
+  let requestedCollectionId;
+  for (const {url:value,title:collectionTitle} of collections) {
+    try {
+      const collection = parseCollection(value);
+      if (collection.repository === 'nvidia/simready-assets' && collection.revision === 'main' && !collection.folder) {
+        if (requestedCollections.includes(value)) requestedCollectionId = 'simready';
+        continue;
+      }
+      const id = 'collection:' + encodeURIComponent(collection.url);
+      if (requestedCollections.includes(value)) requestedCollectionId = id;
+      if (sampleGroups.has(id)) continue;
+      const library = createCollectionLibrary(collection.url);
+      const title = collectionTitle || collection.repository + (collection.folder ? '/' + collection.folder : '');
+      const button = createSampleTreeControl({groupId:id,name:title,count:'',hasChildren:false},0);
+      button.classList.add('sample-library-leaf');
+      button.dataset.library = id;
+      button.querySelector('small').textContent = '';
+      button.style.setProperty('--depth','1');
+      sampleGroupList.append(button);
+      sampleGroups.set(id,{title,load:async()=>{
+        try {
+          const catalog = await library.load();
+          button.querySelector('small').textContent = String(catalog.cards.length);
+          return catalog.cards;
+        } catch (error) { setGalleryStatus(error.message,true); return []; }
+      }});
+    } catch (error) { setGalleryStatus(error.message,true); }
+  }
+  if (requestedCollectionId) selectedSampleGroup = requestedCollectionId;
+  else if (selectedSampleGroup.startsWith('collection:') && !sampleGroups.has(selectedSampleGroup)) selectedSampleGroup = 'gltf';
 
   const needleCloudCards = [
     {
@@ -4092,7 +4098,6 @@ async function init() {
 
   async function selectSampleGroup(groupId) {
     if (renderedSampleGroup === groupId && galleryGrid?.children.length) return;
-    clearTimeout(searchTimer);searchAbort?.abort();
     // Corrupt or obsolete stored folder IDs should fall back to a usable library.
     try { decodeURIComponent(groupId); } catch { groupId = 'gltf'; }
     let group = sampleGroups.get(groupId);
@@ -4157,8 +4162,6 @@ async function init() {
     const cards = group.load ? await group.load() : group.cards || [];
     if (selectedSampleGroup !== groupId || galleryLoadVersion !== loadVersion) return;
     buildGalleryCards(cards);
-    galleryBaseCards=cards;
-    if(exampleSearch.value.trim())void searchExamples();
     if (!sourceLink.hidden) sourceLink.href=galleryGrid.querySelector('.gallery-card.active')?.dataset.source || 'https://huggingface.co/datasets/nvidia/simready-assets';
     renderedSampleGroup = groupId;
     galleryGrid.dataset.exampleGroup=groupId;

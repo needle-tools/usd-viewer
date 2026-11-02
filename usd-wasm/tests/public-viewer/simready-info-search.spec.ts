@@ -1,11 +1,11 @@
 import {expect,test} from '@playwright/test';
 import {openSamples,selectExampleFolder,stageReady} from './workbench-menus';
 
-test('filename search discovers OEM assets across folders and Info uses shared controls and authored metadata',async({page},info)=>{
+test('AGIBOT folder search and Info use shared controls and authored metadata',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'needle');
+ await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'collection:'+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));
  await page.getByRole('searchbox',{name:'Search examples'}).fill('g2_swiftpicker');
- const card=page.locator('.gallery-card:visible').filter({hasText:'G2 swiftpicker'});
+ const card=page.locator('.gallery-card:visible').filter({hasText:'g2 swiftpicker'});
  await expect(card).toHaveCount(1,{timeout:25000});await expect(card.locator('img')).toBeVisible();
  await expect.poll(()=>card.locator('img').evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(0);
  await page.screenshot({path:info.outputPath('swiftpicker-search.png')});
@@ -36,10 +36,9 @@ test('filename search discovers OEM assets across folders and Info uses shared c
  expect(errors).toEqual([]);
 });
 
-test('search merges the pinned library and Central without duplicating the same asset',async({page})=>{
+test('search filters the selected NVIDIA collection without external search dependencies',async({page})=>{
  await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'simready');
- const response=page.waitForResponse(response=>response.url().endsWith('/search_hybrid')&&response.status()===200);
- await page.getByRole('searchbox',{name:'Search examples'}).fill('fixture_cabinet_b01');await response;
+ await page.getByRole('searchbox',{name:'Search examples'}).fill('fixture_cabinet_b01');
  await expect(page.getByRole('searchbox',{name:'Search examples'})).not.toHaveAttribute('aria-busy','true');
  await expect(page.locator('.gallery-card:visible')).toHaveCount(1);
  const file=new URL((await page.locator('.gallery-card:visible').getAttribute('href'))!,page.url()).searchParams.get('file')!;
