@@ -52,6 +52,9 @@ function relative(path, root) {
  */
 export function createStageSourcePaths(rootIdentifier, {resolveUrl} = {}) {
   const aliases = new Map();
+  // MEMFS accepts both spellings; treat its root identity as absolute before
+  // anchoring dependencies, otherwise the mount directory can be repeated.
+  if (!scheme(rootIdentifier)) rootIdentifier = '/' + rootIdentifier.replace(/^\/+/, '');
   function original(path) {
     path = urlIdentity(path);
     const packaged = packageParts(path);
@@ -63,10 +66,16 @@ export function createStageSourcePaths(rootIdentifier, {resolveUrl} = {}) {
   // file with the same name must never become the same public identity.
   const container = packageParts(rootIdentifier)?.[0] || rootIdentifier;
   const root = original(container);
+  const localDirectory = !scheme(container) ? container.slice(0, container.lastIndexOf('/') + 1).replace(/^\/+/, '') : '';
   return {
     path(identifier) {
-      const resolved = scheme(identifier) || identifier.startsWith('/') ? identifier : anchor(identifier, container);
-      const path = relative(original(resolved), root);
+      if (aliases.has(identifier)) return identifier;
+      const mounted = localDirectory && identifier.startsWith(localDirectory) ? '/' + identifier : identifier;
+      const resolved = scheme(mounted) || mounted.startsWith('/') ? mounted : anchor(mounted, container);
+      const identity = original(resolved);
+      // Mounted files alongside a downloaded archive may have no HTTP mapping.
+      // Relativize them against the native container rather than exposing MEMFS.
+      const path = relative(identity, !scheme(identity) && scheme(root) ? container : root);
       aliases.set(path, resolved);
       return path;
     },

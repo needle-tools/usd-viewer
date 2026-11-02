@@ -206,7 +206,7 @@ async function createFile(opts) {
     // Put a simple USDZ file into the virtual file system so USD can access it
     // Create a file in the virtual file system
     opts.USD.FS_createDataFile(parent, filepath, new Uint8Array(arrayBuffer), true, true, true);
-    return parent + filepath;
+    return "/" + parent + filepath;
 }
 
 const activeLegacyLoads = new WeakSet();

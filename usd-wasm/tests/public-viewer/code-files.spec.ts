@@ -218,3 +218,19 @@ test('file and folder labels share fixed indentation and array expansion describ
   await expect(page.locator('.usd-code-view')).toContainText('#usda 1.0');
   await expect(page.getByRole('button',{name:'Expand arrays',exact:true})).toBeHidden();
 });
+
+test('remote USDZ sources expose public names and packaged image previews remain readable',async({page},info)=>{
+ const name='NormalsTextureBiasAndScale.usdz';
+ const url='https://raw.githubusercontent.com/usd-wg/assets/main/test_assets/NormalsTextureBiasAndScale/'+name;
+ await page.goto('/?workspace=studio&viewer=three&render=beauty&complexity=low&background=dark&file='+encodeURIComponent(url));
+ await stageReady(page);await openCode(page);await wide(page);
+ const files=await sources(page),root=files.find((file:any)=>file.role==='root');
+ expect(root.path).toBe(name);expect(root.label).toBe(name);
+ for(const file of files){expect(file.path).not.toMatch(/(?:^|\/)needle\/\d+|https:__|hdEmscripten-http/);expect(file.label).not.toMatch(/https:__|needle\/\d+/);}
+ await expect(page.locator('.usd-code-file-name').filter({hasText:'https:__'})).toHaveCount(0);
+ await choose(page,'[r_normal_map.png]');
+ const preview=page.locator('.usd-code-preview img');await expect(preview).toBeVisible();
+ await expect.poll(()=>preview.evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(0);
+ await expect(page.locator('.usd-code-file-name').filter({hasText:/^r_normal_map.png$/})).toHaveCount(1);
+ await page.screenshot({path:info.outputPath('package-source-paths.png')});
+});

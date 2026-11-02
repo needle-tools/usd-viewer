@@ -52,3 +52,17 @@ test('Sdf-normalized HTTP identifiers remain navigable URLs', () => {
   assert.equal(paths.resolve('../Textures/normal.png'), 'https:/example.test/Textures/normal.png');
   assert.equal(paths.resolve('extras/new.txt'), 'https://example.test/shot/extras/new.txt');
 });
+
+test('relative MEMFS identities do not duplicate the root mount or escape public round trips',()=>{
+  const native='needle/7/https:__assets.example_Archive.usdz';
+  const source='https://assets.example/Archive.usdz';
+  const paths=createStageSourcePaths(native,{resolveUrl:path=>path==='/'+native?source:''});
+  assert.equal(paths.path(native),'Archive.usdz');
+  assert.equal(paths.path('/'+native),'Archive.usdz');
+  const member=native+'[Textures/normal.png]';
+  const publicPath=paths.path(member);
+  assert.equal(publicPath,'Archive.usdz[Textures/normal.png]');
+  assert.equal(paths.path(publicPath),publicPath);
+  assert.equal(paths.resolve(publicPath),'/'+member);
+  assert.equal(paths.path('needle/7/Textures/normal.png'),'Textures/normal.png');
+});

@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Package source paths keep private MEMFS mounts out of the public inventory. Code uses public filenames and previews images inside USDZ archives.
+
 - Packaged texture loading with shared-memory WASM runtimes, including USDZ JPEG/PNG images; dome lights also accept ordinary image textures with correct sRGB decoding.
 - Empty session edit layers no longer clutter Studio's Code and Layers lists; authored session edits remain available.
 - Asset cache hits honor HTTP freshness rather than forcing revalidation. Large assets and revision-pinned collections from other publishers receive the same caching behavior.

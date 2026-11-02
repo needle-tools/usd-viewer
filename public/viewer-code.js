@@ -218,7 +218,10 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   function sourceKey(source) { return source.kind === 'example' ? 'example' : `${source.kind}:${canonical(source.path)}`; }
   function matches(a,b) { a = canonical(a); b = canonical(b); return a === b || a.endsWith('/' + b); }
-  const basename = path => path.split(/[?#]/)[0].split('/').pop();
+  // Package delimiters belong to the resolver identity, not the filename or
+  // extension. Keep that identity intact for reads and source navigation.
+  const displayPath = path => /\.usdz\[/i.test(path) ? path.replace(/(\.usdz)\[/gi, '$1/').replace(/\]+$/, '') : path;
+  const basename = path => displayPath(path).split(/[?#]/)[0].split('/').pop();
   const extension = path => basename(path).split('.').pop().toLowerCase();
   function contextKey() { return binding?.example?.title || canonical(sources.find(source => source.role === 'root')?.path || ''); }
   function saveFiles() {
@@ -239,11 +242,11 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       const path = layer.role === 'session' ? layer.displayName : paths ? paths.path(layer.identifier) : layer.identifier;
       const file = layer.role !== 'session' && files.find(file => paths ? file.path === path : matches(layer.identifier,file.path) || matches(layer.realPath,file.path));
       if (file) usedFiles.add(file);
-      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path:file?.path || path,label:layer.displayName || basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:signal=>exportLayer(layer.identifier,layer.role,signal)});
+      sources.push({kind:'layer',role:layer.role,identifier:layer.identifier,path:file?.path || path,label:layer.role === 'session' ? layer.displayName : basename(path),language:'usda',canOpenAsRoot:layer.role !== 'session',read:signal=>exportLayer(layer.identifier,layer.role,signal)});
     }
     for (const file of files) {
       if (usedFiles.has(file) || sources.some(source=>canonical(source.path) === canonical(file.path))) continue;
-      const layer = /\.(?:usd[acz]?|usdz)(?:[?#]|$)/i.test(file.path);
+      const layer = ['usd','usda','usdc','usdz'].includes(extension(file.path));
       sources.push({...file,kind:'file',role:'file',label:basename(file.path),language:layer?'usda':language(file.path),
         read:layer && binding?.usd ? signal=>exportLayer(file.identifier || file.url || file.path,undefined,signal) : signal=>file.read(signal)});
     }
@@ -296,7 +299,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     const query = filter.value.trim().toLocaleLowerCase(), files = sources.filter(source=>!query || `${source.path} ${source.label}`.toLocaleLowerCase().includes(query));
     const model = {dirs:new Map(),files:[]};
     for (const source of files) {
-      let parts = source.role === 'session' ? [source.label] : canonical(source.path).split('/'), node = model, path = '';
+      let parts = source.role === 'session' ? [source.label] : displayPath(canonical(source.path)).split('/'), node = model, path = '';
       const name = parts.pop();
       for (const part of parts) { path += (path ? '/' : '') + part; if (!node.dirs.has(part)) node.dirs.set(part,{dirs:new Map(),files:[],path}); node = node.dirs.get(part); }
       node.files.push({source,name});
