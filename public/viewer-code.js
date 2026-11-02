@@ -1,7 +1,7 @@
 import {LARGE_SOURCE, SOURCE_PAGE} from './viewer-code-data.js';
 import {createSourceReader} from './viewer-code-reader.js';
 import {viewerIcon} from './usd/viewer/icons.js';
-import {stageLayers} from './usd/scene/inspection.js';
+import {stageLayers,readStageLayers} from './usd/scene/inspection.js';
 import {readStageLayerBytes} from './usd/scene/sources.js';
 import {findArrays, arrayLayout, serializeArray} from './usd/viewer/arrayData.js';
 import {mountArrayEditor, attachArrayInput} from './usd/viewer/arrayEditor.js';
@@ -225,6 +225,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     if (contextKey()) scrolls[contextKey()] = tree.scrollTop;
     try { localStorage.setItem(stateKey + ':files',JSON.stringify({width:fileWidth,arrayWidth,followSelection,collapsed:[...collapsed],filter:filter.value,scrolls})); } catch {}
   }
+  let visibleSessionLayers = new Set(), layerRead = 0;
   function rebuildSources() {
     const files = binding?.getFiles?.({includeResources:visible()}) || [];
     sources = [];
@@ -234,6 +235,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     const paths = binding?.handle?.sourcePaths;
     const usedFiles = new Set();
     for (const layer of layers) {
+      if (layer.role === 'session' && !visibleSessionLayers.has(layer.identifier)) continue;
       const path = layer.role === 'session' ? layer.displayName : paths ? paths.path(layer.identifier) : layer.identifier;
       const file = layer.role !== 'session' && files.find(file => paths ? file.path === path : matches(layer.identifier,file.path) || matches(layer.realPath,file.path));
       if (file) usedFiles.add(file);
@@ -445,7 +447,22 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   async function render() {
     clearTimeout(timer); timer = undefined; firstNotice = 0;
     if (disposed) return;
-    if (dirty) { dirty = false; cache.clear(); rebuildSources(); }
+    if (dirty) {
+      dirty = false; cache.clear();
+      const bound = binding;
+      if (bound?.handle && bound?.usd) {
+        const revision = ++layerRead;
+        try {
+          const layers = await readStageLayers(bound.handle, bound.usd);
+          if (disposed || bound !== binding || revision !== layerRead) return;
+          visibleSessionLayers = new Set(layers.filter(layer=>layer.role==='session').map(layer=>layer.identifier));
+        } catch (error) {
+          if (disposed || bound !== binding || revision !== layerRead) return;
+          status.textContent = error.message;
+        }
+      }
+      rebuildSources();
+    }
     const source = sources.find(candidate=>sourceKey(candidate) === selected);
     empty.hidden = !!source; view.hidden = !source; preview.hidden = true; copy.disabled = true;
     readAbort?.abort(); readAbort = new AbortController();
@@ -572,7 +589,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   return {
     show(next) {
       if (disposed) return;
-      saveFiles(); unbind(); sourceHistory=[];historyIndex=-1;selected = ''; binding = next && (next.stage || next.example) ? next : null;
+      saveFiles(); unbind(); sourceHistory=[];historyIndex=-1;selected = ''; binding = next && (next.stage || next.example) ? next : null; visibleSessionLayers.clear();
       if(binding?.stage&&binding?.edit)editOwner=createArrayEdits({usd:binding.usd,stage:binding.stage,edit:binding.edit,isCurrent:()=>!disposed&&binding===next&&(!binding.isCurrent||binding.isCurrent())});
       if (binding?.stage) {
         try { listener = binding.stage.RegisterObjectsChanged(()=>invalidate()); }
@@ -580,7 +597,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       }
       text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); status.textContent = ''; cache.clear(); dirty = false;
       rebuildSources(); tree.scrollTop = scrolls[contextKey()] || 0; empty.hidden = !!sources.length; view.hidden = !sources.length; preview.hidden = true;
-      refreshTools();wasVisible=visible();if (wasVisible) void render();
+      dirty = true; refreshTools();wasVisible=visible();if (wasVisible) void render();
     },
     invalidate,refreshVisibility,follow,
     get sources() { return sources.map(({kind,role,label,language,path,canOpenAsRoot})=>({key:sourceKey({kind,path}),kind,role,identifier:path,label,language,path,canOpenAsRoot})); },

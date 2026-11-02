@@ -51,7 +51,7 @@ export interface StagePanel {
 export function renderStructuredValue(value: unknown, label: string): HTMLElement;
 /** The host retains ownership of its scene, renderer, controls and handle. */
 export function mountStagePanel(options: {
-  handle: NeedleThreeHydraHandle; stage: USDStage; scene: Object3D; camera: Camera;
+  handle: NeedleThreeHydraHandle; stage: USDStage; usd?: import("./bindings.js").USD; scene: Object3D; camera: Camera;
   controls: { enabled: boolean }; container?: HTMLElement; style?: boolean;
   containers?: { settings?: HTMLElement; view?: HTMLElement; stage: HTMLElement; properties: HTMLElement; layers: HTMLElement; timeline: HTMLElement; toolbar?: HTMLElement };
   stateKey?: string;

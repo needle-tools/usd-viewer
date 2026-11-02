@@ -54,3 +54,24 @@ export function stageVariants(stage) {
   } finally { prims.delete?.(); }
   return variants;
 }
+
+/** Visible layer inventory. Empty session layers are implementation-owned edit
+ * targets, not source files. Inspect only those layers, never flatten the stage. */
+export async function readStageLayers(handle, usd) {
+  return handle.readStage(async stage => {
+    const layers = stageLayers(stage), visible = [];
+    for (const layer of layers) {
+      if (layer.role !== 'session') { visible.push(layer); continue; }
+      const temporary = await stage.OpenLayerStage(layer.identifier);
+      if (!temporary) { visible.push(layer); continue; }
+      try {
+        const root = temporary.GetRootLayer();
+        try {
+          const text = await (root.ExportToStringAsync ? root.ExportToStringAsync() : root.ExportToString());
+          if (text.replace(/^#[^\n]*(?:\n|$)/gm, '').trim()) visible.push(layer);
+        } finally { root.delete?.(); }
+      } finally { usd.ReleaseStage(temporary); }
+    }
+    return visible;
+  });
+}

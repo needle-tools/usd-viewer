@@ -210,8 +210,9 @@ test('physics overview uses the native read boundary without extracting collider
   const buffer = encode('#usda 1.0\ndef PhysicsScene "Physics" {}\ndef Cube "Body" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]) {\n bool physics:rigidBodyEnabled = true\n}\ndef PhysicsPrismaticJoint "Joint" {}\n');
   const handle = await createThreeHydra({ USD, scene: new Group(), buffer, url: 'overview.usda' });
   let fullReads = 0;
-  const original = handle.driver.GetPhysicsSceneJson;
-  handle.driver.GetPhysicsSceneJson = function () { fullReads++; return original.call(this); };
+  const method = handle.driver.GetPhysicsSceneMetadataJson && handle.driver.GetPhysicsMeshBuffers ? 'GetPhysicsSceneMetadataJson' : 'GetPhysicsSceneJson';
+  const original = handle.driver[method];
+  handle.driver[method] = function () { fullReads++; return original.apply(this,arguments); };
   try {
     assert.deepEqual(await inspectUsdPhysics(handle), { scenes: [{ path: '/Physics' }], dynamic: true, bodies: ['/Body'], joints: ['/Joint'] });
     assert.equal(fullReads, 0);
@@ -251,4 +252,22 @@ test('authored layer export yields the event loop and preserves exact unsaved va
   assert.equal(new TextDecoder().decode(bytes),expected);
   assert.ok(!USD.FS_readdir('/tmp').some(name=>name.startsWith('needle-layer-source-')),'temporary exports are unlinked');
  }finally{await handle.dispose();}
+});
+
+test('layer presentation omits empty sessions and retains actual session edits',async()=>{
+  const {readStageLayers,stageLayers}=await import('../../src/scene/inspection.js');
+  const USD=await getUsdModule({print(){},printErr(){}});
+  const handle=await createThreeHydra({USD,scene:new Group(),files});
+  try {
+    await handle.ready();
+    const session=await handle.readStage(stage=>stageLayers(stage).find(layer=>layer.role==='session'));
+    assert.ok(session);
+    assert.equal((await readStageLayers(handle,USD)).some(layer=>layer.role==='session'),false);
+    await handle.editStage(async stage=>{
+      const temporary=await stage.OpenLayerStage(session.identifier);
+      try{temporary.DefinePrim('/World/SessionEdit','Xform').delete();}finally{USD.ReleaseStage(temporary);}
+    });
+    assert.ok((await readStageLayers(handle,USD)).some(layer=>layer.identifier===session.identifier));
+    assert.ok(await handle.readStage(stage=>{const prim=stage.GetPrimAtPath('/World/SessionEdit');try{return prim.IsValid();}finally{prim.delete();}}));
+  } finally {await handle.dispose();}
 });

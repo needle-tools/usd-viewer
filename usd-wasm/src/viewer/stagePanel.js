@@ -3,12 +3,12 @@ import { installViewerStyle } from './style.js';
 import { transportIcon, viewerIcon, primIcon } from './icons.js';
 import { createSelection } from './selection.js';
 import { mountPropertyInspector } from './propertyInspector.js';
-import { inspectStageAsync, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
+import { inspectStageAsync, readStageLayers, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
 
 function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text) el.textContent = text; return el; }
 let inspectorId = 0;
 /** Plain DOM panels can be hosted in Dockview or embedded without a framework. Native handles remain owned by Hydra. */
-export async function mountStagePanel({ handle, stage, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onHover = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
+export async function mountStagePanel({ handle, stage, usd, scene, camera, controls, container = document.body, containers, stateKey, beforeEdit = () => {}, afterEdit = () => {}, isCurrent = () => true, setCamera = () => {}, onVariantChange = () => {}, onPickModeChange = () => {}, onHover = () => {}, onSelect = () => {}, onOpen = () => {}, onStage = () => {}, style = true }) {
   if (style) installViewerStyle();
   let disposed = false, editing = false, activeCamera = '', currentPurpose = 'default,render', frame, info, selectedPath = '';
   let collapsed = new Set(), expandedInstances = new Set(), showPrototypes = false;
@@ -335,6 +335,7 @@ export async function mountStagePanel({ handle, stage, scene, camera, controls, 
       if (disposed || !isCurrent() || revision !== refreshRevision) return null;
       return inspectStageAsync(currentStage, time, {expandedInstances:search.value.trim()?null:[...expandedInstances],includePrototypes:showPrototypes});
     });
+    if (nextInfo && usd) nextInfo.layers = await readStageLayers(handle, usd);
     if (disposed || !isCurrent() || revision !== refreshRevision || !nextInfo) return;
     info = nextInfo; inspectedTime = time; primPaths = new Set(info.prims.map(prim => prim.path)); updateTimeline(info.time); onStage(info);
     if (!saved.initialized) { if (!saved.collapsed) for (const prim of info.prims) if (['Looks', 'Materials'].includes(prim.name)) collapsed.add(prim.path); saved.initialized = true; }

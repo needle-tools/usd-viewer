@@ -16,6 +16,7 @@ export function inspectStageFiles(stage: USDStage, usd: import('./bindings.js').
 export interface VariantInfo { path: string; setName: string; choices: string[]; selection: string; readOnly?: boolean; }
 export function hasAuthoredUsdLights(root?: Object3D | null, stage?: USDStage | null): boolean;
 export function stageVariants(stage: USDStage): VariantInfo[];
+export function readStageLayers(handle: import('./create.three.js').NeedleThreeHydraHandle, usd: import('./bindings.js').USD): Promise<ReturnType<typeof stageLayers>>;
 export function stageLayers(stage: USDStage): (ReturnType<USDStage['GetLayerStack']>[number] & {role:'root' | 'sublayer' | 'session' | 'layer'})[];
 export interface PrimInfo { path: string; name: string; type: string; specifier: string; active: boolean; visible: boolean; localVisible: boolean; hiddenBy: string; purpose: string; imageable: boolean; loaded: boolean; payload: boolean; reference: boolean; instance: boolean; instanceProxy: boolean; instanceable: boolean; prototype: boolean; inPrototype: boolean; defined: boolean; abstract: boolean; prototypePath: string; prototypePrimPath: string; prototypeInstanceCount: number; variants: VariantInfo[]; }
 export interface StageInfo { prims: PrimInfo[]; prototypes: {path:string;instanceCount:number}[]; time: { start: number; end: number } | null; variants: VariantInfo[]; payloads: PrimInfo[]; layers: ReturnType<USDStage['GetLayerStack']>; errors: string[]; }

@@ -1,5 +1,5 @@
 import {resolveHierarchyVisibility,primCompositionFlags,stagePrototypes,primInstancing} from './hierarchy.js';
-export { hasAuthoredUsdLights, stageLayers, stageVariants } from './inspection.js';
+export { hasAuthoredUsdLights, stageLayers, readStageLayers, stageVariants } from './inspection.js';
 export { readStageAsset, readStageLayer, readStageLayerBytes, stageResources } from './sources.js';
 export { createStageSourcePaths } from './source-paths.js';
 export {inspectStageSummary, inspectStageFiles} from './summary.js';

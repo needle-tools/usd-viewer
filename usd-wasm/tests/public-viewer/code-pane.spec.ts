@@ -64,11 +64,11 @@ test('Window > Code adds a pane without rearranging the layout and shows the exa
   await expect.poll(() => paneText(page)).toBe(exampleCode('hello-world'));
 });
 
-test('layers export through USD: root, session and referenced layers, including live edits', async ({ page }) => {
+test('layers export through USD with live edits and omit empty session layers', async ({ page }) => {
   await page.goto(exampleUrl('referenced-layer')); await stageReady(page);
   await openCode(page);
   const roles = await page.locator('.usd-code-source option').evaluateAll(options => (options as HTMLOptionElement[]).map(option => option.dataset.role));
-  expect(roles).toEqual(expect.arrayContaining(['example', 'root', 'session', 'layer']));
+  expect(roles).toEqual(expect.arrayContaining(['example', 'root', 'layer']));
 
   await selectLayer(page, 'root');
   const exported = await page.evaluate(() => (window as any).usdStage.GetRootLayer().ExportToString());
@@ -78,8 +78,7 @@ test('layers export through USD: root, session and referenced layers, including 
 
   await selectLayer(page, 'layer', 'reference-base.usda');
   await expect.poll(() => paneText(page)).toContain('def Xform "Mushroom"');
-  await selectLayer(page, 'session');
-  await expect.poll(() => paneText(page)).toMatch(/^#usda 1\.0/);
+  expect(roles).not.toContain('session');
 
   // Authored edits reach the shown layer once, after the edit, not per frame.
   await selectLayer(page, 'root');
