@@ -41,6 +41,14 @@ async function loadUsdModuleFromTempCopy(runtime = 'asyncify') {
     });
 }
 
+function assertPortableBuildInfo(info) {
+    assert.equal(info.toolchain.cxxCompiler, "em++");
+    assert.equal("prefix" in info.dependencies.materialX, false);
+    assert.equal("prefix" in info.dependencies.usdGltf, false);
+    assert.doesNotMatch(JSON.stringify(info), /(?:\/Users\/|\/home\/|[A-Za-z]:\\)/,
+        "public build metadata must not expose compiler or dependency checkout paths");
+}
+
 describe("OpenUSD wasm binding artifacts", () => {
     it("ships a JSPI artifact matching its build and optimization metadata", async () => {
         const [js, wasm, metadata, optimization] = await Promise.all([
@@ -51,6 +59,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         ]);
         assert.match(js, /globalThis\["NEEDLE:USD:GET:JSPI"\]/);
         assert.equal(metadata.toolchain.asyncRuntime, 'JSPI');
+        assertPortableBuildInfo(metadata);
         assert.equal(metadata.openusd.gitDirty, false);
         assert.equal(wasm.length, optimization.output.bytes);
         assert.equal(createHash('sha256').update(wasm).digest('hex'), optimization.output.sha256);
@@ -63,6 +72,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         const USD = await loadUsdModuleFromTempCopy('jspi');
         const expected = JSON.parse(await readFile(resolve(bindingsDir, 'openusd-build-info.jspi.json'), 'utf8'));
         assert.deepEqual(JSON.parse(USD.GetBuildInfoJson()), expected);
+        assertPortableBuildInfo(expected);
         assert.ok(Object.values(expected.modules).every(value => value === true), 'all existing native features remain linked');
         USD.FS_createDataFile('/', 'jspi-api.usda', new TextEncoder().encode('#usda 1.0\ndef Cube "Cube" {\n double size.timeSamples = { 0: 1, 2: 3 }\n}\n'), true, true, true);
         const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
@@ -72,6 +82,7 @@ describe("OpenUSD wasm binding artifacts", () => {
             const prim = driver.GetStage().GetPrimAtPath('/Cube'), size = prim.GetAttribute('size');
             try {
                 assert.equal(await size.Get(1), 2);
+                assert.deepEqual(await size.GetValuePage(1, 0, 1), {value: 2, total: null, offset: 0});
                 assert.equal(await size.GetNumTimeSamples(), 2);
                 assert.equal(await prim.SetActive(false), true);
                 assert.equal(prim.IsActive(), false);
@@ -186,6 +197,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         const buildInfo = JSON.parse(USD.GetBuildInfoJson());
         const shippedBuildInfo = JSON.parse(await readFile(buildInfoPath, "utf8"));
         assert.deepEqual(buildInfo, shippedBuildInfo);
+        assertPortableBuildInfo(buildInfo);
         assert.equal(buildInfo.openusd.version, "0.26.11");
         assert.equal(typeof buildInfo.openusd.gitDirty, "boolean");
         assert.equal(buildInfo.modules.usdImaging, true);

@@ -115,12 +115,14 @@ export type OpenUsdBuildInfo = {
             version: string,
         },
         materialX: {
-            prefix: string,
+            /** Present only in older runtime metadata. */
+            prefix?: string,
             gitSha: string,
             gitDirty: boolean,
         },
         usdGltf: {
-            prefix: string,
+            /** Present only in older runtime metadata. */
+            prefix?: string,
             gitSha: string,
             gitDirty: boolean,
             draco: boolean,
