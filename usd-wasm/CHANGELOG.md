@@ -6,40 +6,40 @@
 
 ### Added
 
-- OpenUSD 26.11.1 with Hydra imaging, MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched `usdGltf`, `usdDraco` and glTF Draco plugins. Both runtime artifacts reference OpenUSD commit `c34f374d042b1579855f63f142a6082cb95a0cfc`.
-- Optional JSPI runtime with native Wasm exceptions. Its Wasm is 45.6% smaller and its Brotli transfer 38.7% smaller than Asyncify. `getUsdModule({asyncRuntime:'auto'})` selects it where supported; Asyncify remains the default and compatibility fallback.
-- Narrow `/runtime`, `/three`, `/scene`, `/editing`, `/viewer/inspect`, `/viewer/repl` and `/viewer/download` entry points. Inspection can load without the REPL, export controls or archive tools.
-- WebGPU rendering for meshes, Gaussian particle fields and bounded media in the same scene. Optional `/renderers` provides Basic, Beauty with SSGI/AO/TAA, MuTracer and gkjohnson path tracing, configurable samples/bounces, OIDN denoising and scene-linear HDR bloom. Optional tracers load on selection.
-- Rational NURBS patches, evaluated Bézier/B-spline/NURBS curves, world-space points with varying widths, and uniform/adaptive OpenSubdiv surfaces with animated creases, corners and holes. Adaptive tessellation uses camera-independent OpenSubdiv Bfr limit surfaces with bounded triangle budgets.
-- UsdLux lights and cameras, authored shadow controls, dome environments including ordinary image textures, MaterialX geometry properties and nested graphs, MDL preview approximation, and optional bounded MaterialX/OpenVDB volume rendering.
-- Native instance and PointInstancer inspection/picking, prototype traversal, composed hierarchy state, multi-selection, property following and geometry-subset framing/outlines through native face identities.
-- Typed metadata and attribute reads/authoring, dictionary-key edits with explicit Sdf types, list-operation buckets, matrices/quaternions and ordered sublayers. Public reads retain owned values and exact 64-bit integer inputs are validated.
-- Serialized `handle.readStage()` and `handle.editStage()` boundaries; resolver-aware source reads and root-relative public paths preserving parent traversal and USDZ membership. Stage summaries inspect schemas, SimReady metadata, scene counts and file sizes without reading mesh arrays.
-- `/editing` typed array commands with sparse undo/redo, expected-value validation, conflict-safe rollback and document lifetime checks. Reusable array inspectors/editors support paged rows, vector/color columns, matrices and spreadsheet paste.
-- Asynchronous native USDZ packaging with dependency localization and unsaved edits; worker-based ZIP compression and a reusable split Download control with progress, cancellation-safe ownership and remembered format.
-- Optional `/kinematics` for bounded joint interaction, fixed attachments, mimic dependencies, independent frames and closed linkages. Interaction does not load a contact physics engine. Optional Rapier simulation loads on demand and reports unsupported configurations before starting.
-- Configurable scene helpers for curves, control points, points, lights, cameras and joint constraints, including helper picking and depth-tested overlays in optional path tracers.
+- OpenUSD 26.11.1 with Hydra imaging, MaterialX 1.39.5, OpenSubdiv 3.6.1 and Draco support for USD and glTF geometry.
+- An optional, smaller JSPI runtime. `getUsdModule({ asyncRuntime: 'auto' })` selects it where supported; Asyncify remains the default. Asynchronous JSPI binding calls must be awaited.
+- Separate `/runtime`, `/three`, `/scene`, `/editing`, `/viewer/inspect`, `/viewer/repl` and `/viewer/download` imports, so applications can load inspection, editing and export tools on demand.
+- WebGPU rendering for meshes, Gaussian splats and bounded volumes. Optional `/renderers` provides Basic, Beauty, MuTracer and gkjohnson modes, configurable path tracing, OIDN denoising and HDR bloom. Renderer requirements and content limitations are documented in the README.
+- Rational NURBS patches, evaluated Bézier/B-spline/NURBS curves, varying-width points, and uniform/adaptive subdivision with animated creases, corners and holes.
+- USD lights and cameras, authored shadow controls, image-based dome lighting, MaterialX geometry properties and nested graphs, MDL preview approximations, and optional MaterialX/OpenVDB volumes.
+- Native-instance and PointInstancer inspection and picking, prototype traversal, multi-selection, property navigation and mesh-subset framing.
+- Typed metadata and attribute reads and edits, including dictionary entries, list operations, matrices, quaternions and ordered sublayers. Exact 64-bit integer inputs accept bigint or decimal strings.
+- Serialized `handle.readStage()` and `handle.editStage()` operations, resolver-aware source reads and stage summaries for schemas, simulation metadata, scene counts and file sizes.
+- Typed array editing with undo/redo and conflict detection, plus paged tables for vectors, colors, matrices and spreadsheet paste.
+- Asynchronous USDZ export with unsaved edits and localized dependencies. The optional download control offers ZIP/USDZ, progress reporting and cancellation.
+- Optional `/kinematics` for joint interaction, fixed attachments, mimic dependencies and closed linkages. Rapier contact simulation loads separately and reports unsupported configurations.
+- Configurable curve, point, light, camera and joint helpers, with picking and depth-tested overlays.
 
 ### Fixed
 
-- Honor authored colors, UVs, tangents, smooth normals, MDL normal scale/bias and OmniGlass transmission. Preserve textures through material replacement, package reads and variant/payload resyncs.
-- Copy shared WASM texture bytes before browser image decoding. Preserve package image formats and support lazy EXR/HDR/TGA/KTX2 decoding, including compressed color maps and readable scalar/normal remapping.
-- Update textureless WebGPU instance groups and selection outlines during animation and mechanism interaction. Retain authored subset identities through triangulation and subdivision.
-- Preserve native instance material branches, inherited visibility, unloaded payload state and animation ranges in shared prototypes. Instance-proxy children remain inspectable and read-only.
-- Yield while opening remote stages and recomposing variants/payloads; deliver owned change notices and dependency progress on the JavaScript thread. Geometry and material constants can appear before textures finish.
-- Keep large assets responsive with bounded attribute pages, asynchronous layer exports, worker-backed source analysis, typed collider buffers, deferred hidden geometry and worker-built BVHs. Oversized PNGs resize with a scanline decoder before browser bitmap allocation.
-- Retain native stages through pending reads/exports; cancel stale texture loads, guard superseded updates, release workers and restore host resources on disposal. Deleting a root-layer wrapper no longer invalidates its stage.
-- Keep empty session layers out of embedded source lists while retaining authored session edits. Use public source filenames without exposing MEMFS mount identities.
-- Match host stylesheet ownership and repair strict Bundler/NodeNext declarations, optional entry points and browser-safe imports.
+- Preserve authored colors, UVs, tangents and smooth normals; correct MDL normal maps and glass transmission. Retain textures through material replacement and variant/payload changes.
+- Decode package images safely and load EXR, HDR, TGA and KTX2 support on demand. Compressed color maps and scalar/normal remapping can share the same source texture.
+- Update instances without textures and their selection outlines during animation and interaction. Preserve mesh-subset selections through triangulation and subdivision.
+- Preserve instance materials, inherited visibility, unloaded payload state and animation ranges in shared prototypes. Instance-proxy children remain inspectable and read-only.
+- Keep remote stage loading and recomposition responsive, report dependency transfers, and display geometry and material constants before textures finish.
+- Keep large-mesh inspection, source reads, image decoding and viewport picking responsive through paged reads and background work.
+- Retain stages while reads and exports are pending, cancel stale loads and release workers and host resources on disposal. Releasing a root-layer wrapper no longer invalidates its stage.
+- Omit empty session layers from source lists while preserving authored session edits, and expose source filenames consistently.
+- Correct stylesheet cleanup, TypeScript Bundler/NodeNext declarations and browser imports for optional entry points.
 
 ### Changed
 
-- Defer native MaterialX library initialization until a material requires it; PreviewSurface-only stages avoid the library parse without changing mixed-material or volume behavior.
-- Expose `onAssetFetchProgress`, `resolveTextureUrl` and `maxTextureSize` for progressive host loading. Defaults retain original textures; `waitForMaterials:true` requests texture completion. Catalog and display-resolution policy belong to the host application.
-- Preserve the legacy Three.js integration and existing package-root exports. Modern renderers require a compatible host Three.js/WebGPU setup; optional runtime and renderer dependencies remain host-owned.
-- Keep the MaterialX dependency pinned to the published `@needle-tools/materialx@1.8.0` artifact.
+- Load native MaterialX libraries when first needed; PreviewSurface-only stages skip their initialization.
+- Add `onAssetFetchProgress`, `resolveTextureUrl` and `maxTextureSize` for progressive loading. Defaults retain original textures; `waitForMaterials: true` waits for their completion.
+- Preserve package-root exports and legacy Three.js support. Modern renderers and optional features require the host dependencies documented in the README.
+- Update the MaterialX dependency to `@needle-tools/materialx@1.8.0`.
 
-Viewer application changes and fixture updates are recorded in the repository's [viewer changelog](../CHANGELOG.md).
+Viewer changes and fixture updates are recorded in the [viewer changelog](https://github.com/needle-tools/usd-viewer/blob/main/CHANGELOG.md).
 
 ## [1.1.2] - 2026-07-17
 ### Changed

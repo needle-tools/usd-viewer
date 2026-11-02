@@ -2,7 +2,7 @@
 """Author the curved-surface studio scenes: designed subdivision, spline and NURBS models.
 
 Run with native OpenUSD Python:
-  PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python /usr/local/bin/python3 \
+  python3 \
     usd-wasm/scripts/generate-curved-studio-fixtures.py
 
 Deterministic and rerunnable. It writes only the `studio-*` stages, their UV texture and

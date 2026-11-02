@@ -2,7 +2,7 @@
 """Compare small browser rig position samples to native UsdSkel.BakeSkinning.
 
 Run the browser selection first with --output .cache/coverage-validation/skinning-browser-results.json.
-Native: PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python /usr/local/bin/python3 scripts/validate-coverage-skinning.py
+Native: python3 scripts/validate-coverage-skinning.py
 """
 from pathlib import Path
 import json, math

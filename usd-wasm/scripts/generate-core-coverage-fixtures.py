@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the core coverage corpus with native OpenUSD Python bindings.
 
-Example: PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python python3 scripts/generate-core-coverage-fixtures.py
+Example: python3 scripts/generate-core-coverage-fixtures.py
 """
 from pathlib import Path
 import sys

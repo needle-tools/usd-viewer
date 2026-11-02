@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create advanced schema fixtures with OpenUSD Python bindings."""
 from pathlib import Path
-import sys
+import sys, os
 import json, math, shutil, wave, struct
 from pxr import Usd, UsdGeom, UsdSkel, UsdPhysics, UsdVol, UsdMedia, UsdRender, Sdf, Gf, Vt
 import skel_faces
@@ -174,10 +174,13 @@ def physics_motion_case(name,label,mode):
 for x in [('physics-dominoes','Domino chain','dominoes'),('physics-pendulum','Pendulum','pendulum')]: physics_motion_case(*x)
 
 # VDB data from the OpenUSD test suite; copied locally for standalone resolution.
-source=Path('/Users/herbst/git/OpenUSD/pxr/usdImaging/usdImagingGL/testenv/testUsdImagingGLVdbVolume')
+source_root=os.environ.get('OPENUSD_SOURCE')
+source=Path(source_root)/'pxr/usdImaging/usdImagingGL/testenv/testUsdImagingGLVdbVolume' if source_root else None
 for fn in ('densityAndHeat.vdb','smoke_000001.vdb','smoke_000002.vdb'):
     target=OUT/fn
-    if not target.exists(): shutil.copyfile(source/fn,target)
+    if not target.exists():
+        if source is None: raise FileNotFoundError(f'{target} is missing; set OPENUSD_SOURCE to an OpenUSD source checkout')
+        shutil.copyfile(source/fn,target)
 def volume_case(name,label,mode):
     if not wanted(name): return
     s,p=setup(name); vol=UsdVol.Volume.Define(s,'/World/Volume'); files=[]

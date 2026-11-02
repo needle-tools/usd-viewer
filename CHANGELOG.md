@@ -6,24 +6,24 @@
 
 ### Added
 
-- USD Viewer and USD Studio modes. Viewer presents the viewport and Examples menu; Studio adds a persistent, dockable workspace with Stage, Examples, Properties, Layers, Code, Timeline, Console and Simulation panels.
-- Basic, Beauty, MuTracer and gkjohnson render modes on the Three.js WebGPU surface, with remembered render/detail settings, tone mapping, bloom and optional denoising. New sessions start in Beauty with Adaptive detail.
-- View menus for display/render settings and helpers, standard menu navigation, light/dark themes, thin scrollbars, viewport selection/hover outlines, instance/subset picking, multi-selection and **F** to focus.
-- Responsive Examples folders with adjustable splitters, remembered selection/scroll/preview size, and selectable Beauty/native Storm cards. Include executable JavaScript API lessons, layered production examples, texture-format cases and animated subdivision, rigging, lighting and volume fixtures.
-- Complete NVIDIA SimReady browsing with revision-pinned entry points and published previews, a separate Hugging Face test set and AGIBOT collection. Additional dataset/folder URLs register their own folders through repeatable `collection=` parameters.
-- Code inspection for JavaScript and live USDA layers, an adjustable file sidebar, navigable references and hierarchy-linked declarations. Large arrays open in a resizable editing sidebar; the Console uses the same structured array tools.
-- Properties with collapsible sections, typed/schema inspection, instance/prototype links and property navigation. Asset Info includes source links, file/byte totals, authored SimReady profile/mass/dimensions, scene counts, moving parts, independent joints and schema arrays.
-- Lightweight mechanism interaction with green constraint helpers, authored limits and dependent parts. Contact simulation is separate, optional and validates unsupported configurations before starting.
-- Reusable Download split control for ZIP/USDZ with asynchronous export progress; exports include authored edits and original dependencies.
+- USD Viewer and USD Studio modes. Studio adds a dockable workspace with Stage, Examples, Properties, Layers, Code, Timeline, Console and Simulation panels.
+- Basic, Beauty, MuTracer and gkjohnson rendering, with tone mapping, bloom and optional denoising. New sessions start in Beauty with Adaptive detail.
+- Display and helper menus, light/dark themes, selection outlines, instance and mesh-subset picking, multi-selection and **F** to focus.
+- An Examples browser with remembered layout and selection, Beauty/native Storm previews, executable JavaScript lessons and new geometry, material, lighting and animation fixtures.
+- NVIDIA SimReady and AGIBOT asset collections with published previews and source attribution. Additional Hugging Face datasets and folders can be opened with repeatable `collection=` URL parameters.
+- Code inspection for JavaScript, live USDA layers, textures and other loaded files. References link to their sources, and large arrays open in an editable table. The Console shares the array tools.
+- Typed property inspection, instance/prototype navigation and Asset Info summaries for dependencies, scene contents and authored simulation metadata.
+- Mechanism interaction with joint limits and constraint helpers, plus optional contact simulation that reports unsupported configurations before starting.
+- ZIP and USDZ downloads with progress reporting, including authored edits and original asset dependencies.
 
 ### Fixed
 
-- Preserve user-owned panel arrangements and Timeline visibility when switching assets. Keep viewport frames, hierarchy rows, focus and scroll stable during stage updates and resizing.
-- Correct inherited visibility, native-instance branches, payload state, prototype animation detection, hover/selection outlines and animated subset framing.
-- Fix package texture decoding, image-based domes, normal-texture remapping, MDL preview materials, glass transmission, analytic normals and textureless instance updates.
-- Keep remote composition, large texture decoding, mesh inspection, layer source analysis and viewport picking responsive. Loading UI reports concurrent dependencies, known/unknown totals, percentages, speed and ETA.
-- Use public source paths throughout Code and Layers, preserving parent dependencies without leaking resolver mounts. Hide empty session edit layers and preview images inside packages.
-- Version UI modules and styles by content to avoid mixing old SDK imports with a newer page. Asset cache hits honor HTTP freshness; pinned collections and large assets remain cacheable without forced re-downloads.
-- Remove asset-specific texture replacements and noisy analytics terminal logging. Published lower-resolution textures are an explicit display option; original dependencies remain available for viewing and export.
+- Preserve panel arrangements, Timeline visibility, selection and scroll position when changing assets or updating the stage.
+- Correct inherited visibility, native instances, unloaded payload state, prototype animation and animated mesh-subset framing.
+- Correct package textures, image-based dome lighting, normal maps, MDL preview materials, glass transmission and animated instances without textures.
+- Keep remote composition, large textures, source inspection and viewport picking responsive. Download progress includes concurrent dependencies, byte totals, transfer speed and estimated time remaining.
+- Show source filenames consistently in Code and Layers, and omit empty session layers and package preview images.
+- Prevent cached UI and SDK modules from loading incompatible versions together. Reuse cached assets according to their HTTP freshness and pinned dataset revisions.
+- Offer published lower-resolution textures as a display option while preserving original dependencies for viewing and export.
 
-The application remains a private deployment package. The reusable npm SDK has its own [changelog](usd-wasm/CHANGELOG.md).
+The reusable npm SDK has a separate [changelog](usd-wasm/CHANGELOG.md).

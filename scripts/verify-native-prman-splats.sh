@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OPENUSD_PREFIX="${OPENUSD_PREFIX:-/Users/herbst/OpenUSD-26.05-native-x86_64}"
+: "${OPENUSD_PREFIX:?Set OPENUSD_PREFIX to an x86_64 native OpenUSD installation}"
 RMANTREE="${RMANTREE:-/Applications/Pixar/RenderManProServer-27.2}"
 PYTHON_BIN="${PYTHON_BIN:-/usr/local/bin/python3}"
 FIXTURE="${FIXTURE:-${ROOT_DIR}/usd-wasm/tests/data/gaussian-splats/chamaeleon.usdc}"

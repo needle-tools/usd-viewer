@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Package the existing MaterialX procedural volume and nodegraph examples as USD stages."""
 from pathlib import Path
-import argparse, importlib.util, json, re, shutil
+import argparse, importlib.util, json, os, re, shutil
 import xml.etree.ElementTree as ET
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdShade
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'tests/fixtures/coverage/materialx'
-SOURCE=Path('/Users/herbst/git/needle-engine-dev/modules/needle-engine/modules/needle-engine-materialx/tests/three/examples/pr-repros')
+SOURCE=Path(os.environ['MATERIALX_SOURCE'])/'tests/three/examples/pr-repros' if os.environ.get('MATERIALX_SOURCE') else None
 spec=importlib.util.spec_from_file_location('shading_fixtures',ROOT/'scripts/generate-shading-coverage-fixtures.py')
 shading=importlib.util.module_from_spec(spec);spec.loader.exec_module(shading)
 CASES=[
@@ -81,7 +81,9 @@ def main():
  OUT.mkdir(parents=True,exist_ok=True);(OUT/'graphs').mkdir(exist_ok=True)
  manifest=[];results=[]
  for name,label,kind,features in CASES:
-  source=SOURCE/kind/(name+'.mtlx');graph=OUT/'graphs'/(name+'.mtlx')
+  if SOURCE is None and not args.validate_only: raise ValueError('Set MATERIALX_SOURCE to the needle-engine-materialx source checkout')
+  source=SOURCE/kind/(name+'.mtlx') if SOURCE is not None else None
+  graph=OUT/'graphs'/(name+'.mtlx')
   if not args.validate_only:
    text=source.read_text();text=re.sub(r'<!--.*?-->','',text,flags=re.S);graph.write_text(text)
   deps=[]

@@ -1,21 +1,21 @@
 # Native MDL references
 
 The browser approximates known MDL inputs. Use the native tools below to render
-the original MDL definitions. `felix-win` renders complete USD scenes with RTX;
-the local Mac SDK renders materials on its own sphere, without loading USD geometry.
-Storm does not evaluate MDL in our native OpenUSD installation.
+the original MDL definitions. An NVIDIA RTX renderer can render complete USD scenes;
+the macOS SDK renders material probes on a sphere. Storm does not evaluate MDL.
 
 The six MDL gallery fixtures include unmodified NVIDIA material definitions,
 their imports, BSD licenses and checksums in
 [`mdl-sources.json`](../usd-wasm/tests/fixtures/coverage/lighting-mdl/mdl-sources.json).
 Regeneration verifies these files rather than overwriting them.
 
-## Prepare the inputs on this Mac
+## Prepare the inputs
 
-From the repository root, using Python matching the installed native OpenUSD:
+From the repository root, use Python with native OpenUSD bindings available
+(`python3 -c "from pxr import Usd"` should succeed):
 
 ```sh
-PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python /usr/local/bin/python3 \
+python3 \
   usd-wasm/scripts/prepare-mdl-references.py
 ```
 
@@ -26,49 +26,46 @@ SDK material wrappers and input checksums. The overlays use `/World/Camera`,
 Use `--width`, `--height`, `--samples` or `--out` to change those values.
 The source fixtures remain unchanged.
 
-## Complete USD scenes on felix-win
+## Complete USD scenes on an RTX host
 
-The working installation is in `D:\usd-mdl-reference-20261028`, with
-`ovrtx 0.5.1.385782`, `ovstage 0.2.1.385922` and its `ovrtx-venv` Python.
-The renderer runs on the RTX 3060 Ti. These are the verified installed versions,
-not a request to upgrade them.
+The reference captures use `ovrtx 0.5.1.385782` and `ovstage 0.2.1.385922`
+in a Windows Python virtual environment. The commands below use `renderer-host`
+as an SSH alias and `D:\mdl-reference` as a workspace; replace these with your host
+and directory. Install the renderer packages in `ovrtx-venv` before running them.
 
 ```sh
 scp -r usd-wasm/.cache/mdl-reference/gallery \
-  'felix-win:D:/usd-mdl-reference-20261028/'
+  'renderer-host:D:/mdl-reference/'
 scp usd-wasm/scripts/render-mdl-rtx.py usd-wasm/scripts/render-mdl-rtx-batch.ps1 \
-  usd-wasm/scripts/ovstage_mdl_audit.py 'felix-win:D:/usd-mdl-reference-20261028/'
-ssh felix-win 'powershell -NoProfile -File D:\usd-mdl-reference-20261028\render-mdl-rtx-batch.ps1 -Bundle D:\usd-mdl-reference-20261028\gallery -Out D:\usd-mdl-reference-20261028\gallery-results -Python D:\usd-mdl-reference-20261028\ovrtx-venv\Scripts\python.exe'
-scp -r 'felix-win:D:/usd-mdl-reference-20261028/gallery-results' \
+  usd-wasm/scripts/ovstage_mdl_audit.py 'renderer-host:D:/mdl-reference/'
+ssh renderer-host 'powershell -NoProfile -File D:\mdl-reference\render-mdl-rtx-batch.ps1 -Bundle D:\mdl-reference\gallery -Out D:\mdl-reference\gallery-results -Python D:\mdl-reference\ovrtx-venv\Scripts\python.exe'
+scp -r 'renderer-host:D:/mdl-reference/gallery-results' \
   usd-wasm/.cache/mdl-reference/
-PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python /usr/local/bin/python3 usd-wasm/scripts/collect-mdl-references.py \
+python3 usd-wasm/scripts/collect-mdl-references.py \
   --captures usd-wasm/.cache/mdl-reference/gallery-results
 ```
 
 For one scene, run the worker directly through SSH:
 
 ```sh
-ssh felix-win 'D:\usd-mdl-reference-20261028\ovrtx-venv\Scripts\python.exe D:\usd-mdl-reference-20261028\render-mdl-rtx.py --stage D:\usd-mdl-reference-20261028\gallery\mdl-normal-texture-rtx.usda --out D:\usd-mdl-reference-20261028\gallery-results\mdl-normal-texture --verify-inputs D:\usd-mdl-reference-20261028\gallery\inputs.json'
+ssh renderer-host 'D:\mdl-reference\ovrtx-venv\Scripts\python.exe D:\mdl-reference\render-mdl-rtx.py --stage D:\mdl-reference\gallery\mdl-normal-texture-rtx.usda --out D:\mdl-reference\gallery-results\mdl-normal-texture --verify-inputs D:\mdl-reference\gallery\inputs.json'
 ```
 
 Each capture retains the linear HDR output, primary depth, native log and hashes.
 `render.png` applies **Needle AgX**, exposure 1, sRGB and the viewer's light
 backdrop; `render-rtx-ldr.png` retains the renderer's separate LDR output.
 The worker fails on input checksum mismatches, invalid HDR or shader/runtime
-errors. It registers USD schemas and the wheel's DLL directories before loading
-the scene. The standalone worker explicitly destroys the renderer and exits
-after flushing files to avoid the pinned SDK's interpreter-teardown hang.
+errors and saves the logs alongside each capture.
 
-## Material probes on this Mac
+## Material probes on macOS
 
-The installed SDK is
-`usd-wasm/.cache/mdl-reference/MDL-SDK-2026.0.2-391700.2276-macosx-aarch64`.
-Its `df_native-local-jit` copy was separately signed during the earlier setup
-and is ready to use. No new signing or security change is needed:
+Set `MDL_SDK_ROOT` to an extracted NVIDIA MDL SDK directory. The material probes
+were captured with SDK `2026.0.2-391700.2276`. On macOS, prepare the signed example
+copy described below, then run:
 
 ```sh
 python3 usd-wasm/scripts/render-mdl-sdk.py \
-  --sdk usd-wasm/.cache/mdl-reference/MDL-SDK-2026.0.2-391700.2276-macosx-aarch64 \
+  --sdk "$MDL_SDK_ROOT" \
   --bundle usd-wasm/.cache/mdl-reference/gallery \
   --out usd-wasm/.cache/mdl-reference/gallery-macos
 ```
@@ -79,12 +76,30 @@ logs, commands, image hashes and exit codes. The SDK's sphere and environment
 differ from the USD scene; use these images to check material compilation and
 evaluation, and use the Windows scene captures for the fixture's appearance.
 
-If setting up a new SDK copy, the original NVIDIA macOS example needs JIT and
-library-loading entitlements. The previously used, scoped setup command is
-`bash /Users/herbst/.codex/reports/usd-viewer-2026-10-28/test-macos-mdl-jit.sh`.
-That one-time script requires `df_native-local-jit` not to exist; do not rerun it
-over the working copy. It copies and signs only that executable. The original
-SDK executable and global macOS settings are unchanged.
+The macOS example needs permission to execute JIT code and load the SDK libraries.
+Sign a separate copy of the example executable once. These commands leave the
+original executable and system security settings unchanged:
+
+```sh
+(
+set -eu
+example_dir="$MDL_SDK_ROOT/examples/mdl_sdk/df_native"
+test ! -e "$example_dir/df_native-local-jit"
+cp -p "$example_dir/df_native" "$example_dir/df_native-local-jit"
+cat > /tmp/mdl-jit-entitlements.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict></plist>
+PLIST
+codesign --force --sign - --options runtime --timestamp=none \
+  --entitlements /tmp/mdl-jit-entitlements.plist "$example_dir/df_native-local-jit"
+codesign --verify --strict "$example_dir/df_native-local-jit"
+)
+```
 
 ## References
 

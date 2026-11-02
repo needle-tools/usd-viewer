@@ -21,7 +21,7 @@ animation, baked from eased keys so playback looks the same in every viewer. Eve
 animated attribute's default equals its frame-1 sample.
 
 Run with native OpenUSD Python:
-  PYTHONPATH=/Users/herbst/OpenUSD-26.05-native/lib/python /usr/local/bin/python3 \\
+  python3 \\
     usd-wasm/scripts/generate-animated-subdivision-fixture.py
 
 Re-running writes only this stage and its manifest entry; the studio fixtures are untouched.

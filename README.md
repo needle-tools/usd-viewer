@@ -5,10 +5,10 @@ A web viewer for Universal Scene Description files, created and maintained by
 
 [Open USD Viewer](https://usd-viewer.needle.tools/)
 
-The project has two main pieces:
+The viewer combines:
 
 - WebAssembly bindings built from modern [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD).
-- A Needle-maintained three.js Hydra render delegate that turns Hydra scene updates into WebGL/WebGPU renderable three.js objects.
+- Needle's three.js Hydra render delegate for WebGL and WebGPU rendering.
 
 For commercial use of the source code, please contact [hi@needle.tools](mailto:hi@needle.tools).
 
@@ -17,7 +17,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load USD, USDA, USDC, USDZ, and glTF/GLB assets in the browser.
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
-- Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the modern OpenUSD 26.11.1 wasm bundle.
+- Load MaterialX materials and Draco-compressed geometry with OpenUSD 26.11.1.
 - Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty, MuTracer or gkjohnson path tracing; optional tracers load when selected.
 - Evaluate uniform or adaptive OpenSubdiv surfaces, including animated creases, corners and holes.
 - Inspect and follow individual properties, pick native/point instances, select multiple objects and run the embedded JavaScript REPL.
@@ -36,15 +36,12 @@ when opened; USD files and their relative dependencies stream from Hugging Face
 when selected. Both asset and preview URLs use the dataset revision recorded in
 [the catalog](public/data/nvidia-simready.json). Refresh it with
 `npm run prepare:simready-manifest` (or pass a full dataset commit SHA after `--`).
-The generator paginates the complete file tree, verifies entry points and preview
-paths, and caches its inventory under `.cache/`. It does not download the asset
-library. Folder names group assets by their package-name prefixes.
 
 Additional collections appear as their own Examples folders. AGIBOT is included by
 default. To open a Hugging Face dataset or dataset folder, add
 `collection=https://huggingface.co/datasets/OWNER/DATASET` to the viewer URL
 (repeat `collection=` for multiple folders). For example:
-[AGIBOT collection](http://localhost:3003/?workspace=studio&collection=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fagibot-assets%2Fsimready-assets).
+[AGIBOT collection](https://usd-viewer.needle.tools/?workspace=studio&collection=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fagibot-assets%2Fsimready-assets).
 `/tree/REVISION/FOLDER` URLs are supported as well. Entry points and previews come
 from the dataset's published inventory; USD dependencies use the normal resolver.
 Add built-in collections to `DEFAULT_COLLECTIONS` in
@@ -55,31 +52,17 @@ those images. Maps without a published preview use their original URL and are
 resized after decoding. **View → Scene → Textures → Original** keeps full source
 resolution; the menu shows the asset's original texture download size. Geometry
 and authored material values appear before textures finish, and download activity
-remains visible in the viewport. The generated resource indexes also let the app
-warm bounded geometry and composition layers while OpenUSD initializes.
-The expandable download list shows per-file and combined byte totals,
+remains visible in the viewport. The expandable download list shows per-file and
+combined byte totals,
 percentages, transfer speed and estimated time remaining. Unknown file sizes
 stay indeterminate until reported; totals cover dependencies discovered so far.
-Pinned SimReady URLs are cached without revalidation; cached reloads reuse the
-files across native worker threads. Exports retain the
-original USD dependencies, independently of this display setting.
+Exports retain the original USD dependencies, independently of this display setting.
 
 App and SDK modules use content-versioned URLs so reloads do not mix cached
 inspection code with a newer UI. `npm run prepare:public` generates
 `public/viewer-module-versions.json` for static uploads; include that file with
 the rest of `public/`. The local server generates the same manifest from the
 current source files.
-
-Both native runtimes are built from OpenUSD commit
-`c34f374d042b1579855f63f142a6082cb95a0cfc` on the local
-`git/openusd` branch `wasm/openusd-26.11.1`. The bridge yields the browser thread
-while opening stages and changing remote variants/payloads, forwards worker
-transfer progress, and delivers change notifications on the JavaScript thread.
-It also exposes typed reads and authoring for metadata and attributes, reference-counted
-root-layer handles, lazy instance/prototype inspection, and animation ranges independent
-of hierarchy expansion, plus authored face identities for subset picking and
-outlines through triangulation and subdivision.
-Only the affected bridge files were recompiled; the OpenUSD libraries were reused.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
 COOP/COEP headers:
@@ -120,25 +103,19 @@ package. Code and Console load when opened. Embedded viewers can use `/runtime`,
 
 ## Examples and render settings
 
-Use **Examples** to browse local Needle fixtures, the 14 NVIDIA SimReady assets,
-USD Working Group assets and glTF samples. Needle includes 192 coverage fixtures
-and 63 executable JavaScript lessons. The Examples footer switches between
-Beauty previews and the retained native usdview/Storm captures, and remembers
-your choice. Beauty captures use two camera fits in a 4:3 viewport; faint media,
-splats and the unmaterialed triangle use a dark background for contrast.
+Use **Examples** to browse Needle fixtures and executable JavaScript lessons,
+NVIDIA SimReady and AGIBOT collections, USD Working Group assets and glTF samples.
+The Examples footer switches between Beauty previews and native usdview/Storm
+captures, and remembers your choice.
 The animation collection includes a rolling cube, heartbeat, lighthouse day/night
 cycle, orrery, waving flag, bellows and chasing beacon lights. Continuous loops
 return to their first pose, including the referenced and value-clip examples.
 **Subdivision → Pip and Pop** demonstrates animated hole faces and crease/corner
 sharpness in a five-second loop.
 
-Regenerate Beauty previews against the running app with
-`node usd-wasm/scripts/render-beauty-thumbnails.mjs --base-url http://localhost:3003 --include-remote`.
-Use `--only <id>` or `--group <category>` for a focused capture. Native cards still
-use `usd-wasm/scripts/render-coverage-thumbnails.py` and
-`usd-wasm/scripts/render-api-thumbnails.py` with local OpenUSD/Storm. Beauty
-capture metadata and image hashes live in
-`usd-wasm/tests/fixtures/thumbnails/beauty/index.json`.
+Generate fixture reference captures with local OpenUSD/Storm using
+`usd-wasm/scripts/render-coverage-thumbnails.py` and
+`usd-wasm/scripts/render-api-thumbnails.py`.
 
 **Window → Code** shows the current JavaScript lesson or USDA for any composed
 layer. Layer text comes from the USD API, includes unsaved authored edits and
@@ -191,10 +168,9 @@ Adaptive uses camera-independent curvature rates with a bounded triangle budget.
 MDL materials use documented authored-input approximations. Path-tracer, volume,
 physics and NURBS limitations are described in the [SDK README](usd-wasm/README.md).
 
-Native MDL reference rendering is available through SSH on `felix-win` for
-complete USD scenes, and with the installed NVIDIA MDL SDK on this Mac for
-material probes. Commands, input preparation and reference images are documented
-in [Native MDL references](docs/mdl-reference-rendering.md).
+For native MDL comparisons, render complete USD scenes with an NVIDIA RTX renderer or material
+probes with the NVIDIA MDL SDK. See [Native MDL references](docs/mdl-reference-rendering.md)
+for setup and commands; configure the renderer host and SDK paths for your machine.
 
 ## Viewer URL Options
 
@@ -217,14 +193,8 @@ Supported values include:
 Example:
 
 ```txt
-http://localhost:3003/?viewer=needle&environment=fasthdr-studio&file=/test-fixtures/usd-concepts/camera_light.usda
+https://usd-viewer.needle.tools/?viewer=needle&environment=fasthdr-studio&file=/test-fixtures/usd-concepts/camera_light.usda
 ```
-
-## OpenUSD Wasm Runtime
-
-The checked-in OpenUSD wasm runtime is maintained by Needle. Internal rebuild
-and deployment instructions live in the Needle team wiki, not in this public
-source repository.
 
 ## Tests
 
@@ -239,11 +209,8 @@ npm run test:viewer-visual
 
 ## Release checks
 
-The private viewer and `@needle-tools/usd` candidate are version **1.2.0**.
-[Viewer changes](CHANGELOG.md) and [SDK changes](usd-wasm/CHANGELOG.md) are recorded separately.
-The SDK and viewer pin the already published `@needle-tools/materialx@1.8.0`
-(currently tagged `next`). That exact artifact is suitable for promotion to
-`latest`; republishing version 1.8.0 is unnecessary.
+[Viewer changes](CHANGELOG.md) and [SDK changes](usd-wasm/CHANGELOG.md) are recorded
+separately. Both use `@needle-tools/materialx@1.8.0`.
 
 Run viewer checks from the repository root, then the package's exact-tarball consumer tests:
 
@@ -260,8 +227,7 @@ and legacy Three.js consumers, builds them for production and exercises the
 modern viewer/renderers in Chrome. Install Chrome for Playwright first with
 `npx playwright install chrome`. It preserves the tarball, hashes, logs and
 captures under `usd-wasm/.cache/package-validation/`. These commands do not
-publish the package. The release workflow performs these checks before its
-existing publication steps.
+publish the package. The release workflow runs these checks before publication.
 
 `test:three-matrix` runs a representative compatibility set. To regenerate the
 full cross-version renderer status matrix, run:
