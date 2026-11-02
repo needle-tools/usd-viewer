@@ -24,6 +24,13 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Arrange Stage, Examples, Properties, Layers, Code, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
 - Package/export authored stages as USDZ through the OpenUSD wasm API.
 
+The viewer uses **OpenUSD 26.11.1**, **MaterialX 1.39.5** and **OpenSubdiv 3.6.1**.
+Its native build includes Adobe **`usdGltf`**, **`usdDraco`** and **`usdGltfDraco`**,
+including glTF/GLB import and Draco-compressed geometry. Browser material rendering
+and authoring use **`@needle-tools/materialx` 1.8.1**. See the
+[SDK's runtime and plugin inventory](usd-wasm/README.md#runtime-and-plugins)
+for build details and source metadata.
+
 The header switches between **USD Viewer**, with a full viewport and an Examples
 menu, and **USD Studio**, with the dockable inspection and authoring workspace.
 Switching keeps the loaded scene and Studio layout. The choice is remembered;
@@ -211,7 +218,7 @@ npm run test:viewer-visual
 ## Release checks
 
 [Viewer changes](CHANGELOG.md) and [SDK changes](usd-wasm/CHANGELOG.md) are recorded
-separately. Both use `@needle-tools/materialx@1.8.0`.
+separately. Both use `@needle-tools/materialx@1.8.1`.
 
 Run viewer checks from the repository root, then the package's exact-tarball consumer tests:
 
@@ -228,7 +235,10 @@ and legacy Three.js consumers, builds them for production and exercises the
 modern viewer/renderers in Chrome. Install Chrome for Playwright first with
 `npx playwright install chrome`. It preserves the tarball, hashes, logs and
 captures under `usd-wasm/.cache/package-validation/`. These commands do not
-publish the package. The release workflow runs these checks before publication.
+publish the package. Set `USD_PACKAGE_THREE` and `USD_PACKAGE_MATERIALX` to
+local tarball specs (`file:/path/package.tgz`) to validate unpublished dependency
+candidates; the legacy consumer still uses Three.js 0.160.0.
+The release workflow runs these checks before publication.
 
 `test:three-matrix` runs a representative compatibility set. To regenerate the
 full cross-version renderer status matrix, run:

@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- Update to MaterialX 1.8.1 and Three.js 0.185.2-alpha.8 with the complete MaterialX loader, corrected TSL default inputs and expanded node-library coverage.
+
 - Honor authored colors, UVs, tangents, smooth normals, MDL normal scale/bias and OmniGlass transmission. Preserve textures through material replacement, package reads and variant/payload resyncs.
 - Copy shared WASM texture bytes before browser image decoding. Preserve package image formats and support lazy EXR/HDR/TGA/KTX2 decoding, including compressed color maps and readable scalar/normal remapping.
 - Update textureless WebGPU instance groups and selection outlines during animation and mechanism interaction. Retain authored subset identities through triangulation and subdivision.

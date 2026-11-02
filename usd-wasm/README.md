@@ -35,6 +35,27 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
   inside a USD stage, including Draco-compressed meshes.
 - **Compression** — `usdDraco` and `usdGltfDraco` compressed mesh payloads.
 
+### Runtime and plugins
+
+| Component | Shipped version or implementation |
+| --- | --- |
+| OpenUSD | **26.11.1**, with Hydra imaging and the Needle three.js render delegate |
+| Native MaterialX | **1.39.5**, for material documents and shader generation |
+| MaterialX web package | **`@needle-tools/materialx` 1.8.1**, for browser rendering, authoring and the TSL node library |
+| Three.js | **`@needle-tools/three` 0.185.2-alpha.8** in the viewer, including its MaterialX loader |
+| OpenSubdiv | **3.6.1**, including uniform and adaptive limit-surface evaluation |
+| `usdGltf` | Adobe's file-format plugin for glTF/GLB import, with Draco enabled |
+| `usdDraco` | Native Draco-compressed USD mesh payloads |
+| `usdGltfDraco` | Draco support in the glTF/GLB file-format plugin |
+| Web runtime | Threaded Emscripten **4.0.23**, with Asyncify and JSPI builds |
+
+Both WebAssembly builds include these native modules and plugins. Exact source
+commits and build options are recorded in
+[`openusd-build-info.json`](src/bindings/openusd-build-info.json) and
+[`openusd-build-info.jspi.json`](src/bindings/openusd-build-info.jspi.json).
+Read the selected runtime's metadata with `loadOpenUsdBuildInfo()` or
+`USD.GetBuildInfoJson()`. The viewer exposes the same information in **Help → About**.
+
 ### Progressive textures
 
 `createThreeHydra({USD, scene, url, onAssetFetchProgress, resolveTextureUrl, maxTextureSize})`
@@ -137,7 +158,7 @@ both owned target handles. Complete examples are in
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.2.0 three@npm:@needle-tools/three@0.185.2-alpha.6
+npm install @needle-tools/usd@1.2.0 three@npm:@needle-tools/three@0.185.2-alpha.8
 ```
 
 Version 1.2.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
@@ -330,7 +351,7 @@ served package paths.
   "dependencies": {
     "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
     "@needle-tools/usd": "1.2.0",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "vite": "^8.1.0"
   }
 }
@@ -415,7 +436,7 @@ property so USD references can resolve.
   },
   "dependencies": {
     "@needle-tools/usd": "1.2.0",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "vite": "^8.1.0"
   }
 }
@@ -635,7 +656,7 @@ Legacy WebGLRenderer and Needle Engine integrations continue to use Spark.
 Install Spark alongside Three.js 0.180 or newer and pass the host renderer:
 
 ```sh
-npm install @sparkjsdev/spark@2.2.0 three@npm:@needle-tools/three@0.185.2-alpha.6
+npm install @sparkjsdev/spark@2.2.0 three@npm:@needle-tools/three@0.185.2-alpha.8
 ```
 
 Spark is an optional peer dependency; scenes without `particleField` prims do
@@ -713,7 +734,7 @@ composites against the renderer’s opaque color/depth pass; a CSS background
 behind a transparent canvas is not available to that pass.
 
 Volume support is an explicit opt-in entry point and requires the recent
-three.js node APIs (validated with `@needle-tools/three@0.185.2-alpha.6`).
+three.js node APIs (validated with `@needle-tools/three@0.185.2-alpha.8`).
 The base entry points retain support for legacy three.js consumers without
 importing those APIs. Missing volume configuration or a legacy `WebGLRenderer`
 reports unsupported volume shading. The MaterialX factory does not load

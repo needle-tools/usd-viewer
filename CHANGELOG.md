@@ -20,6 +20,8 @@
 
 ### Fixed
 
+- Update to MaterialX 1.8.1 and Three.js 0.185.2-alpha.8 with the complete MaterialX loader, corrected TSL default inputs and expanded node-library coverage.
+
 - Preserve user-owned panel arrangements and Timeline visibility when switching assets. Keep viewport frames, hierarchy rows, focus and scroll stable during stage updates and resizing.
 - Correct inherited visibility, native-instance branches, payload state, prototype animation detection, hover/selection outlines and animated subset framing.
 - Fix package texture decoding, image-based domes, normal-texture remapping, MDL preview materials, glass transmission, analytic normals and textureless instance updates.

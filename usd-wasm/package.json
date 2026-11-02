@@ -156,7 +156,7 @@
     "@playwright/test": "^1.60.0",
     "@sparkjsdev/spark": "2.2.0",
     "@types/three": "^0.164.1",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.6",
+    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "typescript": "5.9.3",
     "vite": "^8.1.0"
   },
@@ -165,10 +165,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@needle-tools/materialx": "1.8.0"
+    "@needle-tools/materialx": "1.8.1"
   },
   "overrides": {
-    "@needle-tools/materialx": "1.8.0",
+    "@needle-tools/materialx": "$@needle-tools/materialx",
     "three": "$three"
   }
 }
