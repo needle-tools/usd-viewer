@@ -1,6 +1,6 @@
 # Advanced USD coverage fixtures
 
-This corpus has 34 stages: 10 skeletal animation and blend shape cases, 4 Gaussian particle fields, 8 physics cases, 4 volume cases, 4 curve/point/NURBS cases, and 4 scene-schema cases. `manifest.json` identifies the roots, dependencies, feature scope, and assertions. The generator writes an ignored local `native-validation.json` report with native OpenUSD 26.05 stage opens, composition errors, and schema/data checks. These checks do not establish viewer rendering, animation, or simulation correctness.
+This corpus covers skeletal animation and blend shapes, Gaussian particle fields, physics, volumes, curves, points, NURBS and scene schemas. `manifest.json` identifies the roots, dependencies, feature scope, and assertions. The generator writes an ignored local `native-validation.json` report with native OpenUSD 26.05 stage opens, composition errors, and schema/data checks. These checks do not establish viewer rendering, animation, or simulation correctness.
 
 Regenerate from `usd-wasm` with native OpenUSD Python bindings:
 
@@ -8,29 +8,29 @@ Regenerate from `usd-wasm` with native OpenUSD Python bindings:
 python3 scripts/generate-advanced-coverage-fixtures.py
 ```
 
-The ten skeletal fixtures loop over frames 1–97 at 24 fps. The articulated scenes
+The skeletal fixtures loop over frames 1–97 at 24 fps. The articulated scenes
 are a waving toy (rest transforms), flapping bird (bind transforms), dancing
 flower (joint names), kelp (multiple influences), twisting column (dual
 quaternions), periscope robot (translations), and pinwheel (rotations). Their
 motions use separate joint hierarchies and weights, densely sampled transforms,
 and matching start/end poses.
 
-The three rounded faces use localized smile, wink and surprise targets. Head
+The rounded faces use localized smile, wink and surprise targets. Head
 features follow one rigid head joint, while expressions affect the mouth, lids,
 brows and cheeks. The sparse case indexes only affected features; the inbetween
 case holds a distinct closed-mouth half-smile before the open grin. Position
 and normal offsets share topology and indices. Static visibility alone is not
 a skinning test.
 
-Regenerate just these fixtures by passing their ten names to the generator.
+Regenerate just these fixtures by passing their names to the generator.
 `skel_faces.py` and `skeletal_props.py` contain the modeling helpers. Native card
 captures use each manifest entry's `thumbnailFrame`; the helper bakes skinning on
 a private layer with native `UsdSkel.BakeSkinning` before Storm rendering. This
 avoids the installed Storm 26.05 GPU skinning's faceted normals and occasional
 missing blend-shape draws. Source assets retain their skeletons and animation.
 
-`tests/public-viewer/skeletal-loops.spec.ts` checks all ten scenes in both viewer
-modes at nine cycle times, including exact endpoints and backward seeks. Compare
+`tests/public-viewer/skeletal-loops.spec.ts` checks the scenes in both viewer
+modes at sampled cycle times, including exact endpoints and backward seeks. Compare
 its world-point captures against native USD with:
 
 ```sh

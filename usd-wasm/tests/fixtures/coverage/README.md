@@ -1,20 +1,20 @@
 # USD feature fixtures
 
-These 192 fixtures appear under **Examples → Needle**, grouped by feature.
+These fixtures appear under **Examples → Needle**, grouped by feature.
 Each suite manifest lists root layers, dependencies and authored assertions.
 
-| Suite | Fixtures | Coverage |
-| --- | ---: | --- |
-| [Core](core/README.md) | 45 | Composition, variants, clips, topology, primvars, animation, instancing, purposes, cameras and lights |
-| [Shading](shading/README.md) | 45 | MaterialX graphs, geometry properties, textures, UsdShade interfaces and bindings |
-| [Advanced](advanced/README.md) | 34 | Skeletons, blend shapes, splats, physics, VDB, curves, points and scene schemas |
-| [Lighting and MDL](lighting-mdl/README.md) | 22 | UsdLux emitters, dome maps, light rigs and six MDL input approximations |
-| [MaterialX gallery](materialx/README.md) | 9 | Bounded media and custom or nested surface graphs |
-| [Curved surfaces](curved-surfaces/README.md) | 32 | Subdivision, animated creases and holes, splines and rational NURBS |
-| [Production](production/README.md) | 2 | Separate geometry, material, layout and lighting layers |
-| [Textures](textures/README.md) | 3 | KTX2, EXR, PNG, JPEG and TGA |
+| Suite | Coverage |
+| --- | --- |
+| [Core](core/README.md) | Composition, variants, clips, topology, primvars, animation, instancing, purposes, cameras and lights |
+| [Shading](shading/README.md) | MaterialX graphs, geometry properties, textures, UsdShade interfaces and bindings |
+| [Advanced](advanced/README.md) | Skeletons, blend shapes, splats, physics, VDB, curves, points and scene schemas |
+| [Lighting and MDL](lighting-mdl/README.md) | UsdLux emitters, dome maps, light rigs and MDL input approximations |
+| [MaterialX gallery](materialx/README.md) | Bounded media and custom or nested surface graphs |
+| [Curved surfaces](curved-surfaces/README.md) | Subdivision, animated creases and holes, splines and rational NURBS |
+| [Production](production/README.md) | Separate geometry, material, layout and lighting layers |
+| [Textures](textures/README.md) | KTX2, EXR, PNG, JPEG and TGA |
 
-The fourteen remote comparison assets are separate under **Examples → Hugging
+The remote comparison assets are separate under **Examples → Hugging
 Face test set**. Executable JavaScript lessons have their own category.
 
 ## Regeneration

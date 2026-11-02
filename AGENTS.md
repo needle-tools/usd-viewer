@@ -6,3 +6,5 @@
 - Generate USD fixture thumbnails/reference captures with the local native OpenUSD/Storm path, not the web viewer. Use local `usdview` for visual reference and the local thumbnail helper plus `usdrecord --renderer Storm` for card thumbnails so images match USD reference behavior.
 
 - Do not remove, narrow or weaken product, marketing or support claims without explicit user approval. Report the exact wording and evidence first; treat implementation gaps as bugs to investigate rather than silently reducing the claims.
+
+- Do not put changing inventory, coverage or test totals in public Markdown. Keep counts in generated machine-readable reports and test output; document the behavior and link to the inventory instead.

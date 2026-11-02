@@ -1,6 +1,6 @@
 # Core USD coverage fixtures
 
-These 45 small stages exercise composition arcs, topology, subdivision, primvar interpolation and indexing, animation, instancing, imageable purposes, transforms, cameras and lighting. Each entry in `manifest.json` lists its root, dependent files and native feature assertions. The generator opens each root with payloads loaded and checks composition and authored feature assertions using native OpenUSD. Results go to an ignored `native-validation.json` report. `expected.needle` lists behavior to check in the viewer.
+These small stages exercise composition arcs, topology, subdivision, primvar interpolation and indexing, animation, instancing, imageable purposes, transforms, cameras and lighting. Each entry in `manifest.json` lists its root, dependent files and native feature assertions. The generator opens each root with payloads loaded and checks composition and authored feature assertions using native OpenUSD. Results go to an ignored `native-validation.json` report. `expected.needle` lists behavior to check in the viewer.
 
 Regenerate from `usd-wasm` using OpenUSD's Python bindings, e.g.:
 
