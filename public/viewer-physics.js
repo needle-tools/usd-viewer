@@ -34,6 +34,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   container.physicsOwner = owner;
   container.replaceChildren(); container.hidden = true;
   if (!overview.dynamic) return null;
+  const snapshots = new Map();
   let simulation, snapshot, jointHelpers, jointControls, disposed = false, dragging = false, previousControls = [], operation = 0, simulationMode = '';
   const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
   const canvas = context?.renderer?.domElement || fallbackControls?.domElement;
@@ -79,7 +80,8 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
       if(!simulation){
         await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         if(disposed||currentOperation!==operation||!isCurrent())return;
-        snapshot ||= await readUsdPhysics(handle);
+        snapshot = snapshots.get(mode) || await readUsdPhysics(handle,{meshGeometry:mode!=='interaction'});
+        snapshots.set(mode,snapshot);
         if(disposed||currentOperation!==operation||!isCurrent())return;
         const settings={handle,snapshot,scenePath:sceneSelect.value||undefined,mode};
         let created,kinematics;
@@ -170,7 +172,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     async interact() { if (!disposed && !interact.disabled && !(simulationMode==='interaction'&&simulation?.isPlaying())) await start('interaction'); },
     get simulation() { return simulation; },
     dispose() {
-      disposed = true; stop();
+      disposed = true; stop(); snapshots.clear(); snapshot = null;
       canvas.removeEventListener('pointerdown', down, true); canvas.removeEventListener('pointermove', move, true);
       canvas.removeEventListener('pointerup', up, true); canvas.removeEventListener('pointercancel', up, true);
       if (container.physicsOwner === owner) { container.replaceChildren(); container.hidden = true; }

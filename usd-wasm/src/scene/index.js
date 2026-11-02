@@ -1,6 +1,6 @@
 import {resolveHierarchyVisibility,primCompositionFlags,stagePrototypes,primInstancing} from './hierarchy.js';
 export { hasAuthoredUsdLights, stageLayers, stageVariants } from './inspection.js';
-export { readStageAsset, readStageLayer, stageResources } from './sources.js';
+export { readStageAsset, readStageLayer, readStageLayerBytes, stageResources } from './sources.js';
 export { createStageSourcePaths } from './source-paths.js';
 
 /** Convert embind vectors without retaining native wrappers. */
@@ -121,13 +121,22 @@ export async function inspectStageAsync(stage, time = 0, options = {}) {
     layers: stage.GetLayerStack?.(true) || [], errors: stage.GetCompositionErrors?.() || [] };
 }
 
+async function readAttributeValue(attribute, time, options) {
+  if (Number.isInteger(options.arrayLimit) && options.arrayLimit >= 0 && attribute.GetValuePage) {
+    const page = await attribute.GetValuePage(time, 0, options.arrayLimit);
+    return { value: page.value, ...(page.total !== null ? { arraySize: page.total, valueOffset: page.offset } : {}) };
+  }
+  return { value: await attribute.Get(time) };
+}
+
 /** Asynchronous counterpart of inspectPrim; preserves wrapper ownership until each read completes. */
-export async function inspectPrimAsync(stage, path, time = 0) {
+export async function inspectPrimAsync(stage, path, time = 0, options = {}) {
+  if (options.arrayLimit !== undefined && (!Number.isInteger(options.arrayLimit) || options.arrayLimit < 0 || options.arrayLimit > 0xffffffff)) throw new RangeError('arrayLimit must be an unsigned 32-bit integer.');
   const prim = stage.GetPrimAtPath(path);
   try {
     if (!prim?.IsValid()) return null;
     const data={ path, type: prim.GetTypeName(), metadata: prim.GetAllMetadataValues?.() || prim.GetAllMetadata(),
-      attributes: await readVectorAsync(prim.GetAttributes(), async attribute => ({ name: attribute.GetName(), path: attribute.GetPath(), type: attribute.GetTypeName(), value: await attribute.Get(time),
+      attributes: await readVectorAsync(prim.GetAttributes(), async attribute => ({ name: attribute.GetName(), path: attribute.GetPath(), type: attribute.GetTypeName(), ...await readAttributeValue(attribute, time, options),
         connections: strings(attribute.GetConnections?.()), resolveInfo: await attribute.GetResolveInfo?.(time), authored: attribute.HasAuthoredValueOpinion?.() || false })),
       relationships: readVector(prim.GetRelationships(), relation => ({ name: relation.GetName(), path: relation.GetPath(), targets: strings(relation.GetTargets()) })) };
     data.instancing=primInstancing(prim,data.attributes,data.relationships);return data;

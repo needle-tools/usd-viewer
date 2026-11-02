@@ -26,6 +26,7 @@ for(const complexity of ['low','medium','adaptive'])test(`${complexity}: authore
  try{
   await handle.setTime(1);let mesh;handle.scene.traverseVisible(o=>{if(o.isMesh)mesh=o;});const params=mesh.geometry.userData.usdCoarseFaceParams;
   assert.ok(params?.length>0);assert.ok([...params].some(p=>(p>>2)===0));assert.ok([...params].some(p=>(p>>2)===1));
+  assert.equal(Object.keys(mesh.geometry.userData).includes('usdCoarseFaceParams'),false);
   const [first]=await parts(cache,mesh,handle,0);assert.notEqual(first.geometry,mesh.geometry);assert.equal(first.geometry.attributes.position,mesh.geometry.attributes.position);
   for(const index of first.geometry.index.array)assert.equal(params[Math.floor(index/3)]>>2,0);
   assert.equal((await resolveSubsetPick(handle,{path:'/Panel',instances:[]},mesh.geometry,0)).path,'/Panel/Side');

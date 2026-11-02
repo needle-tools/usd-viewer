@@ -29,7 +29,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Page large attribute arrays in Properties instead of eagerly copying and stringifying mesh topology. Expose native `GetValuePage` and optional bounded SDK inspection; retain full-value API reads and correct point-instance counts.
+- Avoid the empty physics JSON error on large assets: Interact reads only body/joint/collider metadata; simulation reads collision geometry through owned typed buffers. Keep interaction and simulation snapshots separate.
+
+- Prevent Code from freezing or crashing on large crate geometry layers: export authored USDA asynchronously to bytes, compact numeric arrays in a worker, page expanded text, and release source workers on document changes. Guard byte-backed array edits against changes to the expected value.
+
 - Outline selected and hovered face GeomSubsets, preserve authored face identities through subdivision, and add viewport Mesh subsets picking. Release selection proxies when clearing or changing scenes.
+- Downsample oversized PNG textures in a worker without allocating full-resolution browser bitmaps; retain bounded decoded memory for large assets with missing published previews. Serve worker scripts with the required isolation headers.
 
 - Refresh WebGPU instance transforms for textureless material groups as well as textured surfaces, keeping handles and other subsets attached during joint interaction.
 - Frame selected mesh GeomSubsets with **F**, using their authored elements and current instance pose instead of falling back to the whole stage. Expose reusable `getSelectionBounds` from `/viewer/inspect`.

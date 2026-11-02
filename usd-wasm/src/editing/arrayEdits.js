@@ -10,6 +10,25 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
     if (disposed || !isCurrent()) throw new Error("The document has changed.");
   };
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // USDA uses short decimal spellings for float/half values. Compare the
+  // stored precision so an unchanged authored 0.1 matches its native value.
+  function expectedValueMatches(actual, expected, type) {
+    const f32=/^(?:float[234]?|(?:color|point|normal|vector|texCoord)[234]f|quatf)\[\]$/.test(type);
+    const half=/^(?:half[234]?|(?:color|point|normal|vector|texCoord)[234]h|quath)\[\]$/.test(type);
+    const roundHalf=value=>{
+      const number=Math.fround(value),a=Math.abs(number);
+      if(!a||!Number.isFinite(a))return number;
+      if(a>=65520)return Math.sign(number)*Infinity;
+      const step=2**(Math.max(-14,Math.floor(Math.log2(a)))-10),q=a/step,low=Math.floor(q),fraction=q-low;
+      return Math.sign(number)*(low+(fraction>.5||fraction===.5&&low%2?1:0))*step;
+    };
+    const round=half?roundHalf:f32?Math.fround:value=>value;
+    function equal(a,b){
+      if(Array.isArray(b))return Array.isArray(a)&&a.length===b.length&&b.every((value,index)=>equal(a[index],value));
+      return a===(typeof b==='number'?round(b):b);
+    }
+    return equal(actual,expected);
+  }
   function makePatch(before, after) {
     if (before.length === after.length)
       return {
@@ -81,7 +100,7 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
         if (
           checkText &&
           text !== undefined &&
-          stage.GetRootLayer().ExportToString() !== text
+          await (stage.GetRootLayer().ExportToStringAsync?.() ?? stage.GetRootLayer().ExportToString()) !== text
         )
           throw new Error("Layer changed. Reopen the array before applying.");
         const prim = stage.GetPrimAtPath(command.primPath),
@@ -103,7 +122,7 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
         inLayer(async (attribute) => {
           before = await attribute.Get(command.time);
           current();
-          if (expected !== undefined && !same(before, expected))
+          if (expected !== undefined && !expectedValueMatches(before, expected, command.type))
             throw new Error("The value was edited elsewhere.");
           const desired = typeof value === "function" ? value(before) : value;
           if (same(before, desired)) {
@@ -150,12 +169,12 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
     return result;
   }
   return {
-    apply(layer, array, text, value) {
+    apply(layer, array, text, value, options = {}) {
       return serialize(async () => {
         if (!array.property)
           throw new Error("This literal is not a USD attribute.");
         const command = { layer, ...array.property };
-        const result = await write(command, value, { text });
+        const result = await write(command, value, { text, expected: options.expected });
         if (!result.changed || same(result.before, result.after)) return;
         history.splice(cursor);
         history.push({

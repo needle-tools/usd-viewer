@@ -168,7 +168,10 @@ declare type USDLayer = {
     GetDisplayName(): string,
     GetRealPath(): string,
     ExportToString(): string,
+    ExportToStringAsync(): MaybePromise<string>,
     Export(path: string): boolean,
+    ExportAsync(path: string): MaybePromise<boolean>,
+    ExportFileAsync(path: string, resolve: (success: boolean) => void, reject: (message: string) => void): void,
     Save(): boolean,
     GetSubLayerPaths(): string[],
     SetSubLayerPaths(paths: string[]): MaybePromise<void>,
@@ -176,6 +179,7 @@ declare type USDLayer = {
 }
 
 declare type USDAttribute = {
+    GetValuePage(timeCode: number, offset: number, limit: number): MaybePromise<{ value: unknown; total: number | null; offset: number }>,
     IsValid(): boolean,
     GetName(): string,
     GetPath(): string,

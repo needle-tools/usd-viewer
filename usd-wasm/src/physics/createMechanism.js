@@ -16,7 +16,7 @@ const rigid=link=>new Matrix4().fromArray(link.matrixWorld);
 /** Bounded USD joint manipulation. The optional IK core has no physics/WASM runtime. */
 export async function createUsdMechanism({handle,root=handle.scene,snapshot,loadKinematics=()=>import('closed-chain-ik/core')}){
  if(!root)throw new Error('A USD scene root is required.');
- snapshot={...(snapshot||await readUsdPhysics(handle))};snapshot.joints=[...(snapshot.joints||[])];
+ snapshot={...(snapshot||await readUsdPhysics(handle,{meshGeometry:false}))};snapshot.joints=[...(snapshot.joints||[])];
  await readJointMetadata(handle,snapshot);
  const {Link,Joint,Solver,DOF}=await loadKinematics();
  const wasPlaying=handle.isPlaying?.()||false;handle.setPlaying(false);await handle.ready();

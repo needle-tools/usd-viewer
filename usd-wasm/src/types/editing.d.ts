@@ -19,10 +19,12 @@ export interface ArrayEditsOptions {
 
 export interface ArrayEdits {
   /** Apply to an existing typed attribute in the specified layer. The layer text
-   * must match the inspected baseline. Failed writes preserve history; recovery
+   * must match the inspected baseline. A byte-backed source can instead supply
+   * undefined text and the expected attribute value to guard against conflicts.
+   * Failed writes preserve history; recovery
    * never overwrites a newer value. If recovery also fails, the original error
    * is rethrown with a rollbackError property when that error is extensible. */
-  apply(layer: string, array: { property?: ArrayEditProperty }, text: string, value: readonly unknown[]): Promise<void>;
+  apply(layer: string, array: { property?: ArrayEditProperty }, text: string | undefined, value: readonly unknown[], options?: {expected?: readonly unknown[]}): Promise<void>;
   undo(): Promise<void>;
   redo(): Promise<void>;
   readonly canUndo: boolean;

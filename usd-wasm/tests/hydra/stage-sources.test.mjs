@@ -5,7 +5,7 @@ import { Group, Mesh, MeshBasicMaterial, Texture } from 'three';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
-import { readStageAsset, readStageLayer, stageResources } from '../../src/scene/sources.js';
+import { readStageAsset, readStageLayer, readStageLayerBytes, stageResources } from '../../src/scene/sources.js';
 import { inspectUsdPhysics, readUsdPhysics } from '../../src/physics/createPhysics.js';
 import { inspectStage, inspectStageAsync, inspectPrim, inspectPrimAsync } from '../../src/scene/index.js';
 
@@ -229,4 +229,26 @@ test('physics overview uses the native read boundary without extracting collider
   await assert.rejects(inspectUsdPhysics(handle), /closed stage/);
   await assert.rejects(readUsdPhysics(handle), /closed stage/);
   assert.equal(fullReads, 1, 'closed handles do not reach native extraction');
+});
+
+test('authored layer export yields the event loop and preserves exact unsaved values',async()=>{
+ const USD=await getUsdModule({print(){},printErr(){}}),handle=await createThreeHydra({USD,scene:new Group(),files});
+ try{
+  await handle.ready();let expected,identifier;
+  await handle.readStage(async stage=>{
+   const prim=stage.DefinePrim('/World/Data','Scope'),attribute=prim.CreateAttribute('values','float[]',true);
+   try{attribute.Set(Array.from({length:100000},(_,i)=>i/16),NaN);}finally{attribute.delete();prim.delete();}
+   const layer=stage.GetRootLayer();
+   try{
+    identifier=layer.GetIdentifier();expected=layer.ExportToString();
+    assert.equal(typeof layer.ExportToStringAsync,'function');
+    let beats=0;const timer=setInterval(()=>beats++,1);
+    try{assert.equal(await layer.ExportToStringAsync(),expected);assert.ok(beats>0,'native export yields while its worker owns the layer');}finally{clearInterval(timer);}
+   }finally{layer.delete?.();}
+  });
+  assert.equal(await readStageLayer(handle,USD,identifier),expected);
+  const bytes=await readStageLayerBytes(handle,USD,identifier);
+  assert.equal(new TextDecoder().decode(bytes),expected);
+  assert.ok(!USD.FS_readdir('/tmp').some(name=>name.startsWith('needle-layer-source-')),'temporary exports are unlinked');
+ }finally{await handle.dispose();}
 });

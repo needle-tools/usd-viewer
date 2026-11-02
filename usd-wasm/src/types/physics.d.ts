@@ -19,7 +19,7 @@ export type PhysicsShape = PhysicsMass & {
     scale: PhysicsVector; collisionEnabled: boolean; simulationOwners: string[];
     materials: string[]; filteredCollisions: string[]; collisionGroups: string[];
     halfExtents?: PhysicsVector; radius?: number; halfHeight?: number; axis?: 'X' | 'Y' | 'Z';
-    approximation?: string; meshScale?: PhysicsVector; points?: number[]; indices?: number[];
+    approximation?: string; meshScale?: PhysicsVector; points?: number[] | Float32Array; indices?: number[] | Int32Array;
 };
 export type PhysicsLimit = { enabled: boolean; lower: number; upper: number };
 export type PhysicsDrive = {
@@ -65,7 +65,7 @@ export interface UsdPhysicsSimulation {
     endDrag(): void;
     dispose(): void;
 }
-export function readUsdPhysics(handle: NeedleThreeHydraHandle): Promise<UsdPhysicsSnapshot>;
+export function readUsdPhysics(handle: NeedleThreeHydraHandle, options?: {meshGeometry?:boolean}): Promise<UsdPhysicsSnapshot>;
 export function getUsdPhysicsLimitations(snapshot:UsdPhysicsSnapshot):PhysicsIssue[];
 /** Scene, movable body and joint paths; does not allocate collider geometry. */
 export function inspectUsdPhysics(handle: NeedleThreeHydraHandle): Promise<{scenes:{path:string}[];dynamic:boolean;bodies:string[];joints:string[]}>;

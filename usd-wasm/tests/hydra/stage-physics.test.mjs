@@ -158,3 +158,20 @@ def PhysicsCollisionGroup "Inverted" {
         }
     } finally {driver.delete();USD.FS_unlink('/physics-defaults.usda');}
 });
+
+test('collision buffers are owned typed arrays and joint metadata excludes collider topology',async()=>{
+ const USD=await getUsdModule({print(){},printErr(){}});
+ for(const [name,text] of [['physics-assembly.usda',assembly],['physics-buffers.usda',source]])USD.FS_createDataFile('/',name,new TextEncoder().encode(text),true,true,true);
+ const delegate={createRPrim(){},createSPrim(){},createBPrim(){},CommitResources(){}};
+ const driver=await (USD.CreateHdWebSyncDriver?.(delegate,'physics-buffers.usda')??new USD.HdWebSyncDriver(delegate,'physics-buffers.usda'));
+ try{
+  const metadata=JSON.parse(await driver.GetPhysicsSceneMetadataJson()),full=JSON.parse(await driver.GetPhysicsSceneJson());
+  assert.deepEqual(metadata.joints,full.joints);assert.deepEqual(metadata.bodies,full.bodies);
+  const shape=metadata.shapes.find(s=>s.path==='/World/Ground');assert.ok(shape);assert.equal(shape.points,undefined);assert.equal(shape.indices,undefined);
+  const buffers=await driver.GetPhysicsMeshBuffers(shape.path),expected=full.shapes.find(s=>s.path===shape.path);
+  assert.ok(buffers.points instanceof Float32Array);assert.ok(buffers.indices instanceof Int32Array);
+  assert.deepEqual([...buffers.points],expected.points);assert.deepEqual([...buffers.indices],expected.indices);
+  buffers.points[0]=500;assert.equal((await driver.GetPhysicsMeshBuffers(shape.path)).points[0],-1);
+  await assert.rejects(async()=>await driver.GetPhysicsMeshBuffers('/World/Missing'));
+ }finally{driver.delete();for(const name of ['physics-assembly.usda','physics-buffers.usda'])USD.FS_unlink('/'+name);}
+});

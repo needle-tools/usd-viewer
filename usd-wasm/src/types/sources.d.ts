@@ -26,5 +26,8 @@ export function readStageAsset(handle: NeedleThreeHydraHandle, usd: USD, path: s
 /** Current authored layer text, including unsaved opinions. Temporary native
  * stages are released before completion; the displayed stage stays unchanged. */
 export function readStageLayer(handle: NeedleThreeHydraHandle, usd: USD, identifier: string, options?: StageLayerReadOptions): Promise<string>;
+/** Stream authored USDA to independently owned UTF-8 bytes without constructing
+ * a giant string in the native heap. Safe to transfer to a worker. */
+export function readStageLayerBytes(handle: NeedleThreeHydraHandle, usd: USD, identifier: string, options?: StageLayerReadOptions): Promise<Uint8Array>;
 /** Deduplicated texture identities currently loaded into the render scene. */
 export function stageResources(root: Object3D, sourcePaths?: StageSourcePaths): string[];

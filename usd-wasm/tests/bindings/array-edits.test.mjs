@@ -218,3 +218,27 @@ test("array recovery failure cannot hide the originating edit failure", async ()
     USD.ReleaseStage(stage);
   }
 });
+
+test('byte-backed source edits check the expected value and preserve history on conflicts',async()=>{
+ const {stage,attribute,array,layer}=setup('byte-backed-array'),owner=createArrayEdits({usd:USD,stage,edit:fn=>fn(),isCurrent:()=>true});
+ try{
+  const before=await attribute.Get(NaN),after=before.map(v=>v.map(c=>c+1));
+  await owner.apply(layer,array,undefined,after,{expected:before});assert.deepEqual(await attribute.Get(NaN),after);
+  await assert.rejects(owner.apply(layer,array,undefined,before,{expected:before}),/edited elsewhere/);
+  await owner.undo();assert.deepEqual(await attribute.Get(NaN),before);await owner.redo();assert.deepEqual(await attribute.Get(NaN),after);
+ }finally{owner.dispose();attribute.delete();USD.ReleaseStage(stage);}
+});
+
+test('byte-backed decimal baselines compare native float and half precision without accepting changed values',async()=>{
+ const {stage,attribute,array,layer}=setup('decimal-baseline'),owner=createArrayEdits({usd:USD,stage,edit:fn=>fn(),isCurrent:()=>true});
+ try{
+  attribute.Set([[.1,.2,.3]],NaN);
+  await owner.apply(layer,array,undefined,[[.2,.3,.4]],{expected:[[.1,.2,.3]]});
+  assert.deepEqual(await attribute.Get(NaN),[[Math.fround(.2),Math.fround(.3),Math.fround(.4)]]);
+  await assert.rejects(owner.apply(layer,array,undefined,[[1,2,3]],{expected:[[.1,.2,.3]]}),/edited elsewhere/);
+  const prim=stage.GetPrimAtPath('/Mesh'),half=prim.CreateAttribute('weights','half[]',true);half.Set([.1,.2,.3],NaN);
+  const halfArray={property:{primPath:'/Mesh',name:'weights',type:'half[]',time:NaN}};
+  await owner.apply(layer,halfArray,undefined,[.4,.5,.6],{expected:[.1,.2,.3]});
+  await owner.undo();assert.ok(Math.abs((await half.Get(NaN))[0]-.1)<.001);half.delete();prim.delete();
+ }finally{owner.dispose();attribute.delete();USD.ReleaseStage(stage);}
+});

@@ -41,11 +41,24 @@ export async function inspectUsdPhysics(handle) {
 }
 
 /** Read physics from the composed stage, including referenced layers and relationships. */
-export async function readUsdPhysics(handle) {
+export async function readUsdPhysics(handle, {meshGeometry = true} = {}) {
     await handle.ready();
     const snapshot=await handle.readStage(async (_stage, driver) => {
         if (!driver.GetPhysicsSceneJson) throw new Error('This USD runtime does not include physics extraction.');
-        return JSON.parse(await driver.GetPhysicsSceneJson());
+        const compact = driver.GetPhysicsSceneMetadataJson && (!meshGeometry || driver.GetPhysicsMeshBuffers);
+        const raw = await (compact ? driver.GetPhysicsSceneMetadataJson() : driver.GetPhysicsSceneJson());
+        if (!raw) throw new Error('USD physics extraction returned no data.');
+        const result = JSON.parse(raw);
+        if (driver.GetPhysicsMeshBuffers && meshGeometry) {
+            for (const shape of result.shapes || []) if (shape.type === 'mesh' && shape.collisionEnabled !== false) {
+                try { Object.assign(shape, await driver.GetPhysicsMeshBuffers(shape.path)); }
+                catch (error) {
+                    result.unsupported.push({path:shape.path,type:'mesh',reason:error.message || String(error)});
+                    shape.collisionEnabled = false;
+                }
+            }
+        }
+        return result;
     });
     await readJointMetadata(handle,snapshot);
     return snapshot;

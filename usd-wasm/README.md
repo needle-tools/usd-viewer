@@ -39,7 +39,9 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 
 `createThreeHydra({USD, scene, url, onAssetFetchProgress, resolveTextureUrl, maxTextureSize})`
 can report HTTP texture transfers, choose published texture-resolution URLs, and
-optionally cap ordinary raster images after decoding. Defaults preserve source
+optionally cap ordinary raster images. Oversized PNGs use a worker and scanline
+decoder to resize before creating a browser bitmap, keeping decoded memory
+bounded. Other raster formats are capped after decoding. Defaults preserve source
 resolution. URL selection belongs to the host's catalog policy; composition and
 material loading remain in the SDK. `waitForMaterials: true` waits for texture
 completion; otherwise PreviewSurface/MDL constants render immediately and maps
@@ -226,6 +228,12 @@ For inspection with either runtime, use `inspectStageAsync` or
 `inspectPrimAsync` from `/scene` inside `handle.readStage()`. The synchronous
 helpers remain available for existing Asyncify integrations.
 
+For large meshes, pass `{arrayLimit: 256}` as the fourth argument to
+`inspectPrimAsync(stage, path, time, options)`. Array snapshots then include
+`arraySize` and `valueOffset`; `value` contains only the requested preview.
+`attribute.GetValuePage(time, offset, limit)` reads further pages without copying
+the full array into JavaScript. Omitting the option retains full-value reads.
+
 Stage inspection includes instance proxies, with `instanceProxy: true` on their
 snapshots. Pass `{expandedInstances: []}` as the third argument to keep instance
 branches closed, or list the instance paths to expand. Set `includePrototypes: true`
@@ -292,6 +300,11 @@ paths, save/export the layer. `stage.Export()` produces a flattened stage.
 Use `handle.sourcePaths.path(identifier)` for public file paths relative to the
 root layer's folder, including `../` for dependencies above it. Pass the result
 directly to `readStageAsset` or `readStageLayer` from `/scene` to read it.
+For large layers, use `readStageLayerBytes`: it streams authored USDA through a
+native worker and returns owned UTF-8 bytes for transfer to a source worker.
+It preserves unsaved opinions and removes its temporary export before returning.
+`Layer.ExportAsync(path)` and `Layer.ExportToStringAsync()` retain the existing
+synchronous methods while allowing serialized SDK operations to yield the UI.
 `stageResources(handle.scene, handle.sourcePaths)` lists loaded textures in the
 same form. Package members keep their USDZ identity; files on another HTTP
 origin keep their URL. Native OpenUSD identifiers remain available for low-level
@@ -902,6 +915,13 @@ adapter implementing the simulation methods used by the controls (`play`,
 `pause`, `isPlaying`, `update`, `reset`, `dispose`, `bodyForObject`, `beginDrag`,
 `moveDrag`, `endDrag`). This bypasses the Rapier loader. The package's composed
 `readUsdPhysics()` snapshot remains available independently of a simulation.
+
+Physics inspection accepts `readUsdPhysics(handle, {meshGeometry: false})` for
+body, joint and collider metadata without mesh buffers. Constrained interaction
+uses this mode. Full physics reads return owned typed collision buffers, avoiding
+numeric JSON serialization; `GetPhysicsSceneJson()` remains available for existing
+low-level integrations.
+
 
 ## Useful References
 

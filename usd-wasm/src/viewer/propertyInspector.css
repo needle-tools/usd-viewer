@@ -41,3 +41,6 @@
 .usd-property-instancing dd {margin:0;min-width:0;overflow-wrap:anywhere}
 .usd-property-instancing summary {cursor:pointer}
 .usd-property-instance-links {display:flex;flex-direction:column;align-items:flex-start;gap:var(--usd-space-small,4px);margin-top:var(--usd-space-small,4px)}
+.usd-property-array-pager { display:flex; align-items:center; gap:var(--usd-space-1,4px); margin-top:var(--usd-space-1,4px); font-family:var(--font-family-body,sans-serif); color:var(--text-secondary,#647578); }
+.usd-property-array-pager button { padding:0; width:var(--usd-control-height,24px); height:var(--usd-control-height,24px); flex:none; }
+.usd-property-array-pager small { overflow:hidden; text-overflow:ellipsis; }

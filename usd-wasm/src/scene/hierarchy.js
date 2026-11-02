@@ -48,8 +48,8 @@ export function stagePrototypes(stage) {
 export function primInstancing(prim, attributes, relationships) {
   const flags=primCompositionFlags(prim);
   if (prim.GetTypeName()==='PointInstancer') {
-    const indices=attributes.find(attr=>attr.name==='protoIndices')?.value;
-    return {kind:'point-instancer',instanceCount:Array.isArray(indices)?indices.length:0,
+    const indicesAttribute=attributes.find(attr=>attr.name==='protoIndices'),indices=indicesAttribute?.value;
+    return {kind:'point-instancer',instanceCount:indicesAttribute?.arraySize ?? (Array.isArray(indices)?indices.length:0),
       prototypes:relationships.find(rel=>rel.name==='prototypes')?.targets || []};
   }
   let prototype,instances;

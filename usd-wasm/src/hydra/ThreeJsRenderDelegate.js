@@ -631,7 +631,26 @@ class TextureRegistry {
       }
 
       filetype = textureFileType(extension, _loadedFile);
-      let blob = new Blob([_loadedFile.slice(0)], { type: filetype });
+      const limit=this.config.maxTextureSize;
+      if(filetype==='image/png' && limit>0 && typeof document!=='undefined' && typeof Worker!=='undefined' && _loadedFile.byteLength>=33){
+        const header=new DataView(_loadedFile.buffer,_loadedFile.byteOffset,_loadedFile.byteLength);
+        if(Math.max(header.getUint32(16),header.getUint32(20))>limit){
+          void import('./pngTexture.js').then(({createPngDownsampler})=>{
+            if(this.disposed)throw new Error('Texture registry disposed');
+            this.pngDownsampler ||= createPngDownsampler();
+            const owned=_loadedFile.buffer instanceof ArrayBuffer && _loadedFile.byteOffset===0 && _loadedFile.byteLength===_loadedFile.buffer.byteLength?_loadedFile:new Uint8Array(_loadedFile);
+            return this.pngDownsampler.decode(owned,limit);
+          }).then(image=>{
+            if(this.disposed)throw new Error('Texture registry disposed');
+            const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
+            canvas.getContext('2d').putImageData(new ImageData(image.data,image.width,image.height),0,0);
+            const texture=new THREE.CanvasTexture(canvas);texture.name=sourceIdentity;texture.userData.usdSourceSize=[image.sourceWidth,image.sourceHeight];
+            this.loadedTextures.add(texture);textureResolve(texture);
+          }).catch(textureReject);
+          return;
+        }
+      }
+      let blob = new Blob([_loadedFile], { type: filetype });
       const url = URL.createObjectURL(blob);
       this.objectUrls.add(url);
       loadFromUrl(url, true);
@@ -639,7 +658,7 @@ class TextureRegistry {
 
     const loadHttp = url => {
       const progress = this.config.onAssetFetchProgress || this.config.USD?.onAssetFetchProgress;
-      if (!progress && !this.config.resolveTextureUrl) { loadFromUrl(url); return; }
+      if (!progress && !this.config.resolveTextureUrl && !(this.config.maxTextureSize>0)) { loadFromUrl(url); return; }
       Promise.resolve().then(() => this.config.resolveTextureUrl?.(url) || url)
         .then(target => fetchAsset(target || url, progress, {signal:this.httpAbort.signal}))
         .then(bytes => { if (this.disposed) throw new Error('Texture registry disposed'); loadFromFile(bytes); })
@@ -693,6 +712,7 @@ class TextureRegistry {
   dispose() {
     this.disposed = true;
     this.httpAbort.abort();
+    this.pngDownsampler?.dispose();
     for (const url of this.objectUrls) {
       URL.revokeObjectURL(url);
     }
@@ -1370,7 +1390,8 @@ class HydraMesh {
         const previous = this._geometry.userData.usdCoarseFaceParams;
         let same = previous?.length === coarseFaceParams.length;
         for (let i = 0; same && i < previous.length; i++) same = previous[i] === coarseFaceParams[i];
-        if (!same) this._geometry.userData.usdCoarseFaceParams = Int32Array.from(coarseFaceParams);
+        // Runtime lookup data must not become exported geometry extras.
+        if (!same) Object.defineProperty(this._geometry.userData,'usdCoarseFaceParams',{value:Int32Array.from(coarseFaceParams),writable:true,configurable:true});
       }
       if (debugMeshes) console.log("updateIndices", indices);
       let unchanged = this._indices && this._indices.length === indices?.length;

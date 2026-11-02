@@ -82,7 +82,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   toolbar.append(back, forward, filter);
   const address = node('div', 'usd-property-address'), pathLabel = node('code');
   const copyPath = makeButton('Copy path', 'copy_path', () => copy(current));
-  const copyValue = makeButton('Copy value', 'content_copy', () => copy(selectedRow()?.text ?? rawText(snapshot)));
+  const copyValue = makeButton('Copy value', 'content_copy', () => void copySelected());
   address.append(pathLabel, copyPath, copyValue);
   const instancing=node('dl','usd-property-instancing');instancing.setAttribute('role','group');instancing.setAttribute('aria-label','Instancing');instancing.hidden=true;
   const status = node('div', 'usd-property-status'); status.setAttribute('role', 'status'); status.hidden = true;
@@ -94,6 +94,16 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   async function copy(text) {
     try { await navigator.clipboard.writeText(text || ''); if (alive()) message('Copied'); }
     catch { if (alive()) message('Could not copy to clipboard.'); }
+  }
+  async function copySelected() {
+    const row=selectedRow();
+    const attr=snapshot?.attributes?.find(item=>item.path===row?.path);
+    if(attr?.arraySize > (attr?.value?.length || 0)) {
+      try {
+        const value=await handle.readStage(async()=>{let prim,property;try{prim=stage.GetPrimAtPath(primPath);property=prim.GetAttribute(attr.name);return await property.Get(handle.getTime?.()||0);}finally{property?.delete?.();prim?.delete?.();}});
+        if(alive())await copy(rawText(value));
+      }catch(error){if(alive())message(error.message);}
+    } else await copy(row?.text ?? rawText(snapshot));
   }
   function buttons() { back.disabled = historyIndex <= 0; forward.disabled = historyIndex >= history.length - 1; copyPath.disabled = !current; copyValue.disabled = !snapshot; }
   function selectedRow() { return [...rows.values()].find(row => row.path === current && row.kind !== 'metadata'); }
@@ -134,13 +144,19 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     const prim = stage.GetPrimAtPath(path);
     try {
       if (!prim?.IsValid()) return null;
-      const data = typeof prim.GetAllMetadata === 'function' ? await inspectPrimAsync(stage, path, time) : {
+      const data = typeof prim.GetAllMetadata === 'function' ? await inspectPrimAsync(stage, path, time, {arrayLimit:256}) : {
         path, type: prim.GetTypeName?.(), metadata: {},
         attributes: await vectorValuesAsync(prim.GetAttributes?.(), async attr => ({ name: attr.GetName(), type: attr.GetTypeName(), value: await attr.GetValueStringAtTime(time) })),
         relationships: vectorValues(prim.GetRelationships?.(), rel => ({ name: rel.GetName(), targets: vectorValues(rel.GetTargets?.()) })),
       };
       for (const attr of data.attributes || []) {
         attr.path ||= `${path}.${attr.name}`;
+        const previous=rows.get(`attribute:${attr.name}`);
+        if(previous?.path===attr.path && previous.pageOffset>0 && previous.pageOffset<attr.arraySize) {
+          const native=prim.GetAttribute(attr.name);
+          try {const page=await native.GetValuePage(time,previous.pageOffset,256);attr.value=page.value;attr.valueOffset=page.offset;attr.arraySize=page.total;}
+          finally {native.delete?.();}
+        }
         if (!Array.isArray(attr.connections)) {
           const native = prim.GetAttribute(attr.name);
           try { attr.connections = vectorValues(native.GetConnections?.()); }
@@ -267,7 +283,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         row = { tr, th, td, caption, connections }; rows.set(key, row);
       }
       Object.assign(row, { name: value.name, kind: value.kind, path: value.path, type: value.type });
-      row.caption.textContent = [Array.isArray(value.value) ? `${value.value.length} ${value.value.length===1?'item':'items'}` : value.type || (value.kind === 'relationship' ? 'Relationship' : ''), value.resolveInfo?.source === 'None' ? '' : value.resolveInfo?.source].filter(Boolean).join(' · ');
+      row.caption.textContent = [Array.isArray(value.value) ? `${value.arraySize ?? value.value.length} ${(value.arraySize ?? value.value.length)===1?'item':'items'}` : value.type || (value.kind === 'relationship' ? 'Relationship' : ''), value.resolveInfo?.source === 'None' ? '' : value.resolveInfo?.source].filter(Boolean).join(' · ');
       row.tr.dataset.active = String(value.path === current); row.tr.tabIndex = value.path === current ? 0 : -1;
       if (value.path) row.tr.dataset.propertyPath = value.path;
       const connectionKey = JSON.stringify(value.connections || []);
@@ -276,8 +292,9 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         for (const target of value.connections || []) row.connections.append(link(target, target, path));
       }
       const text = rawText(value.value), targetsKey = JSON.stringify(value.targets || []);
-      if (row.text === text && row.targetsKey === targetsKey) continue;
-      row.text = text; row.targetsKey = targetsKey;
+      const pageKey=`${value.arraySize}:${value.valueOffset}`;
+      if (row.text === text && row.targetsKey === targetsKey && row.pageKey === pageKey) continue;
+      row.text = text; row.targetsKey = targetsKey; row.pageKey=pageKey; row.pageOffset=value.valueOffset || 0;
       const { td } = row;
       const structured=value.kind==='metadata' && value.value!==null && typeof value.value==='object';
       td.classList.toggle('usd-property-structured',structured);
@@ -287,7 +304,32 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         } else if(structured)td.replaceChildren(structuredValue(value.value,value.name));
         else td.textContent = td.classList.contains('expanded') || text.length <= 200 ? text : text.slice(0, 200) + '…';
       };
-      draw(); td.title = text.length > 500 ? text.slice(0, 500) + '…' : text;
+      draw();
+      if (value.arraySize > (value.value?.length || 0)) {
+        const content=node('span'), pager=node('span','usd-property-array-pager');
+        let offset=value.valueOffset || 0, pending=false;
+        const pageLabel=node('small');
+        const previous=makeButton('Previous array values','chevron_left',()=>void page(-256));
+        const next=makeButton('Next array values','chevron_right',()=>void page(256));
+        const update=()=>{
+          content.textContent=rawText(value.value);
+          pageLabel.textContent=`${offset+1}–${offset+value.value.length} / ${value.arraySize.toLocaleString()}`;
+          previous.disabled=pending||offset===0;next.disabled=pending||offset+value.value.length>=value.arraySize;
+        };
+        const page=async delta=>{
+          if(pending)return;pending=true;update();const target=current, request=revision;
+          try{
+            const result=await handle.readStage(async()=>{let prim,attr;try{prim=stage.GetPrimAtPath(path);attr=prim.GetAttribute(value.name);return await attr.GetValuePage(handle.getTime?.()||0,Math.max(0,offset+delta),256);}finally{attr?.delete?.();prim?.delete?.();}});
+            if(!alive()||target!==current||request!==revision)return;
+            offset=result.offset;value.value=result.value;row.text=rawText(result.value);row.pageOffset=offset;row.pageKey=`${result.total}:${offset}`;
+          }catch(error){if(alive())message(error.message);}
+          finally{pending=false;if(alive())update();}
+        };
+        pager.append(previous,pageLabel,next);td.replaceChildren(content,pager);update();
+        td.removeAttribute('tabindex');td.ondblclick=td.onkeydown=null;
+        continue;
+      }
+      td.title = text.length > 500 ? text.slice(0, 500) + '…' : text;
       if (!structured && value.kind !== 'relationship' && (text.length > 80 || td.classList.contains('expanded'))) {
         td.tabIndex = 0; td.title = 'Double-click or press Enter to expand';
         const expand = () => { td.classList.toggle('expanded'); draw(); };

@@ -68,6 +68,9 @@ export async function readStageAsset(handle, usd, path, options = {}) {
   return handle.readStage(() => { assertCurrent(options); return bytes; });
 }
 
+const layerExportPrefix = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+let layerExportSerial = 0;
+
 /** Export current authored text, including unsaved opinions, without changing
  * the displayed stage. Temporary stage wrappers never escape this operation.
  * @param {import('../types/create.three.js').NeedleThreeHydraHandle} handle
@@ -75,13 +78,34 @@ export async function readStageAsset(handle, usd, path, options = {}) {
  * @param {string} identifier
  * @param {import('../types/sources.js').StageLayerReadOptions} [options]
  */
-export async function readStageLayer(handle, usd, identifier, options = {}) {
+async function readLayer(handle, usd, identifier, options = {}, bytes = false) {
   assertCurrent(options);
   return handle.readStage(async stage => {
     assertCurrent(options);
     const root = stage.GetRootLayer();
     const paths = handle.sourcePaths, publicPath = paths?.path(identifier);
-    if (root.GetIdentifier() === identifier || paths && paths.path(root.GetIdentifier()) === publicPath) return root.ExportToString();
+    const exportLayer = async layer => {
+      try {
+        if (!bytes) {
+          const text = await (layer.ExportToStringAsync ? layer.ExportToStringAsync() : layer.ExportToString());
+          assertCurrent(options);
+          return text;
+        }
+        // File export streams its output instead of keeping a second full
+        // stringstream in the WASM heap. The returned bytes are owned by JS.
+        const path = `/tmp/needle-layer-source-${layerExportPrefix}-${++layerExportSerial}.usda`;
+        try {
+          const success = layer.ExportFileAsync
+            ? await new Promise((resolve,reject) => layer.ExportFileAsync(path,resolve,message=>reject(new Error(message))))
+            : await (layer.ExportAsync ? layer.ExportAsync(path) : layer.Export(path));
+          assertCurrent(options);
+          if (!success) throw new Error(`Could not export layer ${publicPath || identifier}.`);
+          return usd.FS_readFile(path);
+        } finally { try { usd.FS_unlink(path); } catch {} }
+      } finally { layer.delete?.(); }
+    };
+    if (root.GetIdentifier() === identifier || paths && paths.path(root.GetIdentifier()) === publicPath) return exportLayer(root);
+    root.delete?.();
     // Keep the exact native identifier for an already composed layer. Sdf can
     // normalize URL spellings differently from the resolver's fetch URL.
     const used = paths && stage.GetUsedLayers(false).find(layer => paths.path(layer.identifier) === publicPath);
@@ -91,9 +115,20 @@ export async function readStageLayer(handle, usd, identifier, options = {}) {
     if (!temporary) throw new Error(`Layer ${publicPath || identifier} is not available.`);
     try {
       assertCurrent(options);
-      return temporary.GetRootLayer().ExportToString();
+      return await exportLayer(temporary.GetRootLayer());
     } finally { usd.ReleaseStage(temporary); }
   });
+}
+
+/** Current authored text, including unsaved opinions, exported off the UI thread. */
+export function readStageLayer(handle, usd, identifier, options = {}) {
+  return readLayer(handle, usd, identifier, options);
+}
+
+/** UTF-8 authored text as independently owned bytes. Use this for large layers
+ * or transfer it to a source worker without allocating a giant JS string. */
+export function readStageLayerBytes(handle, usd, identifier, options = {}) {
+  return readLayer(handle, usd, identifier, options, true);
 }
 
 /** Texture resource identities currently present in the rendered stage. This is

@@ -10,6 +10,7 @@ def Cube "Test" (documentation = "metadata-doc") {
     custom string typeName = "custom-value"
     custom string documentation.timeSamples = {1: "attribute-doc", 2: "second-doc"}
     custom int[] longArray = [${Array.from({length: 150}, (_, i) => i).join(', ')}]
+    custom int[] pagedArray = [${Array.from({length:4096}, (_,i)=>i).join(", ")}]
     custom rel links = [</Looks/Mat/Shader.inputs:roughness>, </Other>, </Missing>, </Other.missing>]
     ${Array.from({length: 35}, (_, i) => `custom float filler${String(i).padStart(2, '0')} = ${i}`).join('\n')}
 }
@@ -168,4 +169,19 @@ test('delayed property snapshots cannot replace a newer navigation or a disposed
     w.testInspector.show('/Test'); w.testInspector.dispose();
   });
   await expect(host(page).locator('.usd-property-inspector')).toHaveCount(0);
+});
+
+
+test('large property arrays page without expanding the DOM, retain their page on refresh and copy the full value',async({page},info)=>{
+ await openFixture(page);await mount(page,'/Test.pagedArray');
+ const row=property(page,'pagedArray'),pager=row.locator('.usd-property-array-pager');
+ await expect(pager).toContainText('1–256 / 4,096');
+ await pager.getByRole('button',{name:'Next array values',exact:true}).click();await expect(pager).toContainText('257–512 / 4,096');
+ await page.evaluate(()=>(window as any).testInspector.refresh());await expect(pager).toContainText('257–512 / 4,096');
+ await pager.getByRole('button',{name:'Previous array values',exact:true}).click();await expect(pager).toContainText('1–256 / 4,096');
+ expect((await row.textContent())!.length).toBeLessThan(3000);
+ await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+ await host(page).getByRole('button',{name:'Copy value',exact:true}).click();
+ await expect.poll(()=>page.evaluate(async()=>JSON.parse(await navigator.clipboard.readText()).length)).toBe(4096);
+ await row.scrollIntoViewIfNeeded();await host(page).screenshot({path:info.outputPath('paged-properties.png')});
 });

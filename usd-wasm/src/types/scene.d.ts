@@ -11,11 +11,11 @@ export interface StageInfo { prims: PrimInfo[]; prototypes: {path:string;instanc
 export function inspectStage(stage: USDStage, time?: number, options?: {expandedInstances?: string[] | null;includePrototypes?:boolean}): StageInfo;
 /** Supports both native runtimes, including remotely loaded value clips. */
 export function inspectStageAsync(stage: USDStage, time?: number, options?: {expandedInstances?: string[] | null;includePrototypes?:boolean}): Promise<StageInfo>;
-export function inspectPrimAsync(stage: USDStage, path: string, time?: number): Promise<ReturnType<typeof inspectPrim>>;
+export function inspectPrimAsync(stage: USDStage, path: string, time?: number, options?: {arrayLimit?:number}): Promise<ReturnType<typeof inspectPrim>>;
 export function inspectPrim(stage: USDStage, path: string, time?: number): null | {
   instancing: null | {kind:'instance';prototypePath:string;instanceCount:number} | {kind:'proxy';prototypePrimPath:string} | {kind:'prototype';instances:string[];instanceCount:number} | {kind:'point-instancer';instanceCount:number;prototypes:string[]} | {kind:'instanceable' | 'prototype-child'};
   path: string; type: string; metadata: Record<string, unknown>;
-  attributes: { name: string; path: string; type: string; value: unknown; connections: string[]; resolveInfo?: import('./bindings.js').USDResolveInfo; authored: boolean }[];
+  attributes: { name: string; path: string; type: string; value: unknown; arraySize?: number; valueOffset?: number; connections: string[]; resolveInfo?: import('./bindings.js').USDResolveInfo; authored: boolean }[];
   relationships: { name: string; path: string; targets: string[] }[];
 };
 export function setVariant(handle: NeedleThreeHydraHandle, path: string, setName: string, value: string): Promise<unknown>;

@@ -594,6 +594,8 @@ declare type HdWebSyncDriver = {
     GetStage(): USDStage,
     /** Read-only composed UsdPhysics descriptors, serialized as JSON. */
     GetPhysicsSceneJson(): MaybePromise<string>,
+    GetPhysicsSceneMetadataJson(): MaybePromise<string>,
+    GetPhysicsMeshBuffers(path:string): MaybePromise<{points:Float32Array;indices:Int32Array}>,
     GetStageUpAxis(): number,
     GetStageStartTimeCode(): number,
     GetStageEndTimeCode(): number,

@@ -55,7 +55,7 @@ files across native worker threads. Exports retain the
 original USD dependencies, independently of this display setting.
 
 Both native runtimes are built from OpenUSD commit
-`93e76528bf7642d5c2435ef5fc57c78fe6faf541` on the local
+`c34f374d042b1579855f63f142a6082cb95a0cfc` on the local
 `git/openusd` branch `wasm/openusd-26.11.1`. The bridge yields the browser thread
 while opening stages and changing remote variants/payloads, forwards worker
 transfer progress, and delivers change notifications on the JavaScript thread.
@@ -141,6 +141,11 @@ Literal arrays collapse to compact controls. Open one to inspect named columns,
 color swatches or matrix grids in a paged table in the resizable right sidebar.
 **Expand arrays** shows their values inline; **Compact arrays** restores the
 table links. This toggle appears only for sources containing expandable arrays.
+
+Large geometry layers export on a native worker. Code keeps their numeric arrays
+compact and reads raw text in bounded pages; opening a data table decodes that
+array on demand. Copy uses the complete authored source.
+
 The sidebar remembers its width. Cells support spreadsheet paste,
 row insertion/removal, keyboard navigation and a raw view. USD attribute edits
 use the native API and support undo/redo; they are included in stage downloads.

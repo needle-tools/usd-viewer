@@ -30,6 +30,7 @@ export function mountLazyCodePane(container, {isVisible = () => true, load = () 
     get sources() { return pane?.sources || []; },
     get selected() { return pane?.selected || ''; },
     get text() { return pane?.text || ''; },
+    get byteLength() { return pane?.byteLength || 0; },
     dispose() { if (disposed) return; disposed = true; binding = null; selection = undefined; pane?.dispose(); pane = null; },
   };
 }

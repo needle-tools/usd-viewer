@@ -1,6 +1,8 @@
+import {LARGE_SOURCE, SOURCE_PAGE} from './viewer-code-data.js';
+import {createSourceReader} from './viewer-code-reader.js';
 import {viewerIcon} from './usd/viewer/icons.js';
 import {stageLayers} from './usd/scene/inspection.js';
-import {readStageLayer} from './usd/scene/sources.js';
+import {readStageLayerBytes} from './usd/scene/sources.js';
 import {findArrays, arrayLayout, serializeArray} from './usd/viewer/arrayData.js';
 import {mountArrayEditor, attachArrayInput} from './usd/viewer/arrayEditor.js';
 import {createArrayEdits} from './usd/editing/index.js';
@@ -89,6 +91,8 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   const rawButton=tool('Expand arrays',()=>{closeArray();const {scrollTop,scrollLeft}=view;rawSource=!rawSource;drawSource();view.scrollTop=scrollTop;view.scrollLeft=scrollLeft;});
   const editButton=tool('Edit source',()=>{closeArray();sourceEditing=!sourceEditing;editButton.setAttribute('aria-pressed',String(sourceEditing));sourceInput.value=text;drawSource();if(sourceEditing)sourceInput.focus();});
   const arrayButton=tool('Array',()=>{});
+  const pageBack=historyButton('Previous source page','chevron_left'),pageNext=historyButton('Next source page','chevron_right'),pageRange=element('span','usd-code-page-range');
+  pageBack.hidden=pageNext.hidden=pageRange.hidden=true;toolbar.append(pageBack,pageRange,pageNext);
   const runButton=tool('Run',async()=>{const bound=binding;runButton.disabled=true;try{await bound.runExample(text);}catch(error){status.textContent=error.message;}finally{if(bound===binding)refreshTools();}});
   const undoButton=tool('Undo array edit',()=>void replayEdit(false)),redoButton=tool('Redo array edit',()=>void replayEdit(true));undoButton.textContent='Undo';redoButton.textContent='Redo';
   const status = element('div','usd-code-status'); status.setAttribute('role','status');
@@ -105,6 +109,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   let binding = null, sources = [], selected = '', listener = null, dirty = true, token = 0, text = '', shownKey = '', revision = 0;
   let timer, firstNotice = 0, copiedTimer, disposed = false, imageUrl = '', readAbort, resizeFrame = 0, resizeWindow, layout, drag, scrollTimer;
   const cache = new Map();
+  let sourceReader,sourceAnalysis,sourcePageState,pageRequest=0;
   let shownValue,rawSource=false,sourceEditing=false,hasArrays=false,arrayEditor,editOwner;
   let sourceHistory=[],historyIndex=-1;
   const drafts=new Map(Object.entries(load(stateKey+':drafts',{})).filter(([,value])=>typeof value==='string'&&value.length<=200000).slice(-10)),draftHistory=new Map();let draftTimer;
@@ -139,11 +144,23 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       refreshTools();status.textContent='';
     }catch(error){status.textContent=error.message;}
   }
+  function releaseSourceReader(){sourceReader?.dispose();sourceReader=sourceAnalysis=sourcePageState=undefined;pageRequest++;pageBack.hidden=pageNext.hidden=pageRange.hidden=true;root.removeAttribute('aria-busy');}
+  async function rawPage(start){
+    if(!sourceReader)return;const reader=sourceReader,request=++pageRequest;
+    try{const page=await reader.request('page',{start});if(reader!==sourceReader||request!==pageRequest)return;sourcePageState=page;drawSource();view.scrollTop=view.scrollLeft=0;}catch(error){if(reader===sourceReader)status.textContent=error.message;}
+  }
+  pageBack.onclick=()=>void rawPage(Math.max(0,(sourcePageState?.start||0)-SOURCE_PAGE));
+  pageNext.onclick=()=>void rawPage(sourcePageState?.end||0);
   function drawSource(){
     const source=sources.find(source=>sourceKey(source)===selected);if(!source)return;
     view.hidden=sourceEditing||shownValue?.kind!=='text';sourceInput.hidden=!sourceEditing||source.kind!=='example';refreshTools();
     if(sourceEditing)return;
-    const locations=sourceLocations(text,source.language),resolveUrl=path=>binding?.handle?.driver?.resolveAssetUrl?.(path),defined=new Set(locations.definitions.values()),primAvailability=new Map();
+    const large=!!sourceAnalysis,rawPage=large&&(rawSource||sourceAnalysis.rawOnly);
+    if(rawPage&&!sourcePageState){void rawPageFirst();return;}
+    const displayText=rawPage?sourcePageState.text:large?sourceAnalysis.text:text;
+    pageBack.hidden=pageNext.hidden=pageRange.hidden=!rawPage;
+    if(rawPage){pageBack.disabled=!sourcePageState.start;pageNext.disabled=sourcePageState.end>=sourcePageState.total;pageRange.textContent=`${(sourcePageState.start+1).toLocaleString()}–${sourcePageState.end.toLocaleString()} / ${sourcePageState.total.toLocaleString()}`;}
+    const locations=rawPage?sourceLocations(displayText,source.language):large?sourceAnalysis.locations:sourceLocations(text,source.language),resolveUrl=path=>binding?.handle?.driver?.resolveAssetUrl?.(path),defined=new Set(locations.definitions.values()),primAvailability=new Map();
     const decorate=(at,kind)=>{
       const definition=locations.definitions.get(at),link=locations.links.get(at);
       if(link){
@@ -162,27 +179,35 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       }
       if(definition){const span=element('span','usd-code-definition');span.dataset.usdPath=definition;return span;}
     };
-    const availableArrays=findArrays(text,source.language).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));
-    hasArrays=availableArrays.some(array=>array.end-array.start>=64||array.value.flat(Infinity).length>4);refreshTools();
-    const fragment=document.createDocumentFragment(),arrays=rawSource?[]:availableArrays;let last=0;
+    const availableArrays=(large?sourceAnalysis.arrays:findArrays(text,source.language)).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));
+    hasArrays=availableArrays.some(array=>array.large||array.end-array.start>=64||array.value.flat(Infinity).length>4);refreshTools();
+    const fragment=document.createDocumentFragment(),arrays=rawSource||sourceAnalysis?.rawOnly?[]:availableArrays;let last=0;
     for(const array of arrays){
-      fragment.append(highlight(text.slice(last,array.start),source.language,decorate,last));
-      const wrapper=element('span','usd-code-array'),raw=element('span','usd-code-array-literal',text.slice(array.start,array.end));
-      const button=element('button','usd-code-array-button');button.type='button';const layout=arrayLayout(array.value,array.type,array.name);
-      const literal=text.slice(array.start,array.end);button.dataset.summary=array.value.length*layout.width<=4&&literal.length<64?literal:layout.width===1?`[ ${array.value.length.toLocaleString()} ${array.value.length===1?'value':'values'} ]`:`[ ${array.value.length.toLocaleString()} × ${layout.dims.length===3?layout.dims.slice(1).join('×'):layout.columns.join('')} ]`;
+      fragment.append(highlight(displayText.slice(last,array.start),source.language,decorate,last));
+      const wrapper=element('span','usd-code-array'),raw=element('span','usd-code-array-literal',displayText.slice(array.start,array.end));
+      const button=element('button','usd-code-array-button');button.type='button';const layout=array.summary||arrayLayout(array.value,array.type,array.name),count=array.count??array.value.length;
+      const literal=displayText.slice(array.start,array.end);button.dataset.summary=count*layout.width<=4&&literal.length<64?literal:layout.width===1?`[ ${count.toLocaleString()} ${count===1?'value':'values'} ]`:`[ ${count.toLocaleString()} × ${layout.dims.length===3?layout.dims.slice(1).join('×'):layout.columns.join('')} ]`;
       button.dataset.arrayId=array.property?`${array.property.primPath}.${array.property.name}@${array.property.time}`:`${array.name}@${array.start}`;button.setAttribute('aria-label',`Open ${array.name} array`);button.title=`${array.property?.primPath||array.name} · ${array.type||'Array'}`;
-      button.onclick=()=>{
-        closeArray();const baseline=text,bound=binding,key=selected,editable=source.kind==='example'||source.kind==='layer'&&!!array.property&&!!editOwner;
-        arrayVisible(true);arrayEditor=mountArrayEditor(arraySidebar,{...array,timeCode:array.property?.time,editable,create:source.kind==='example'&&array.value.length===0&&!array.type,onClose:()=>{arrayEditor=null;arrayVisible(false);[...code.querySelectorAll('[data-array-id]')].find(next=>next.dataset.arrayId===button.dataset.arrayId)?.focus({preventScroll:true});},onApply:async value=>{
+      button.onclick=async()=>{
+        closeArray();const baseline=text,bound=binding,key=selected,reader=sourceReader,editable=source.kind==='example'||source.kind==='layer'&&!!array.property&&!!editOwner;
+        let values=array.value;
+        if(array.large){
+          status.textContent='Reading array…';button.disabled=true;
+          try{values=await reader.request('array',{index:sourceAnalysis.arrays.indexOf(array)});}catch(error){if(reader===sourceReader)status.textContent=error.message;return;}finally{button.disabled=false;}
+          if(bound!==binding||key!==selected||reader!==sourceReader)return;status.textContent='';
+        }
+        arrayVisible(true);arrayEditor=mountArrayEditor(arraySidebar,{...array,value:values,timeCode:array.property?.time,editable,create:source.kind==='example'&&array.value.length===0&&!array.type,onClose:()=>{arrayEditor=null;arrayVisible(false);[...code.querySelectorAll('[data-array-id]')].find(next=>next.dataset.arrayId===button.dataset.arrayId)?.focus({preventScroll:true});},onApply:async value=>{
           if(bound!==binding||key!==selected||baseline!==text)throw new Error('Source changed. Reopen the array.');
-          if(source.kind==='example')draft(text.slice(0,array.start)+serializeArray(value,source.language)+text.slice(array.end));
-          else {await editOwner.apply(source.identifier,array,baseline,value);dirty=true;await render();refreshTools();}
+          if(source.kind==='example')draft(text.slice(0,array.originalCharacterStart??array.originalStart??array.start)+serializeArray(value,source.language)+text.slice(array.originalCharacterEnd??array.originalEnd??array.end));
+          else {await editOwner.apply(source.identifier,array,sourceAnalysis?undefined:baseline,value,sourceAnalysis?{expected:values}:undefined);dirty=true;await render();refreshTools();}
         }});
       };
       wrapper.append(button,raw);fragment.append(wrapper);last=array.end;
     }
-    fragment.append(highlight(text.slice(last),source.language,decorate,last));code.replaceChildren(fragment);
+    fragment.append(highlight(displayText.slice(last),source.language,decorate,last));code.replaceChildren(fragment);
   }
+
+  function rawPageFirst(){return rawPage(0);}
 
   function canonical(path) {
     if (/^https?:\/\//i.test(path)) {
@@ -244,7 +269,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   async function exportLayer(identifier, role, signal) {
     const bound = binding;
-    return readStageLayer(bound.handle, bound.usd, identifier, {
+    return readStageLayerBytes(bound.handle, bound.usd, identifier, {
       signal, allowUncomposed: !role,
       isCurrent: () => !disposed && binding === bound && (!bound.isCurrent || bound.isCurrent()),
     });
@@ -333,6 +358,7 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     availability.set(owner,valid);return valid;
   }
   function revealDefinition(path){
+    if(sourceAnalysis&&rawSource){rawSource=false;drawSource();}
     code.querySelectorAll('[data-target]').forEach(node=>delete node.dataset.target);
     const targets=[...code.querySelectorAll('[data-usd-path]')],target=targets.find(node=>node.dataset.usdPath===path)||targets.find(node=>node.dataset.usdPath===path.split('.')[0])
       || (sources.find(source=>sourceKey(source)===selected)?.kind==='example' ? [...code.querySelectorAll('[data-reference]')].find(node=>node.dataset.reference===path||node.dataset.reference===path.split('.')[0]) : null);
@@ -427,25 +453,40 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
     if (!source) { status.textContent = ''; text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); return; }
     let value = cache.get(key), failure;
     if (value === undefined) {
-      if (key !== shownKey) { text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); view.hidden = true; status.textContent = ''; }
+      if (key !== shownKey) { releaseSourceReader(); text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); view.hidden = true; status.textContent = ''; }
       if (bound?.isCurrent && !bound.isCurrent()) return;
       try {
         const ext = extension(source.path);
         const textual = source.kind !== 'file' || source.language === 'usda' || /^(?:js|mjs|cjs|ts|json|xml|mtlx|mdl|txt|md|svg|glsl|wgsl|yaml|yml|obj|csv)$/.test(ext);
-        if (textual) { const data = await source.read(readAbort.signal); value = {kind:'text',text:typeof data === 'string' ? data : await data.text()}; }
+        if (textual) {
+          status.textContent='Reading source…';root.setAttribute('aria-busy','true');const data=await source.read(readAbort.signal);
+          const bytes=ArrayBuffer.isView(data)?new Uint8Array(data.buffer,data.byteOffset,data.byteLength):data instanceof Blob&&data.size>LARGE_SOURCE?new Uint8Array(await data.arrayBuffer()):null;
+          value=bytes&&bytes.length>LARGE_SOURCE?{kind:'text',bytes}:{kind:'text',text:bytes?new TextDecoder().decode(bytes):typeof data==='string'?data:await data.text()};
+        }
         else if (/^(?:png|jpe?g|gif|webp|avif|bmp)$/.test(ext)) value = {kind:'image',blob:await source.read(readAbort.signal)};
         else value = {kind:'binary',size:source.size,extension:ext};
       } catch (error) { failure = error; }
       if (disposed || current !== token || bound !== binding || (bound?.isCurrent && !bound.isCurrent())) return;
-      if (!failure) cache.set(key,value);
+      if (!failure && !(value.kind==='text'&&(value.bytes||value.text.length>LARGE_SOURCE))) cache.set(key,value);
     }
-    updateSelection(); status.textContent = failure ? failure.message || String(failure) : '';
+    root.removeAttribute('aria-busy');updateSelection(); status.textContent = failure ? failure.message || String(failure) : '';
     view.setAttribute('aria-label',source.label); view.dataset.language = source.language;
     if (failure) { text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); view.hidden = true; return; }
     copy.disabled = value.kind !== 'text'; view.hidden = value.kind !== 'text'; preview.hidden = value.kind === 'text';
-    const content = value.kind === 'text' ? value.text : '';
-    if (key === shownKey && (value.kind === 'text' ? content === text : value === shownValue)) return;
-    const switched = key !== shownKey; text = content; shownKey = key; revision++; root.dataset.revision = String(revision); clearPreview(); shownValue = value;
+    let content=value.kind==='text'?value.text||'':'';
+    if (key === shownKey && (value.kind === 'text' ? !value.bytes&&content === text : value === shownValue)) return;
+    const switched = key !== shownKey;
+    if(value.kind==='text'&&(value.bytes||content.length>LARGE_SOURCE)){
+      releaseSourceReader();const reader=sourceReader=createSourceReader();status.textContent='Reading source…';root.setAttribute('aria-busy','true');
+      // Let the file tree and busy state paint before source analysis. Native
+      // layer bytes transfer directly; numeric values stay out of the DOM lexer.
+      await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+      try{const analysis=await reader.request('analyze',value.bytes?{bytes:value.bytes,language:source.language}:{source:content,language:source.language},value.bytes?[value.bytes.buffer]:[]);
+        if(disposed||current!==token||bound!==binding||reader!==sourceReader)return;
+        sourceAnalysis=analysis;if(value.bytes)content=analysis.text;status.textContent='';root.removeAttribute('aria-busy');
+      }catch(error){if(reader===sourceReader){status.textContent=error.message;root.removeAttribute('aria-busy');}return;}
+    }else releaseSourceReader();
+    text = content; shownKey = key; revision++; root.dataset.revision = String(revision); clearPreview(); shownValue = value;
     if (value.kind === 'text') drawSource();
     else if (value.kind === 'image') { const image = element('img'); image.alt = source.label; imageUrl = URL.createObjectURL(value.blob); image.src = imageUrl; preview.append(image); }
     else { const info = element('dl','usd-code-file-info'); for (const [label,data] of [['File',basename(source.path)],['Format',value.extension.toUpperCase()],['Size',Number.isFinite(value.size)?`${value.size.toLocaleString()} bytes`:null]]) if (data) info.append(element('dt','',label),element('dd','',data)); preview.append(info); }
@@ -459,14 +500,20 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
   }
   function invalidate() { dirty = true; schedule(); }
   function unbind() {
-    followRevision++;selectionPath='';closeArray();sourceEditing=false;sourceInput.hidden=true;editOwner?.dispose();editOwner=null;token++; readAbort?.abort(); clearTimeout(timer); timer = undefined;
+    followRevision++;selectionPath='';releaseSourceReader();closeArray();sourceEditing=false;sourceInput.hidden=true;editOwner?.dispose();editOwner=null;token++; readAbort?.abort(); clearTimeout(timer); timer = undefined;
     if (listener !== null && binding?.stage) { try { binding.stage.RevokeObjectsChanged(listener); } catch {} }
     listener = null; binding = null;
   }
   copy.onclick = async ()=>{
-    if (!text) return;
-    try { await navigator.clipboard.writeText(text); }
-    catch { const active=document.activeElement,area=element('textarea');area.value=text;area.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.append(area);area.select();document.execCommand('copy');area.remove();active?.focus({preventScroll:true}); }
+    const value=text,reader=sourceReader,bound=binding,key=selected;
+    if (!value) return;
+    const current=()=>!disposed&&bound===binding&&key===selected;
+    try { if(reader)await navigator.clipboard.write([new ClipboardItem({'text/plain':reader.request('blob')})]);else await navigator.clipboard.writeText(value); }
+    catch (error) {
+      if(reader){if(current())status.textContent=error.message||'Could not copy source.';return;}
+      const active=document.activeElement,area=element('textarea');area.value=value;area.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.append(area);area.select();document.execCommand('copy');area.remove();active?.focus({preventScroll:true});
+    }
+    if(!current())return;
     copy.replaceChildren(codeIcon('check')); announcer.textContent = 'Copied'; clearTimeout(copiedTimer);
     copiedTimer = setTimeout(()=>{ copy.replaceChildren(codeIcon('content_copy')); announcer.textContent = ''; },1200);
   };
@@ -533,11 +580,11 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       }
       text = ''; shownKey = ''; code.replaceChildren(); clearPreview(); status.textContent = ''; cache.clear(); dirty = false;
       rebuildSources(); tree.scrollTop = scrolls[contextKey()] || 0; empty.hidden = !!sources.length; view.hidden = !sources.length; preview.hidden = true;
-      refreshTools();if (visible()) void render();
+      refreshTools();wasVisible=visible();if (wasVisible) void render();
     },
     invalidate,refreshVisibility,follow,
     get sources() { return sources.map(({kind,role,label,language,path,canOpenAsRoot})=>({key:sourceKey({kind,path}),kind,role,identifier:path,label,language,path,canOpenAsRoot})); },
-    get selected() { return selected; }, get text() { return text; }, select:choose,
+    get selected() { return selected; }, get text() { return text; }, get byteLength() { return sourceAnalysis?.originalLength ?? new TextEncoder().encode(text).length; }, select:choose,
     dispose() {
       if (disposed) return;
       saveFiles();saveDrafts();draftWindow.removeEventListener('pagehide',saveDrafts);unbind(); arrayInput.dispose(); drafts.clear();draftHistory.clear();disposed = true; clearTimeout(copiedTimer); clearTimeout(scrollTimer); resize.disconnect();
