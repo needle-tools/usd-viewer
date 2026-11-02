@@ -237,12 +237,21 @@ npm run test:three-matrix
 npm run test:viewer-visual
 ```
 
-For release preparation, run the package checks and exact-tarball consumer tests:
+## Release checks
+
+The private viewer and `@needle-tools/usd` candidate are version **1.2.0**.
+[Viewer changes](CHANGELOG.md) and [SDK changes](usd-wasm/CHANGELOG.md) are recorded separately.
+The SDK and viewer pin the already published `@needle-tools/materialx@1.8.0`
+(currently tagged `next`). That exact artifact is suitable for promotion to
+`latest`; republishing version 1.8.0 is unnecessary.
+
+Run viewer checks from the repository root, then the package's exact-tarball consumer tests:
 
 ```sh
-cd usd-wasm
 npm run test:release
 npm run test:package
+npm run prepare:public
+cd usd-wasm
 npm publish --dry-run --ignore-scripts --json
 ```
 

@@ -36,8 +36,8 @@ jobs:
       - name: Install package dependencies
         run: npm ci --prefix usd-wasm
 
-      - name: Validate package APIs and runtime
-        run: npm run --prefix usd-wasm test:release
+      - name: Validate viewer, package APIs and runtime
+        run: npm run test:release
 
       - name: Install consumer test browser
         working-directory: usd-wasm

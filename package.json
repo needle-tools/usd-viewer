@@ -1,6 +1,6 @@
 {
   "name": "usd-viewer",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "OpenUSD viewer with MaterialX, WebGPU rendering, stage inspection and authoring tools",
   "main": "server.js",
@@ -9,7 +9,10 @@
     "dev": "node --watch server.js",
     "prepare:public": "node scripts/prepare-public-runtime.mjs",
     "prepare:usd-wg-manifest": "node scripts/generate-usd-wg-assets-manifest.mjs",
-    "prepare:simready-manifest": "node scripts/generate-simready-manifest.mjs"
+    "prepare:simready-manifest": "node scripts/generate-simready-manifest.mjs",
+    "test": "node --test scripts/*.test.js scripts/*.test.mjs",
+    "test:release": "npm test && npm run --prefix usd-wasm test:release",
+    "test:package": "npm run --prefix usd-wasm test:package"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
