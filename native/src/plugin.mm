@@ -28,6 +28,9 @@
 #include "pxr/imaging/hd/driver.h"
 #include "pxr/imaging/hd/sceneIndexPlugin.h"
 #include "pxr/imaging/hd/sceneIndexPluginRegistry.h"
+#include "pxr/imaging/hd/sceneGlobalsSchema.h"
+#include "pxr/imaging/hd/meshSchema.h"
+#include "pxr/imaging/hd/subdivisionTagsSchema.h"
 #include "pxr/imaging/hd/retainedDataSource.h"
 #include "pxr/imaging/hd/overlayContainerDataSource.h"
 #include "pxr/imaging/hd/legacyTaskSchema.h"
@@ -336,13 +339,16 @@ public:HdRenderDelegate* CreateRenderDelegate()override{return new NeedleDelegat
 #endif
 };
 #include "selection.h"
+#include "subdivision-scene-index.h"
 class HdNeedleSceneIndexPlugin final:public HdSceneIndexPlugin {
 protected:HdSceneIndexBaseRefPtr _AppendSceneIndex(HdSceneIndexBaseRefPtr const& input,HdContainerDataSourceHandle const&)override {
     auto mesh=HdRetainedTypedSampledDataSource<TfToken>::New(HdsiImplicitSurfaceSceneIndexTokens->toMesh);
     auto implicit=HdsiImplicitSurfaceSceneIndex::New(input,HdRetainedContainerDataSource::New(
         HdPrimTypeTokens->sphere,mesh,HdPrimTypeTokens->cube,mesh,HdPrimTypeTokens->cone,mesh,
         HdPrimTypeTokens->cylinder,mesh,HdPrimTypeTokens->capsule,mesh,HdPrimTypeTokens->plane,mesh));
-    return NeedleSelectionSceneIndex::New(implicit);
+    // Temporary USD notification workaround; see subdivision-scene-index.h
+    // for the upstream source fix and removal criteria.
+    return NeedleSelectionSceneIndex::New(NeedleSubdivisionSceneIndex::New(implicit));
 }};
 TF_REGISTRY_FUNCTION(TfType){HdRendererPluginRegistry::Define<HdNeedleRendererPlugin>();HdSceneIndexPluginRegistry::Define<HdNeedleSceneIndexPlugin>();}
 TF_REGISTRY_FUNCTION(HdSceneIndexPlugin){HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(

@@ -1,0 +1,37 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    upAxis = "Y"
+    startTimeCode = 1
+    endTimeCode = 121
+)
+def Xform "World" {
+    def Mesh "Holes" {
+        point3f[] points = [(-2.5,-1,-1),(-.5,-1,-1),(-.5,1,-1),(-2.5,1,-1),(-2.5,-1,1),(-.5,-1,1),(-.5,1,1),(-2.5,1,1)]
+        int[] faceVertexCounts = [4,4,4,4,4,4]
+        int[] faceVertexIndices = [0,3,2,1,4,5,6,7,0,1,5,4,3,7,6,2,0,4,7,3,1,2,6,5]
+        uniform token subdivisionScheme = "catmullClark"
+        int[] holeIndices.timeSamples = {1: [1,3], 25: [3], 26: [1,3], 100: [], 101: [1,3]}
+        color3f[] primvars:displayColor = [(.1,.6,.5)]
+    }
+    def Mesh "Creases" {
+        point3f[] points = [(.5,-1,-1),(2.5,-1,-1),(2.5,1,-1),(.5,1,-1),(.5,-1,1),(2.5,-1,1),(2.5,1,1),(.5,1,1)]
+        int[] faceVertexCounts = [4,4,4,4,4,4]
+        int[] faceVertexIndices = [0,3,2,1,4,5,6,7,0,1,5,4,3,7,6,2,0,4,7,3,1,2,6,5]
+        uniform token subdivisionScheme = "catmullClark"
+        int[] creaseIndices = [0,1,1,2,2,3,3,0,4,5,5,6,6,7,7,4,0,4,1,5,2,6,3,7]
+        int[] creaseLengths = [2,2,2,2,2,2,2,2,2,2,2,2]
+        float[] creaseSharpnesses.timeSamples = {
+            1: [0,0,0,0,0,0,0,0,0,0,0,0],
+            49: [0,0,0,0,0,0,0,0,0,0,0,0],
+            50: [4,4,4,4,4,4,4,4,4,4,4,4],
+            74: [0,0,0,0,0,0,0,0,0,0,0,0]
+        }
+        int[] cornerIndices = [0,1,2,3,4,5,6,7]
+        float[] cornerSharpnesses.timeSamples = {
+            1: [0,0,0,0,0,0,0,0], 74: [0,0,0,0,0,0,0,0],
+            75: [4,4,4,4,4,4,4,4], 100: [0,0,0,0,0,0,0,0]
+        }
+        color3f[] primvars:displayColor = [(.7,.25,.1)]
+    }
+}
