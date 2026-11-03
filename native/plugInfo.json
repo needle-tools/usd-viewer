@@ -1,0 +1,30 @@
+{
+  "Plugins": [
+    {
+      "Name": "hdNeedle",
+      "Type": "library",
+      "Root": "..",
+      "LibraryPath": "libhdNeedle.dylib",
+      "ResourcePath": "resources",
+      "Info": {
+        "Types": {
+          "HdNeedleRendererPlugin": {
+            "bases": [
+              "HdRendererPlugin"
+            ],
+            "displayName": "Needle Three.js WebGPU",
+            "priority": 0
+          },
+          "HdNeedleSceneIndexPlugin": {
+            "bases": [
+              "HdSceneIndexPlugin"
+            ],
+            "loadWithRenderer": "Needle Three.js WebGPU",
+            "priority": 0,
+            "displayName": "Needle implicit surface tessellation"
+          }
+        }
+      }
+    }
+  ]
+}

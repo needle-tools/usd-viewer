@@ -39,3 +39,10 @@ public/modules/mesh-bvh.umd.js
 
 # Generated module URLs for static uploads.
 /public/viewer-module-versions.json
+
+# Native Hydra experiment build products.
+/native/.build/
+/native/renderer/renderer.js
+/native/renderer/assets/
+/native/**/__pycache__/
+native/node_modules/

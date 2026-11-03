@@ -1,0 +1,8 @@
+{
+  "name": "needle-native-hydra",
+  "private": true,
+  "description": "Native host runtime for the Three.js WebGPU Hydra integration",
+  "dependencies": {
+    "electron": "46.0.0-alpha.5"
+  }
+}

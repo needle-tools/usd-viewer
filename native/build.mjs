@@ -1,0 +1,10 @@
+import {build} from 'esbuild';
+import {mkdir} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const here=fileURLToPath(new URL('.',import.meta.url));
+await mkdir(here+'.build',{recursive:true});
+const compiler=spawnSync('clang++',['-std=c++17','-O2','-dynamiclib','-undefined','dynamic_lookup','-DNAPI_VERSION=8','-I'+(process.env.NODE_INCLUDE||'/opt/homebrew/include/node'),'-framework','IOSurface','-framework','Foundation',here+'src/surface-addon.mm','-o',here+'.build/surface.node'],{stdio:'inherit'});
+if(compiler.status!==0)process.exit(compiler.status||1);
+await build({entryPoints:[here+'renderer/renderer.mjs'],outfile:here+'renderer/renderer.js',bundle:true,format:'esm',loader:{'.wasm':'file'},external:['node:*'],assetNames:'assets/[name]-[hash]',plugins:[{name:'shared-three',setup(build){build.onResolve({filter:/^three(?:\/|$)/},args=>({path:fileURLToPath(import.meta.resolve(args.path))}));}}],target:'chrome140',logLevel:'warning'});
+console.log('Built GPU surface transport and shared Three.js renderer.');
