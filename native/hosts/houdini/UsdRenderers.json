@@ -1,0 +1,17 @@
+{
+  "HdNeedleRendererPlugin": {
+    "valid": true,
+    "menulabel": "Needle Three.js WebGPU",
+    "menupriority": 30,
+    "depthstyle": "linear",
+    "allowbackgroundupdate": true,
+    "pauseonupdate": false,
+    "defaultpurposes": ["guide", "proxy"],
+    "drawmodesupport": false,
+    "aovsupport": true,
+    "viewportrenderer": false,
+    "showinviewportmenu": true,
+    "needsselection": true,
+    "needsdepth": false
+  }
+}

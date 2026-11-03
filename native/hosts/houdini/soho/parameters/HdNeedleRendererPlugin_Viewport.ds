@@ -1,0 +1,52 @@
+// Names use Houdini's UT_VarEncode::encodeParm (hou.text.encodeParm).
+// Houdini decodes them before calling HdRenderDelegate::SetRenderSetting.
+{
+    name "Needle"
+    label "Needle Three.js"
+    parmtag { spare_opfilter "!!SHOP/PROPERTIES!!" }
+    parmtag { spare_classtags "render" }
+
+    // Match Solaris' compositor depth contract without changing the delegate's
+    // normalized-depth default used by generic Hydra imaging engines.
+    parm {
+        name "xn__needlelinearDepth_r3a"
+        type toggle
+        size 1
+        default { 1 }
+        parmtag { "uiscope" "viewport" }
+        invisible
+    }
+
+    parm {
+        name "xn__needlessgi_dsa"
+        label "Screen-space GI"
+        type toggle
+        size 1
+        default { 1 }
+        parmtag { "uiscope" "viewport" }
+        parmtag { "spare_category" "Rendering" }
+        help "Use the viewer Beauty pipeline with indirect lighting and temporal antialiasing."
+    }
+    parm {
+        name "xn__needlesamples_8wa"
+        label "Temporal Samples"
+        type int
+        size 1
+        default { 32 }
+        range { 1! 1024! }
+        disablewhen "{ xn__needlessgi_dsa == 0 }"
+        parmtag { "uiscope" "viewport" }
+        parmtag { "spare_category" "Rendering" }
+        help "Number of temporal samples after the scene or camera changes."
+    }
+    parm {
+        name "xn__needleenvironment_r3a"
+        label "Fallback HDR Environment"
+        type toggle
+        size 1
+        default { 1 }
+        parmtag { "uiscope" "viewport" }
+        parmtag { "spare_category" "Lighting" }
+        help "Use the viewer's neutral HDR environment when there are no authored lights."
+    }
+}

@@ -1,0 +1,27 @@
+#usda 1.0
+(defaultPrim="World";upAxis="Y")
+def Xform "World" {
+    def Mesh "Subdiv" (prepend apiSchemas=["MaterialBindingAPI"]) {
+        point3f[] points=[(-1,-1,-1),(1,-1,-1),(1,1,-1),(-1,1,-1),(-1,-1,1),(1,-1,1),(1,1,1),(-1,1,1)]
+        int[] faceVertexCounts=[4,4,4,4,4,4]
+        int[] faceVertexIndices=[0,3,2,1,4,5,6,7,0,1,5,4,3,7,6,2,0,4,7,3,1,2,6,5]
+        uniform token subdivisionScheme="catmullClark"
+        color3f[] primvars:displayColor=[(.03,.12,.8)]
+        texCoord2f[] primvars:st=[(0,0),(1,0),(1,1),(0,1)] (interpolation="faceVarying")
+        int[] primvars:st:indices=[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+        rel material:binding=</World/Red>
+    }
+    def Material "Red" {
+        token outputs:surface.connect=</World/Red/Surface.outputs:surface>
+        def Shader "Surface" {
+            uniform token info:id="UsdPreviewSurface"
+            color3f inputs:diffuseColor=(.8,.025,.01)
+            float inputs:roughness=.8
+            token outputs:surface
+        }
+    }
+    def DomeLight "Dome" {
+        asset inputs:texture:file=@../../../public/environments/neutral.hdr@
+        float inputs:intensity=.7
+    }
+}

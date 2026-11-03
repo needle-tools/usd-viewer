@@ -1,0 +1,44 @@
+#usda 1.0
+(defaultPrim="World";upAxis="Y";metersPerUnit=1)
+class Xform "Asset" {
+    def Cube "Body" {
+        double size=.5
+        color3f[] primvars:displayColor=[(.1,.3,.8)]
+    }
+}
+def Xform "World" {
+    def Mesh "Floor" {
+        point3f[] points=[(-3,-1,-2),(3,-1,-2),(3,-1,2),(-3,-1,2)]
+        int[] faceVertexCounts=[4]
+        int[] faceVertexIndices=[0,3,2,1]
+        uniform token subdivisionScheme="none"
+        color3f[] primvars:displayColor=[(.6,.6,.6)]
+    }
+    def Mesh "Wall" {
+        point3f[] points=[(-3,-1,-1.5),(3,-1,-1.5),(3,2.5,-1.5),(-3,2.5,-1.5)]
+        int[] faceVertexCounts=[4]
+        int[] faceVertexIndices=[0,1,2,3]
+        uniform token subdivisionScheme="none"
+        color3f[] primvars:displayColor=[(.6,.6,.6)]
+    }
+    def Cube "Red" {
+        double size=1.3
+        double3 xformOp:translate=(-1,-.35,0)
+        uniform token[] xformOpOrder=["xformOp:translate"]
+        color3f[] primvars:displayColor=[(.8,.04,.02)]
+    }
+    def Sphere "Green" {
+        double radius=.65
+        double3 xformOp:translate=(1,-.35,0)
+        uniform token[] xformOpOrder=["xformOp:translate"]
+        color3f[] primvars:displayColor=[(.03,.6,.08)]
+    }
+    def Xform "LeftInstance" (instanceable=true;prepend references=</Asset>) {
+        double3 xformOp:translate=(-.65,1.25,0)
+        uniform token[] xformOpOrder=["xformOp:translate"]
+    }
+    def Xform "RightInstance" (instanceable=true;prepend references=</Asset>) {
+        double3 xformOp:translate=(.65,1.25,0)
+        uniform token[] xformOpOrder=["xformOp:translate"]
+    }
+}

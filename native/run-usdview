@@ -1,0 +1,8 @@
+#!/bin/zsh
+set -eu
+here=${0:A:h}
+prefix=${OPENUSD_NATIVE_PREFIX:-$HOME/OpenUSD-26.05-native}
+export PYTHONPATH="$prefix/lib/python"
+export PXR_PLUGINPATH_NAME="$here/.build/usdview/plugin/resources"
+unset DYLD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH
+exec "$prefix/bin/usdview" --renderer 'Needle Three.js WebGPU' "$@"

@@ -1,0 +1,58 @@
+#usda 1.0
+(defaultPrim="World";upAxis="Y";metersPerUnit=1;subLayers=[@parity.usda@])
+over "World" {
+    over "Floor" (prepend apiSchemas=["MaterialBindingAPI"]) {
+        texCoord2f[] primvars:st=[(0,0),(2,0),(2,2),(0,2)] (interpolation="faceVarying")
+        rel material:binding=</World/Looks/Preview>
+    }
+    over "Wall" (prepend apiSchemas=["MaterialBindingAPI"]) {
+        texCoord2f[] primvars:st=[(0,0),(2,0),(2,1),(0,1)] (interpolation="faceVarying")
+        rel material:binding=</World/Looks/MaterialX>
+    }
+    def Scope "Looks" {
+        def Material "Preview" {
+            token outputs:surface.connect=</World/Looks/Preview/Surface.outputs:surface>
+            def Shader "Surface" {
+                uniform token info:id="UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect=</World/Looks/Preview/Texture.outputs:rgb>
+                float inputs:roughness=.5
+                token outputs:surface
+            }
+            def Shader "UV" {
+                uniform token info:id="UsdPrimvarReader_float2"
+                string inputs:varname="st"
+                float2 outputs:result
+            }
+            def Shader "Texture" {
+                uniform token info:id="UsdUVTexture"
+                asset inputs:file=@../../../usd-wasm/tests/fixtures/coverage/textures/mosaic.png@
+                token inputs:sourceColorSpace="sRGB"
+                float2 inputs:st.connect=</World/Looks/Preview/UV.outputs:result>
+                token inputs:wrapS="repeat"
+                token inputs:wrapT="repeat"
+                float3 outputs:rgb
+            }
+        }
+        def Material "MaterialX" {
+            token outputs:mtlx:surface.connect=</World/Looks/MaterialX/Surface.outputs:out>
+            def Shader "Surface" {
+                uniform token info:id="ND_standard_surface_surfaceshader"
+                float inputs:base=1
+                color3f inputs:base_color.connect=</World/Looks/MaterialX/Texture.outputs:out>
+                float inputs:specular_roughness=.5
+                token outputs:out
+            }
+            def Shader "UV" {
+                uniform token info:id="ND_texcoord_vector2"
+                int inputs:index=0
+                float2 outputs:out
+            }
+            def Shader "Texture" {
+                uniform token info:id="ND_image_color3"
+                asset inputs:file=@../../../usd-wasm/tests/fixtures/coverage/textures/mosaic.png@ (colorSpace="srgb_texture")
+                float2 inputs:texcoord.connect=</World/Looks/MaterialX/UV.outputs:out>
+                token outputs:out
+            }
+        }
+    }
+}

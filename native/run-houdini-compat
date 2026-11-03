@@ -1,0 +1,8 @@
+#!/bin/zsh
+set -eu
+here=${0:A:h}
+# Houdini 22.0.466/22.0.492's CPU AOV picker mixes logical mouse coordinates with
+# physical Retina raster dimensions. Keep the host and its AOVs at one scale.
+# This is a per-launch compatibility option, not a saved user preference.
+export HOUDINI_ENABLE_RETINA=0
+exec "$here/run-houdini" "$@"
