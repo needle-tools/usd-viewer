@@ -3,7 +3,7 @@
   "openusd": {
     "version": "0.26.11",
     "pxrVersion": 2611,
-    "gitSha": "d7aa0ef3bccda32648fd19873a21bffc7f60c6d8",
+    "gitSha": "1abaaa25a43f84dd9df7e9c52bebe475c9fcdadf",
     "gitDirty": false
   },
   "toolchain": {
@@ -26,7 +26,8 @@
       "version": "3.6.1"
     },
     "materialX": {
-      "gitSha": "3523fff0ba00a6124d6229e34e4f2a2bb3accfe7",
+      "version": "1.39.5",
+      "gitSha": "290d74c745d0708ce221c2f819dc87ee26b3bb43",
       "gitDirty": false
     },
     "usdGltf": {
