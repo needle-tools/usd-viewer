@@ -6,6 +6,11 @@ Beauty pipeline, including SSGI and temporal antialiasing. The host sends Hydra
 changes and camera matrices to an isolated Electron WebGPU renderer. Renderer
 Sync consumes Hydra data; it never opens or traverses the host's USD stage.
 
+For a developer handoff, normal Hydra plugin distribution and the remaining
+work for a portable binary installer, see [DISTRIBUTION.md](DISTRIBUTION.md).
+The current integration retains its Electron runtime. A browserless replacement
+is deferred while the working host integrations are validated.
+
 The native adapter handles meshes, implicit surfaces converted by
 `HdsiImplicitSurfaceSceneIndex`, instancing, visibility, indexed primvars,
 authored or generated normals, material subsets, OpenSubdiv refinement, UsdPreviewSurface and
