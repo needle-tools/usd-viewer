@@ -20,16 +20,24 @@ export function createPicking(renderer, scene, camera, identities) {
   return {
     target,
     render(width, height) {
+      const attributes = new Map();
       scene.traverse(object => {
         if (!object.isMesh || !object.geometry || !identities.has(object.userData.usdPath)) return;
         const geometry = object.geometry, position = geometry.getAttribute('position');
+        if (!position || attributes.has(geometry)) return;
         const coarse = geometry.userData.usdCoarseFaceParams;
-        const previous = versions.get(geometry);
-        if (!position || previous?.position === position && previous?.coarse === coarse) return;
-        const ids = new Uint32Array(position.count);
-        for (let i=0;i<ids.length;i++) ids[i] = coarse?.[Math.floor(i/3)] >>> 2;
-        geometry.setAttribute('needleElementId', new Uint32BufferAttribute(ids, 1));
-        versions.set(geometry, {position, coarse});
+        let cached = versions.get(geometry);
+        if (cached?.position !== position || cached?.coarse !== coarse) {
+          const ids = new Uint32Array(position.count);
+          for (let i=0;i<ids.length;i++) ids[i] = coarse?.[Math.floor(i/3)] >>> 2;
+          cached = {position, coarse, attribute:new Uint32BufferAttribute(ids, 1)};
+          versions.set(geometry, cached);
+        }
+        // Picking owns this attribute only for its draw. A stale attachment on
+        // the shared beauty geometry can hide a mesh when animated holes close:
+        // Hydra's visibility check correctly rejects undersized attributes.
+        attributes.set(geometry, geometry.getAttribute('needleElementId'));
+        geometry.setAttribute('needleElementId', cached.attribute);
       });
       target.setSize(width, height);
       const previous = {target:renderer.getRenderTarget(), mrt:renderer.getMRT(), override:scene.overrideMaterial,
@@ -41,6 +49,10 @@ export function createPicking(renderer, scene, camera, identities) {
         renderer.setClearColor(new Color(-1,-1,-1), 1);
         renderer.render(scene, camera);
       } finally {
+        for (const [geometry, previous] of attributes) {
+          if (previous) geometry.setAttribute('needleElementId', previous);
+          else geometry.deleteAttribute('needleElementId');
+        }
         renderer.setClearColor(previous.color, previous.alpha);
         renderer.setRenderTarget(previous.target);renderer.setMRT(previous.mrt);
         scene.overrideMaterial = previous.override;scene.background = previous.background;
