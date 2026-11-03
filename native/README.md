@@ -33,6 +33,12 @@ The launcher registers the add-on for that session. Its Render Properties panel
 controls SSGI, temporal samples and the fallback environment. F12 uses Blender's
 normal Hydra render engine integration. Viewport picking and orange outlines
 use Blender's native selection system.
+In Rendered shading, the viewport shading popover exposes Blender's Scene
+Lights and Scene World toggles. Turn Scene World off to select a studio HDRI
+and adjust its rotation and strength. These are Blender's per-viewport settings;
+its Hydra adapter supplies the corresponding lights and world to Needle.
+Blender's installed Hydra adapter does not forward studio-background opacity
+or blur, so those controls are not exposed by the Needle lighting panel.
 
 In Houdini, enter Solaris and select **Needle Three.js WebGPU** in the viewport
 renderer menu. Its Display Options expose SSGI, temporal samples and the fallback
@@ -198,6 +204,7 @@ node native/tests/browser-parity-runner.mjs
 python3 native/tests/native-parity-runner.py
 native/run-blender --background --factory-startup --python native/tests/blender-parity.py
 native/run-blender --factory-startup --python native/tests/blender-viewport.py
+native/run-blender --factory-startup --python native/tests/blender-viewport-lighting.py
 ```
 
 The browser/native comparison uses the actual wasm imaging bridge and each

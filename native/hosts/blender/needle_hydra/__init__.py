@@ -74,7 +74,38 @@ class NeedleHydraPanel(bpy.types.Panel):
         row.prop(settings, 'samples')
         self.layout.prop(settings, 'environment')
 
-classes = (NeedleHydraSettings, NeedleHydraRenderEngine, NeedleHydraPanel)
+class NeedleViewportLightingPanel(bpy.types.Panel):
+    bl_idname = 'NEEDLE_VIEW3D_PT_shading_lighting'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'HEADER'
+    bl_label = 'Lighting'
+    bl_parent_id = 'VIEW3D_PT_shading'
+
+    @classmethod
+    def poll(cls, context):
+        return (context.engine == 'NEEDLE_HYDRA' and
+                context.space_data.shading.type == 'RENDERED')
+
+    def draw(self, context):
+        # Blender's HydraSceneDelegate consumes these per-viewport properties
+        # and supplies scene lights / the selected world as ordinary Hydra data.
+        shading = context.space_data.shading
+        col = self.layout.column()
+        col.prop(shading, 'use_scene_lights_render')
+        col.prop(shading, 'use_scene_world_render')
+        if not shading.use_scene_world_render:
+            split = self.layout.split(factor=.9)
+            sub = split.column().row()
+            sub.scale_y = .6
+            sub.template_icon_view(shading, 'studio_light', scale_popup=3)
+            split.column().operator('screen.userpref_show', emboss=False, text='',
+                                    icon='PREFERENCES').section = 'LIGHTS'
+            col = self.layout.column()
+            col.prop(shading, 'studiolight_rotate_z', text='Rotation')
+            col.prop(shading, 'studiolight_intensity')
+
+classes = (NeedleHydraSettings, NeedleHydraRenderEngine, NeedleHydraPanel,
+           NeedleViewportLightingPanel)
 
 def register():
     root = Path(__file__).resolve().parents[3]
