@@ -3,10 +3,11 @@ import { vec4 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 
 /** Bloom operates on scene-linear HDR, before the renderer's display transform. */
-export function createBloomPresentation(renderer, input, settings) {
+export function createBloomPresentation(renderer, input, settings, { outputColorTransform = true } = {}) {
   const glow = bloom(input);
   const combined = vec4(input.rgb.add(glow.rgb), input.a);
   const pipeline = new RenderPipeline(renderer, input);
+  pipeline.outputColorTransform = outputColorTransform;
   let enabled = false;
   function setSettings(values) {
     glow.strength.value = values.bloomStrength;

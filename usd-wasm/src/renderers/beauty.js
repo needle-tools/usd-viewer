@@ -5,7 +5,7 @@ import { traa } from 'three/addons/tsl/display/TRAANode.js';
 import { createBloomPresentation } from './bloom.js';
 
 /** Surface GI is resolved before transparent objects. Volumes composite once over linear HDR color/depth. */
-export function createBeauty({ renderer, scene, camera, settings }) {
+export function createBeauty({ renderer, scene, camera, settings, outputColorTransform = true }) {
   const pass = TSL.pass(scene, camera); pass.transparent = false;
   // Share one RGBA16F attachment between octahedral normals and XY velocity.
   // Four attachments stay within WebGPU's 32-byte/sample portable limit.
@@ -39,7 +39,7 @@ export function createBeauty({ renderer, scene, camera, settings }) {
   // must preserve the opaque depth attachment for transparent depth tests.
   opaque._quadMesh.material.depthWrite = false; opaque._quadMesh.material.depthTest = false;
   // Include transparent surfaces/volumes in bloom, after their HDR composite.
-  const presentation = createBloomPresentation(renderer, TSL.texture(target.texture), settings);
+  const presentation = createBloomPresentation(renderer, TSL.texture(target.texture), settings, { outputColorTransform });
   const size = new Vector2(), clear = new Color();
   const volumeDepth = TSL.texture(pass.renderTarget.depthTexture, TSL.screenUV).r, volumeColor = TSL.texture(resolved.renderTarget.texture, TSL.screenUV), volumes = new Map();
   function bindVolumeDepth() {
@@ -58,6 +58,10 @@ export function createBeauty({ renderer, scene, camera, settings }) {
   let disposed = false;
   return {
     camera,
+    // Native Hydra presentation retains scene-linear HDR and its depth AOV.
+    // The host owns the display transform and selection/picking presentation.
+    get depthTexture() { return target.depthTexture; },
+    reset() { temporal._historyRenderTarget.setSize(1, 1); },
     setSettings: values => presentation.setSettings(values),
     render() {
       if (disposed) return;

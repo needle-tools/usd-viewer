@@ -179,3 +179,22 @@ test('retiring prototype meshes does not report their removed materials as unsup
     assert.equal(delegate.getDiagnostics().materialFallbacks,0);
     delegate.dispose();
 });
+
+test('clearing a live Hydra material restores each assigned mesh fallback and can be reenabled', async () => {
+    const {delegate, mesh} = setup();
+    mesh.setDisplayColor([.1,.2,.8], 'constant');
+    const material = await preview(delegate, '/Authored', [.8,.02,.01]);
+    mesh.setMaterial('/Authored');
+    assert.equal(mesh._mesh.material, material._material);
+    material.clearMaterial();
+    await delegate.waitForMaterialsReady();
+    assert.equal(mesh._mesh.material, mesh._ownedMaterial);
+    assert.deepEqual(mesh._mesh.material.color.toArray(), [.1,.2,.8]);
+    material.beginMaterialSync();
+    material.updateNode('surface','/Authored/Preview',{identifier:'UsdPreviewSurface',diffuseColor:[.8,.02,.01]});
+    material.updateFinished('surface',[]);
+    await delegate.waitForMaterialsReady();
+    assert.equal(mesh._mesh.material, material._material);
+    assert.notEqual(mesh._mesh.material, mesh._ownedMaterial);
+    delegate.dispose();
+});

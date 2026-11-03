@@ -2209,6 +2209,17 @@ class HydraMaterial {
     }
   }
 
+  clearMaterial() {
+    const previous = this._material;
+    this.beginMaterialSync();
+    this._useMeshFallback = true;
+    this._ready = true;
+    this._hasResolvedMaterial = true;
+    this._material = defaultMaterial;
+    this._applyMaterialToAssignedMeshes();
+    disposeMaterialResources(previous);
+  }
+
   static canonicalAssetPath(path) {
     return String(path ?? "")
       .replace(/\\/g, "/")
