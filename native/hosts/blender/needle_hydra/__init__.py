@@ -23,8 +23,10 @@ class NeedleHydraRenderEngine(bpy.types.HydraRenderEngine):
 
     def get_render_settings(self, engine_type):
         settings = bpy.context.scene.needle_hydra
+        # Blender supplies the scene world or the viewport's selected studio HDRI.
+        # Do not inject the viewer's fallback when both world and lights are absent.
         result = {'needle:ssgi': settings.ssgi, 'needle:samples': settings.samples,
-                  'needle:environment': settings.environment, 'needle:toneMapping': 'none'}
+                  'needle:environment': False, 'needle:toneMapping': 'none'}
         if engine_type != 'VIEWPORT':
             result.update({'aovToken:Combined': 'color', 'aovToken:Depth': 'depth'})
         return result
@@ -52,9 +54,6 @@ class NeedleHydraSettings(bpy.types.PropertyGroup):
                                 description='Use the browser Beauty pipeline with SSGI and temporal antialiasing')
     samples: bpy.props.IntProperty(name='Temporal Samples', default=128, min=1, max=1024,
                                   update=update_settings)
-    environment: bpy.props.BoolProperty(name='Fallback HDR Environment', default=True,
-                                       update=update_settings,
-                                       description='Use the viewer environment when the scene has no authored lights')
 
 class NeedleHydraPanel(bpy.types.Panel):
     bl_label = 'Needle Three.js'
@@ -72,7 +71,6 @@ class NeedleHydraPanel(bpy.types.Panel):
         self.layout.prop(settings, 'ssgi')
         row = self.layout.row(); row.active = settings.ssgi
         row.prop(settings, 'samples')
-        self.layout.prop(settings, 'environment')
 
 class NeedleViewportLightingPanel(bpy.types.Panel):
     bl_idname = 'NEEDLE_VIEW3D_PT_shading_lighting'

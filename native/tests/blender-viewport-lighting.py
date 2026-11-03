@@ -17,7 +17,6 @@ bpy.context.preferences.view.show_splash=False
 runpy.run_path(str(root/'tests/blender-parity.py'))
 scene=bpy.context.scene
 scene.needle_hydra.ssgi=False
-scene.needle_hydra.environment=False
 world=bpy.data.worlds.new('Viewport lighting regression')
 world.use_nodes=True
 world.node_tree.nodes['Background'].inputs['Color'].default_value=(.12,.2,.45,1)

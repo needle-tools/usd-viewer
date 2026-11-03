@@ -30,13 +30,15 @@ native/run-houdini-compat
 
 In Blender, choose **Needle Three.js WebGPU** in the Render Engine menu.
 The launcher registers the add-on for that session. Its Render Properties panel
-controls SSGI, temporal samples and the fallback environment. F12 uses Blender's
+controls SSGI and temporal samples. F12 uses Blender's
 normal Hydra render engine integration. Viewport picking and orange outlines
 use Blender's native selection system.
 In Rendered shading, the viewport shading popover exposes Blender's Scene
 Lights and Scene World toggles. Turn Scene World off to select a studio HDRI
 and adjust its rotation and strength. These are Blender's per-viewport settings;
 its Hydra adapter supplies the corresponding lights and world to Needle.
+The viewer's fallback environment is disabled in Blender; lighting comes from
+the scene or Blender's selected studio HDRI.
 Blender's installed Hydra adapter does not forward studio-background opacity
 or blur, so those controls are not exposed by the Needle lighting panel.
 
