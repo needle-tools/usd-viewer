@@ -1,9 +1,11 @@
 // TEMPORARY OPENUSD WORKAROUND -- keep separate from the picking attribute fix.
-// Source fix: OpenUSD 98d51867f on fix/animated-subdivision-invalidation
+// Source fixes on OpenUSD fix/animated-subdivision-invalidation:
+// a0fb2ef5c (USD imaging scene indices), 8e3c3cee7 (legacy imaging delegate)
 // (in the sibling OpenUSD repository; upstream PR pending).
 //
 // Remove when every supported host SDK passes testUsdImagingSubdivisionTags
-// without this filter, and native/tests/animated-subdivision.py still passes
+// and testUsdImagingSubdivisionTagsLegacyDelegate without this filter, and
+// native/tests/animated-subdivision.py still passes
 // with the filter bypassed. Delete this header, its include and schema-only
 // includes in plugin.mm, and pass implicit directly to NeedleSelectionSceneIndex.
 // Keep the picking fix and animation regression tests: they cover distinct bugs.
