@@ -16,7 +16,14 @@ import needle_hydra
 needle_hydra.register()
 scene=bpy.context.scene
 for obj in list(scene.objects):bpy.data.objects.remove(obj,do_unlink=True)
-scene.world=None
+# Use an explicit Blender world, just as a real scene does. The Blender add-on
+# deliberately disables the web viewer's implicit fallback illumination.
+world=bpy.data.worlds.new('Parity studio world')
+world.use_nodes=True
+environment=world.node_tree.nodes.new('ShaderNodeTexEnvironment')
+environment.image=bpy.data.images.load(str(root.parent/'public/environments/neutral.hdr'),check_existing=True)
+world.node_tree.links.new(environment.outputs['Color'],world.node_tree.nodes['Background'].inputs['Color'])
+scene.world=world
 
 def position(value):return (value[0],-value[2],value[1])
 def material(name,color):

@@ -13,14 +13,18 @@ function setup() {
   const renderer={
     getRenderTarget:()=>null, getMRT:()=>null, getClearColor:target=>target.copy(new Color()),
     getClearAlpha:()=>1, setClearColor(){}, setRenderTarget(){}, setMRT(){},
-    render(){assert.equal(mesh._geometry.getAttribute('needleElementId').count,mesh._geometry.getAttribute('position').count);},
+    render(){
+      assert.equal(scene.backgroundNode,null);
+      assert.equal(mesh._geometry.getAttribute('needleElementId').count,mesh._geometry.getAttribute('position').count);
+    },
   };
   const picking=createPicking(renderer,scene,new PerspectiveCamera(),new Map([['/Animated',7]]));
-  return {delegate,mesh,picking,renderer,root};
+  return {delegate,mesh,picking,renderer,root,scene};
 }
 
 test('picking does not leave stale attributes that hide a mesh when holes close',()=>{
-  const {delegate,mesh,picking,root}=setup();
+  const {delegate,mesh,picking,root,scene}=setup();
+  const background={isNode:true};scene.backgroundNode=background;
   try {
     // Both renderables can share a geometry (ordinary/instanced mesh paths).
     const shared=new Mesh(mesh._geometry,mesh._mesh.material);
@@ -30,6 +34,7 @@ test('picking does not leave stale attributes that hide a mesh when holes close'
       mesh.commit();
       assert.equal(mesh._mesh.visible,true);
       picking.render(16,16);
+      assert.equal(scene.backgroundNode,background);
       assert.equal(mesh._geometry.getAttribute('needleElementId'),undefined);
       mesh.commit();
       assert.equal(mesh._mesh.visible,true);

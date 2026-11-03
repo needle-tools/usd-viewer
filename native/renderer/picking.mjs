@@ -41,10 +41,11 @@ export function createPicking(renderer, scene, camera, identities) {
       });
       target.setSize(width, height);
       const previous = {target:renderer.getRenderTarget(), mrt:renderer.getMRT(), override:scene.overrideMaterial,
-        background:scene.background, color:renderer.getClearColor(clear).clone(), alpha:renderer.getClearAlpha()};
+        background:scene.background, backgroundNode:scene.backgroundNode,
+        color:renderer.getClearColor(clear).clone(), alpha:renderer.getClearAlpha()};
       try {
         camera.clearViewOffset();
-        scene.overrideMaterial = material; scene.background = null;
+        scene.overrideMaterial = material; scene.background = null;scene.backgroundNode=null;
         renderer.setRenderTarget(target); renderer.setMRT(null);
         renderer.setClearColor(new Color(-1,-1,-1), 1);
         renderer.render(scene, camera);
@@ -56,6 +57,7 @@ export function createPicking(renderer, scene, camera, identities) {
         renderer.setClearColor(previous.color, previous.alpha);
         renderer.setRenderTarget(previous.target);renderer.setMRT(previous.mrt);
         scene.overrideMaterial = previous.override;scene.background = previous.background;
+        scene.backgroundNode=previous.backgroundNode;
       }
     },
     dispose() { target.dispose(); material.dispose(); },

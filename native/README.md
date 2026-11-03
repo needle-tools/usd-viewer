@@ -35,12 +35,17 @@ normal Hydra render engine integration. Viewport picking and orange outlines
 use Blender's native selection system.
 In Rendered shading, the viewport shading popover exposes Blender's Scene
 Lights and Scene World toggles. Turn Scene World off to select a studio HDRI
-and adjust its rotation and strength. These are Blender's per-viewport settings;
-its Hydra adapter supplies the corresponding lights and world to Needle.
+and adjust its rotation, strength, World Opacity and Blur. These are Blender's
+per-viewport settings; its Hydra adapter supplies the corresponding lights and
+world to Needle.
 The viewer's fallback environment is disabled in Blender; lighting comes from
 the scene or Blender's selected studio HDRI.
-Blender's installed Hydra adapter does not forward studio-background opacity
-or blur, so those controls are not exposed by the Needle lighting panel.
+Blender's generic Hydra world exporter omits background opacity and blur. The
+add-on forwards these existing viewport controls as `needle:backgroundOpacity`
+and `needle:backgroundBlur` render settings, with `needle:backgroundColor` for
+the viewport's theme backdrop (sRGB hex). They affect the visible background
+only, leaving dome illumination and reflections intact. Scene World and final renders use
+an opaque, unblurred background; studio display overrides stay in their viewport.
 
 In Houdini, enter Solaris and select **Needle Three.js WebGPU** in the viewport
 renderer menu. Its Display Options expose SSGI, temporal samples and the fallback

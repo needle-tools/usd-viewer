@@ -10,7 +10,7 @@ import {configureNeedleAgx} from '../../usd-wasm/src/renderers/needleAgx.js';
 import {createViewerLighting} from '../../public/viewer-lighting.js';
 import {HydraCamera} from './hydra-camera.mjs';
 import {createPicking} from './picking.mjs';
-import {getDomeRotation} from '../../usd-wasm/src/hydra/domeEnvironment.js';
+import {createDomeBackground} from './dome-background.mjs';
 
 const bloomSettings = {bloom:false,bloomStrength:.5,bloomRadius:.5,bloomThreshold:1};
 
@@ -41,15 +41,13 @@ export async function createViewport(renderer, requestRender) {
       .then(texture=>{texture.mapping=THREE.EquirectangularReflectionMapping;return texture;});
     return environment;
   }});
-  let settings = {ssgi:true,samples:128,toneMapping:'none',exposure:1,environment:true,domeLightCameraVisibility:true};
+  let settings = {ssgi:true,samples:128,toneMapping:'none',exposure:1,environment:true,domeLightCameraVisibility:true,
+    backgroundBlur:0,backgroundOpacity:1,backgroundColor:[0,0,0]};
+  const background=createDomeBackground(scene);
   function updateDomeBackground() {
     const dome=Object.values(delegate.scenePrimitives).reverse().find(prim=>
       prim._domeTexture&&prim._domeState?.visible!==false&&prim._domeState?.cameraVisibility!==false);
-    scene.background=settings.domeLightCameraVisibility&&dome?dome._domeTexture:null;
-    if(dome){
-      scene.backgroundIntensity=Number(dome._domeState.intensity??1);
-      getDomeRotation(dome._object,scene.backgroundRotation);
-    }
+    background.update(dome,settings);
   }
   const colorTarget = new THREE.RenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false});
   const displayTarget = new THREE.RenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false});
@@ -67,6 +65,13 @@ export async function createViewport(renderer, requestRender) {
       else next.samples=Math.max(1,Math.min(1024,Math.round(next.samples)));
       if(!Number.isFinite(next.exposure))delete next.exposure;
       else next.exposure=Math.max(0,Math.min(32,next.exposure));
+      for(const key of ['backgroundBlur','backgroundOpacity']){
+        if(!Number.isFinite(next[key]))delete next[key];
+        else next[key]=Math.max(0,Math.min(1,next[key]));
+      }
+      if(typeof next.backgroundColor==='string'&&/^#[0-9a-f]{6}$/i.test(next.backgroundColor))
+        next.backgroundColor=new THREE.Color(next.backgroundColor).toArray();
+      else delete next.backgroundColor;
       if(next.toneMapping!==undefined&&!['none','needle-agx'].includes(next.toneMapping))throw new Error('Unknown Hydra tone mapping: '+next.toneMapping);
       const ssgi = next.ssgi ?? settings.ssgi;
       if(ssgi!==settings.ssgi){
@@ -94,6 +99,6 @@ export async function createViewport(renderer, requestRender) {
       }
       return {color,depth:picking.target.depthTexture,ids:picking.target.textures};
     },
-    dispose(){pipeline.dispose();picking.dispose();lighting.dispose();colorTarget.dispose();displayTarget.dispose();display.dispose();},
+    dispose(){pipeline.dispose();picking.dispose();background.dispose();lighting.dispose();colorTarget.dispose();displayTarget.dispose();display.dispose();},
   };
 }

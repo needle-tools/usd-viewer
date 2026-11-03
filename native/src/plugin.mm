@@ -254,6 +254,9 @@ public:
         HdRenderSettingDescriptorList result{{"Screen-space GI",TfToken("needle:ssgi"),VtValue(true)},
                 {"Temporal samples",TfToken("needle:samples"),VtValue(128)},
                 {"Fallback HDR environment",TfToken("needle:environment"),VtValue(true)},
+                {"Background blur",TfToken("needle:backgroundBlur"),VtValue(0.f)},
+                {"Background opacity",TfToken("needle:backgroundOpacity"),VtValue(1.f)},
+                {"Background blend color (sRGB hex)",TfToken("needle:backgroundColor"),VtValue(std::string("#000000"))},
                 {"Tone mapping",TfToken("needle:toneMapping"),VtValue(std::string(std::string(NEEDLE_HOST_NAME)=="usdview"?"needle-agx":"none"))},
                 {"Exposure",TfToken("needle:exposure"),VtValue(1.f)}};
         if(std::string(NEEDLE_HOST_NAME)=="houdini")

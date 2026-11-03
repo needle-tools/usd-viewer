@@ -28,8 +28,42 @@ class NeedleHydraRenderEngine(bpy.types.HydraRenderEngine):
         result = {'needle:ssgi': settings.ssgi, 'needle:samples': settings.samples,
                   'needle:environment': False, 'needle:toneMapping': 'none'}
         if engine_type != 'VIEWPORT':
-            result.update({'aovToken:Combined': 'color', 'aovToken:Depth': 'depth'})
+            result.update({'aovToken:Combined': 'color', 'aovToken:Depth': 'depth',
+                           'needle:backgroundBlur': 0.0, 'needle:backgroundOpacity': 1.0,
+                           'needle:backgroundColor': '#000000'})
         return result
+
+    def _sync_viewport_background(self, context):
+        if not self.engine_ptr:
+            return
+        # These are per viewport, not scene properties. Blender's generic Hydra
+        # world exporter omits them, so send them as renderer-specific settings.
+        # Also sync on draw: shading-only edits need not update the depsgraph.
+        shading = context.space_data.shading
+        studio = not shading.use_scene_world_render
+        theme = context.preferences.themes[0].view_3d.space.gradients.gradient
+        # Blender's Python Hydra bridge accepts only scalar values and strings,
+        # not Gf color vectors. Send standard sRGB hex, decoded to linear by Three.
+        backdrop = '#' + ''.join(f'{round(max(0, min(1, c)) * 255):02x}' for c in theme)
+        values = (self.engine_ptr,
+                  shading.studiolight_background_blur if studio else 0.0,
+                  shading.studiolight_background_alpha if studio else 1.0,
+                  backdrop if studio else '#000000')
+        if values == getattr(self, '_background_values', None):
+            return
+        import _bpy_hydra
+        for key, value in zip(('needle:backgroundBlur', 'needle:backgroundOpacity',
+                               'needle:backgroundColor'), values[1:]):
+            _bpy_hydra.engine_set_render_setting(self.engine_ptr, key, value)
+        self._background_values = values
+
+    def view_update(self, context, depsgraph):
+        super().view_update(context, depsgraph)
+        self._sync_viewport_background(context)
+
+    def view_draw(self, context, depsgraph):
+        self._sync_viewport_background(context)
+        super().view_draw(context, depsgraph)
 
     def update_render_passes(self, scene, render_layer):
         if render_layer.use_pass_combined:
@@ -101,6 +135,8 @@ class NeedleViewportLightingPanel(bpy.types.Panel):
             col = self.layout.column()
             col.prop(shading, 'studiolight_rotate_z', text='Rotation')
             col.prop(shading, 'studiolight_intensity')
+            col.prop(shading, 'studiolight_background_alpha')
+            col.prop(shading, 'studiolight_background_blur')
 
 classes = (NeedleHydraSettings, NeedleHydraRenderEngine, NeedleHydraPanel,
            NeedleViewportLightingPanel)

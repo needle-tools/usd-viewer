@@ -70,7 +70,7 @@ export function createBeauty({ renderer, scene, camera, settings, outputColorTra
       // frame. Supply real dimensions so that first frame can seed history.
       composite.setSize(size.x, size.y); resolved.setSize(size.x, size.y);
       bindVolumeDepth();
-      const previous = { target: renderer.getRenderTarget(), mrt: renderer.getMRT(), opaque: renderer.opaque, transparent: renderer.transparent, autoClear: renderer.autoClear, toneMapping: renderer.toneMapping, background: scene.background, aspect: camera.aspect, view: camera.view, viewValues: camera.view && {...camera.view} };
+      const previous = { target: renderer.getRenderTarget(), mrt: renderer.getMRT(), opaque: renderer.opaque, transparent: renderer.transparent, autoClear: renderer.autoClear, toneMapping: renderer.toneMapping, background: scene.background, backgroundNode: scene.backgroundNode, aspect: camera.aspect, view: camera.view, viewValues: camera.view && {...camera.view} };
       try {
         if (!scene.background) scene.background = renderer.getClearColor(clear);
         renderer.setRenderTarget(target); renderer.setMRT(null); renderer.autoClear = false;
@@ -79,7 +79,7 @@ export function createBeauty({ renderer, scene, camera, settings, outputColorTra
         renderer.copyTextureToTexture(pass.renderTarget.depthTexture, target.depthTexture);
         renderer.toneMapping = previous.toneMapping;
         renderer.setRenderTarget(target); renderer.setMRT(null); renderer.autoClear = false;
-        renderer.opaque = false; renderer.transparent = true; scene.background = null;
+        renderer.opaque = false; renderer.transparent = true; scene.background = null; scene.backgroundNode = null;
         renderer.render(scene, camera);
         renderer.opaque = previous.opaque; renderer.transparent = previous.transparent;
         renderer.setRenderTarget(previous.target); renderer.autoClear = previous.autoClear;
@@ -87,7 +87,7 @@ export function createBeauty({ renderer, scene, camera, settings, outputColorTra
       } finally {
         renderer.setRenderTarget(previous.target); renderer.setMRT(previous.mrt);
         renderer.opaque = previous.opaque; renderer.transparent = previous.transparent; renderer.autoClear = previous.autoClear;
-        renderer.toneMapping = previous.toneMapping; scene.background = previous.background;
+        renderer.toneMapping = previous.toneMapping; scene.background = previous.background; scene.backgroundNode = previous.backgroundNode;
         // TRAA.setViewOffset changes PerspectiveCamera.aspect, even during its
         // first 1×1 frame. Do not leak jitter/temporary target sizes into picking,
         // framing, the host camera or a subsequent renderer mode.
