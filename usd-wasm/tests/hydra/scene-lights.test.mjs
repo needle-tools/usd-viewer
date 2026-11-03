@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Group, Scene, Vector3 } from 'three';
+import { Group, Scene, Vector3, Quaternion, Euler, LinearFilter, RepeatWrapping } from 'three';
 import { ThreeRenderDelegateInterface } from '../../src/hydra/ThreeJsRenderDelegate.js';
+import { getDomeRotation } from '../../src/hydra/domeEnvironment.js';
 
 function setup() {
     const scene = new Scene(), root = new Group(); scene.add(root);
@@ -115,5 +116,26 @@ test('LDR dome texels decode sRGB before applying the linear light tint',async()
   assert.ok(Math.abs(texture.image.data[0]-0.10793)<0.0001);
   assert.ok(Math.abs(texture.image.data[1]-0.05127)<0.0001);
   assert.equal(texture.image.data[2],0);assert.deepEqual([...source.image.data],[128,64,255,255]);
+  assert.equal(texture.minFilter,LinearFilter);assert.equal(texture.magFilter,LinearFilter);
+  assert.equal(texture.wrapS,RepeatWrapping);
  } finally {source.dispose();texture.dispose();}
+});
+
+test('USD dome longitude matches Storm after local and parent rotations',()=>{
+ const parent=new Group(),dome=new Group();parent.add(dome);
+ for(const angles of [[0,0,0],[.3,.7,-.2],[Math.PI/2,0,0]]){
+  parent.rotation.set(...angles);dome.rotation.set(.1,.2,.3);
+  const authored=dome.getWorldQuaternion(new Quaternion());
+  const rotation=getDomeRotation(dome,new Euler());
+  const inverse=new Quaternion().setFromEuler(rotation).invert();
+  for(const local of [new Vector3(1,.2,0),new Vector3(0,-.2,1),new Vector3(-1,.3,-1)]){
+   const direction=local.clone().normalize();
+   const sampled=direction.clone().applyQuaternion(authored).applyQuaternion(inverse);
+   const threeU=Math.atan2(sampled.z,sampled.x)/(2*Math.PI)+.5;
+   const stormU=Math.atan2(direction.z,direction.x)/(2*Math.PI)+.25;
+   const difference=threeU-stormU;
+   assert.ok(Math.abs(difference-Math.round(difference))<1e-12);
+   assert.ok(Math.abs(sampled.y-direction.y)<1e-12,'basis must preserve dome latitude');
+  }
+ }
 });

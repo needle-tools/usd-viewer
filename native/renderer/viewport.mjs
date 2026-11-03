@@ -10,6 +10,7 @@ import {configureNeedleAgx} from '../../usd-wasm/src/renderers/needleAgx.js';
 import {createViewerLighting} from '../../public/viewer-lighting.js';
 import {HydraCamera} from './hydra-camera.mjs';
 import {createPicking} from './picking.mjs';
+import {getDomeRotation} from '../../usd-wasm/src/hydra/domeEnvironment.js';
 
 const bloomSettings = {bloom:false,bloomStrength:.5,bloomRadius:.5,bloomThreshold:1};
 
@@ -47,7 +48,7 @@ export async function createViewport(renderer, requestRender) {
     scene.background=settings.domeLightCameraVisibility&&dome?dome._domeTexture:null;
     if(dome){
       scene.backgroundIntensity=Number(dome._domeState.intensity??1);
-      scene.backgroundRotation.copy(scene.environmentRotation);
+      getDomeRotation(dome._object,scene.backgroundRotation);
     }
   }
   const colorTarget = new THREE.RenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false});

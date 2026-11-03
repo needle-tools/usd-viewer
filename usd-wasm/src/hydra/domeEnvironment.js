@@ -1,7 +1,16 @@
 import { Color, SRGBColorSpace, DataTexture, DataUtils, EquirectangularReflectionMapping, FloatType, HalfFloatType,
-    LinearSRGBColorSpace, Quaternion, RGBAFormat } from 'three';
+    LinearSRGBColorSpace, LinearFilter, RepeatWrapping, Quaternion, Vector3, RGBAFormat } from 'three';
 
 const environments = new WeakMap();
+// USD/Storm longitude is atan2(z,x)/(2*pi) + 1/4; Three uses +1/2.
+// Compose this local basis after the authored transform, for both illumination
+// and camera backgrounds. The panorama's latitude convention is handled by flipY.
+const domeBasis = new Quaternion().setFromAxisAngle(new Vector3(0,1,0), -Math.PI/2);
+
+export function getDomeRotation(object, target) {
+    object.updateWorldMatrix(true, false);
+    return target.setFromQuaternion(object.getWorldQuaternion(new Quaternion()).multiply(domeBasis));
+}
 
 // A scene can contain several independently owned USD handles. Keep dome
 // ownership separate from the host environment, and restore it on removal.
@@ -25,8 +34,7 @@ function apply(scene, record) {
     if ('environmentIntensity' in scene) scene.environmentIntensity = entry ? Number(entry.state.intensity ?? 1) : record.baseline.intensity;
     if (scene.environmentRotation) {
         if (entry) {
-            entry.object.updateWorldMatrix(true, false);
-            scene.environmentRotation.setFromQuaternion(entry.object.getWorldQuaternion(new Quaternion()));
+            getDomeRotation(entry.object, scene.environmentRotation);
         } else if (record.baseline.rotation) scene.environmentRotation.copy(record.baseline.rotation);
     }
 }
@@ -84,6 +92,11 @@ export function createDomeTexture(source, color) {
     texture.mapping = EquirectangularReflectionMapping;
     texture.colorSpace = LinearSRGBColorSpace;
     texture.flipY = source?.flipY ?? false;
+    // DataTexture defaults to nearest filtering. The visible dome must sample
+    // the decoded panorama smoothly, including across the longitude seam.
+    texture.minFilter = LinearFilter;
+    texture.magFilter = LinearFilter;
+    texture.wrapS = RepeatWrapping;
     texture.needsUpdate = true;
     return texture;
 }

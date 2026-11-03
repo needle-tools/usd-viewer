@@ -83,9 +83,16 @@ the display transform.
 The delegate supplies `color`, `depth`, `primId`, `instanceId` and `elementId`.
 Host complexity selects Hydra's refinement level through OpenUSD's OpenSubdiv
 factory, preserving schemes, subdivision tags, face-varying channels and coarse
-face identities. Scene-material disabling clears the shader resource and restores
+face identities. Animated holes, crease sharpness and corner sharpness update
+independently of animated points. A compatibility scene index compares Hydra
+subdivision tag values on `sceneGlobals.currentFrame` notifications, supplying
+missing dirty notices in host USD versions that omit them. Unchanged values do
+not invalidate geometry; renderer Sync still consumes only Hydra data.
+Scene-material disabling clears the shader resource and restores
 each mesh's display-color fallback. Dome camera visibility controls the texture
-background independently of environment illumination.
+background independently of environment illumination. Dome textures use linear
+filtering and the same local longitude basis as Storm for both illumination and
+backgrounds, including authored rotations and Z-up host lights.
 Picking uses a separate unjittered pass, preserving full 32-bit IDs and depth;
 Beauty's temporal jitter does not move the pick target. The host resolves IDs
 back to USD prims and instances. A scoped compatibility task corrects the
@@ -170,6 +177,8 @@ for changes confined to this native integration.
 ```sh
 node --test native/tests/hydra-camera.test.mjs
 python3 native/tests/install-hosts.py
+python3 native/tests/animated-subdivision.py
+python3 native/tests/dome-presentation.py
 node native/tests/browser-parity-runner.mjs
 python3 native/tests/native-parity-runner.py
 native/run-blender --background --factory-startup --python native/tests/blender-parity.py
@@ -194,6 +203,11 @@ ordinary usdview launch. This check does not call `RegisterPlugins`.
 `native/tests/host-controls.py` exercises complexity and live
 scene-material/dome-background toggles through that engine, checks their
 restoration, and verifies that refined picking retains coarse face identities.
+`animated-subdivision.py` compares direct jumps with forward/backward frame
+sequences for animated holes, creases and corners. Use `--scene /path/to/asset.usdz`
+to exercise another asset, and `--ssgi` to include progressive Beauty rendering.
+`dome-presentation.py` compares actual Storm and Needle backgrounds using
+usdview's default dome light under several camera and light rotations.
 Blender tests exercise actual rendered pixels, its viewport
 selection operator, native outlines and live SSGI setting changes in a fresh
 factory-startup process. They do not modify an already-open Blender scene.
