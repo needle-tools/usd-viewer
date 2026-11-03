@@ -127,6 +127,9 @@ plus a small GPU completion metadata strip. The atlas and GPU unpack pass add
 bandwidth overhead. The runtime requests the adapter's texture dimension
 limit so Retina viewports are not constrained by WebGPU's default limit.
 GPU-completed scene serials and temporal samples determine convergence.
+The runtime keeps GPU submissions bounded while continuing to apply Hydra
+updates. A new draw uses the latest camera instead of accumulating queued
+renders of older views during navigation.
 When offscreen composition skips the final submission, the canvas republishes
 its existing GPU attachments until the host acknowledges that scene and sample.
 It does not restart temporal accumulation. Private AOVs survive render-pass
@@ -187,6 +190,7 @@ for changes confined to this native integration.
 
 ```sh
 node --test native/tests/hydra-camera.test.mjs
+node --experimental-vm-modules --test native/tests/render-scheduling.test.mjs
 python3 native/tests/install-hosts.py
 python3 native/tests/animated-subdivision.py
 python3 native/tests/dome-presentation.py

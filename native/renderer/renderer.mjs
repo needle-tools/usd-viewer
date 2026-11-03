@@ -17,7 +17,7 @@ renderer.setPixelRatio(1);await renderer.init();
 renderer.onError = fail;
 renderer.backend.device.lost.then(info=>fail(new Error('WebGPU device lost: '+info.message)));
 if(!renderer.backend.isWebGPUBackend)throw new Error('Native Hydra requires WebGPU');
-let dirty=false,frame=null,samples=0,commands=Promise.resolve(),attachments=null,presentRequested=false;
+let dirty=false,frame=null,samples=0,commands=Promise.resolve(),attachments=null,presentRequested=false,gpuInFlight=0;
 const viewport=await createViewport(renderer,()=>{dirty=true;});
 const surface=createSurface(renderer);
 bridge.onPresent(request=>{if(request.serial===frame?.serial)presentRequested=true;});
@@ -64,14 +64,25 @@ bridge.onCommand(message=>{commands=commands.then(async()=>{
   } finally {updating=false;}
 }).catch(fail);});
 
+function submittedWork() {
+  // RAF can submit faster than WebGPU finishes. Bound render-ahead so orbit
+  // input updates the next frame instead of waiting behind old camera views.
+  // Two submissions can overlap to keep the GPU busy without a long queue.
+  // Hydra commands continue to apply while this work is in flight.
+  gpuInFlight++;
+  const work=renderer.backend.device.queue.onSubmittedWorkDone();
+  work.then(()=>{gpuInFlight--;},error=>{gpuInFlight--;fail(error);});
+  return work;
+}
+
 function render(){
   requestAnimationFrame(render);
   const wantedSamples=viewport.settings.ssgi?viewport.settings.samples:1;
-  if(failed||updating||!frame)return;
+  if(failed||updating||gpuInFlight>=2||!frame)return;
   if(!dirty&&samples>=wantedSamples){
     if(presentRequested&&attachments){
       presentRequested=false;
-      try{surface.render(attachments.color,attachments.depth,attachments.ids,{...frame,sample:samples,converged:true});}
+      try{surface.render(attachments.color,attachments.depth,attachments.ids,{...frame,sample:samples,converged:true});submittedWork();}
       catch(error){fail(error);}
     }
     return;
@@ -84,10 +95,11 @@ function render(){
     if(samples===0)console.log('Beauty frame complete',frame.serial);
     samples++;
     surface.render(attachments.color,attachments.depth,attachments.ids,{...frame,sample:samples,converged:samples>=wantedSamples});
+    const work=submittedWork();
     const completed={serial:frame.serial,sample:samples,converged:samples>=wantedSamples};
     // The final notification must follow GPU completion. The host may have
     // released its previous paint before this last canvas submission arrived.
-    if(completed.converged)renderer.backend.device.queue.onSubmittedWorkDone()
+    if(completed.converged)work
       .then(()=>bridge.rendered(completed)).catch(fail);
     else bridge.rendered(completed);
   } catch(error){fail(error);}
