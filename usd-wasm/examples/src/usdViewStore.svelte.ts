@@ -1,6 +1,7 @@
 import type { USDObjectsChangedNotice, USDStageLike, USDStageMetadata } from "./usdViewModel";
 
 export type USDHydraHandleLike = {
+  readStage<T>(callback: () => T | Promise<T>): Promise<T>;
   setTime(timeCode: number): Promise<void>;
   getTime(): number;
   setPlaying(playing: boolean): void;

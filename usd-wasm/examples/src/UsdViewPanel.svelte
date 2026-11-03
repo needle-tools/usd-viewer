@@ -1,20 +1,34 @@
 <script lang="ts">
   import UsdHierarchy from "./UsdHierarchy.svelte";
   import { usdViewState, type UsdViewState } from "./usdViewStore.svelte";
-  import { buildUsdViewModel, type AttributeRow, type LayerRow, type LayerTableRow, type RelationshipRow, type USDPcpNode, type USDSpecStackEntry } from "./usdViewModel";
+  import { buildUsdViewModel, emptyModel, type AttributeRow, type LayerRow, type LayerTableRow, type RelationshipRow, type USDPcpNode, type USDSpecStackEntry } from "./usdViewModel";
 
-  let { state = usdViewState } = $props<{ state?: UsdViewState }>();
-  let model = $derived(buildUsdViewModel({
-    stage: state.stage,
-    selectedPath: state.selectedPath,
-    revision: state.revision,
-    currentTime: state.currentTime,
-    selectedPropertyPath: state.selectedPropertyPath,
-    selectedLayerIdentifier: state.selectedLayerIdentifier,
-    selectedLayerSource: state.selectedLayerSource,
-    stageMetadata: state.handle?.stageMetadata?.() ?? null,
-  }));
-  let lastNotice = $derived(state.notice);
+  let { state: viewState = usdViewState } = $props<{ state?: UsdViewState }>();
+  let model = $state(emptyModel);
+  const options = $derived({
+    stage: viewState.stage,
+    selectedPath: viewState.selectedPath,
+    revision: viewState.revision,
+    currentTime: viewState.currentTime,
+    selectedPropertyPath: viewState.selectedPropertyPath,
+    selectedLayerIdentifier: viewState.selectedLayerIdentifier,
+    selectedLayerSource: viewState.selectedLayerSource,
+    stageMetadata: viewState.handle?.stageMetadata?.() ?? null,
+  });
+  $effect(() => {
+    const snapshot = options;
+    const handle = viewState.handle;
+    let current = true;
+    const read = () => current ? buildUsdViewModel(snapshot) : null;
+    const pending = handle ? handle.readStage(read) : Promise.resolve(read());
+    void pending.then(next => {
+      if (current && next) model = next;
+    }).catch(error => {
+      if (current) console.warn("USD inspector refresh failed", error);
+    });
+    return () => { current = false; };
+  });
+  let lastNotice = $derived(viewState.notice);
 
   function metadataEntries(metadata: Record<string, string>) {
     return Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b));
@@ -25,11 +39,11 @@
   }
 
   function selectProperty(path: string) {
-    state.selectProperty(path);
+    viewState.selectProperty(path);
   }
 
   function selectLayer(row: LayerTableRow) {
-    state.selectLayer(row.identifier, row.source);
+    viewState.selectLayer(row.identifier, row.source);
   }
 
   function propertyType(property: AttributeRow | RelationshipRow) {
@@ -47,12 +61,12 @@
 
   async function setTimelineValue(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
-    state.setPlaying(false);
-    await state.setTime(Number(input.value));
+    viewState.setPlaying(false);
+    await viewState.setTime(Number(input.value));
   }
 
   function togglePlayback() {
-    state.setPlaying(!state.isPlaying);
+    viewState.setPlaying(!viewState.isPlaying);
   }
 
   async function copyText(text: string) {
@@ -64,10 +78,10 @@
 <aside class="usdview-panel" data-testid="usdview-panel">
   <header>
     <h2>Usdview</h2>
-    <span>{state.stage ? `rev ${state.revision}` : "no stage"}</span>
+    <span>{viewState.stage ? `rev ${viewState.revision}` : "no stage"}</span>
   </header>
 
-  {#if !state.stage}
+  {#if !viewState.stage}
     <p class="empty">Load a USD stage.</p>
   {:else}
     <div class="panel-grid">
@@ -75,9 +89,9 @@
         <h3>Prim Browser</h3>
         <UsdHierarchy
           tree={model.tree}
-          selectedPath={state.selectedPath}
-          revision={state.revision}
-          onSelectPath={(path) => state.selectPath(path)}
+          selectedPath={viewState.selectedPath}
+          revision={viewState.revision}
+          onSelectPath={(path) => viewState.selectPath(path)}
         />
       </section>
 
@@ -85,7 +99,7 @@
         <h3>Animation</h3>
         <div class="timeline">
           <button type="button" onclick={togglePlayback} data-testid="usdview-timeline-play">
-            {state.isPlaying ? "Pause" : "Play"}
+            {viewState.isPlaying ? "Pause" : "Play"}
           </button>
           <input
             data-testid="usdview-timeline-slider"
@@ -281,7 +295,7 @@
     </div>
     {#each properties as property}
       <button
-        class:selected={state.selectedPropertyPath === property.path}
+        class:selected={viewState.selectedPropertyPath === property.path}
         class="property-row"
         type="button"
         onclick={() => selectProperty(property.path)}
@@ -340,7 +354,7 @@
       </div>
       {#each rows as row}
         <button
-          class:selected={state.selectedLayerIdentifier === row.identifier && state.selectedLayerSource === row.source}
+          class:selected={viewState.selectedLayerIdentifier === row.identifier && viewState.selectedLayerSource === row.source}
           class="layer-row"
           data-testid="usdview-layer-row"
           type="button"

@@ -51,18 +51,20 @@ export type USDPrimLike = {
   GetVariantSelection(variantSetName: string): string;
 };
 
+type MaybePromise<T> = T | Promise<T>;
+
 export type USDAttributeLike = {
   IsValid(): boolean;
   GetName(): string;
   GetPath(): string;
   GetTypeName(): string;
   GetAllMetadata(): Record<string, string>;
-  GetValueString(): string;
-  GetValueStringAtTime(timeCode: number): string;
+  GetValueString(): MaybePromise<string>;
+  GetValueStringAtTime(timeCode: number): MaybePromise<string>;
   GetConnections(): USDVectorLike<string>;
-  GetResolveInfo(timeCode: number): USDResolveInfo;
-  GetTimeSamples(): USDVectorLike<number>;
-  GetPropertyStackWithLayerOffsets(timeCode: number): USDSpecStackEntry[];
+  GetResolveInfo(timeCode: number): MaybePromise<USDResolveInfo>;
+  GetTimeSamples(): MaybePromise<USDVectorLike<number>>;
+  GetPropertyStackWithLayerOffsets(timeCode: number): MaybePromise<USDSpecStackEntry[]>;
 };
 
 export type USDRelationshipLike = {
@@ -282,7 +284,7 @@ export const emptyModel: InspectorModel = {
   compositionErrors: [],
 };
 
-export function buildUsdViewModel(options: BuildUsdViewModelOptions): InspectorModel {
+export async function buildUsdViewModel(options: BuildUsdViewModelOptions): Promise<InspectorModel> {
   const {
     stage,
     selectedPath = "/",
@@ -301,7 +303,7 @@ export function buildUsdViewModel(options: BuildUsdViewModelOptions): InspectorM
 
   const pseudoRoot = stage.GetPseudoRoot();
   const selectedPrim = selectedPath === "/" ? pseudoRoot : stage.GetPrimAtPath(selectedPath);
-  const attributes = readAttributes(selectedPrim, currentTime);
+  const attributes = await readAttributes(selectedPrim, currentTime);
   const relationships = readRelationships(selectedPrim, currentTime);
   const selectedProperty = [...attributes, ...relationships].find((property) => property.path === selectedPropertyPath) ?? null;
   const selectedPropertyStack = selectedProperty?.stack ?? [];
@@ -379,24 +381,26 @@ export function readPrimDetails(prim: USDPrimLike): PrimDetails | null {
   };
 }
 
-export function readAttributes(prim: USDPrimLike, currentTime: number): AttributeRow[] {
+export async function readAttributes(prim: USDPrimLike, currentTime: number): Promise<AttributeRow[]> {
   if (!prim?.IsValid?.()) return [];
-  return vectorToArray(prim.GetAttributes()).map((attribute: USDAttributeLike) => {
-    const resolveInfo = safeUsdQuery(() => attribute.GetResolveInfo(currentTime), null);
-    return {
+  const rows: AttributeRow[] = [];
+  for (const attribute of vectorToArray(prim.GetAttributes())) {
+    const resolveInfo = await safeUsdQueryAsync(() => attribute.GetResolveInfo(currentTime), null);
+    rows.push({
       kind: "attribute",
       name: attribute.GetName(),
       path: attribute.GetPath(),
       typeName: attribute.GetTypeName(),
-      value: safeUsdQuery(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
+      value: await safeUsdQueryAsync(() => attribute.GetValueStringAtTime?.(currentTime) ?? attribute.GetValueString(), ""),
       resolveSource: resolveInfo?.source ?? "",
       resolveInfo,
-      timeSamples: vectorToArray(attribute.GetTimeSamples()),
+      timeSamples: vectorToArray(await attribute.GetTimeSamples()),
       connections: vectorToArray(attribute.GetConnections()),
       metadata: attribute.GetAllMetadata(),
-      stack: vectorToArray(safeUsdQuery(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
-    };
-  });
+      stack: vectorToArray(await safeUsdQueryAsync(() => attribute.GetPropertyStackWithLayerOffsets?.(currentTime), [])),
+    });
+  }
+  return rows;
 }
 
 export function readRelationships(prim: USDPrimLike, currentTime: number): RelationshipRow[] {
@@ -477,6 +481,15 @@ export function vectorToArray<T>(vector: USDVectorLike<T> | T[] | null | undefin
 export function safeUsdQuery<T>(callback: () => T, fallback: T): T {
   try {
     return callback();
+  } catch (error) {
+    console.warn("USD inspector query failed", error);
+    return fallback;
+  }
+}
+
+async function safeUsdQueryAsync<T>(callback: () => T | Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await callback();
   } catch (error) {
     console.warn("USD inspector query failed", error);
     return fallback;

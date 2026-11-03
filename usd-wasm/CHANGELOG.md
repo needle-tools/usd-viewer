@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- Await asynchronous attribute reads in the SDK example inspector and retain the stage while reading.
+
 - Refresh the embedded MaterialX libraries to the final upstream 1.39.5 data in both runtime builds.
 
 - Update to MaterialX 1.8.1 and Three.js 0.185.2-alpha.8 with the complete MaterialX loader, corrected TSL default inputs and expanded node-library coverage.
