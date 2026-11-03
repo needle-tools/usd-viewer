@@ -65,7 +65,11 @@ export function createBeauty({ renderer, scene, camera, settings, outputColorTra
     setSettings: values => presentation.setSettings(values),
     render() {
       if (disposed) return;
-      renderer.getDrawingBufferSize(size); target.setSize(size.x, size.y); bindVolumeDepth();
+      renderer.getDrawingBufferSize(size); target.setSize(size.x, size.y);
+      // TRAA queries its RTT input extent before the lazy RTT draw on the first
+      // frame. Supply real dimensions so that first frame can seed history.
+      composite.setSize(size.x, size.y); resolved.setSize(size.x, size.y);
+      bindVolumeDepth();
       const previous = { target: renderer.getRenderTarget(), mrt: renderer.getMRT(), opaque: renderer.opaque, transparent: renderer.transparent, autoClear: renderer.autoClear, toneMapping: renderer.toneMapping, background: scene.background, aspect: camera.aspect, view: camera.view, viewValues: camera.view && {...camera.view} };
       try {
         if (!scene.background) scene.background = renderer.getClearColor(clear);
