@@ -11,6 +11,7 @@ needle_hydra.register()
 from pxr import UsdImagingGL
 assert 'HdNeedleRendererPlugin' in UsdImagingGL.Engine.GetRendererPlugins()
 bpy.context.scene.render.engine = 'NEEDLE_HYDRA'
+assert bpy.context.scene.needle_hydra.samples == 128
 bpy.context.scene.render.resolution_x = 256
 bpy.context.scene.render.resolution_y = 256
 bpy.context.scene.render.resolution_percentage = 100

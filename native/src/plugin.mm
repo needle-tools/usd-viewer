@@ -252,7 +252,7 @@ public:
     }
     HdRenderSettingDescriptorList GetRenderSettingDescriptors()const override {
         HdRenderSettingDescriptorList result{{"Screen-space GI",TfToken("needle:ssgi"),VtValue(true)},
-                {"Temporal samples",TfToken("needle:samples"),VtValue(32)},
+                {"Temporal samples",TfToken("needle:samples"),VtValue(128)},
                 {"Fallback HDR environment",TfToken("needle:environment"),VtValue(true)},
                 {"Tone mapping",TfToken("needle:toneMapping"),VtValue(std::string(std::string(NEEDLE_HOST_NAME)=="usdview"?"needle-agx":"none"))},
                 {"Exposure",TfToken("needle:exposure"),VtValue(1.f)}};

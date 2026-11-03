@@ -41,7 +41,7 @@ export async function createViewport(renderer, requestRender) {
       .then(texture=>{texture.mapping=THREE.EquirectangularReflectionMapping;return texture;});
     return environment;
   }});
-  let settings = {ssgi:true,samples:32,toneMapping:'none',exposure:1,environment:true,domeLightCameraVisibility:true};
+  let settings = {ssgi:true,samples:128,toneMapping:'none',exposure:1,environment:true,domeLightCameraVisibility:true};
   function updateDomeBackground() {
     const dome=Object.values(delegate.scenePrimitives).reverse().find(prim=>
       prim._domeTexture&&prim._domeState?.visible!==false&&prim._domeState?.cameraVisibility!==false);

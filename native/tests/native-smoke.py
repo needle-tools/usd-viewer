@@ -35,6 +35,9 @@ fbo=QOpenGLFramebufferObject(QSize(256,256));fbo.bind()
 stage=Usd.Stage.Open(str(root/('tests/fixtures/'+fixture+'.usda')))
 engine=UsdImagingGL.Engine()
 assert engine.SetRendererPlugin('HdNeedleRendererPlugin')
+if 'NEEDLE_TEST_SAMPLES' in os.environ:
+    engine.SetRendererSetting('needle:samples',int(os.environ['NEEDLE_TEST_SAMPLES']))
+samples=engine.GetRendererSetting('needle:samples')
 engine.SetRendererSetting('needle:ssgi',ssgi)
 engine.SetRendererSetting('needle:toneMapping','none')
 assert engine.SetRendererAov('color')
@@ -62,7 +65,7 @@ while True:
     assert time.monotonic()<deadline,stats
 
 assert stats['needle:ssgiEnabled'] is ssgi,stats
-assert stats['needle:samples']>=(32 if ssgi else 1),stats
+assert stats['needle:samples']>=(samples if ssgi else 1),stats
 baseline=fbo.toImage()
 assert baseline.save(str(output/'viewport.png'))
 hits={}

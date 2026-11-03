@@ -50,7 +50,7 @@ class NeedleHydraSettings(bpy.types.PropertyGroup):
     ssgi: bpy.props.BoolProperty(name='Screen-space GI', default=True,
                                 update=update_settings,
                                 description='Use the browser Beauty pipeline with SSGI and temporal antialiasing')
-    samples: bpy.props.IntProperty(name='Temporal Samples', default=32, min=1, max=1024,
+    samples: bpy.props.IntProperty(name='Temporal Samples', default=128, min=1, max=1024,
                                   update=update_settings)
     environment: bpy.props.BoolProperty(name='Fallback HDR Environment', default=True,
                                        update=update_settings,

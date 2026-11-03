@@ -31,6 +31,7 @@ for host,(python,paths) in hosts.items():
                  if not key.startswith(('NEEDLE_','DYLD_'))}
             env.update(paths,NEEDLE_TEST_HOST=host,NEEDLE_TEST_FIXTURE=fixture,
                        NEEDLE_TEST_SSGI='1' if ssgi else '0',
+                       NEEDLE_TEST_SAMPLES='32', # Match browser-parity.mjs, independently of host defaults.
                        PXR_PLUGINPATH_NAME=str(root/'.build'/host/'plugin/resources'),
                        NEEDLE_HYDRA_CAPTURE=str(output/'aov'),NEEDLE_HYDRA_VALIDATE_CODEC='1')
             if '--compare-only' not in sys.argv:

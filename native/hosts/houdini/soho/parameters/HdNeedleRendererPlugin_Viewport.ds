@@ -32,7 +32,7 @@
         label "Temporal Samples"
         type int
         size 1
-        default { 32 }
+        default { 128 }
         range { 1! 1024! }
         disablewhen "{ xn__needlessgi_dsa == 0 }"
         parmtag { "uiscope" "viewport" }

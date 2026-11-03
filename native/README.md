@@ -74,6 +74,12 @@ Hydra render settings. The fallback environment is suppressed when authored
 lights exist, following the browser lighting policy. MaterialX documents and
 texture paths come from the host's Hydra material network and resolver.
 
+Temporal filtering uses the shared Three.js SSGI/TRAA pipeline. Native hosts
+default to 128 temporal samples after scene or camera changes; `needle:samples`
+controls that scheduling budget. TRAA reuses history with temporal rejection and
+can retain residual grain. Reaching the budget means the host stops scheduling
+frames, rather than that the image has reached zero noise.
+
 Blender and Houdini receive scene-linear color and apply their own display
 management. usdview defaults to the viewer's Needle AgX tone mapping. To compare
 raw color across hosts, set `needle:toneMapping` to `none` and compare linear
@@ -200,6 +206,13 @@ installation. After installing standalone USD discovery, use
 `env -u PXR_PLUGINPATH_NAME python3 native/tests/native-smoke.py --default-discovery`
 with that installation's Python environment to verify the same path as an
 ordinary usdview launch. This check does not call `RegisterPlugins`.
+`node native/tests/temporal-accumulation-runner.mjs` measures actual WebGPU pixels
+through the shared Beauty graph: a valid first frame, temporal grain reduction,
+history reset, resize and host projection preservation.
+`native/tests/temporal-accumulation.py` checks progressive pixels and the default
+sample budget through a host's actual UsdImagingGL engine. Configure the matching
+Python/plugin paths as for `native-smoke.py`. Its framebuffer captures are test
+readbacks; they do not change the normal presentation path.
 `native/tests/host-controls.py` exercises complexity and live
 scene-material/dome-background toggles through that engine, checks their
 restoration, and verifies that refined picking retains coarse face identities.
