@@ -1,17 +1,27 @@
 """Exercise a host's actual UsdImagingGL engine, including Hydra ID-buffer picking."""
+import argparse
 import json
 import os
 from pathlib import Path
 import time
 from pxr import Gf, Plug, Usd, UsdImagingGL
 
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--default-discovery',action='store_true',
+                    help='Require installed discovery without a plugin-path override')
+args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 host=os.environ.get('NEEDLE_TEST_HOST','usdview')
 ssgi=os.environ.get('NEEDLE_TEST_SSGI','1')!='0'
 fixture=os.environ.get('NEEDLE_TEST_FIXTURE','parity')
 output=root/'.build'/host/(fixture if ssgi else fixture+'-basic')
 output.mkdir(parents=True,exist_ok=True)
-Plug.Registry().RegisterPlugins(str(root/'.build'/host/'plugin/resources'))
+if args.default_discovery:
+    assert not os.environ.get('PXR_PLUGINPATH_NAME'),'Unset PXR_PLUGINPATH_NAME to test installed discovery'
+    plugin=Plug.Registry().GetPluginWithName('hdNeedle')
+    assert plugin and Path(plugin.path).resolve()==root/'.build'/host/'plugin/libhdNeedle.dylib',plugin
+else:
+    Plug.Registry().RegisterPlugins(str(root/'.build'/host/'plugin/resources'))
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QOffscreenSurface,QOpenGLContext,QSurfaceFormat

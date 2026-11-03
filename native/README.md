@@ -42,8 +42,15 @@ Houdini's UI. If a saved Retina desktop restores an incorrectly sized image,
 resize the window once. `native/run-houdini` preserves Retina rendering; use
 the compatibility launcher for accurate viewport picking on these builds.
 
-`python3 native/install-hosts.py` installs the local Houdini
-package and links the Blender add-on into its scripts directory. Blender's
+`python3 native/install-hosts.py` registers the built usdview plugin in the
+standalone OpenUSD installation, installs the local Houdini package and links
+the Blender add-on into its scripts directory. Ordinary `usdview` launches then
+offer **Needle Three.js WebGPU** in the Renderer menu without needing the
+checkout launcher or `PXR_PLUGINPATH_NAME`. Restart usdview after installation.
+The standalone prefix defaults to `OPENUSD_NATIVE_PREFIX` or
+`~/OpenUSD-26.05-native`; pass `--usd-prefix /path/to/OpenUSD` to select another
+installation with a matching ABI. The installer adds a managed plugin include
+and leaves the installation's existing registry and executable intact. Blender's
 Preferences can enable that add-on for launches outside the script. Installed
 links and packages refer to this checkout. Houdini requires a working local
 license service even when Apprentice has already been activated.
@@ -162,6 +169,7 @@ for changes confined to this native integration.
 
 ```sh
 node --test native/tests/hydra-camera.test.mjs
+python3 native/tests/install-hosts.py
 node native/tests/browser-parity-runner.mjs
 python3 native/tests/native-parity-runner.py
 native/run-blender --background --factory-startup --python native/tests/blender-parity.py
@@ -179,7 +187,11 @@ It is not part of normal native presentation.
 `native/tests/native-smoke.py` exercises a host's actual UsdImagingGL engine,
 including intersection tests, object highlighting, individual-instance
 highlighting and clearing selection. Set its Python/plugin paths to that host's
-installation. `native/tests/host-controls.py` exercises complexity and live
+installation. After installing standalone USD discovery, use
+`env -u PXR_PLUGINPATH_NAME python3 native/tests/native-smoke.py --default-discovery`
+with that installation's Python environment to verify the same path as an
+ordinary usdview launch. This check does not call `RegisterPlugins`.
+`native/tests/host-controls.py` exercises complexity and live
 scene-material/dome-background toggles through that engine, checks their
 restoration, and verifies that refined picking retains coarse face identities.
 Blender tests exercise actual rendered pixels, its viewport
