@@ -476,3 +476,25 @@ test('OmniGlass retains transmission, IOR, roughness and explicitly enabled cuto
     assert.equal(material.opacity,1);assert.equal(material.transparent,false);
   }finally{context.delegate.dispose();}
 });
+
+test('original texture scope reapplies scalar channels and UV transforms and rejects use after cancellation',async()=>{
+ const context=setup();
+ try{
+  const material=await update(context,omni({enable_ORM_texture:true,ORM_texture:'orm.png',reflection_roughness_texture_influence:1,metallic_texture_influence:1,ao_to_diffuse:1,texture_scale:[2,3],texture_translate:[0.1,0.2]}));
+  const preview=material.roughnessMap,recipe=context.delegate.registry.exportRecipes.get(preview);
+  assert.equal(typeof recipe,'function');
+  context.delegate.registry.exportRecipes.set(preview,async registry=>{
+   assert.equal(registry.config.maxTextureSize,undefined);assert.equal(registry.config.resolveTextureUrl,undefined);
+   registry.getTexture=async()=>new DataTexture(new Uint8Array([10,50,90,255,20,60,100,255]),2,1);
+   return recipe(registry);
+  });
+  const controller=new AbortController(),scope=context.delegate.registry.createExportScope({signal:controller.signal});
+  const original=await scope.getTexture(preview);
+  assert.equal(original.image.width,2);assert.deepEqual(original.repeat.toArray(),preview.repeat.toArray());
+  assert.deepEqual(original.offset.toArray(),preview.offset.toArray());assert.equal(original.colorSpace,preview.colorSpace);
+  assert.equal(original.image.data[1],50);assert.equal(original.image.data[5],60);
+  assert.equal(material.roughnessMap,preview);assert.equal(preview.image.width,1);
+  assert.equal(await scope.getTexture(preview),original);
+  controller.abort();await assert.rejects(scope.getTexture(preview),{name:'AbortError'});scope.dispose();
+ }finally{context.delegate.dispose();}
+});

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, cp, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, cp, realpath, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -8,6 +8,8 @@ import { spawnSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 const sdk = fileURLToPath(new URL('..', import.meta.url));
+const simreadyDependency=JSON.parse(await readFile(join(sdk,'package.json'),'utf8')).peerDependencies['@needle-tools/simready'];
+const kinematicsDependency=JSON.parse(await readFile(join(sdk,'../package.json'),'utf8')).dependencies['closed-chain-ik'];
 const output = resolve(process.argv[2] || join(sdk, '.cache/package-validation', `renderers-${Date.now()}`));
 await mkdir(output, { recursive: true });
 function command(label, cwd, cmd, args) {
@@ -24,9 +26,10 @@ try {
     const root = await mkdtemp(join(tmpdir(), `needle-usd-renderers-${name}-`));
     result.consumers.push({ name, root, three });
     await writeFile(join(root, 'package.json'), JSON.stringify({ name: `usd-renderers-${name}`, private: true, type: 'module', scripts: { build: 'vite build' },
-      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
+      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(name === 'modern' ? {'@needle-tools/simready':process.env.USD_PACKAGE_SIMREADY || simreadyDependency} : {}), ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { 'closed-chain-ik':kinematicsDependency, '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
     await command(`${name}-install`, root, 'npm', ['install', '--no-audit', '--no-fund', '--prefer-offline']);
     assert.equal(await realpath(join(root, 'node_modules/@needle-tools/usd')), join(await realpath(root), 'node_modules/@needle-tools/usd'));
+    if (name === 'legacy') await assert.rejects(access(join(root,'node_modules/@needle-tools/simready')),{code:'ENOENT'});
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
     if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
@@ -34,6 +37,12 @@ try {
     await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     if (name === 'modern') await cp(join(sdk,'tests/fixtures/coverage/lighting-mdl'),join(root,'public/mdl'),{recursive:true});
+    if (name === 'modern') {
+      await cp(join(sdk,'tests/fixtures/simready'),join(root,'public/simready'),{recursive:true});
+      await command('modern-type-dependencies',root,'npm',['install','--save-dev','--no-audit','--no-fund','typescript@5.9.3','@types/three@0.185.4']);
+      await cp(join(sdk,'tests/types/gltf-consumer.ts'),join(root,'gltf-consumer.ts'));
+      await command('modern-gltf-types',root,'npx',['--no-install','tsc','--noEmit','--strict','--skipLibCheck','false','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','gltf-consumer.ts']);
+    }
     await cp(join(sdk,'tests/fixtures/coverage/textures'),join(root,'public/textures'),{recursive:true});
     if (name === 'legacy') await cp(join(root,'node_modules/three/examples/jsm/libs/basis'),join(root,'public/basis'),{recursive:true});
     await command(`${name}-build`, root, 'npm', ['run', 'build']);
@@ -49,6 +58,9 @@ try {
     page.on('response', response => result.requests.push({ url: response.url(), status: response.status() }));
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(() => !!window.packed, null, { timeout: 120_000 });
+    result.simready=await page.evaluate(()=>window.packed.simreadyRoundTrip());
+    assert.equal(result.simready.joints,3);assert.ok(Math.abs(result.simready.value-90)<1e-4);
+    assert.deepEqual(result.simready.issues,[]);assert.ok(result.simready.bytes>0);assert.ok(result.simready.archiveBytes>0);
     result.authoring = await page.evaluate(async () => {
       const USD=window.packed.USD;
       if(!USD.FS_analyzePath('/tmp').exists)USD.FS_createPath('/','tmp',true,true);
@@ -167,7 +179,7 @@ try {
     const zippedEntries = unzipSync(new Uint8Array(await readFile(await zipped.path())));
     assert.ok(Object.keys(zippedEntries).length > 0);
     await page.getByLabel('Download format', {exact:true}).focus(); await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('End'); await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => window.packed.downloads.format), 'usdz');
     const usdzEvent = page.waitForEvent('download');
     await page.getByRole('button', {name:'Download',exact:true}).click();

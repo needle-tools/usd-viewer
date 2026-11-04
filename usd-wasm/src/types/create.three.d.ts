@@ -7,12 +7,12 @@ export type { UsdViewportHelpers } from "./hydra.js";
 export declare type HydraFile = File & { path: string };
 
 export type UsdExportProgress = {
-    phase: 'preparing' | 'dependencies' | 'packaging' | 'reading' | 'compressing' | 'complete';
+    phase: 'preparing' | 'dependencies' | 'packaging' | 'reading' | 'textures' | 'compressing' | 'complete';
     /** Per-phase work, not a fabricated overall percentage. Zero total is indeterminate. */
     completed: number;
     total: number;
 };
-export type UsdExportOptions = { onProgress?: (progress: UsdExportProgress) => void };
+export type UsdExportOptions = { onProgress?: (progress: UsdExportProgress) => void; signal?: AbortSignal; textureResolution?: 'original' | 'preview' };
 
 export declare type NeedleThreeHydraStageMetadata = {
     upAxis: string,
@@ -212,8 +212,14 @@ export declare type NeedleThreeHydraHandle = {
     /** Self-contained USDZ with authored layers, variants, animation and unsaved
      * root/layer edits. Serialized after pending editStage operations. */
     exportUsdz(options?: UsdExportOptions): Promise<Uint8Array>,
-    /** Resolves when asynchronous material generation and texture assignment have settled.
-     */
+    /** Export textures at the selected resolution, including authored channel/UV conversions.
+     * Dispose after export; the live scene remains at its preview resolution. */
+    createTextureExport(options?: {signal?: AbortSignal; resolution?: 'original' | 'preview'}): {
+      readonly maxTextureSize: number;
+      getTexture(texture: import('three').Texture): Promise<import('three').Texture>;
+      dispose(): void;
+    };
+    /** Resolves when asynchronous material generation and texture assignment have settled. */
     materialsReady: () => Promise<void>,
     /** Returns lightweight delegate diagnostics for smoke tests and debugging.
      */

@@ -99,6 +99,7 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
   await page.addInitScript(value => localStorage.setItem('needle-usd-theme', JSON.stringify(value)), theme);
   await page.goto('/?viewer=three');
   await expect(page.locator('#usd-workbench')).toHaveAttribute('data-loaded', 'false');
+  await page.waitForFunction(()=>(window as any).__usdViewerUiReady);
   await expect(page.locator('#dropzone')).toBeVisible();
   const contrast = (selector: string, background?: string) => page.locator(selector).evaluate((node, bg) => {
     const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v => {v/=255; return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
@@ -109,9 +110,9 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
   expect(await contrast('.dropzone-title','#usd-viewport')).toBeGreaterThan(4.5);
   expect(await contrast('.dropzone-subtitle','#usd-viewport')).toBeGreaterThan(4.5);
   await page.locator('[data-usd-menu=file]>summary').click();
-  await page.locator('#export-gltf').hover();
+  await page.locator('#usd-download').hover();
   await expect(page.locator('.ui-tooltip')).toBeVisible();
-  await expect(page.locator('.ui-tooltip')).toContainText('Load a USD');
+  await expect(page.locator('.ui-tooltip')).toContainText('Open a file first');
   await expect(page.locator('.ui-tooltip')).toHaveCSS('opacity','1');
   expect(await contrast('.ui-tooltip')).toBeGreaterThan(4.5);
   await page.screenshot({path:info.outputPath(`${theme}-empty-tooltip.png`)});
@@ -140,14 +141,15 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
   await page.evaluate(async()=>{await(window as any).usdHydra.ready();});
   await expect(page.locator('#dropzone')).toBeHidden();
   await page.locator('[data-usd-menu=file]>summary').click();
-  await page.locator('#export-gltf').hover();
-  await expect(page.locator('.ui-tooltip')).toContainText('Share or export');
+  await page.locator('#usd-download').hover();
+  await expect(page.locator('.ui-tooltip')).toContainText('Download');
   await expect(page.locator('.ui-tooltip')).toHaveCSS('opacity','1');
   expect(await contrast('.ui-tooltip')).toBeGreaterThan(4.5);
   await page.screenshot({path:info.outputPath(`${theme}-loaded-tooltip.png`)});
-  await page.locator('#export-gltf').click();
-  await expect(page.locator('#export-dialog')).toBeVisible();
-  await page.locator('#export-dialog-close-btn').click();
+  await page.keyboard.press('Escape');
+  await page.getByLabel('Download format',{exact:true}).click();
+  await expect(page.getByRole('menuitemradio',{name:'glTF',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.setViewportSize({width:390,height:700});
   await expect(page.locator('#usd-viewport')).toBeVisible();
   await expect.poll(()=>page.locator('#usd-viewport').evaluate(node=>node.getBoundingClientRect().width)).toBeGreaterThan(380);

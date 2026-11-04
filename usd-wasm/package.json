@@ -69,6 +69,10 @@
     "./kinematics": {
       "types": "./src/types/kinematics.d.ts",
       "import": "./src/physics/kinematics.js"
+    },
+    "./gltf": {
+      "types": "./src/types/gltf.d.ts",
+      "import": "./src/gltf/simready.js"
     }
   },
   "files": [
@@ -76,7 +80,8 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE.txt",
-    "THIRD_PARTY_NOTICES.txt"
+    "THIRD_PARTY_NOTICES.txt",
+    "SIMREADY_GLTF.md"
   ],
   "keywords": [
     "needle",

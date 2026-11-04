@@ -81,7 +81,7 @@ entry points, and import optional tools when the user opens them:
 | `@needle-tools/usd/viewer/inspect` | Stage, property, selection and renderer controls, without the REPL or download UI |
 | `@needle-tools/usd/editing` | Typed array commands with sparse undo/redo |
 | `@needle-tools/usd/viewer/repl` | Optional JavaScript console and array table |
-| `@needle-tools/usd/viewer/download` | Optional ZIP/USDZ download control |
+| `@needle-tools/usd/viewer/download` | ZIP/USDZ download control with optional glTF and Cloud destinations |
 | `@needle-tools/usd/scene` | Scene inspection, variant/payload changes and resolver-aware source reads |
 
 Simulation, joint interaction and SimReady GLB export use the optional
@@ -1103,6 +1103,10 @@ styles, or override the shared viewer CSS variables and
 `isCurrent()` for additional cancellation checks. Hosts with application menus
 can coordinate through `onOpenChange`, `onMenuNavigate`, `openMenu()` and
 `closeMenu()`; no workbench or global app state is required.
+Supply `DownloadSource.exportGltf({onProgress,signal})` to offer glTF downloads
+as `.glb`, and `DownloadSource.share()` to offer Share on Needle Cloud. Selecting
+Cloud changes the primary button to Share; uploading starts only when that
+button is clicked. Selecting a file format changes it back to Download.
 
 MuTracer's built-in conversion supports ordinary Three.js PBR surfaces, including the viewer's MDL input approximations. Arbitrary MaterialX graphs, bounded volumes, custom primvar shaders, per-point/curve opacity, Gaussian splats and PMREM-only environments cannot currently be translated by this integration; selecting path tracing preserves the current mode and reports the unsupported content. Applications can supply `convertMaterial` and `convertLight` for their own MuTracer conversions. Use an equirectangular HDR/EXR environment for path tracing.
 
@@ -1194,3 +1198,36 @@ For commercial use, contact [hi@needle.tools](mailto:hi@needle.tools).
 
 [Needle](https://needle.tools) · [GitHub](https://github.com/needle-tools) ·
 [Discord](https://discord.needle.tools) · [Forum](https://forum.needle.tools)
+
+## SimReady glTF interoperability
+
+`@needle-tools/usd/gltf` exports the stage's rigid visuals with Khronos physics,
+`NEEDLE_simready` runtime bindings and structured USD schema metadata. USD
+Viewer's existing GLB export uses this path. Downstream glTF consumers opt in
+to the shared mechanism and physics runtime with `registerSimreadyLoader` from
+`@needle-tools/simready/gltf`.
+Mesh Baker can optimize these GLBs while retaining that contract. See [the export/runtime contract](SIMREADY_GLTF.md)
+for usage, units, preservation guarantees and runtime
+limitations. Loading never starts a simulator automatically.
+
+The download menu defaults to **Full-resolution textures** for every format.
+Turn it off to export the loaded preview textures. This selection is independent
+of the viewport's texture quality. The same remembered checkbox applies to ZIP, USDZ, glTF and Cloud sharing.
+Changing format does not change its value. Cloud sharing packages the selected
+format and texture quality, including current stage edits.
+
+`exportSimreadyGltf({handle, exporter, textureResolution: 'original'})` uses a
+native USD handle's temporary `createTextureExport({signal, resolution})` scope to load
+original images and reapply channel and UV conversions. Export leaves preview
+materials intact and disposes temporary textures on completion or failure.
+Use `textureResolution: 'preview'` for the loaded images. A glTF input can only
+re-export the images it contains; it has no external USD originals to recover.
+
+`handle.exportUsdz({textureResolution: 'preview', signal})` resizes packaged
+PNG, JPEG and WebP images in an isolated browser worker, leaving authored layers,
+variants, asset paths, other dependencies and the live stage intact. Rewritten
+USDZ entries remain uncompressed and aligned to 64-byte boundaries. Other image
+encodings reject preview archive conversion rather than silently changing the
+encoding or discarding HDR data; full-resolution archives preserve their bytes.
+The download control forwards the same quality to all formats and its Cloud
+callback. Preview textures use the configured preview limit, or 512px.

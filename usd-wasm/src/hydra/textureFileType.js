@@ -5,11 +5,12 @@ export function textureFileType(extension, data) {
     ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
     : data instanceof ArrayBuffer ? new Uint8Array(data) : null;
   if (bytes) {
+    if (bytes[0]===0x52&&bytes[1]===0x49&&bytes[2]===0x46&&bytes[3]===0x46&&bytes[8]===0x57&&bytes[9]===0x45&&bytes[10]===0x42&&bytes[11]===0x50)return 'image/webp';
     if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
     if ([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value)) return 'image/png';
     if ([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value)) return 'image/ktx2';
     if ([0x76, 0x2f, 0x31, 0x01].every((value, index) => bytes[index] === value)) return 'image/x-exr';
     if (bytes[0] === 0x23 && bytes[1] === 0x3f && bytes[2] === 0x52 && bytes[3] === 0x41) return 'image/vnd.radiance';
   }
-  return { ktx2: 'image/ktx2', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', exr: 'image/x-exr', tga: 'image/tga', hdr: 'image/vnd.radiance' }[extension];
+  return { webp:'image/webp', ktx2: 'image/ktx2', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', exr: 'image/x-exr', tga: 'image/tga', hdr: 'image/vnd.radiance' }[extension];
 }

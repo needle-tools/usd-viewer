@@ -31,6 +31,24 @@ const exportProgress = [];
 const downloads = mountDownloadButton({container:downloadHost,getSource:()=>current?{handle,filename:'scene.usda'}:null,stateKey:'packed-download-format',onProgress:value=>exportProgress.push(value)});
 let maskHandle, maskRoot, ktxHandle, ktxRoot;
 window.packed = { USD, renderer, modes: picker.modes, handle, panel, repl, selection, camera, controls, downloads, exportProgress, setPrimActive, setPrimVisible, loadEditing:()=>import('@needle-tools/usd/editing'), get status(){return status;},
+  async simreadyRoundTrip() {
+    const {GLTFExporter}=await import('three/addons/exporters/GLTFExporter.js');
+    const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
+    const {exportSimreadyGltf}=await import('@needle-tools/usd/gltf');
+    const {registerSimreadyLoader}=await import('@needle-tools/simready/gltf');
+    const source=await createThreeHydra({USD,scene:new Group(),renderer,url:'/simready/assembly.usda',autoPlay:false,webGpuSupport:await createWebGpuSupport()});
+    let mechanism;
+    try {
+      const bytes=await exportSimreadyGltf({handle:source,exporter:new GLTFExporter()});
+      const loaded=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
+      const runtime=loaded.userData.simready;
+      mechanism=await runtime.createMechanism();
+      mechanism.setJointValue('/Assembly/Hinge',120);
+      const value=mechanism.getJointValue('/Assembly/Hinge');
+      const archive=await source.exportUsdz({textureResolution:'preview'});
+      return {bytes:bytes.byteLength,joints:runtime.snapshot.joints.length,value,issues:mechanism.unsupported,archiveBytes:archive.length};
+    } finally { mechanism?.dispose();await source.dispose(); }
+  },
   async cutout(value) {
     if (!maskHandle) {
       await picker.modes.setMode('basic');panel.dispose();await handle.dispose();scene.remove(root);

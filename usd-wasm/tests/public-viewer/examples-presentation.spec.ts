@@ -63,13 +63,13 @@ for (const theme of ['light','dark']) test(`${theme}: tooltip delay, menu placem
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);
   await page.goto('/?viewer=three'); await page.waitForFunction(()=>(window as any).__usdViewerUiReady);
   await openAppMenu(page,'file');
-  const share=page.locator('#export-gltf');await share.hover();
+  const share=page.locator('#usd-download');await share.hover();
   const tip=page.getByRole('tooltip');
   await page.waitForTimeout(180);await expect(tip).toBeHidden();
   await expect(tip).toBeVisible();
-  await expect(tip).toHaveText('Load a USD file first to share');
+  await expect(tip).toHaveText('Open a file first');
   const [anchor,box]=await Promise.all([share.boundingBox(),tip.boundingBox()]);
-  expect(box!.x).toBeGreaterThanOrEqual(anchor!.x+anchor!.width+7);
+  expect(box!.x).toBeGreaterThanOrEqual(8);expect(box!.x+box!.width).toBeLessThanOrEqual(1280-8);
   expect(box!.width).toBeLessThanOrEqual(240);
   expect(await tip.evaluate(el=>getComputedStyle(el).fontSize)).toBe('11px');
   await page.screenshot({path:info.outputPath(`${theme}-menu-tooltip.png`)});

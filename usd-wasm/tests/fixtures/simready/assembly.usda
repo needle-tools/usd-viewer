@@ -1,0 +1,80 @@
+#usda 1.0
+(
+    defaultPrim = "Assembly"
+    metersPerUnit = 0.01
+    kilogramsPerUnit = 0.001
+    upAxis = "Z"
+    customLayerData = {
+        dictionary SimReady_Metadata = {
+            string profile = "regression"
+        }
+    }
+)
+def Xform "Assembly" {
+    custom string simready:category = "regression assembly"
+    custom float simready:safetyMargin = inf
+    custom float simready:sampledValue.timeSamples = {0: 2, 1: 4}
+    custom rel simready:movableParts = [</Assembly/Door>, </Assembly/Slider>]
+    def PhysicsScene "Physics" {
+        vector3f physics:gravityDirection = (0, 0, -1)
+        float physics:gravityMagnitude = 0
+    }
+    def Xform "Base" (prepend apiSchemas = ["PhysicsRigidBodyAPI"]) {
+        bool physics:kinematicEnabled = true
+        def Cube "Visual" {
+            double size = 10
+        }
+    }
+    def Xform "Door" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]) {
+        float physics:mass = 2000
+        float3 physics:diagonalInertia = (1000000, 1000000, 1000000)
+        def Sphere "Visual" {
+            double radius = 20
+        }
+        def Cube "Collision" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {
+            double size = 40
+        }
+    }
+    def Xform "Knob" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]) {
+        float physics:mass = 100
+        double3 xformOp:translate = (100, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        def Sphere "Visual" {
+            double radius = 5
+        }
+    }
+    def Xform "Slider" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]) {
+        float physics:mass = 500
+        double3 xformOp:translate = (0, 200, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        def Cube "Visual" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {
+            double size = 20
+        }
+    }
+    def PhysicsRevoluteJoint "Hinge" {
+        rel physics:body0 = </Assembly/Base>
+        rel physics:body1 = </Assembly/Door>
+        uniform token physics:axis = "Z"
+        float physics:lowerLimit = 0
+        float physics:upperLimit = 90
+        custom float physxJoint:armature = 0.03
+        custom float mjc:frictionloss = 0.3
+    }
+    def PhysicsFixedJoint "Attached" {
+        rel physics:body0 = </Assembly/Door>
+        rel physics:body1 = </Assembly/Knob>
+        point3f physics:localPos0 = (100, 0, 0)
+    }
+    def PhysicsPrismaticJoint "Slide" (prepend apiSchemas = ["PhysicsDriveAPI:linear"]) {
+        rel physics:body0 = </Assembly/Base>
+        rel physics:body1 = </Assembly/Slider>
+        point3f physics:localPos0 = (0, 200, 0)
+        uniform token physics:axis = "X"
+        float physics:lowerLimit = -50
+        float physics:upperLimit = 50
+        float drive:linear:physics:targetPosition = 30
+        float drive:linear:physics:stiffness = 10000
+        float drive:linear:physics:damping = 1000
+        custom float drive:linear:physics:vendorLimit = 123
+    }
+}

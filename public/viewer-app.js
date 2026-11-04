@@ -275,9 +275,9 @@ function needleCloudBase() {
 
 // Stash the captured USD set and hand off to the (non-isolated) /cloud-handoff
 // page, which postMessages it to Needle Cloud. Returns false if nothing is loaded.
-async function uploadToNeedleCloud() {
-  let files = capturedFiles;
-  let rootFilename = capturedRootFilename;
+async function uploadToNeedleCloud(asset) {
+  let files = asset?.files || capturedFiles;
+  let rootFilename = asset?.rootFilename || capturedRootFilename;
 
   // URL / sample load: no captured drop bytes — re-fetch the original source.
   if (!files.length && loadedSourceUrl) {
@@ -308,7 +308,7 @@ async function uploadToNeedleCloud() {
     files: files.map(f => ({ relativePath: f.relativePath, bytes: f.bytes })),
   };
   await stashHandoffPayload(payload);
-  track('upload_to_cloud', { file: rootFilename || undefined, files: files.length });
+  track('upload_to_cloud', { format: /\.(glb|gltf|zip|usdz|usd|usda|usdc)$/i.exec(rootFilename)?.[1].toLowerCase()||'other', files: files.length===1?'one':files.length<=8?'few':'many' });
   return true;
 }
 
@@ -1299,147 +1299,71 @@ catch (error) {
   }
 }
 
-// In-browser glTF export (binary .glb) of the currently loaded scene.
-async function doGltfExport() {
-  const generation = loadGeneration;
+// The header owns format selection, progress and saving; every glTF download
+// goes through the same exporter regardless of the current viewer mode.
+async function exportCurrentGltf({onProgress,signal,textureResolution='original'}={}) {
+  const generation=loadGeneration;
+  track('export_gltf_started',{textures:textureResolution,simready:!!currentHydraHandle});
   try {
-    const GLTFExporter = await loadGltfExporter();
-    if (generation !== loadGeneration) return;
-    const exporter = new GLTFExporter();
-    console.log("EXPORTING GLTF", window.usdRoot);
-    exporter.parse( window.usdRoot, function ( gltf ) {
-      const blob = new Blob([gltf], {type: 'application/octet-stream'});
-      // Completed export: full source name + the exported glb size in bytes.
-      track('export_gltf', { file: currentDisplayFilename || undefined, size: bucketBytes(blob.size) });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      let filename = currentDisplayFilename;
-      // strip extension, strip path
-      filename = filename.split('/').pop()?.split('.')[0].split('?')[0] || "export";
-      a.download = filename + ".glb";
-      a.click();
-      URL.revokeObjectURL(url);
-    },
-    function (error) {
-      // Async export failure (GLTFExporter's error callback).
-      console.error(error);
-      trackError('export_gltf', error);
-    },
-    {
-      binary: true,
-      // not possible right now since USD controls animation bindings,
-      // it's not a three.js clip
-      animations: [
-        // window.usdRoot.animations[0]
-      ]
-    });
-  } catch (error) {
-    // parse() can also throw synchronously (before the error callback runs) —
-    // report that too so a failed export is never silent.
-    console.error("glTF export failed:", error);
-    trackError('export_gltf', error);
+    const GLTFExporter=await loadGltfExporter();
+    if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
+    viewerPhysics?.reset?.();
+    const handle=currentHydraHandle;
+    const bytes=handle?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({handle,exporter:new GLTFExporter(),onProgress,textureResolution,signal})
+      :await new GLTFExporter().parseAsync(window.usdRoot,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
+    if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
+    track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes.byteLength),simready:!!handle});
+    return bytes;
+  } catch(error) {if(error.name!=='AbortError')trackError('export_gltf',error);throw error;}
+}
+
+async function shareCurrentAsset({format='gltf',textureResolution='original',signal,onProgress}={}) {
+  track('export_cloud_cta',{mode:hasUploadableAsset()?'upload':'open',format,textures:textureResolution});
+  if(!hasUploadableAsset()){window.open(needleCloudBase(),'_blank','noopener');return;}
+  const generation=loadGeneration;
+  let bytes;
+  if(format==='gltf')bytes=await exportCurrentGltf({textureResolution,signal,onProgress});
+  else {
+    if(!currentHydraHandle)throw new Error('USD archive export requires an open USD stage.');
+    bytes=await currentHydraHandle.exportUsdz({textureResolution,signal,onProgress});
+    if(format==='zip')bytes=await(await import('/usd/scene/compressArchive.js')).compressArchive(bytes,{signal,onProgress});
   }
+  if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Share cancelled','AbortError');
+  const basename=cloudUploadBasename(loadedSourceUrl||'',currentDisplayFilename||loadedSourceFilename).replace(/\.[^.]+$/,'');
+  const rootFilename=basename+(format==='gltf'?'.glb':'.'+format);
+  const buffer=bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  try {sessionStorage.setItem('needle_cloud_base',needleCloudBase());}catch{}
+  const returnUrl=location.href;
+  if(await uploadToNeedleCloud({files:[{relativePath:rootFilename,bytes:buffer}],rootFilename}))location.assign('/cloud-handoff.html?return='+encodeURIComponent(returnUrl));
 }
 
-// "Convert to glTF" opens a dialog that points users to Needle Cloud for a
-// production-ready conversion, while still offering the quick in-browser export.
-const gltfExportBtn = document.getElementById('export-gltf');
-const gltfExportBtns = Array.from(document.querySelectorAll('[data-export-gltf]'));
+function setAssetDownload(handle,generation,formats=['zip','usdz','gltf']) {
+  window.usdWorkbench?.setDownload(()=>({handle,filename:currentDisplayFilename||loadedSourceFilename,
+    formats,exportGltf:exportCurrentGltf,share:shareCurrentAsset,isCurrent:()=>generation===loadGeneration}));
+}
+
+// File → Share USD keeps the Cloud introduction; both actions use the same
+// export controller and texture choice as the header's split button.
 const exportDialog = document.getElementById('export-dialog');
-const exportDialogCloseBtn = document.getElementById('export-dialog-close-btn');
-const exportDownloadDirectBtn = document.getElementById('export-download-direct');
-const exportCloudCta = document.getElementById('export-cloud-cta');
-
-// Did the user act (Cloud or download) this time? Lets us report closing the
-// dialog as a dismissal — opened the export prompt but chose neither.
 let exportDialogResolved = false;
-// First hover per open, per button — learns which CTA drew interest without
-// firing on every mouse pass.
-let exportHovered = {};
-
-function openExportDialog() {
-  exportDialogResolved = false;
-  exportHovered = {};
-  track('open_export_dialog', { file: currentDisplayFilename || undefined });
-  openDialogAnimated(exportDialog);
-}
-
 function closeExportDialog(via) {
   closeDialogAnimated(exportDialog);
-  if (!exportDialogResolved) {
-    // Opened the prompt, then closed it without choosing Cloud or downloading.
-    // `via` distinguishes the X button from clicking the backdrop.
-    track('export_dialog_dismissed', { via: via || 'unknown' });
+  if(!exportDialogResolved)track('export_dialog_dismissed',{via});
+}
+document.querySelectorAll('[data-export-gltf]').forEach(button=>button.addEventListener('click',event=>{
+  event.preventDefault();
+  if(!document.getElementById('container')?.classList.contains('have-custom-file')){
+    showTooltip(button,getTooltipText(button),2500);return;
   }
-}
-
-function trackExportHover(button) {
-  if (exportHovered[button]) return;
-  exportHovered[button] = true;
-  track('export_hover', { button });
-}
-
-// When no model is loaded the button is shown but inert. Hover/focus uses the
-// shared tooltip portal; click/tap flashes the same disabled hint explicitly.
-function flashExportHint(button) {
-  const target = button || gltfExportBtn;
-  if (!target) return;
-  showTooltip(target, getTooltipText(target), 2500);
-}
-
-gltfExportBtns.forEach((button) => {
-  button.addEventListener('click', (evt) => {
-    evt.preventDefault();
-    const container = document.getElementById('container');
-    const hasFile = container && container.classList.contains('have-custom-file');
-    if (!hasFile) {
-      track('export_blocked_no_file');
-      flashExportHint(button);
-      return;
-    }
-    closeHeaderOverflowMenu();
-    openExportDialog();
-  });
-});
-if (exportDialogCloseBtn) exportDialogCloseBtn.addEventListener('click', () => closeExportDialog('close_button'));
-if (exportDialog) exportDialog.addEventListener('click', (event) => {
-  if (event.target === exportDialog) closeExportDialog('backdrop');
-});
-if (exportCloudCta) {
-  exportCloudCta.addEventListener('mouseenter', () => trackExportHover('cloud'));
-  exportCloudCta.addEventListener('click', async (evt) => {
-    evt.preventDefault();
-    exportDialogResolved = true;
-    closeExportDialog('cloud');
-
-    // Nothing loaded → just open Needle Cloud (dev-aware).
-    if (!hasUploadableAsset()) {
-      track('export_cloud_cta', { mode: 'open' });
-      window.open(needleCloudBase(), '_blank', 'noopener');
-      return;
-    }
-
-    // Stash the asset, then navigate to our top-level /cloud-handoff page. It opens
-    // the cloud /connect popup and postMessages the asset up. We navigate (not a
-    // popup) because the bridge must be TOP-LEVEL same-origin to read the stash —
-    // a cross-site iframe gets partitioned storage and sees nothing.
-    track('export_cloud_cta', { mode: 'upload' });
-    try { sessionStorage.setItem('needle_cloud_base', needleCloudBase()); } catch {}
-    // Preserve the current viewer URL (e.g. ?file=…) so the handoff's "Back to the
-    // viewer" link returns to the same loaded asset.
-    const returnUrl = location.href;
-    const ok = await uploadToNeedleCloud();
-    if (ok) location.assign('/cloud-handoff.html?return=' + encodeURIComponent(returnUrl));
-  });
-}
-if (exportDownloadDirectBtn) {
-  exportDownloadDirectBtn.addEventListener('mouseenter', () => trackExportHover('download'));
-  exportDownloadDirectBtn.addEventListener('click', () => {
-    exportDialogResolved = true;
-    track('export_download_direct', { file: currentDisplayFilename || undefined });
-    closeExportDialog('download');
-    doGltfExport();
+  exportDialogResolved=false;track('open_export_dialog',{file:currentDisplayFilename||undefined});
+  openDialogAnimated(exportDialog);
+}));
+document.getElementById('export-dialog-close-btn')?.addEventListener('click',()=>closeExportDialog('close_button'));
+exportDialog?.addEventListener('click',event=>{if(event.target===exportDialog)closeExportDialog('backdrop');});
+for(const [id,action] of [['export-download-direct','downloadGltf'],['export-cloud-cta','share']]){
+  document.getElementById(id)?.addEventListener('click',event=>{
+    event.preventDefault();exportDialogResolved=true;closeExportDialog(action);
+    void window.usdWorkbench[action]().catch(error=>{console.error('Export failed:',error);trackError('export_share_dialog',error);});
   });
 }
 
@@ -2103,6 +2027,7 @@ async function loadNativeGltfFile(filename, path) {
 
     if (generation !== loadGeneration) return;
     ready = true;
+    setAssetDownload(nativeGltfRoot||window.usdRoot,generation,['gltf']);
 
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
@@ -2276,10 +2201,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
-    window.usdWorkbench?.setDownload(() => ({
-      handle, filename: currentDisplayFilename || filename,
-      isCurrent: () => generation === loadGeneration && currentHydraHandle === handle,
-    }));
+    setAssetDownload(handle,generation);
     messageLog.textContent = "";
 
     if (!diagnosticsMode()) {

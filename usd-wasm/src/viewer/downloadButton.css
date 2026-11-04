@@ -23,3 +23,9 @@
 .usd-download-menu > button[aria-checked=true] { background: var(--usd-row-selected-background, color-mix(in srgb, var(--accent-brand, #77ae45) 18%, var(--surface-panel, #fff))); }
 .usd-download-menu > button:is(:hover,:focus-visible) { background: var(--surface-panel-muted, color-mix(in srgb, var(--text-primary, #202520) 6%, var(--surface-panel, #fff))); }
 .usd-download-menu > button:disabled { opacity: .5; cursor: default; }
+.usd-download-menu > button[hidden] { display: none; }
+.usd-download-menu { width: max-content; min-width: var(--usd-download-menu-width,144px); }
+
+.usd-download-menu > .usd-download-textures {border-top:1px solid var(--usd-border, #8885);margin-top:4px;padding-top:10px;gap:6px;}
+.usd-download-checkbox {width:14px;height:14px;box-sizing:border-box;border:1px solid currentColor;border-radius:3px;display:grid;place-items:center;}
+.usd-download-textures[aria-checked=true] > .usd-download-checkbox::after {content:'';width:6px;height:3px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-1px) rotate(-45deg);}

@@ -6,6 +6,8 @@
 - Control SimReady joints and motors in shared simulations, with correct asset units.
 - Inspect and edit animated transforms and arrays in Properties and Code.
 - Switch between USD Viewer and USD Studio from the header. Fix header movement on hover and unwanted joint helpers.
+- Choose original or preview textures for ZIP, USDZ, glTF and Cloud exports. Remember the choice independently of viewport quality.
+- Export SimReady GLBs with physics, joint constraints, object identities and schema metadata preserved, including through compatible Mesh Baker optimization.
 
 ## [1.2.0] - 2026-11-02
 

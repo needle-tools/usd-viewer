@@ -134,7 +134,6 @@ test('dialogs stay inside short and narrow windows with a reachable close contro
     for (const [menu,trigger,id,close] of [
       ['help','#about-link','#about-dialog','#dialog-close-btn'],
       ['help','#feedback-link','#feedback-dialog','#feedback-dialog-close-btn'],
-      ['file','#export-gltf','#export-dialog','#export-dialog-close-btn'],
     ] as const) {
       await openAppMenu(page,menu); await page.locator(trigger).click();
       await expect(page.locator(id)).toHaveClass(/is-open/);

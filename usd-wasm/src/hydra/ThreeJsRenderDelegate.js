@@ -318,6 +318,7 @@ class TextureRegistry {
     this.allPaths = config.paths;
     this.textures = [];
     this.loadedTextures = new Set();
+    this.exportRecipes = new WeakMap();
     this.objectUrls = new Set();
     this.materialXDefinitionCache = new Map();
     this.disposed = false;
@@ -566,7 +567,13 @@ class TextureRegistry {
 
     let textureResolve, textureReject;
     this.textures[cacheKey] = new Promise((resolve, reject) => {
-      textureResolve = resolve;
+      textureResolve = texture => {
+        this.exportRecipes.set(texture.source, async registry => {
+          const original = await registry.getTexture(resourcePath, readable);
+          const copy = texture.clone(); copy.source = original.source; return copy;
+        });
+        resolve(texture);
+      };
       textureReject = reject;
     });
 
@@ -710,6 +717,38 @@ class TextureRegistry {
     loadFromDriverFile();
 
     return this.textures[cacheKey];
+  }
+
+  // Originals use a separate registry: no preview URL rewrite, size cap, or
+  // replacement of textures in the live scene. The caller owns this scope.
+  createExportScope({signal,resolution='original'} = {}) {
+    if(!['original','preview'].includes(resolution))throw new RangeError('Invalid export texture resolution.');
+    const preview=resolution==='preview',limit=this.config.maxTextureSize||512;
+    const registry = new TextureRegistry({...this.config, resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
+    const pending = new Map(), converted = new Set();
+    let disposed = false;
+    const dispose = () => {
+      if (disposed) return;
+      disposed = true; signal?.removeEventListener('abort', dispose);
+      registry.dispose(); for (const texture of converted) texture.dispose();
+    };
+    signal?.addEventListener('abort', dispose, {once:true});
+    if (signal?.aborted) dispose();
+    return {
+      maxTextureSize:preview?limit:Infinity,
+      getTexture: async texture => {
+        if (disposed) throw new DOMException('Texture export cancelled', 'AbortError');
+        if(preview&&Math.max(texture.image?.width||0,texture.image?.height||0)<=limit)return texture;
+        const recipe = this.exportRecipes.get(texture) || this.exportRecipes.get(texture.source);
+        if (!recipe) return texture; // Native glTF and host-owned textures are already the source.
+        if (!pending.has(texture)) pending.set(texture, recipe(registry).then(value => {
+          if (disposed) {value.dispose(); throw new DOMException('Texture export cancelled', 'AbortError');}
+          converted.add(value); return value;
+        }));
+        return pending.get(texture);
+      },
+      dispose,
+    };
   }
 
   dispose() {
@@ -2397,56 +2436,62 @@ class HydraMaterial {
         connection.loaded = true;
         return;
       }
-      let cloned = texture.clone();
-      const target = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
-      if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || (!texture.isCompressedTexture && texture.format !== RGBAFormat))) {
-        // A clone initially shares its Source with the cached texture. Replacing
-        // source avoids corrupting other maps that use a different channel.
-        cloned.source = new THREE.Source(remapTextureSamples(texture.image, channel, target, node.sampleTransform,
-          { type: texture.type, format: texture.format }));
-      }
-      if (slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)) {
-        // UsdUVTexture defaults to identity, while common normal maps explicitly
-        // author scale=2 and bias=-1. MDL lookup nodes use their own normal contract.
-        const scale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
-        const bias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
-        if (scale.some(value => value !== 2) || bias.some(value => value !== -1)) {
-          const converted = remapNormalTextureSamples(texture.image, scale, bias, { type: texture.type, format: texture.format });
-          if (converted.image.data && !texture.isDataTexture) cloned = new THREE.DataTexture().copy(texture);
-          cloned.source = new THREE.Source(converted.image);
-          cloned.type = converted.type;
-          cloned.format = RGBAFormat;
+      const convert = texture => {
+        let cloned = texture.clone();
+        const target = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
+        if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || (!texture.isCompressedTexture && texture.format !== RGBAFormat))) {
+          // A clone initially shares its Source with the cached texture. Replacing
+          // source avoids corrupting other maps that use a different channel.
+          cloned.source = new THREE.Source(remapTextureSamples(texture.image, channel, target, node.sampleTransform,
+            { type: texture.type, format: texture.format }));
         }
-      }
-      const authoredColorSpace = String(node.sourceColorSpace || '').toLowerCase();
-      cloned.colorSpace = authoredColorSpace === 'srgb' ? SRGBColorSpace
-        : ['raw', 'linear', 'lin_rec709'].includes(authoredColorSpace) ? LinearSRGBColorSpace
-        : texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
-        : HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
-      if (target !== undefined && !cloned.isCompressedTexture) cloned.format = RGBAFormat;
-      const uv = node.mdlUV || node.st?.nodeIn;
-      if (uv) {
-        const rotation = node.mdlUV ? uv.rotation : (uv.rotation || 0) / 180 * Math.PI;
-        cloned.repeat.fromArray(uv.scale || [1, 1]);
-        cloned.offset.fromArray(uv.translation || [0, 0]);
-        cloned.rotation = rotation || 0;
-        if (!node.mdlUV) {
-          cloned.offset.y -= (1 - Math.cos(rotation)) * cloned.repeat.y;
-          cloned.offset.x -= Math.sin(rotation) * cloned.repeat.x;
+        if (slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)) {
+          // UsdUVTexture defaults to identity, while common normal maps explicitly
+          // author scale=2 and bias=-1. MDL lookup nodes use their own normal contract.
+          const scale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
+          const bias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
+          if (scale.some(value => value !== 2) || bias.some(value => value !== -1)) {
+            const converted = remapNormalTextureSamples(texture.image, scale, bias, { type: texture.type, format: texture.format });
+            if (converted.image.data && !texture.isDataTexture) cloned = new THREE.DataTexture().copy(texture);
+            cloned.source = new THREE.Source(converted.image);
+            cloned.type = converted.type;
+            cloned.format = RGBAFormat;
+          }
         }
-        if (node.mdlUV) {
-          const [sx, sy] = uv.scale;
-          const [tx, ty] = uv.translation;
-          const c = Math.cos(rotation), s = Math.sin(rotation);
-          cloned.matrixAutoUpdate = false;
-          // Conjugate glTF transforms with the MDL bottom-left UV origin.
-          cloned.matrix.set(c * sx, -s * sy, uv.gltf ? tx + s * sy : tx,
-            s * sx, c * sy, uv.gltf ? 1 - ty - c * sy : ty, 0, 0, 1);
+        const authoredColorSpace = String(node.sourceColorSpace || '').toLowerCase();
+        cloned.colorSpace = authoredColorSpace === 'srgb' ? SRGBColorSpace
+          : ['raw', 'linear', 'lin_rec709'].includes(authoredColorSpace) ? LinearSRGBColorSpace
+          : texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
+          : HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
+        if (target !== undefined && !cloned.isCompressedTexture) cloned.format = RGBAFormat;
+        const uv = node.mdlUV || node.st?.nodeIn;
+        if (uv) {
+          const rotation = node.mdlUV ? uv.rotation : (uv.rotation || 0) / 180 * Math.PI;
+          cloned.repeat.fromArray(uv.scale || [1, 1]);
+          cloned.offset.fromArray(uv.translation || [0, 0]);
+          cloned.rotation = rotation || 0;
+          if (!node.mdlUV) {
+            cloned.offset.y -= (1 - Math.cos(rotation)) * cloned.repeat.y;
+            cloned.offset.x -= Math.sin(rotation) * cloned.repeat.x;
+          }
+          if (node.mdlUV) {
+            const [sx, sy] = uv.scale;
+            const [tx, ty] = uv.translation;
+            const c = Math.cos(rotation), s = Math.sin(rotation);
+            cloned.matrixAutoUpdate = false;
+            // Conjugate glTF transforms with the MDL bottom-left UV origin.
+            cloned.matrix.set(c * sx, -s * sy, uv.gltf ? tx + s * sy : tx,
+              s * sx, c * sy, uv.gltf ? 1 - ty - c * sy : ty, 0, 0, 1);
+          }
         }
-      }
-      cloned.wrapS = this.convertWrap(node.wrapS);
-      cloned.wrapT = this.convertWrap(node.wrapT);
-      cloned.needsUpdate = true;
+        cloned.wrapS = this.convertWrap(node.wrapS);
+        cloned.wrapT = this.convertWrap(node.wrapT);
+        cloned.needsUpdate = true;
+        return cloned;
+      };
+      const cloned = convert(texture);
+      this._interface.registry.exportRecipes.set(cloned, async registry =>
+        convert(await registry.getTexture(file, !!(remapScalar || remapNormal))));
       this._material[slot] = cloned;
       if (slot === 'metalnessMap') this._material.metalness = 1;
       if (slot === 'roughnessMap') this._material.roughness = 1;

@@ -2,7 +2,7 @@ import {viewerIcon} from './icons.js';
 import {installViewerStyle} from './style.js';
 import {compressArchive} from '../scene/compressArchive.js';
 
-const formats = ['zip', 'usdz'];
+const formats = ['zip', 'usdz', 'gltf'];
 let nextId = 0;
 
 /** A standalone stage download control; the host owns the current Hydra handle. */
@@ -27,25 +27,35 @@ export function mountDownloadButton(options) {
   menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Download formats'); menuTrigger.setAttribute('aria-controls', menu.id);
   const topLayer = typeof menu.showPopover === 'function';
   if (topLayer) menu.setAttribute('popover', 'manual');
-  let format = options.format || 'zip', busy = false, disposed = false, progress = null, activeSource = null, compressionAbort = null;
+  let format = options.format || 'zip', sharing = false, busy = false, disposed = false, progress = null, activeSource = null, compressionAbort = null;
   let announcedPhase = '', announcedPercent = -1;
   let exportingFormat = format;
+  let textureResolution = options.textureResolution || 'original';
+  try { if(options.stateKey) textureResolution=JSON.parse(localStorage.getItem(options.stateKey+':textures'))||textureResolution; } catch {}
+  if(!['original','preview'].includes(textureResolution))textureResolution='original';
   const status = document.createElement('span'); status.className = 'usd-download-status'; status.id = `usd-download-status-${nextId}`;
   status.setAttribute('role','status'); status.setAttribute('aria-live','polite'); status.setAttribute('aria-atomic','true');
   try { if (options.stateKey) format = JSON.parse(localStorage.getItem(options.stateKey)) || format; } catch {}
   if (!formats.includes(format)) format = 'zip';
   const items = formats.map(value => {
-    const item = document.createElement('button'); item.type = 'button'; item.textContent = value.toUpperCase();
+    const item = document.createElement('button'); item.type = 'button'; item.textContent = value === 'gltf' ? 'glTF' : value.toUpperCase();
     item.setAttribute('role', 'menuitemradio');
     item.addEventListener('click', () => { setFormat(value); closeMenu(); button.focus(); });
     menu.append(item); return item;
   });
+  const shareItem=document.createElement('button');shareItem.type='button';shareItem.textContent='Share on Needle Cloud';shareItem.setAttribute('role','menuitemradio');
+  shareItem.addEventListener('click',()=>{sharing=true;refresh();closeMenu();button.focus();});menu.append(shareItem);
+  const textureItem=document.createElement('button');textureItem.type='button';textureItem.className='usd-download-textures';
+  textureItem.setAttribute('role','menuitemcheckbox');
+  const textureCheck=document.createElement('span');textureCheck.setAttribute('aria-hidden','true');textureCheck.className='usd-download-checkbox';
+  textureItem.append(textureCheck,'Full-resolution textures');
+  textureItem.addEventListener('click',()=>setTextureResolution(textureResolution==='original'?'preview':'original'));menu.append(textureItem);
   menuElement.append(menuTrigger, menu); element.append(button, menuElement, status); container.append(element);
 
   function reportProgress(value) {
     if (disposed) return;
     progress = value;
-    const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',compressing:'Compressing ZIP',complete:'Download ready'};
+    const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',textures:'Preparing preview textures',compressing:'Compressing ZIP',physics:'Physics',metadata:'Metadata',geometry:'Geometry',writing:'Writing glTF',sharing:'Sharing',complete:sharing?'Share ready':'Download ready'};
     const percent = value.total > 0 ? Math.min(100, Math.floor(value.completed / value.total * 100)) : -1;
     const text = names[value.phase] + (percent >= 0 && value.phase !== 'complete' ? ` ${percent}%` : '');
     button.title = value.phase === 'complete' ? text : `Exporting ${exportingFormat.toUpperCase()} · ${text}`;
@@ -57,25 +67,41 @@ export function mountDownloadButton(options) {
 
   function refresh() {
     if (disposed) return;
-    const source = options.getSource(), allowed = source?.formats || formats;
+    const source = options.getSource(), allowed = source?.formats || (!source||source.exportGltf ? formats : ['zip','usdz']);
     if (busy && (!source || source.handle !== activeSource?.handle || activeSource?.isCurrent?.() === false)) compressionAbort?.abort();
     if (!allowed.includes(format)) format = allowed[0] || 'zip';
-    button.disabled = !source || busy || allowed.length === 0;
+    if(sharing&&!source?.share)sharing=false;
+    button.disabled = !source || busy || (sharing ? !source.share : allowed.length === 0);
+    idleLabel.textContent=sharing?'Share':'Download';button.setAttribute('aria-label',sharing?'Share':'Download');
+    glyph.replaceChildren(viewerIcon(sharing?'share':'download'),spinner);
     button.setAttribute('aria-busy', String(busy)); element.dataset.exporting = String(busy);
     if (busy) button.setAttribute('aria-describedby', status.id);
-    else { button.title = `Download ${format.toUpperCase()}`; button.removeAttribute('aria-describedby'); }
+    else { button.title = !source?'Open a file first':sharing?'Share on Needle Cloud':`Download ${format==='gltf'?'glTF':format.toUpperCase()}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
     menuTrigger.setAttribute('aria-disabled', String(button.disabled)); menuTrigger.tabIndex = button.disabled ? -1 : 0;
     items.forEach((item, index) => {
       item.disabled = button.disabled || !allowed.includes(formats[index]);
-      item.setAttribute('aria-checked', String(formats[index] === format));
+      item.hidden = formats[index]==='gltf'&&!source?.exportGltf;
+      item.setAttribute('aria-checked', String(!sharing&&formats[index] === format));
     });
+    shareItem.hidden=!source?.share;shareItem.disabled=button.disabled;shareItem.setAttribute('aria-checked',String(sharing));
+    textureItem.hidden=false;
+    textureItem.disabled=button.disabled;
+    textureItem.setAttribute('aria-checked',String(textureResolution==='original'));
+    textureItem.title=textureResolution==='original'?'Export source textures at full resolution':'Export the currently loaded preview textures';
     if (button.disabled) closeMenu();
   }
   function setFormat(value) {
     if (!formats.includes(value)) throw new RangeError(`Unsupported download format: ${value}`);
     format = value;
+    sharing = false;
     try { if (options.stateKey) localStorage.setItem(options.stateKey, JSON.stringify(format)); } catch {}
     refresh(); options.onFormatChange?.(format);
+  }
+  function setTextureResolution(value) {
+    if(!['original','preview'].includes(value))throw new RangeError('Unsupported export texture resolution: '+value);
+    textureResolution=value;
+    try {if(options.stateKey)localStorage.setItem(options.stateKey+':textures',JSON.stringify(value));}catch{}
+    refresh();options.onTextureResolutionChange?.(value);
   }
   function positionMenu() {
     if (!menuElement.open || disposed) return;
@@ -102,6 +128,8 @@ export function mountDownloadButton(options) {
     const source = options.getSource(); if (!source) return;
     refresh(); if (button.disabled) return;
     const selectedFormat = format;
+    const selectedShare = sharing;
+    const selectedTextures = textureResolution;
     exportingFormat = selectedFormat;
     closeMenu(); busy = true; activeSource = source; compressionAbort = new AbortController(); refresh();
     announcedPhase = ''; announcedPercent = -1; reportProgress({phase:'preparing',completed:0,total:0});
@@ -111,7 +139,8 @@ export function mountDownloadButton(options) {
       // uses a pthread; compression uses a separate module worker below.
       await (globalThis.scheduler?.yield?.() || new Promise(resolve => setTimeout(resolve, 0)));
       if (!current()) return;
-      let bytes = await source.handle.exportUsdz({onProgress:value => {
+      if(selectedShare){reportProgress({phase:'sharing',completed:0,total:0});await source.share({format:selectedFormat,textureResolution:selectedTextures,signal:compressionAbort.signal,onProgress:reportProgress});return;}
+      let bytes = selectedFormat==='gltf' ? await source.exportGltf({onProgress:reportProgress,signal:compressionAbort.signal,textureResolution:selectedTextures}) : await source.handle.exportUsdz({textureResolution:selectedTextures,signal:compressionAbort.signal,onProgress:value => {
         if (current() && value.phase !== 'complete') reportProgress(value);
       }});
       if (!current()) return;
@@ -125,6 +154,10 @@ export function mountDownloadButton(options) {
       status.textContent = 'Export failed'; throw error;
     } finally { busy = false; activeSource = null; compressionAbort = null; refresh(); }
   }
+  async function share() {
+    if(disposed||busy||!options.getSource()?.share)return;
+    sharing=true;refresh();await download();
+  }
   button.addEventListener('click', () => { void download().catch(error => {
     if (!disposed) (options.onError || (error => console.error('Download failed:', error)))(error);
   }); });
@@ -133,12 +166,12 @@ export function mountDownloadButton(options) {
     if (button.disabled) return;
     if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault(); openMenu();
-      const enabled = items.filter(item => !item.disabled);
+      const enabled = [...items,shareItem,textureItem].filter(item => !item.disabled&&!item.hidden);
       (event.key === 'ArrowUp' ? enabled.at(-1) : enabled[0])?.focus();
     }
   });
   menu.addEventListener('keydown', event => {
-    const enabled = items.filter(item => !item.disabled), index = enabled.indexOf(document.activeElement);
+    const enabled = [...items,shareItem,textureItem].filter(item => !item.disabled&&!item.hidden), index = enabled.indexOf(document.activeElement);
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Tab'].includes(event.key)) return;
     if (event.key === 'Tab') { closeMenu(); (event.shiftKey ? button : menuTrigger).focus(); return; }
     event.preventDefault();
@@ -159,7 +192,8 @@ export function mountDownloadButton(options) {
   const observer = new ResizeObserver(positionMenu); observer.observe(element);
   refresh();
   return {
-    element, button, menuElement, menuTrigger, refresh, setFormat, download, openMenu, closeMenu,
+    element, button, menuElement, menuTrigger, refresh, setFormat, setTextureResolution, download, share, openMenu, closeMenu,
+    get textureResolution() { return textureResolution; },
     get format() { return format; }, get busy() { return busy; }, get menuOpen() { return menuElement.open; },
     get progress() { return progress; },
     dispose() {
@@ -176,8 +210,8 @@ function saveDownload(bytes, name, format) {
   let filename = String(name).split(/[?#]/)[0].split('/').pop() || 'stage';
   try { filename = decodeURIComponent(filename); } catch {}
   const basename = filename.replace(/\.[^.]+$/, '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_') || 'stage';
-  const url = URL.createObjectURL(new Blob([bytes], {type: format === 'zip' ? 'application/zip' : 'model/vnd.usdz+zip'}));
-  const link = document.createElement('a'); link.href = url; link.download = `${basename}.${format}`;
+  const url = URL.createObjectURL(new Blob([bytes], {type: format === 'gltf'?'model/gltf-binary':format === 'zip' ? 'application/zip' : 'model/vnd.usdz+zip'}));
+  const link = document.createElement('a'); link.href = url; link.download = `${basename}.${format==='gltf'?'glb':format}`;
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

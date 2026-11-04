@@ -8,6 +8,9 @@
 - Keep dragging correctly aligned in shared worlds and clean up simulations when scenes close.
 - Honor USD units in Needle Engine and find loaded USD assets from selected child objects.
 - Inspect and edit animated transforms and large arrays in Properties and Code, with undo and redo.
+- Choose original or preview textures for ZIP, USDZ, glTF and Cloud exports, independently of viewport quality.
+- Export glTF with correct instance visibility and material colors, or share directly on Needle Cloud.
+- Preserve SimReady physics, joint constraints, object identities and schema metadata in GLB exports, including through compatible Mesh Baker optimization.
 
 ## [1.2.0] - 2026-11-02
 

@@ -1210,8 +1210,8 @@ test.describe('public usd-viewer lifecycle', () => {
         ]);
 
         await openAppMenu(page,'file');
-        await page.locator('#export-gltf').hover();
-        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Load a USD file first to share');
+        await page.locator('#usd-download').hover();
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText('Open a file first');
         expect(diagnostics).toEqual([]);
     });
 

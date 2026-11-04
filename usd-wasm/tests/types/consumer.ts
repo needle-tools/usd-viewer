@@ -73,9 +73,12 @@ import {mountDownloadButton as mountDownloadOnly, type DownloadFormat} from '@ne
 const standaloneDownload: typeof mountDownloadButton = mountDownloadOnly;
 const archiveFormat: DownloadFormat = 'zip'; void [standaloneDownload, archiveFormat];
 const downloadSource: DownloadSource = {handle: stage, filename:'scene.usda', formats:['zip','usdz']};
-const downloadControl = mountDownloadButton({getSource:()=>downloadSource, stateKey:'my-download-format', onFormatChange(format){const selected:'zip'|'usdz'=format;void selected;},onProgress(value){value.completed.toFixed();value.total.toFixed();}});
+downloadSource.exportGltf=async({onProgress,signal,textureResolution})=>{const quality:'original'|'preview'=textureResolution;void quality;signal.throwIfAborted();onProgress({phase:'writing',completed:0,total:0});return new ArrayBuffer(0);};
+downloadSource.share=async()=>{};
+const downloadControl = mountDownloadButton({getSource:()=>downloadSource, stateKey:'my-download-format', onFormatChange(format){const selected:'zip'|'usdz'|'gltf'=format;void selected;},onProgress(value){value.completed.toFixed();value.total.toFixed();}});
+downloadControl.setTextureResolution('original');const textureScope=stage.createTextureExport();textureScope.dispose();
 downloadControl.setFormat('usdz'); downloadControl.refresh(); await downloadControl.download(); downloadControl.dispose();
-await stage.exportUsdz({onProgress(value){const phase:'preparing'|'dependencies'|'packaging'|'reading'|'compressing'|'complete'=value.phase;void phase;}});
+await stage.exportUsdz({onProgress(value){const phase:'preparing'|'dependencies'|'packaging'|'reading'|'textures'|'compressing'|'complete'=value.phase;void phase;}});
 // @ts-expect-error Unsupported archive format.
 downloadControl.setFormat('rar');
 import { createWebGpuSupport } from '@needle-tools/usd/renderers';
@@ -132,3 +135,5 @@ runtimeOnly.CreateStage('/stage.usda');
 import * as packageApi from '@needle-tools/usd';
 // @ts-expect-error The package root also exposes native authoring through USD only.
 packageApi.CreateStage('/stage.usda');
+import './gltf-consumer.js';
+void downloadControl.share;

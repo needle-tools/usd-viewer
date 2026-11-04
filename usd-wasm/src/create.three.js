@@ -802,7 +802,13 @@ async function createScopedThreeHydra(config, lifetime) {
                     let directory;
                     do { directory = "/" + directoryForFiles + `.needle-export-${++exportSequence}`; }
                     while (USD.FS_analyzePath(directory).exists);
-                    return await packageStage(USD, stage, directory, driver, options);
+                    if(options.textureResolution!==undefined&&!['original','preview'].includes(options.textureResolution))throw new RangeError('Invalid export texture resolution.');
+                    if(options.signal?.aborted)throw new DOMException('Export cancelled','AbortError');
+                    const bytes=await packageStage(USD, stage, directory, driver, options);
+                    if(options.signal?.aborted)throw new DOMException('Export cancelled','AbortError');
+                    if(options.textureResolution!=='preview')return bytes;
+                    const {previewArchive}=await import('./scene/previewArchive.js');
+                    return await previewArchive(bytes,{...options,maxTextureSize:config.maxTextureSize||512});
                 } finally { editInFlight = false; }
             });
             stageEditQueue = result.catch(() => {});
@@ -822,6 +828,8 @@ async function createScopedThreeHydra(config, lifetime) {
             await renderInterface.waitForMaterialsReady();
             shadows.refreshBounds();
         },
+        /** Temporary original-resolution textures for export, preserving preview materials. */
+        createTextureExport: options => renderInterface.registry.createExportScope(options),
         diagnostics: () => renderInterface.getDiagnostics(),
         stageMetadata: () => {
             applyStageMetadata(readStageMetadata());

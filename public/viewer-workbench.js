@@ -1,3 +1,4 @@
+import { track } from './analytics.js';
 import { createDockview } from 'dockview-core';
 import { viewerIcon } from './usd/viewer/icons.js';
 import { mountExamplesBrowser } from './viewer-examples.js';
@@ -147,6 +148,7 @@ export async function mountWorkbench() {
   downloadControl = mountDownloadButton({
     container: header, getSource: () => downloadSource?.(),
     stateKey: 'needle-usd-download-format', menuAnchor: header,
+    onTextureResolutionChange:resolution=>track('export_texture_resolution_changed',{resolution}),
     onOpenChange(open) { if (open) for (const menu of menus) menu.open = false; },
     onMenuNavigate(direction) { nextMenu(downloadControl.menuTrigger, direction, downloadControl.menuOpen); },
   });
@@ -538,6 +540,8 @@ export async function mountWorkbench() {
     },
     onDispose(callback) { if (disposed) { callback(); return () => {}; } disposeListeners.add(callback); return () => disposeListeners.delete(callback); },
     setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
+    downloadGltf() { downloadControl.setFormat('gltf'); return downloadControl.download(); },
+    share() { return downloadControl.share(); },
     containers: { helpers: helperSettings, settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
     openPanel, isPanelVisible, exampleChosen() { if (productMode === 'viewer') examplesDialog.close(); else if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
     async prepareStage() {

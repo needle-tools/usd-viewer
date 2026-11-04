@@ -9,10 +9,10 @@ test('USD startup skips glTF tools and area-light tables, then loads the request
   await page.goto('/?viewer=three&render=beauty&file=/test-fixtures/asset-explorer/DamagedHelmet.glb.three.usdz');
   await stageReady(page);
   expect(requests.some(path => /\/(GLTFLoader|GLTFExporter|RectAreaLightTexturesLib)\.js$/.test(path))).toBe(false);
-  await openAppMenu(page, 'file');
-  await page.getByRole('link', {name:'Share USD', exact:true}).first().click();
+  await page.getByLabel('Download format',{exact:true}).click();
+  await page.getByRole('menuitemradio',{name:'glTF',exact:true}).click();
   const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', {name:'Just the raw GLB', exact:true}).click();
+  await page.getByRole('button', {name:'Download', exact:true}).click();
   const file = await downloaded;
   const bytes = await readFile((await file.path())!);
   expect(bytes.subarray(0, 4).toString()).toBe('glTF');
