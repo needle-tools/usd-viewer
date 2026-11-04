@@ -17,11 +17,11 @@
     "--strip-producers"
   ],
   "input": {
-    "bytes": 37690353,
-    "sha256": "0385543b314764359c4818f006e00466b53e0a5a4d4dd826143e85575d5fc936"
+    "bytes": 37696039,
+    "sha256": "f96a94719e7f0065dea12986947dde10d74ee8f4b29f0c8d6273d9db4aea859c"
   },
   "output": {
-    "bytes": 36369300,
-    "sha256": "c828f6776f1ef68f73d4f58e642b9befb7a3d46fd615ed7d8109c72c69e0675b"
+    "bytes": 36374986,
+    "sha256": "133a679370f8a931ef82d0d4b0607d643ef8837f6b533b4777f05aeb5dc5bcf4"
   }
 }

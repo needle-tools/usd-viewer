@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Simulate USD assets alongside other objects in Needle Engine, with shared collisions and physics queries.
+- Control SimReady joints and motors in shared simulations, with correct asset units.
 - Inspect and edit animated transforms and arrays in Properties and Code.
 - Switch between USD Viewer and USD Studio from the header. Fix header movement on hover and unwanted joint helpers.
 

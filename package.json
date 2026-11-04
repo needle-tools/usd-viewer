@@ -27,7 +27,8 @@
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "three-gpu-pathtracer": "https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz",
     "three-mesh-bvh": "https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz",
-    "xatlas-web": "https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz"
+    "xatlas-web": "https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz",
+    "@needle-tools/simready": "file:modules/simready"
   },
   "overrides": {
     "@needle-tools/materialx": "$@needle-tools/materialx",

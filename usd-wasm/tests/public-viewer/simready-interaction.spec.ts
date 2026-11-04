@@ -56,7 +56,7 @@ test('SimReady glasses drag their rendered arm within its hinge limits and keep 
  await page.getByRole('button',{name:'Reset',exact:true}).click();expect(await page.evaluate(()=>(window as any).usdPhysics.simulation)).toBeNull();expect(errors).toEqual([]);
 });
 
-test('cabinet drawers preserve every rendered attachment across repeated poses and refuse unsupported contacts',async({page},info)=>{
+test('cabinet drawers preserve every rendered attachment across repeated poses and physical contacts',async({page},info)=>{
  const rapier:string[]=[],errors:string[]=[];page.on('request',r=>{if(r.url().includes('/rapier/'))rapier.push(r.url());});page.on('pageerror',e=>errors.push(e.message));
  await page.goto(url('fixture_cabinet_b01'));await stageReady(page);await page.evaluate(()=>(window as any).usdHydra.materialsReady());await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
  const interact=page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true});await interact.click();await expect(interact).toHaveAttribute('aria-pressed','true');
@@ -86,9 +86,41 @@ test('cabinet drawers preserve every rendered attachment across repeated poses a
   }
   await page.locator('#usd-physics-controls').getByRole('button',{name:'Reset',exact:true}).click();await compare();
  }
+ expect(rapier).toEqual([]);
  await page.locator('#usd-physics-controls').getByRole('button',{name:'Simulate',exact:true}).click();
- await expect(page.locator('#usd-physics-controls [role=status]')).toContainText(/Simulation unavailable:.*sdf/i);await compare();
- expect(rapier).toEqual([]);expect(errors).toEqual([]);
+ await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Pause',exact:true})).toBeVisible();
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Pause',exact:true}).click();
+ const physical=await page.evaluate(async()=>{
+  const w=window as any,sim=w.usdPhysics.simulation,{Matrix4,Vector3,Quaternion}=await import('three'),root=w.usdHydra.scene;
+  const attachments=()=>{
+   root.updateWorldMatrix(true,true);const inverse=root.matrixWorld.clone().invert(),result:any[]=[];
+   root.traverseVisible((object:any)=>{if(!object.isMesh||object.userData.usdHelperFor)return;for(let i=0;i<(object.isInstancedMesh?object.count:1);i++){
+    const record=sim.bodyForObject(object,i);if(!record)throw new Error('Rendered cabinet attachment lost its body mapping.');
+    const local=new Matrix4();if(object.isInstancedMesh)object.getMatrixAt(i,local);
+    const pose=new Matrix4().compose(new Vector3().copy(record.body.translation()),new Quaternion().copy(record.body.rotation()),new Vector3(1,1,1));
+    const relative=pose.invert().multiply(inverse).multiply(object.matrixWorld).multiply(local);
+    result.push({key:object.uuid+':'+i,owner:record.data.path,matrix:relative.elements});
+   }});return result;
+  };
+  const before=attachments(),drawer=sim.bodies.get('/RootNode/Geometry/part_01_obj_00').body;
+  sim.play();
+  drawer.applyImpulse({x:4,y:0,z:0},true);
+  for(let i=0;i<240;i++)sim.step(1/120);
+  sim.pause();
+  return {before,after:attachments(),travel:sim.getJointValue('/RootNode/Joints/joint_part_01_joint_00'),unsupported:sim.unsupported,backend:sim.backend,
+   finite:[...sim.bodies.values()].every((record:any)=>Object.values(record.body.translation()).every(Number.isFinite)&&Object.values(record.body.rotation()).every(Number.isFinite))};
+ });
+ expect(physical.unsupported).toEqual([]);expect(physical.finite).toBe(true);
+ expect(physical.backend.adaptations.some((item:any)=>item.source==='sdf'&&item.target==='convex decomposition')).toBe(true);
+ expect(physical.travel).toBeGreaterThan(.005);expect(physical.travel).toBeLessThan(.47);
+ expect(physical.before.length).toBe(baseline.length);expect(physical.after.length).toBe(baseline.length);
+ for(let i=0;i<physical.before.length;i++){
+  const before=physical.before[i],after=physical.after[i];expect(after.key).toBe(before.key);expect(after.owner).toBe(before.owner);
+  after.matrix.forEach((value:number,index:number)=>expect(value,after.owner).toBeCloseTo(before.matrix[index],4));
+ }
+ await page.screenshot({path:info.outputPath('cabinet-simulated.png')});
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Reset',exact:true}).click();await compare();
+ expect(errors).toEqual([]);
 });
 
 test('cabinet chrome handle pixels move with the drawer in Beauty',async({page},info)=>{

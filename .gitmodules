@@ -1,0 +1,3 @@
+[submodule "modules/simready"]
+	path = modules/simready
+	url = https://github.com/needle-tools/simready.git

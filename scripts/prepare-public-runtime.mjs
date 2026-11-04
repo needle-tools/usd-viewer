@@ -8,6 +8,7 @@ import moduleVersions from './module-versions.js';
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
 const copies = [
+  { from: join(root, 'node_modules', '@needle-tools', 'simready', 'src'), to: join(root, 'public', 'simready'), label: '/simready' },
   { from: join(root, 'node_modules', 'three-mesh-bvh', 'build', 'index.umd.cjs'), to: join(root, 'public', 'modules', 'mesh-bvh.umd.js'), label: '/modules/mesh-bvh.umd.js' },
   { from: join(root, 'node_modules', 'dockview-core', 'dist'), to: join(root, 'public', 'dockview'), label: '/dockview' },
   ...['three-gpu-pathtracer', 'three-mesh-bvh'].map(name => ({ from: join(root, 'node_modules', name), to: join(root, 'public', name), label: '/' + name })),

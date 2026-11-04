@@ -315,6 +315,13 @@ fastify.register(require('@fastify/static'), {
 });
 
 fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'node_modules/@needle-tools/simready/src'),
+  prefix: '/simready',
+  setHeaders,
+  decorateReply: false,
+});
+
+fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'node_modules/@dimforge/rapier3d-compat/dist'),
   prefix: '/rapier',
   setHeaders,

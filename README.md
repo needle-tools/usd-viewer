@@ -82,6 +82,7 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 ## Development
 
 ```sh
+git submodule update --init --recursive
 npm install
 npm run prepare:public
 npm run start

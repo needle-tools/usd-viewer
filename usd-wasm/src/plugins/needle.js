@@ -16,8 +16,11 @@ export function getHydraHandleFromNeedleEngineAsset(asset) {
     const root = findObject3D(asset);
     if (!root) return null;
 
-    let handle = hydraHandlesByRoot.get(root) || null;
-    if (handle) return handle;
+    let handle = null;
+    for (let current = root; current; current = current.parent) {
+        handle = hydraHandlesByRoot.get(current) || null;
+        if (handle) return handle;
+    }
 
     root.traverse?.((object) => {
         handle ??= hydraHandlesByRoot.get(object) || null;
@@ -145,6 +148,15 @@ function onAddNeedlePlugin(NEEDLE, opts) {
             hydraHandlesByRoot.set(this.comp.root, handle);
 
             await handle.ready();
+            // Needle scenes use metres; the Hydra handle retains stage-local
+            // coordinates beneath this root. USD defaults to centimetres.
+            const metersPerUnit = await handle.readStage(stage => {
+                const root = stage.GetPseudoRoot();
+                try { return root.GetMetadata('metersPerUnit'); }
+                finally { root.delete(); }
+            });
+            this.comp.root.scale.setScalar(typeof metersPerUnit === 'number' && metersPerUnit > 0 && Number.isFinite(metersPerUnit) ? metersPerUnit : .01);
+            this.comp.root.updateMatrixWorld(true);
             if (opts.waitForMaterials) await handle.materialsReady();
             else void handle.materialsReady().catch(error => console.warn("USD materials failed", error));
 

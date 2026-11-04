@@ -175,3 +175,55 @@ test('collision buffers are owned typed arrays and joint metadata excludes colli
   await assert.rejects(async()=>await driver.GetPhysicsMeshBuffers('/World/Missing'));
  }finally{driver.delete();for(const name of ['physics-assembly.usda','physics-buffers.usda'])USD.FS_unlink('/'+name);}
 });
+
+test('articulation export retains parsed roots, members, filtering and excluded attachments',async()=>{
+ const USD=await getUsdModule({print(){},printErr(){}});
+ const file='physics-articulation.usda',text=`#usda 1.0
+(defaultPrim = "Robot")
+def Xform "Robot" (prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysicsFilteredPairsAPI"]) {
+ rel physics:filteredPairs = </Obstacle>
+ def Xform "Base" (prepend apiSchemas = ["PhysicsRigidBodyAPI"]) {
+  def Cube "Collider" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {}
+ }
+ def Xform "Link" (prepend apiSchemas = ["PhysicsRigidBodyAPI"]) {
+  def Cube "Collider" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {}
+ }
+ def Xform "Tool" (prepend apiSchemas = ["PhysicsRigidBodyAPI"]) {
+  def Cube "Collider" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {}
+ }
+ def PhysicsFixedJoint "Anchor" {
+  rel physics:body1 = </Robot/Base>
+ }
+ def PhysicsRevoluteJoint "Hinge" {
+  rel physics:body0 = </Robot/Base>
+  rel physics:body1 = </Robot/Link>
+ }
+ def PhysicsFixedJoint "Attachment" {
+  rel physics:body0 = </Robot/Link>
+  rel physics:body1 = </Robot/Tool>
+  bool physics:excludeFromArticulation = true
+ }
+}
+def Cube "Obstacle" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {}
+`;
+ USD.FS_createDataFile('/',file,new TextEncoder().encode(text),true,true,true);
+ const delegate={createRPrim(){},createSPrim(){},createBPrim(){},CommitResources(){}};
+ const driver=await(USD.CreateHdWebSyncDriver?.(delegate,file)??new USD.HdWebSyncDriver(delegate,file));
+ try{
+  const snapshot=JSON.parse(await driver.GetPhysicsSceneJson());
+  assert.deepEqual(snapshot.unsupported,[]);
+  assert.equal(snapshot.articulations.length,1);
+  const articulation=snapshot.articulations[0];
+  assert.equal(articulation.path,'/Robot');
+  // Excluding the attachment creates a separate floating root under the same API subtree.
+  assert.deepEqual([...articulation.rootPrims].sort(),['/Robot/Anchor','/Robot/Tool']);
+  assert.deepEqual(articulation.filteredCollisions,['/Obstacle']);
+  assert.deepEqual([...articulation.articulatedBodies].sort(),['','/Robot/Base','/Robot/Link','/Robot/Tool']);
+  // OpenUSD includes incident excluded joints; their own exclusion flag distinguishes them.
+  assert.deepEqual([...articulation.articulatedJoints].sort(),['/Robot/Anchor','/Robot/Attachment','/Robot/Hinge']);
+  assert.equal(snapshot.joints.find(joint=>joint.path==='/Robot/Hinge').excludeFromArticulation,false);
+  assert.equal(snapshot.joints.find(joint=>joint.path==='/Robot/Attachment').excludeFromArticulation,true);
+  const metadata=JSON.parse(await driver.GetPhysicsSceneMetadataJson());
+  assert.deepEqual(metadata.articulations,snapshot.articulations);
+ }finally{driver.delete();USD.FS_unlink('/'+file);}
+});

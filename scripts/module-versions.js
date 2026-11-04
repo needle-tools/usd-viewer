@@ -17,13 +17,14 @@ function createModuleVersions(root) {
   }
   return async function moduleVersions() {
     const sdk=path.join(root,'usd-wasm/src'),publicRoot=path.join(root,'public');
+    const simready=path.join(root,'node_modules/@needle-tools/simready/src');
     const optionalFiles=directory=>files(directory,true).catch(error=>{if(error.code==='ENOENT')return [];throw error;});
-    const [sdkFiles,appFiles,styles,brand]=await Promise.all([files(sdk,true),files(publicRoot,false),optionalFiles(path.join(publicRoot,'css')),optionalFiles(path.join(publicRoot,'brand'))]);
-    const entries=await Promise.all([...sdkFiles,...appFiles,...styles,...brand].map(async file=>{
+    const [sdkFiles,appFiles,styles,brand,simreadyFiles]=await Promise.all([files(sdk,true),files(publicRoot,false),optionalFiles(path.join(publicRoot,'css')),optionalFiles(path.join(publicRoot,'brand')),optionalFiles(simready)]);
+    const entries=await Promise.all([...sdkFiles,...appFiles,...styles,...brand,...simreadyFiles].map(async file=>{
       const info=await stat(file),stamp=`${info.size}:${info.mtimeMs}:${info.ctimeMs}`,previous=cached.get(file);
       let hash=previous?.stamp===stamp?previous.hash:undefined;
       if(!hash){hash=createHash('sha256').update(await readFile(file)).digest('hex').slice(0,20);cached.set(file,{stamp,hash});}
-      const relative=file.startsWith(sdk+path.sep)?'/usd/'+path.relative(sdk,file):'/'+path.relative(publicRoot,file);
+      const relative=file.startsWith(sdk+path.sep)?'/usd/'+path.relative(sdk,file):file.startsWith(simready+path.sep)?'/simready/'+path.relative(simready,file):'/'+path.relative(publicRoot,file);
       const url=relative.split(path.sep).join('/');return [url,`${url}?v=${hash}`];
     }));
     return Object.fromEntries(entries.sort(([a],[b])=>a.localeCompare(b)));

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Preserve articulation structure, joint exclusions and collision filters when importing USD physics.
+- Simulate USD assets alongside other Needle Engine objects, with shared collisions, physics queries and controls.
+- Support standalone glTF loading, joint interaction and headless simulation through `@needle-tools/simready`, while retaining the existing USD physics API.
+- Keep dragging correctly aligned in shared worlds and clean up simulations when scenes close.
+- Honor USD units in Needle Engine and find loaded USD assets from selected child objects.
 - Inspect and edit animated transforms and large arrays in Properties and Code, with undo and redo.
 
 ## [1.2.0] - 2026-11-02

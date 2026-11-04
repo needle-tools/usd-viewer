@@ -84,6 +84,16 @@ entry points, and import optional tools when the user opens them:
 | `@needle-tools/usd/viewer/download` | Optional ZIP/USDZ download control |
 | `@needle-tools/usd/scene` | Scene inspection, variant/payload changes and resolver-aware source reads |
 
+Simulation, joint interaction and SimReady GLB export use the optional
+`@needle-tools/simready` peer. Install it when using `/physics`, `/kinematics`
+or `/gltf`:
+
+```sh
+npm install @needle-tools/simready
+```
+
+Viewing, inspection, editing and ZIP/USDZ export do not require it.
+
 ```js
 import { getUsdModule } from '@needle-tools/usd/runtime';
 import { createThreeHydra } from '@needle-tools/usd/three';
@@ -339,6 +349,10 @@ Emscripten JavaScript from the page origin; replace those URLs with your own
 served package paths.
 
 ### Needle Engine With Package Install
+
+The plugin converts stage units to metres at the loaded asset root and applies
+the stage's up axis. USD attributes and geometry retain their original stage
+coordinates, so the same data can be inspected, edited and passed to physics.
 
 `package.json`
 
@@ -823,21 +837,76 @@ physics.update(dt);
 physics.dispose();
 ```
 
+The runtime is shared with `@needle-tools/simready`, which also runs independently
+of USD. For multiple interacting assets, create a world with
+`createSimulationWorld` from `@needle-tools/simready/rapier`, then pass
+`{handle, world, id}` to `createUsdPhysics`. The host advances `world.step(dt)`.
+Assets convert into the world's units and Y-up frame; optional `position` and
+quaternion `rotation` place each asset. `setJointTarget(path, {position, velocity})`
+controls authored motors without changing the stage.
+
+`createUsdPhysics` is the USD adapter: it reads the composed stage, resolves
+render-instance identities, binds body poses to those visuals, and pauses USD
+timeline playback until disposal. The simulation itself belongs to
+`@needle-tools/simready`. `createUsdMechanism` provides the same USD connection
+for joint posing without a contact physics engine. These entry points preserve
+the existing USD API; they do not contain separate simulation implementations.
+
+In Needle Engine, load USD through the USD plugin and obtain its handle with
+`getHydraHandleFromNeedleEngineAsset(asset)` from `@needle-tools/usd/plugins`.
+Viewing starts no simulation. For joint posing, call `createUsdMechanism({handle})`;
+Rapier remains unloaded. For dynamics in an Engine scene, use the Needle adapter:
+
+```js
+import {createNeedleSimulationWorld} from '@needle-tools/simready/needle';
+
+const world = await createNeedleSimulationWorld({context});
+const assembly = await createUsdPhysics({handle, world, id: 'assembly'});
+assembly.play();
+```
+
+This requires an Engine version exposing `RapierPhysics.registerExternalPhysics`.
+The adapter initializes or reuses the Engine's Rapier world. Engine registers
+the imported bodies and colliders for ordinary collision callbacks, queries and
+Rigidbody access; SimReady supplies raw physics objects and their visual mappings.
+Engine owns their component identities and lifecycle; external packages do not
+construct or maintain Engine components.
+Engine advances physics and synchronizes the visuals, so do not call
+`world.step()` or `assembly.update()` here. At unload, dispose the assembly and
+then its adapter; the Engine world and other assets remain alive. The
+[SimReady package](https://github.com/needle-tools/simready)
+documents glTF, USD and code-only integration with the same world API.
+
 The simulation overlays rendered transforms; it does not author stage edits.
 `pause()` preserves poses; `reset()` restores authored poses and velocities.
 Drag positions passed to `beginDrag`/`moveDrag` are in stage coordinates before
-the root up-axis transform. `scenePath` selects among multiple PhysicsScenes;
+the root up-axis transform, including for assets placed in a shared world.
+Joint values and motor targets use degrees for hinges; slider values use stage
+units in an independent simulation and world units in a shared world.
+`scenePath` selects among multiple PhysicsScenes;
 ownerless bodies belong to the first scene, following USD semantics.
 
 Supported colliders are cubes, spheres, capsules, cylinders, cones, planes,
-static triangle meshes and authored convex-hull meshes. Fixed, spherical,
-revolute and prismatic joints, unit-joint limits/drives and maximum-distance
+triangle meshes and authored convex-hull meshes. SDF-authored collision meshes
+use Rapier convex decomposition to form concave compounds that preserve cavities.
+Fixed, spherical, revolute and prismatic joints, unit-joint limits/drives and maximum-distance
 ropes are supported. Stage units, gravity, mass/density, body center of mass
-and inertia, materials, filtered pairs and collision groups are preserved.
+and inertia, collider-local mass properties, materials, filtered pairs and
+collision groups are preserved. Body-level mass properties take precedence
+over collider contributions.
 Rapier 0.21.0 also preserves independently rotated hinge/slider frames and
 motor force limits. Older supplied runtimes report unsupported frame/force
-features. Spherical cone limits, D6 joints, reduced-coordinate articulations,
-joint breaking, collider-local inertia overrides and other
+features.
+
+Articulation membership, joint exclusions and collision filters are retained.
+Fixed articulation links use reduced coordinates; movable links use impulse
+constraints with authored frames, limits and drives. Closed fixed loops retain
+an impulse constraint where needed to keep reduced-coordinate links acyclic.
+Additional solver iterations apply to the connected physics island without
+changing the host world's solver settings. `physics.backend.jointSolver` and
+`physics.backend.adaptations` report the solver and collision representations.
+
+Spherical cone limits, D6 joints, joint breaking and other unsupported
 mesh approximations appear in `physics.unsupported`. Kinematic bodies retain
 their initial poses during simulation; animated kinematic driving is not yet
 implemented. Reset/dispose before changing time or variants, then recreate

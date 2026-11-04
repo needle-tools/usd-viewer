@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import R from '@dimforge/rapier3d-compat';
-import { Group, Mesh, BoxGeometry, MeshBasicMaterial, Vector3 } from 'three';
+import { Group, Mesh, InstancedMesh, BoxGeometry, MeshBasicMaterial, Vector3 } from 'three';
 import { createUsdPhysics } from '../../src/physics/createPhysics.js';
+import { createSimulationWorld } from '@needle-tools/simready/rapier';
 
 await R.init();
 const identity = [0, 0, 0, 1];
@@ -39,6 +40,7 @@ test('gravity, contact, descendant poses, mass units, pause/reset/disposal use r
     assert.equal(body.translation().y, position);
     simulation.reset(); assert.deepEqual(data.visual.matrix.elements, original.elements); assert.equal(body.translation().y, 3);
     simulation.dispose(); simulation.dispose(); assert.equal(data.handle.playing, true);
+    simulation.play(); assert.equal(data.handle.playing, true, 'a disposed controller cannot pause the restored timeline');
 });
 
 test('Z-up gravity converts meters to stage units and filtered pairs pass through colliders', async () => {
@@ -61,6 +63,48 @@ test('dragging moves a dynamic body, releases constraints and reset restores aut
     simulation.endDrag(); assert.equal(simulation.world.impulseJoints.len(), 0);
     simulation.reset(); assert.equal(simulation.bodies.get('/Body').body.translation().x, 0);
     simulation.dispose();
+});
+
+test('shared-world dragging accepts USD stage points after unit, axis and instance placement', async () => {
+    const data = stage({upAxis:'Z',metersPerUnit:.01});
+    const world = createSimulationWorld({rapier:R,gravity:[0,0,0]});
+    const originalRoot = data.root.matrix.clone();
+    try {
+        const simulation = await createUsdPhysics({...data,world,id:'placed',position:[2,1,0],rotation:[0,Math.SQRT1_2,0,Math.SQRT1_2],allowPartial:false});
+        simulation.play();
+        assert.equal(simulation.beginDrag('/Body',new Vector3(0,0,3)),true);
+        simulation.moveDrag(new Vector3(100,0,3));
+        for(let i=0;i<120;i++)world.step();
+        const body = simulation.bodies.get('/Body').body;
+        assert.ok(Math.abs(body.translation().x-2)<.01);
+        assert.ok(Math.abs(body.translation().y-1.03)<.01);
+        assert.ok(body.translation().z<-.95,'stage X drag follows the rotated shared-world instance');
+        world.removeAsset('placed');
+        assert.equal(data.handle.playing,true,'world removal restores timeline ownership');
+        assert.deepEqual(data.root.matrix.elements,originalRoot.elements);
+    } finally {world.dispose();}
+});
+
+test('destroying a borrowed world cancels pending USD instance binding before body access', async () => {
+    const data = stage();
+    data.root.remove(data.visual);
+    const visual = new InstancedMesh(new BoxGeometry(),new MeshBasicMaterial(),1);
+    visual.userData.usdPath='/Body/Visual';data.root.add(visual);
+    let resolvePick, started;
+    const waiting = new Promise(resolve=>{started=resolve;});
+    data.handle.resolvePick=()=>{started();return new Promise(resolve=>{resolvePick=resolve;});};
+    const raw = new R.World({x:0,y:0,z:0});
+    const world = createSimulationWorld({rapier:R,world:raw});
+    const creation = createUsdPhysics({...data,world,id:'pending'});
+    const rejected = assert.rejects(creation,{name:'AbortError'});
+    await waiting;
+    world.dispose();
+    assert.equal(raw.bodies.len(),0,'pending bodies detach before the host frees its world');
+    raw.free();
+    resolvePick({path:'/Body/Visual'});
+    await rejected;
+    assert.equal(data.handle.playing,true);
+    assert.equal(data.root.matrixAutoUpdate,true);
 });
 
 test('fixed joint anchors remain coincident and unsupported joint frames are explicit', async () => {

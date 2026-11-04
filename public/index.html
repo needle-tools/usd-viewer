@@ -149,9 +149,6 @@
         "three/addons/": "/needle-three/examples/jsm/",
         "three/examples/jsm/": "/needle-three/examples/jsm/",
         "@needle-tools/engine": "/needle-engine/dist/needle-engine.min.js",
-        // Keep the pinned engine bundle and USD simulation on the same Rapier module.
-        // Rapier 0.21 fixes the deprecated WASM initialization used by its bundled 0.19.
-        "/needle-engine/dist/rapier-DJ-luMxr.min.js": "/rapier/rapier.mjs",
         "@sparkjsdev/spark": "/spark/dist/spark.module.js",
         "@needle-tools/materialx": "/materialx/index.js"
       } : {
@@ -176,6 +173,8 @@
       imports["oidn-webgpu"] = "/oidn-webgpu/dist/oidn.js";
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
+      for (const entry of ["rapier", "kinematics", "three", "gltf", "needle"]) imports["@needle-tools/simready/" + entry] = "/simready/" + entry + ".js";
+      imports["@needle-tools/simready"] = "/simready/index.js";
       imports["closed-chain-ik/core"] = "/modules/kinematics.js";
       for (const key of Object.keys(imports)) imports[key] = versions[imports[key]] || imports[key];
       Object.assign(imports, versions);

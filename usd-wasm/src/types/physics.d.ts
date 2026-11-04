@@ -1,48 +1,8 @@
 import type { Object3D } from 'three';
 import type { NeedleThreeHydraHandle } from './create.three.js';
 
-export type PhysicsVector = [number, number, number];
-export type PhysicsRotation = [number, number, number, number];
-export type PhysicsIssue = { path: string; type?: string; reason: string };
-export type PhysicsMass = {
-    mass?: number; density?: number; centerOfMass?: PhysicsVector;
-    diagonalInertia?: PhysicsVector; principalAxes?: PhysicsRotation;
-};
-export type PhysicsBody = PhysicsMass & {
-    path: string; position: PhysicsVector; rotation: PhysicsRotation; scale: PhysicsVector;
-    rigidBodyEnabled: boolean; kinematicBody: boolean; startsAsleep: boolean;
-    linearVelocity: PhysicsVector; angularVelocity: PhysicsVector;
-    filteredCollisions: string[]; simulationOwners: string[];
-};
-export type PhysicsShape = PhysicsMass & {
-    path: string; type: string; body: string; position: PhysicsVector; rotation: PhysicsRotation;
-    scale: PhysicsVector; collisionEnabled: boolean; simulationOwners: string[];
-    materials: string[]; filteredCollisions: string[]; collisionGroups: string[];
-    halfExtents?: PhysicsVector; radius?: number; halfHeight?: number; axis?: 'X' | 'Y' | 'Z';
-    approximation?: string; meshScale?: PhysicsVector; points?: number[] | Float32Array; indices?: number[] | Int32Array;
-};
-export type PhysicsLimit = { enabled: boolean; lower: number; upper: number };
-export type PhysicsDrive = {
-    enabled: boolean; targetPosition: number; targetVelocity: number; stiffness: number;
-    damping: number; acceleration: boolean; forceLimit: number | null;
-};
-export type PhysicsJoint = {
-    path: string; type: string; body0: string; body1: string;
-    position0: PhysicsVector; position1: PhysicsVector; rotation0: PhysicsRotation; rotation1: PhysicsRotation;
-    jointEnabled: boolean; collisionEnabled: boolean; axis?: 'X' | 'Y' | 'Z';
-    limit?: PhysicsLimit; drive?: PhysicsDrive; minEnabled?: boolean; maxEnabled?: boolean;
-    breakForce: number | null; breakTorque: number | null;
-    /** Optional kinematic coupling: value = multiplier * reference value + offset. */
-    mimic?: {joint:string;multiplier:number;offset:number};
-};
-export type UsdPhysicsSnapshot = {
-    metersPerUnit: number; kilogramsPerUnit: number; upAxis: string;
-    scenes: { path: string; gravityDirection: PhysicsVector; gravityMagnitude: number }[];
-    bodies: PhysicsBody[]; shapes: PhysicsShape[]; joints: PhysicsJoint[];
-    materials: { path: string; staticFriction: number; dynamicFriction: number; restitution: number; density: number }[];
-    groups: { path: string; filteredGroups: string[]; invertFilteredGroups: boolean; mergedGroups: string[] }[];
-    unsupported: PhysicsIssue[];
-};
+export type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsMass,PhysicsBody,PhysicsShape,PhysicsLimit,PhysicsDrive,PhysicsJoint,PhysicsArticulation,PhysicsSnapshot as UsdPhysicsSnapshot} from '@needle-tools/simready';
+import type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsBody,PhysicsSnapshot as UsdPhysicsSnapshot} from '@needle-tools/simready';
 
 // Structural interfaces keep Rapier optional for consumers that only render USD.
 export interface RapierBody {
@@ -69,15 +29,30 @@ export function readUsdPhysics(handle: NeedleThreeHydraHandle, options?: {meshGe
 export function getUsdPhysicsLimitations(snapshot:UsdPhysicsSnapshot):PhysicsIssue[];
 /** Scene, movable body and joint paths; does not allocate collider geometry. */
 export function inspectUsdPhysics(handle: NeedleThreeHydraHandle): Promise<{scenes:{path:string}[];dynamic:boolean;bodies:string[];joints:string[]}>;
-export function createUsdPhysics(options: {
+export interface UsdDynamicsSimulation extends UsdPhysicsSimulation {
+    readonly world:object;
+    readonly bodies:ReadonlyMap<string,{data:PhysicsBody;body:RapierBody}>;
+    step(dt?:number):void;
+    /** Degrees for hinges; stage units for independent sliders, world units for shared sliders. */
+    getJointValue(path:string):number|null;
+    setJointTarget(path:string,target:{position?:number;velocity?:number}):boolean;
+}
+export type UsdPhysicsOptions = {
     handle: NeedleThreeHydraHandle;
-    /** An initialized @dimforge/rapier3d-compat module (tested with 0.19.3 and 0.21.0). */
-    rapier: object;
     root?: Object3D;
     snapshot?: UsdPhysicsSnapshot;
+    /** Instance identity within a shared simulation world. */
+    id?:string;
+    position?:PhysicsVector;
+    rotation?:PhysicsRotation;
     scenePath?: string;
     /** Reject incomplete simulation when false. Defaults to true for compatibility. */
     allowPartial?: boolean;
     /** Interaction solves joint constraints with a held base; gravity and contacts are disabled. */
     mode?: 'simulation' | 'interaction';
-}): Promise<UsdPhysicsSimulation>;
+} & (
+    { /** Initialized Rapier module for an independent stage-coordinate simulation. */ rapier:object; world?:undefined }
+    | { /** SimReady world adapter, not a raw Rapier World. The host owns stepping. */ world:import('@needle-tools/simready/rapier').SimulationWorld; rapier?:object }
+);
+
+export function createUsdPhysics(options:UsdPhysicsOptions):Promise<UsdDynamicsSimulation>;
