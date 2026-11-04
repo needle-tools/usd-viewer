@@ -80,6 +80,9 @@ test('authored SimReady metadata and physics-only stages retain their data witho
   {metadata:{...metadata,stage:{customLayerData:{SimReady_Metadata:{profile:'fixture'}}}}},
   {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',attributes:[{name:'simready:category',type:'string',value:'fixture'}]}]}},
   {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',metadata:{apiSchemas:['PhysxArticulationAPI']}}]}},
+  {metadata:{...metadata,prims:[{path:'/Material',type:'Material',attributes:[{name:'omni:simready:nonvisual:base',type:'token',value:'metal'}]}]}},
+  {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',metadata:{apiSchemas:['SemanticsLabelsAPI:wikidata_qcode']}}]}},
+  {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',attributes:[{name:'semantics:labels:wikidata_qcode',type:'token[]',value:['Q150']}]}]}},
   {key:'scenes',value:[{path:'/Scene',gravityDirection:[0,-1,0],gravityMagnitude:9.81}]},
   {key:'materials',value:[{path:'/Friction',staticFriction:.5,dynamicFriction:.4,restitution:0}]},
  ];

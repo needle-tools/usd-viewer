@@ -24,8 +24,8 @@ export function encodeUsdMetadata(value){
  * catches authored SimReady profiles and schemas on assets without bodies. */
 export function hasSimreadyData(snapshot,metadata){
  if(['bodies','shapes','joints','scenes','materials','groups','articulations','unsupported'].some(key=>snapshot[key]?.length))return true;
- const property=/^(?:simready|physics|physx[A-Za-z]*|mjc|mujoco|newton):/i;
- const schema=/^(?:Physics|Physx|SimReady|Mjc|MuJoCo|Newton)/i;
+ const property=/^(?:(?:omni:)?simready|semantics:labels|physics|physx[A-Za-z]*|mjc|mujoco|newton):/i;
+ const schema=/^(?:Physics|Physx|SimReady|SemanticsLabelsAPI|Mjc|MuJoCo|Newton)/i;
  const applied=value=>typeof value==='string'?schema.test(value):Array.isArray(value)?value.some(applied):value&&typeof value==='object'&&Object.values(value).some(applied);
  const authored=value=>value&&typeof value==='object'&&Object.keys(value).some(key=>key==='SimReady_Metadata'||property.test(key));
  const fields=value=>authored(value)||authored(value?.customData)||authored(value?.customLayerData)||applied(value?.apiSchemas);

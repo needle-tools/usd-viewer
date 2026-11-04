@@ -80,8 +80,7 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE.txt",
-    "THIRD_PARTY_NOTICES.txt",
-    "SIMREADY_GLTF.md"
+    "THIRD_PARTY_NOTICES.txt"
   ],
   "keywords": [
     "needle",

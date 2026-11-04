@@ -1208,7 +1208,7 @@ with authored SimReady or USD physics data also retain Khronos physics,
 optional SimReady package. USD Viewer's GLB export uses this path. Downstream glTF consumers opt in
 to the shared mechanism and physics runtime with `registerSimreadyLoader` from
 `@needle-tools/simready/gltf`.
-Mesh Baker can optimize these GLBs while retaining that contract. See [the export/runtime contract](SIMREADY_GLTF.md)
+Mesh Baker can optimize these GLBs while retaining that contract. See [the export/runtime guide](https://github.com/needle-tools/simready/blob/main/docs/usd-export.md)
 for usage, units, preservation guarantees and runtime
 limitations. Loading never starts a simulator automatically.
 
