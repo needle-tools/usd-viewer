@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Export ordinary USD assets as standard GLB files without requiring SimReady. Preserve authored SimReady and USD physics data when present.
 - Preserve articulation structure, joint exclusions and collision filters when importing USD physics.
 - Simulate USD assets alongside other Needle Engine objects, with shared collisions, physics queries and controls.
 - Support standalone glTF loading, joint interaction and headless simulation through `@needle-tools/simready`, while retaining the existing USD physics API.

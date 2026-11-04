@@ -1,8 +1,8 @@
 import type { Object3D } from 'three';
 import type { NeedleThreeHydraHandle } from './create.three.js';
 
-export type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsMass,PhysicsBody,PhysicsShape,PhysicsLimit,PhysicsDrive,PhysicsJoint,PhysicsArticulation,PhysicsSnapshot as UsdPhysicsSnapshot} from '@needle-tools/simready';
-import type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsBody,PhysicsSnapshot as UsdPhysicsSnapshot} from '@needle-tools/simready';
+export type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsMass,PhysicsBody,PhysicsShape,PhysicsLimit,PhysicsDrive,PhysicsJoint,PhysicsArticulation,UsdPhysicsSnapshot} from './physics-data.js';
+import type {PhysicsVector,PhysicsRotation,PhysicsIssue,PhysicsBody,UsdPhysicsSnapshot} from './physics-data.js';
 
 // Structural interfaces keep Rapier optional for consumers that only render USD.
 export interface RapierBody {

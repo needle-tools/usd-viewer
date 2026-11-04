@@ -33,16 +33,14 @@ try {
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
     if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
-    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera, mountDownloadButton };\n");
+    if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; import { exportSimreadyGltf } from '@needle-tools/usd/gltf'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera, mountDownloadButton, exportSimreadyGltf };\n");
     await mkdir(join(root, 'public'),{recursive:true});
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     if (name === 'modern') await cp(join(sdk,'tests/fixtures/coverage/lighting-mdl'),join(root,'public/mdl'),{recursive:true});
-    if (name === 'modern') {
-      await cp(join(sdk,'tests/fixtures/simready'),join(root,'public/simready'),{recursive:true});
-      await command('modern-type-dependencies',root,'npm',['install','--save-dev','--no-audit','--no-fund','typescript@5.9.3','@types/three@0.185.4']);
-      await cp(join(sdk,'tests/types/gltf-consumer.ts'),join(root,'gltf-consumer.ts'));
-      await command('modern-gltf-types',root,'npx',['--no-install','tsc','--noEmit','--strict','--skipLibCheck','false','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','gltf-consumer.ts']);
-    }
+    if (name === 'modern') await cp(join(sdk,'tests/fixtures/simready'),join(root,'public/simready'),{recursive:true});
+    await command(`${name}-type-dependencies`,root,'npm',['install','--save-dev','--no-audit','--no-fund','typescript@5.9.3','@types/three@0.185.4']);
+    await cp(join(sdk,`tests/types/${name === 'modern' ? 'gltf-consumer.ts' : 'gltf-viewing-consumer.ts'}`),join(root,'gltf-consumer.ts'));
+    await command(`${name}-gltf-types`,root,'npx',['--no-install','tsc','--noEmit','--strict','--skipLibCheck','false','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','gltf-consumer.ts']);
     await cp(join(sdk,'tests/fixtures/coverage/textures'),join(root,'public/textures'),{recursive:true});
     if (name === 'legacy') await cp(join(root,'node_modules/three/examples/jsm/libs/basis'),join(root,'public/basis'),{recursive:true});
     await command(`${name}-build`, root, 'npm', ['run', 'build']);

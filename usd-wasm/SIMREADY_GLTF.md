@@ -1,6 +1,8 @@
 # SimReady glTF export and runtime
 
-Install the optional SimReady package for GLB export and runtime loading:
+Ordinary USD assets export as standard GLB files without the SimReady package.
+To preserve an asset's authored SimReady or USD physics data, or to load that
+data in a glTF runtime, install the optional package:
 
 ```sh
 npm install @needle-tools/simready
@@ -27,7 +29,8 @@ if the stage revision or timeline position changes while it is being written.
 
 ## Contract: `NEEDLE_simready`, version 1
 
-The top-level extension is listed in `extensionsUsed`. Assets with bodies,
+Only assets with authored SimReady or USD physics data include the top-level
+extension in `extensionsUsed`. Assets with bodies,
 colliders, joints or collision groups also list it in `extensionsRequired`.
 Ordinary scenes retain their cameras, lights, points and lines alongside meshes,
 and can be opened without the SimReady runtime.

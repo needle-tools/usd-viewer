@@ -84,15 +84,16 @@ entry points, and import optional tools when the user opens them:
 | `@needle-tools/usd/viewer/download` | ZIP/USDZ download control with optional glTF and Cloud destinations |
 | `@needle-tools/usd/scene` | Scene inspection, variant/payload changes and resolver-aware source reads |
 
-Simulation, joint interaction and SimReady GLB export use the optional
-`@needle-tools/simready` peer. Install it when using `/physics`, `/kinematics`
-or `/gltf`:
+Simulation and joint interaction use the optional `@needle-tools/simready` peer.
+Install it when using `/physics` or `/kinematics`, or when exporting an asset's
+SimReady or USD physics data through `/gltf`:
 
 ```sh
 npm install @needle-tools/simready
 ```
 
-Viewing, inspection, editing and ZIP/USDZ export do not require it.
+Viewing, inspection, editing, ZIP/USDZ export and ordinary GLB export do not
+require it.
 
 ```js
 import { getUsdModule } from '@needle-tools/usd/runtime';
@@ -1201,9 +1202,10 @@ For commercial use, contact [hi@needle.tools](mailto:hi@needle.tools).
 
 ## SimReady glTF interoperability
 
-`@needle-tools/usd/gltf` exports the stage's rigid visuals with Khronos physics,
-`NEEDLE_simready` runtime bindings and structured USD schema metadata. USD
-Viewer's existing GLB export uses this path. Downstream glTF consumers opt in
+`@needle-tools/usd/gltf` exports ordinary stages as standard GLB files. Assets
+with authored SimReady or USD physics data also retain Khronos physics,
+`NEEDLE_simready` runtime bindings and structured USD schema metadata, using the
+optional SimReady package. USD Viewer's GLB export uses this path. Downstream glTF consumers opt in
 to the shared mechanism and physics runtime with `registerSimreadyLoader` from
 `@needle-tools/simready/gltf`.
 Mesh Baker can optimize these GLBs while retaining that contract. See [the export/runtime contract](SIMREADY_GLTF.md)

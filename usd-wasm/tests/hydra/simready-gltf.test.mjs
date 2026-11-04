@@ -51,6 +51,7 @@ test('exports standard constraints and semantic metadata without embedding origi
 test('ordinary stages retain cameras, lights, lines and points without requiring the SimReady runtime',async()=>{
  const f=fixture();
  for(const key of ['bodies','shapes','joints','scenes','materials','groups'])f.snapshot[key]=[];
+ f.usdMetadata={version:1,time:0,stage:{customLayerData:{author:'Fixture author'}},prims:[{path:'/Base',type:'Mesh',attributes:[{name:'user:label',type:'string',value:'simready'}]}]};
  for(const [path,object] of [
   ['/Camera',new PerspectiveCamera(45,1,.1,100)],
   ['/Light',new PointLight(0xffcc88,4)],
@@ -68,7 +69,44 @@ test('ordinary stages retain cameras, lights, lines and points without requiring
  assert.ok(json.meshes.some(mesh=>mesh.primitives.some(primitive=>primitive.mode===0)));
  assert.ok(json.meshes.some(mesh=>mesh.primitives.some(primitive=>primitive.mode===1)));
  assert.ok(!json.extensionsRequired?.includes('NEEDLE_simready'));
+ assert.ok(!json.extensionsUsed?.includes('NEEDLE_simready'));
+ assert.equal(json.extensions?.NEEDLE_simready,undefined);
+ assert.equal(result.userData.simready,undefined);
  assert.ok(!json.extensionsUsed?.includes('KHR_physics_rigid_bodies'));
+});
+test('authored SimReady metadata and physics-only stages retain their data without inventing bodies',async()=>{
+ const metadata={version:1,time:0,stage:{},prims:[]};
+ const cases=[
+  {metadata:{...metadata,stage:{customLayerData:{SimReady_Metadata:{profile:'fixture'}}}}},
+  {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',attributes:[{name:'simready:category',type:'string',value:'fixture'}]}]}},
+  {metadata:{...metadata,prims:[{path:'/Base',type:'Xform',metadata:{apiSchemas:['PhysxArticulationAPI']}}]}},
+  {key:'scenes',value:[{path:'/Scene',gravityDirection:[0,-1,0],gravityMagnitude:9.81}]},
+  {key:'materials',value:[{path:'/Friction',staticFriction:.5,dynamicFriction:.4,restitution:0}]},
+ ];
+ for(const example of cases){
+  const f=fixture();for(const key of ['bodies','shapes','joints','scenes','materials','groups'])f.snapshot[key]=[];
+  if(example.key)f.snapshot[example.key]=example.value;
+  const usdMetadata=example.metadata||metadata;
+  const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata,exporter:new GLTFExporter()});
+  const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
+  assert.deepEqual(result.userData.simready.snapshot,f.snapshot);
+  assert.deepEqual(result.userData.simready.usdMetadata,usdMetadata);
+  assert.deepEqual(result.userData.simready.snapshot.bodies,[]);
+  assert.ok(!result.parser.json.extensionsRequired?.includes('NEEDLE_simready'));
+ }
+});
+test('metadata encoding preserves special numbers, integer precision and typed arrays',async()=>{
+ const f=fixture();
+ f.usdMetadata.prims=[{path:'/Base',type:'Xform',attributes:[
+  {name:'simready:limit',type:'double',value:Infinity},
+  {name:'simready:identity',type:'uint64',value:18446744073709551615n},
+  {name:'simready:samples',type:'float[]',value:new Float32Array([.25,.5])},
+ ]}];
+ const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata:f.usdMetadata,exporter:new GLTFExporter()});
+ const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
+ assert.deepEqual(result.userData.simready.usdMetadata.prims[0].attributes.map(attribute=>attribute.value),[
+  {$usdNumber:'Infinity'},{$usdInteger:'18446744073709551615'},[.25,.5],
+ ]);
 });
 test('exports visible instances once and excludes hidden prototypes and hidden parent subtrees',async()=>{
  const f=fixture(),prototype=f.root.children[0];prototype.visible=false;

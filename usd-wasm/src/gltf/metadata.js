@@ -11,8 +11,27 @@ const visualFields=new Set(['doubleSided','subdivisionScheme','purpose','visibil
 
 /** JSON has no nonfinite numbers or bigint. Retain those values explicitly
  * instead of allowing JSON.stringify to replace them with null or throw. */
-export {encodeMetadata as encodeUsdMetadata} from '@needle-tools/simready';
-import {encodeMetadata as encodeUsdMetadata} from '@needle-tools/simready';
+export function encodeUsdMetadata(value){
+ return JSON.parse(JSON.stringify(value,(_key,item)=>{
+  if(typeof item==='number'&&!Number.isFinite(item))return{$usdNumber:String(item)};
+  if(typeof item==='bigint')return{$usdInteger:String(item)};
+  if(ArrayBuffer.isView(item))return item instanceof DataView?[]:Array.from(item);
+  return item;
+ }));
+}
+
+/** Physics snapshots cover composed bodies and constraints. Metadata also
+ * catches authored SimReady profiles and schemas on assets without bodies. */
+export function hasSimreadyData(snapshot,metadata){
+ if(['bodies','shapes','joints','scenes','materials','groups','articulations','unsupported'].some(key=>snapshot[key]?.length))return true;
+ const property=/^(?:simready|physics|physx[A-Za-z]*|mjc|mujoco|newton):/i;
+ const schema=/^(?:Physics|Physx|SimReady|Mjc|MuJoCo|Newton)/i;
+ const applied=value=>typeof value==='string'?schema.test(value):Array.isArray(value)?value.some(applied):value&&typeof value==='object'&&Object.values(value).some(applied);
+ const authored=value=>value&&typeof value==='object'&&Object.keys(value).some(key=>key==='SimReady_Metadata'||property.test(key));
+ const fields=value=>authored(value)||authored(value?.customData)||authored(value?.customLayerData)||applied(value?.apiSchemas);
+ return !!(fields(metadata.stage)||metadata.prims.some(prim=>schema.test(prim.type)||fields(prim.metadata)
+  ||prim.attributes?.some(attribute=>property.test(attribute.name))||prim.relationships?.some(relation=>property.test(relation.name))));
+}
 
 async function vector(items,read=value=>value){
  if(!items)return[];

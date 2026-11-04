@@ -1,8 +1,8 @@
 import {BufferAttribute,BufferGeometry,Color,Group,Matrix4,Mesh,MeshPhysicalMaterial,Points,Quaternion,Vector3} from 'three';
 import {readUsdPhysics} from '../physics/readPhysics.js';
-import {encodeUsdMetadata,readSimreadyMetadata} from './metadata.js';
+import {encodeUsdMetadata,hasSimreadyData,readSimreadyMetadata} from './metadata.js';
 
-import {SIMREADY_EXTENSION,createSimreadyExtension} from '@needle-tools/simready';
+export const SIMREADY_EXTENSION='NEEDLE_simready';
 const PHYSICS='KHR_physics_rigid_bodies',SHAPES='KHR_implicit_shapes';
 const plain=value=>JSON.parse(JSON.stringify(value,(_key,v)=>ArrayBuffer.isView(v)?Array.from(v):v));
 const contains=(parent,path)=>path===parent||path?.startsWith(parent+'/');
@@ -36,6 +36,14 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
  report('metadata');
  usdMetadata=usdMetadata?encodeUsdMetadata(usdMetadata):await readSimreadyMetadata(handle,snapshot);
  if(usdMetadata.version!==1||!Array.isArray(usdMetadata.prims))throw new Error('Invalid SimReady USD metadata.');
+ let simready;
+ if(hasSimreadyData(snapshot,usdMetadata)){
+  try{
+   simready=await import('@needle-tools/simready');
+   if(typeof simready.createSimreadyExtension!=='function')throw new Error('The SimReady serializer is unavailable.');
+  }
+  catch(cause){throw new Error('Install @needle-tools/simready to preserve this asset’s SimReady or USD physics data in glTF export.',{cause});}
+ }
  report('geometry');
  const stage=new Group();stage.name='USD stage';stage.rotation.x=snapshot.upAxis==='Z'?-Math.PI/2:0;stage.scale.setScalar(snapshot.metersPerUnit);
  const bodies=new Map(),bindings=[],physics=new Map(),colliders=[],jointFrames=[],mappingIssues=[],portableMaterials=new Map(),untintedGeometry=new WeakMap(),exportMaterials=new Map();
@@ -167,10 +175,12 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
     mesh.geometry.dispose();
    }
    for(const [a,b]of jointFrames)physics.get(a).joint.connectedNode=writer.nodeMap.get(b);
-   writer.json.extensions||={};
-   writer.json.extensions[SIMREADY_EXTENSION]=createSimreadyExtension({stageNode:writer.nodeMap.get(stage),snapshot:storedSnapshot,usdMetadata,bindings:bindings.map(({object,...identity})=>({node:writer.nodeMap.get(object),...identity})),mappingIssues});
-   writer.extensionsUsed[SIMREADY_EXTENSION]=true;
-   if(snapshot.bodies.length||snapshot.shapes.length||snapshot.joints.length||snapshot.groups.length)writer.extensionsRequired[SIMREADY_EXTENSION]=true;
+   if(simready){
+    writer.json.extensions||={};
+    writer.json.extensions[SIMREADY_EXTENSION]=simready.createSimreadyExtension({stageNode:writer.nodeMap.get(stage),snapshot:storedSnapshot,usdMetadata,bindings:bindings.map(({object,...identity})=>({node:writer.nodeMap.get(object),...identity})),mappingIssues});
+    writer.extensionsUsed[SIMREADY_EXTENSION]=true;
+    if(snapshot.bodies.length||snapshot.shapes.length||snapshot.joints.length||snapshot.groups.length)writer.extensionsRequired[SIMREADY_EXTENSION]=true;
+   }
    if(physics.size||snapshot.materials.length){
     writer.json.extensions[PHYSICS]={physicsMaterials:snapshot.materials.map(item=>({staticFriction:item.staticFriction,dynamicFriction:item.dynamicFriction,restitution:item.restitution})),physicsJoints};
     writer.extensionsUsed[PHYSICS]=true;
@@ -211,5 +221,3 @@ function projectJoint(joint,m,k){
  if((angular||joint.type==='prismatic')&&joint.drive?.enabled){const d=joint.drive,forceUnit=angular?k*m*m:k*m;drives.push({type:angular?'angular':'linear',axis,mode:d.acceleration?'acceleration':'force',positionTarget:d.targetPosition*factor,velocityTarget:d.targetVelocity*factor,stiffness:d.stiffness*(d.acceleration?1:forceUnit)/factor,damping:d.damping*(d.acceleration?1:forceUnit)/factor,...(Number.isFinite(d.forceLimit)?{maxForce:d.forceLimit*forceUnit}:{})});}
  return{limits,...(drives.length?{drives}:{})};
 }
-
-export {SIMREADY_EXTENSION} from '@needle-tools/simready';
