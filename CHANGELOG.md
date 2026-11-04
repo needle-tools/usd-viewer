@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Switch between USD Viewer and USD Studio from the header. Fix header movement on hover and unwanted joint helpers.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added
@@ -26,8 +28,8 @@
 - Correct inherited visibility, native-instance branches, payload state, prototype animation detection, hover/selection outlines and animated subset framing.
 - Fix package texture decoding, image-based domes, normal-texture remapping, MDL preview materials, glass transmission, analytic normals and textureless instance updates.
 - Keep remote composition, large texture decoding, mesh inspection, layer source analysis and viewport picking responsive. Loading UI reports concurrent dependencies, known/unknown totals, percentages, speed and ETA.
-- Use public source paths throughout Code and Layers, preserving parent dependencies without leaking resolver mounts. Hide empty session edit layers and preview images inside packages.
-- Version UI modules and styles by content to avoid mixing old SDK imports with a newer page. Asset cache hits honor HTTP freshness; pinned collections and large assets remain cacheable without forced re-downloads.
-- Remove asset-specific texture replacements and noisy analytics terminal logging. Published lower-resolution textures are an explicit display option; original dependencies remain available for viewing and export.
+- Show readable source paths in Code and Layers, including parent dependencies. Hide empty edit layers and preview images inside packages.
+- Fix stale scripts and styles after updates. Keep remote assets cached between visits while checking for updates when needed.
+- Load original textures reliably and offer published previews as an optional quality setting. Keep original dependencies available for viewing and export.
 
-The application remains a private deployment package. The reusable npm SDK has its own [changelog](usd-wasm/CHANGELOG.md).
+See the [USD SDK changelog](usd-wasm/CHANGELOG.md) for package changes.

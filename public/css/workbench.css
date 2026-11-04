@@ -32,16 +32,14 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
   background: var(--surface-panel); color: var(--text-primary); font: var(--usd-text-size)/1.4 var(--font-family-body);
 }
 .usd-app-header .header-tool-leading { grid-row: 1; grid-column: 1; flex: none; min-width: 0; gap: var(--usd-space-3); }
-#container.usd-app-header .needle-logo-link { display: flex; flex: none; width: auto; margin: 0; padding: var(--usd-space-small) 0; overflow: visible; border: 0; border-radius: 0; }
+#container.usd-app-header .needle-logo-link,
+#container.usd-app-header .needle-logo-link:hover { display: flex; flex: none; width: auto; margin: 0; padding: var(--usd-space-small) 0; overflow: visible; border: 0; border-radius: 0; }
 .usd-app-header .needle-logo { flex: none; width: var(--usd-logo-width); height: var(--usd-logo-height); object-fit: contain; }
 .usd-app-header .header-tool-title-group { flex: none; }
 .usd-app-header .usd-product-mode {
-  width: var(--usd-product-switch-width); max-width: 100%; height: var(--usd-menubar-height); padding: 0 var(--usd-space-1);
-  border: 1px solid transparent; border-radius: var(--usd-radius-control); background: transparent; color: var(--text-primary);
-  font: 400 var(--usd-product-title-size)/1.4 var(--font-family-body);
+  max-width: 100%; height: var(--usd-menubar-height);
 }
-.usd-app-header .usd-product-mode:hover { background: var(--surface-panel-muted); }
-.usd-app-header .usd-product-mode option { background: var(--surface-panel); color: var(--text-primary); }
+.usd-app-header .usd-product-mode > button { white-space: nowrap; font: inherit; padding-inline: var(--usd-space-2); }
 #container.usd-app-header button.usd-menubar-toggle { display: none; grid-row: 1; grid-column: 2; }
 .usd-app-header .usd-file-context { grid-row: 1; grid-column: 3; justify-self: end; max-width: 100%; margin-left: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: var(--usd-text-size); }
 .usd-app-header .header-tool-actions { grid-row: 1; grid-column: 2; justify-content: flex-start; flex: none; flex-wrap: nowrap; gap: var(--usd-space-1); }
@@ -248,6 +246,9 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-examples-divider:focus-visible { box-shadow: inset 0 0 0 1px var(--border-focus); }
 .usd-examples-content:has(.usd-examples-divider[data-dragging]) { user-select: none; }
 .usd-examples-browser .sample-group-list { display: flex; flex-direction: column; gap: 0; }
+.usd-examples-links { margin-top: var(--usd-space-field); padding-top: var(--usd-space-field); border-top: 1px solid var(--border-subtle); }
+.usd-examples-links h3 { margin: var(--usd-space-half) var(--usd-space-field); color: var(--text-secondary); font: var(--usd-text-small) var(--font-family-body); }
+.usd-examples-links a { text-decoration: none; }
 .usd-examples-browser .sample-group-tree { max-height: none; opacity: 1; margin: 0; padding: 0; border: 0; overflow: visible; transition: none; }
 .usd-examples-browser .sample-library > .sample-group-tree { padding-left: var(--usd-space-3); }
 .usd-examples-browser .sample-library > summary .usd-icon { flex: none; color: var(--usd-icon-color); }
@@ -324,7 +325,8 @@ body.usd-product .ui-tooltip::before { display: none; }
   #container.usd-app-header .usd-download > button .usd-icon { width: var(--usd-icon-size); height: var(--usd-icon-size); }
   #container.usd-app-header { grid-template-columns: minmax(0,1fr) auto auto; padding-inline: var(--usd-space-2); gap: var(--usd-space-2); }
   #container.usd-app-header .header-tool-title-group { display: flex; }
-  .usd-app-header .usd-product-mode { --usd-product-switch-width: 108px; }
+  .usd-app-header .usd-product-mode > button { padding-inline: var(--usd-space-small); }
+  .usd-app-header .usd-product-prefix { display:none; }
   #container.usd-app-header button.usd-menubar-toggle { display: inline-flex; }
   #container.usd-app-header .usd-download { grid-column: 3; }
   #container.usd-app-header .header-tool-actions { display: none; }

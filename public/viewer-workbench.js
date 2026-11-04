@@ -52,9 +52,17 @@ export async function mountWorkbench() {
   const logo = document.querySelector('.needle-logo-link');
   logo.querySelector('img').src = '/brand/logos/logo_needle_black_no_padding.svg';
   const title = element('div', 'header-tool-title-group');
-  const productSelect = element('select', 'usd-product-mode'); productSelect.setAttribute('aria-label', 'Workspace mode');
-  for (const [value, text] of [['viewer', 'USD Viewer'], ['studio', 'USD Studio']]) { const option = element('option', '', text); option.value = value; productSelect.append(option); }
-  productSelect.value = productMode; productSelect.onchange = () => setProductMode(productSelect.value); title.append(productSelect);
+  const productSwitch = element('div', 'segmented-control usd-product-mode');
+  productSwitch.setAttribute('role', 'group'); productSwitch.setAttribute('aria-label', 'Workspace mode');
+  const productButtons = new Map();
+  for (const [value, text] of [['viewer', 'USD Viewer'], ['studio', 'USD Studio']]) {
+    const option = button(text, () => setProductMode(value));
+    option.className = ''; option.setAttribute('aria-label', text);
+    option.replaceChildren(element('span', 'usd-product-prefix', 'USD '), document.createTextNode(value === 'viewer' ? 'Viewer' : 'Studio'));
+    option.dataset.mode = value; option.setAttribute('aria-pressed', String(productMode === value));
+    productButtons.set(value, option); productSwitch.append(option);
+  }
+  title.append(productSwitch);
   const fileContext = element('span', 'usd-file-context', 'Untitled'); identity.append(logo, title);
   const actions = element('nav', 'header-tool-actions usd-menubar'); actions.setAttribute('aria-label', 'Application menus');
   actions.id = 'usd-application-menus';
@@ -160,7 +168,7 @@ export async function mountWorkbench() {
   frameSelection.append(element('kbd','','F'));viewCommands.append(frameSelection);
   const theme = element('select', 'usd-theme-select'); theme.setAttribute('aria-label', 'Color theme');
   for (const [value, text] of [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]) { const option = element('option', '', text); option.value = value; theme.append(option); }
-  theme.value = read(THEME, 'system');
+  theme.value = read(THEME, 'light');
   const media = matchMedia('(prefers-color-scheme: dark)');
   function applyTheme() {
     const dark = theme.value === 'dark' || theme.value === 'system' && media.matches;
@@ -319,7 +327,7 @@ export async function mountWorkbench() {
     closeMenus(); setMenubarOpen(false);
     productMode = next; save(PRODUCT_MODE, next);
     const url = new URL(location.href); url.searchParams.set('workspace', next); history.replaceState({}, '', url);
-    productSelect.value = next;
+    for (const [value, option] of productButtons) option.setAttribute('aria-pressed', String(value === next));
     if (next === 'studio' && awaitingStage && stageInfo) { awaitingStage = false; defaults(defaultKind(), false); }
     else layoutResponsive();
   }

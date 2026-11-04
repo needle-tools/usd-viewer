@@ -10,7 +10,7 @@ export async function showViewportHelpers(container, handle, onPurposesChange = 
   const owner={};owners.set(container,owner);
   container.replaceChildren();synchronizers.delete(container);container.parentElement.ontoggle=null;
   if(!handle?.setHelpers)return;
-  const stored=readRenderSettings().helpers || {}, settings={curves:true,joints:true};
+  const stored=readRenderSettings().helpers || {}, settings={curves:true,joints:false};
   for(const [key] of choices)if(typeof stored[key]==='boolean')settings[key]=stored[key];
   handle.setHelpers(settings);
   if(stored.guides===true && !handle.includedPurposes.includes('guide'))await handle.setIncludedPurposes([...handle.includedPurposes,'guide']);
