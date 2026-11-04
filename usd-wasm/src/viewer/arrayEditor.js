@@ -31,15 +31,19 @@ export function mountArrayEditor(
   {
     value = [],
     type = "",
+    displayType,
     name = "Array",
     language = "javascript",
     editable = true,
     timeCode = Number.NaN,
     create = false,
+    fixedLength = false,
+    dataSource,
     onApply,
     onClose,
   } = {},
 ) {
+  if (dataSource) editable = false;
   const doc = container.ownerDocument,
     node = (tag, cls, text) => {
       const el = doc.createElement(tag);
@@ -64,6 +68,7 @@ export function mountArrayEditor(
     return b;
   };
   const close = () => {
+    disposed = true;
     root.remove();
     onClose?.();
   };
@@ -76,7 +81,7 @@ export function mountArrayEditor(
     if (rawMode) raw.value = serializeArray(values(), language);
     paint();
   });
-  button(tools, "Copy table", async () => {
+  button(tools, dataSource ? "Copy page" : "Copy table", async () => {
     try {
       await doc.defaultView.navigator.clipboard.writeText(
         [layout.columns.join("\t"), ...rows.map((row) => row.join("\t"))].join(
@@ -170,6 +175,7 @@ export function mountArrayEditor(
       if (!rawMode && invalid.size)
         throw new TypeError("Correct invalid cells before applying.");
       const data = rawMode ? parseArrayLiteral(raw.value, language) : values();
+      if (fixedLength && data.length !== value.length) throw new TypeError('Keep the same number of rows.');
       const actual = arrayLayout(data, type, name);
       if (
         data.length &&
@@ -199,7 +205,8 @@ export function mountArrayEditor(
     disposed = false,
     history = [],
     cursor = 0,
-    invalid = new Map();
+    invalid = new Map(), loadedPage = 0, pageRequest = 0;
+  const rowCount = () => dataSource ? dataSource.total : rows.length;
   function init(data) {
     layout = arrayLayout(data, type, name);
     rows = layout.rows.map((row) => row.slice());
@@ -310,35 +317,47 @@ export function mountArrayEditor(
   function paint() {
     page = Math.max(
       0,
-      Math.min(page, Math.max(0, Math.ceil(rows.length / PAGE) - 1)),
+      Math.min(page, Math.max(0, Math.ceil(rowCount() / PAGE) - 1)),
     );
     const start = page * PAGE,
-      end = Math.min(rows.length, start + PAGE);
-    meta.textContent = `${type || layout.columns.join(" · ")} · ${rows.length.toLocaleString()} ${rows.length === 1 ? "row" : "rows"}${Number.isFinite(timeCode) ? " · t=" + timeCode : ""}`;
+      end = Math.min(rowCount(), start + PAGE);
+    meta.textContent = `${(displayType ?? type) || layout.columns.join(" · ")} · ${rowCount().toLocaleString()} ${rowCount() === 1 ? "row" : "rows"}${Number.isFinite(timeCode) ? " · t=" + timeCode : ""}`;
     scroll.hidden = rawMode;
     raw.hidden = !rawMode;
     rawToggle.setAttribute("aria-pressed", String(rawMode));
-    pagination.hidden = rows.length <= PAGE;
+    pagination.hidden = rowCount() <= PAGE;
     actions.hidden = !editable;
     previous.disabled = page === 0;
-    next.disabled = end >= rows.length;
-    goto.max = String(Math.max(0, rows.length - 1));
-    position.textContent = rows.length
-      ? `${start}–${end - 1} / ${rows.length.toLocaleString()}`
+    next.disabled = end >= rowCount();
+    goto.max = String(Math.max(0, rowCount() - 1));
+    position.textContent = rowCount()
+      ? `${start}–${end - 1} / ${rowCount().toLocaleString()}`
       : "0 rows";
     undo.disabled = cursor === 0;
     redo.disabled = cursor === history.length;
     undo.hidden = redo.hidden = !editable;
-    add.hidden = !editable || rawMode;
+    add.hidden = !editable || rawMode || fixedLength;
+    rawToggle.hidden = !!dataSource;
     table.replaceChildren();
     if (rawMode) return;
+    if (dataSource && loadedPage !== page) {
+      const request = ++pageRequest, requested = page;
+      status.textContent = 'Reading array…';
+      void dataSource.read(start, PAGE).then(value => {
+        if (disposed || request !== pageRequest) return;
+        layout = arrayLayout(value, type, name); rows = layout.rows;
+        loadedPage = requested; status.textContent = ''; paint();
+      }).catch(error => { if (!disposed && request === pageRequest) status.textContent = error.message; });
+      return;
+    }
+    if (dataSource) pageRequest++;
     const head = node("thead"),
       h = node("tr");
     h.append(node("th", "", "#"));
     for (const label of layout.dims.length === 3 ? ["Matrix"] : layout.columns)
       h.append(node("th", "", label));
     if (layout.color) h.append(node("th", "", "Color"));
-    if (editable) h.append(node("th"));
+    if (editable && !fixedLength) h.append(node("th"));
     head.append(h);
     table.append(head);
     const body = node("tbody");
@@ -353,7 +372,7 @@ export function mountArrayEditor(
         cell.append(matrix);
         tr.append(cell);
       }
-      rows[i].forEach((v, j) => {
+      (dataSource ? rows[i - start] : rows[i]).forEach((v, j) => {
         const cell = node(matrix ? "div" : "td");
         if (!editable) cell.textContent = String(v);
         else {
@@ -495,7 +514,7 @@ export function mountArrayEditor(
         cell.append(swatch);
         tr.append(cell);
       }
-      if (editable) {
+      if (editable && !fixedLength) {
         const cell = node("td");
         button(
           cell,
@@ -551,6 +570,32 @@ export function mountArrayEditor(
       return values();
     },
   };
+}
+
+/** Sample selection reuses the same typed sheet as defaults and property data. */
+export function mountTimeSampleEditor(container, {samples, sampleType, initialTime = NaN, onApply, ...options}) {
+  const root = container.ownerDocument.createElement('section'); root.className = 'usd-time-samples';
+  const controls = container.ownerDocument.createElement('label'); controls.className = 'usd-array-toolbar';
+  controls.append('Time ');
+  const select = container.ownerDocument.createElement('select'); select.setAttribute('aria-label', 'Sample time');
+  for (const sample of samples) {
+    const option = container.ownerDocument.createElement('option'); option.value = String(sample.time); option.textContent = String(sample.time); select.append(option);
+  }
+  const closest = samples.reduce((a, b) => Math.abs(b.time - initialTime) < Math.abs(a.time - initialTime) ? b : a);
+  select.value = String(closest.time); controls.append(select); root.append(controls); container.append(root);
+  let editor;
+  function show() {
+    editor?.dispose();
+    const sample = samples.find(item => String(item.time) === select.value), array = sampleType.endsWith('[]');
+    editor = mountArrayEditor(root, {...options, value: array ? sample.value : [sample.value], type: array ? sampleType : sampleType + '[]', displayType:sampleType,
+      fixedLength: !array, timeCode: sample.time, onApply: async value => {
+        select.disabled = true;
+        try {await onApply?.(array ? value : value[0], sample);} finally {select.disabled = false;}
+      },
+      onClose: () => { root.remove(); options.onClose?.(); }});
+  }
+  select.onchange = show; show();
+  return {element: root, dispose() {editor?.dispose(); root.remove();}};
 }
 
 /** The same table edits literals already under the caret, or inserts new data. */

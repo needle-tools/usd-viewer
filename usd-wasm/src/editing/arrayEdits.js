@@ -13,8 +13,8 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
   // USDA uses short decimal spellings for float/half values. Compare the
   // stored precision so an unchanged authored 0.1 matches its native value.
   function expectedValueMatches(actual, expected, type) {
-    const f32=/^(?:float[234]?|(?:color|point|normal|vector|texCoord)[234]f|quatf)\[\]$/.test(type);
-    const half=/^(?:half[234]?|(?:color|point|normal|vector|texCoord)[234]h|quath)\[\]$/.test(type);
+    const f32=/^(?:float[234]?|(?:color|point|normal|vector|texCoord)[234]f|quatf)(?:\[\])?$/.test(type);
+    const half=/^(?:half[234]?|(?:color|point|normal|vector|texCoord)[234]h|quath)(?:\[\])?$/.test(type);
     const roundHalf=value=>{
       const number=Math.fround(value),a=Math.abs(number);
       if(!a||!Number.isFinite(a))return number;
@@ -30,6 +30,7 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
     return equal(actual,expected);
   }
   function makePatch(before, after) {
+    if (!Array.isArray(before) || !Array.isArray(after)) return {kind: 'value', before, after};
     if (before.length === after.length)
       return {
         kind: "rows",
@@ -64,6 +65,10 @@ export function createArrayEdits({ usd, stage: hostStage, edit, isCurrent }) {
   function replayValue(value, patch, forward) {
     const from = forward ? "before" : "after",
       to = forward ? "after" : "before";
+    if (patch.kind === 'value') {
+      if (!same(value, patch[from])) throw new Error('The value was edited elsewhere.');
+      return patch[to];
+    }
     const result = value.slice();
     if (patch.kind === "rows") {
       if (

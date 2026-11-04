@@ -457,6 +457,7 @@ body.usd-product ::-webkit-scrollbar-thumb { background: var(--usd-scrollbar-col
 .usd-code-surface { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; overflow:hidden; }
 .usd-code-array-sidebar { display:flex; flex:0 0 var(--usd-code-current-array-width,var(--usd-code-array-width)); min-width:0; min-height:0; overflow:hidden; }
 .usd-code-array-sidebar > .usd-array-editor { flex:1; max-height:none; border:0; }
+.usd-code-array-sidebar > .usd-time-samples { flex:1; }
 /* Override general panel fields here: table cells are a continuous editable sheet. */
 .usd-workbench .usd-panel .usd-array-editor .usd-array-table input:not([type=checkbox]):not([type=range]) {
   width:100%; min-width:var(--usd-array-cell-width); height:var(--usd-array-row-height); margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; padding:var(--usd-space-small) var(--usd-space-2); color:inherit; font:inherit; text-align:right;

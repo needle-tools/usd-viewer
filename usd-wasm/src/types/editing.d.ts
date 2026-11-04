@@ -24,7 +24,7 @@ export interface ArrayEdits {
    * Failed writes preserve history; recovery
    * never overwrites a newer value. If recovery also fails, the original error
    * is rethrown with a rollbackError property when that error is extensible. */
-  apply(layer: string, array: { property?: ArrayEditProperty }, text: string | undefined, value: readonly unknown[], options?: {expected?: readonly unknown[]}): Promise<void>;
+  apply(layer: string, array: { property?: ArrayEditProperty }, text: string | undefined, value: readonly unknown[] | number | string | boolean, options?: {expected?: readonly unknown[] | number | string | boolean}): Promise<void>;
   undo(): Promise<void>;
   redo(): Promise<void>;
   readonly canUndo: boolean;

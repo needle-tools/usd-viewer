@@ -2,13 +2,15 @@
 
 ## [Unreleased]
 
+- Inspect and edit animated transforms and large arrays in Properties and Code, with undo and redo.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added
 
 - Reveal selected cameras, lights, curves, points and NURBS control cages independently of global helper settings.
 
-- OpenUSD 26.11.1 with Hydra imaging, MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched `usdGltf`, `usdDraco` and glTF Draco plugins. Both runtime artifacts reference OpenUSD commit `1abaaa25a43f84dd9df7e9c52bebe475c9fcdadf`.
+- OpenUSD 26.11.1 with Hydra imaging, MaterialX 1.39.5, OpenSubdiv 3.6.1 and ABI-matched `usdGltf`, `usdDraco` and glTF Draco plugins.
 - Optional JSPI runtime with native Wasm exceptions. Its Wasm is 45.9% smaller and its Brotli transfer 39.0% smaller than Asyncify. `getUsdModule({asyncRuntime:'auto'})` selects it where supported; Asyncify remains the default and compatibility fallback.
 - Narrow `/runtime`, `/three`, `/scene`, `/editing`, `/viewer/inspect`, `/viewer/repl` and `/viewer/download` entry points. Inspection can load without the REPL, export controls or archive tools.
 - WebGPU rendering for meshes, Gaussian particle fields and bounded media in the same scene. Optional `/renderers` provides Basic, Beauty with SSGI/AO/TAA, MuTracer and gkjohnson path tracing, configurable samples/bounces, OIDN denoising and scene-linear HDR bloom. Optional tracers load on selection.
@@ -45,7 +47,7 @@
 - Defer native MaterialX library initialization until a material requires it; PreviewSurface-only stages avoid the library parse without changing mixed-material or volume behavior.
 - Expose `onAssetFetchProgress`, `resolveTextureUrl` and `maxTextureSize` for progressive host loading. Defaults retain original textures; `waitForMaterials:true` requests texture completion. Catalog and display-resolution policy belong to the host application.
 - Preserve the legacy Three.js integration and existing package-root exports. Modern renderers require a compatible host Three.js/WebGPU setup; optional runtime and renderer dependencies remain host-owned.
-- Keep the MaterialX dependency pinned to the published `@needle-tools/materialx@1.8.0` artifact.
+- Update the MaterialX dependency to `@needle-tools/materialx@1.8.1`.
 
 Viewer application changes and fixture updates are recorded in the repository's [viewer changelog](../CHANGELOG.md).
 

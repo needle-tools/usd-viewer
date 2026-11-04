@@ -193,5 +193,8 @@
 .usd-array-editor .usd-array-apply { margin-left: auto; color: var(--text-link, #527a2b); font-weight: 600; }
 
 .usd-array-footer { flex:none; }
+.usd-time-samples { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; }
+.usd-time-samples > .usd-array-toolbar { flex:none; }
+.usd-time-samples > .usd-array-editor { flex:1; max-height:100%; }
 .usd-array-pagination { color:var(--text-secondary, #647578); }
 .usd-array-pagination .usd-array-goto { margin-left:auto; }

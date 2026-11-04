@@ -1,6 +1,8 @@
 import {renderStructuredValue} from './structuredValue.js';
 import { inspectPrimAsync } from '../scene/index.js';
 import { viewerIcon } from './icons.js';
+import {mountArrayEditor} from './arrayEditor.js';
+import {arrayLayout} from './arrayData.js';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag);
@@ -69,6 +71,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   let disposed = false, current = '', context = {}, primPath, table, snapshot;
   let history = [], historyIndex = -1, pendingHistory = null;
   const rows = new Map();
+  let arrayEditor, arrayRevision, snapshotTime;
   const root = node('section', 'usd-property-inspector');
   const toolbar = node('div', 'usd-property-toolbar');
   const makeButton = (label, glyph, action) => {
@@ -92,6 +95,27 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   root.append(toolbar, address, instancing, status, provenance, scroller); container.append(root);
   const alive = () => !disposed && isCurrent();
   function message(text = '') { status.textContent = text; status.hidden = !text; }
+  function closeArray() {arrayEditor?.dispose(); arrayEditor = null; scroller.hidden = false;}
+  function openArray(value, path, trigger) {
+    closeArray();
+    const time = snapshotTime ?? handle.getTime?.() ?? 0, target = current;
+    arrayRevision = handle.revision;
+    const paged = value.arraySize > value.value.length;
+    scroller.hidden = true;
+    arrayEditor = mountArrayEditor(root, {name: value.name, type: value.type || '', editable: false,
+      timeCode:['TimeSamples','ValueClips','Spline'].includes(value.resolveInfo?.source)?time:NaN,
+      value: paged ? value.value.slice(0, 32) : value.value,
+      dataSource: paged ? {total: value.arraySize, async read(offset, count) {
+        if (!alive() || current !== target || arrayRevision !== handle.revision) throw new Error('The inspected value has changed. Reopen the array.');
+        return handle.readStage(async () => {
+          let prim, attribute;
+          try {prim = stage.GetPrimAtPath(path); attribute = prim.GetAttribute(value.name); return (await attribute.GetValuePage(time, offset, count)).value;}
+          finally {attribute?.delete?.(); prim?.delete?.();}
+        });
+      }} : undefined,
+      onClose: () => {arrayEditor = null; scroller.hidden = false; trigger.focus({preventScroll: true});},
+    });
+  }
   async function copy(text) {
     try { await navigator.clipboard.writeText(text || ''); if (alive()) message('Copied'); }
     catch { if (alive()) message('Could not copy to clipboard.'); }
@@ -101,7 +125,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     const attr=snapshot?.attributes?.find(item=>item.path===row?.path);
     if(attr?.arraySize > (attr?.value?.length || 0)) {
       try {
-        const value=await handle.readStage(async()=>{let prim,property;try{prim=stage.GetPrimAtPath(primPath);property=prim.GetAttribute(attr.name);return await property.Get(handle.getTime?.()||0);}finally{property?.delete?.();prim?.delete?.();}});
+        const value=await handle.readStage(async()=>{let prim,property;try{prim=stage.GetPrimAtPath(primPath);property=prim.GetAttribute(attr.name);return await property.Get(snapshotTime??handle.getTime?.()??0);}finally{property?.delete?.();prim?.delete?.();}});
         if(alive())await copy(rawText(value));
       }catch(error){if(alive())message(error.message);}
     } else await copy(row?.text ?? rawText(snapshot));
@@ -152,12 +176,6 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       };
       for (const attr of data.attributes || []) {
         attr.path ||= `${path}.${attr.name}`;
-        const previous=rows.get(`attribute:${attr.name}`);
-        if(previous?.path===attr.path && previous.pageOffset>0 && previous.pageOffset<attr.arraySize) {
-          const native=prim.GetAttribute(attr.name);
-          try {const page=await native.GetValuePage(time,previous.pageOffset,256);attr.value=page.value;attr.valueOffset=page.offset;attr.arraySize=page.total;}
-          finally {native.delete?.();}
-        }
         if (!Array.isArray(attr.connections)) {
           const native = prim.GetAttribute(attr.name);
           try { attr.connections = vectorValues(native.GetConnections?.()); }
@@ -271,8 +289,20 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       const text = rawText(value.value), targetsKey = JSON.stringify(value.targets || []);
       const pageKey=`${value.arraySize}:${value.valueOffset}`;
       if (row.text === text && row.targetsKey === targetsKey && row.pageKey === pageKey) continue;
-      row.text = text; row.targetsKey = targetsKey; row.pageKey=pageKey; row.pageOffset=value.valueOffset || 0;
+      row.text = text; row.targetsKey = targetsKey; row.pageKey=pageKey;
       const { td } = row;
+      if (Array.isArray(value.value)) {
+        let layout;
+        try {layout = arrayLayout(value.value, value.type || '', value.name);} catch {}
+        if (layout) {
+          const count = value.arraySize ?? value.value.length;
+          const summary = layout.width === 1 ? `[ ${count.toLocaleString()} ${count === 1 ? 'value' : 'values'} ]` : `[ ${count.toLocaleString()} × ${layout.columns.join('')} ]`;
+          const open = makeButton(`Open ${value.name} array`, null, () => openArray(value, path, open));
+          open.textContent = summary;
+          td.replaceChildren(open); td.removeAttribute('tabindex'); td.ondblclick = td.onkeydown = null;
+          continue;
+        }
+      }
       const structured=value.kind==='metadata' && value.value!==null && typeof value.value==='object';
       td.classList.toggle('usd-property-structured',structured);
       const draw = () => {
@@ -282,30 +312,6 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         else td.textContent = td.classList.contains('expanded') || text.length <= 200 ? text : text.slice(0, 200) + '…';
       };
       draw();
-      if (value.arraySize > (value.value?.length || 0)) {
-        const content=node('span'), pager=node('span','usd-property-array-pager');
-        let offset=value.valueOffset || 0, pending=false;
-        const pageLabel=node('small');
-        const previous=makeButton('Previous array values','chevron_left',()=>void page(-256));
-        const next=makeButton('Next array values','chevron_right',()=>void page(256));
-        const update=()=>{
-          content.textContent=rawText(value.value);
-          pageLabel.textContent=`${offset+1}–${offset+value.value.length} / ${value.arraySize.toLocaleString()}`;
-          previous.disabled=pending||offset===0;next.disabled=pending||offset+value.value.length>=value.arraySize;
-        };
-        const page=async delta=>{
-          if(pending)return;pending=true;update();const target=current, request=revision;
-          try{
-            const result=await handle.readStage(async()=>{let prim,attr;try{prim=stage.GetPrimAtPath(path);attr=prim.GetAttribute(value.name);return await attr.GetValuePage(handle.getTime?.()||0,Math.max(0,offset+delta),256);}finally{attr?.delete?.();prim?.delete?.();}});
-            if(!alive()||target!==current||request!==revision)return;
-            offset=result.offset;value.value=result.value;row.text=rawText(result.value);row.pageOffset=offset;row.pageKey=`${result.total}:${offset}`;
-          }catch(error){if(alive())message(error.message);}
-          finally{pending=false;if(alive())update();}
-        };
-        pager.append(previous,pageLabel,next);td.replaceChildren(content,pager);update();
-        td.removeAttribute('tabindex');td.ondblclick=td.onkeydown=null;
-        continue;
-      }
       td.title = text.length > 500 ? text.slice(0, 500) + '…' : text;
       if (!structured && value.kind !== 'relationship' && (text.length > 80 || td.classList.contains('expanded'))) {
         td.tabIndex = 0; td.title = 'Double-click or press Enter to expand';
@@ -323,6 +329,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     if (resolved === null || !valid(resolved)) { message(`Unavailable target: ${target}`); return false; }
     const nextContext = options.instance ? { instance: plain(options.instance) } : {};
     const changed = current !== resolved || JSON.stringify(context) !== JSON.stringify(nextContext);
+    if (changed) closeArray();
     current = resolved; context = nextContext; message();
     if (changed) snapshot = null;
     if (options.recordHistory !== false && (changed || historyIndex < 0)) {
@@ -338,6 +345,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   async function refresh({ revealTarget = false } = {}) {
     if (!alive()) return;
     const request = ++revision, target = current, time = handle.getTime?.() || 0;
+    if (arrayEditor && arrayRevision !== handle.revision) closeArray();
     const isLatest = () => alive() && revision === request;
     try {
       const result = await handle.readStage(async () => {
@@ -347,7 +355,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
       });
       if (!isLatest()) return;
       if (!result) { message(`Unavailable target: ${target}`); return; }
-      snapshot = result.data; render(result.data, parts(target).prim); details(result.provenance); buttons();
+      snapshot = result.data; snapshotTime = time; render(result.data, parts(target).prim); details(result.provenance); buttons();
       const active = selectedRow();
       if (parts(target).property && !active) message(`Unavailable target: ${target}`);
       if (revealTarget) {
@@ -358,5 +366,5 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   }
   filter.oninput = applyFilter;
   buttons(); show('', { recordHistory: false });
-  return { show, refresh, get target() { return current; }, dispose() { disposed = true; revision++; rows.clear(); history = []; snapshot = null; root.remove(); } };
+  return { show, refresh, get target() { return current; }, dispose() { disposed = true; revision++; closeArray(); rows.clear(); history = []; snapshot = null; root.remove(); } };
 }

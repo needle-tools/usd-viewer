@@ -101,6 +101,8 @@ export function serializeArray(value, language = "javascript") {
   return nested(value, 0);
 }
 export function arrayLayout(value, type = "", name = "") {
+  if (value.flat(Infinity).some(item => !['number', 'string', 'boolean'].includes(typeof item)))
+    throw new TypeError('Use literal scalar, vector or matrix rows.');
   let dims = shape(value);
   if (value.length === 0) {
     const matrix = type.match(/^(?:matrix|frame)([234])d\[\]$/),
@@ -276,4 +278,62 @@ export function findArrays(
     i = parsed.next - 1;
   }
   return result;
+}
+
+/** Authored sample dictionaries are data too, including scalar/vector values
+ * such as animated transforms. Keep each time attached to its own native value. */
+export function findTimeSamples(source, language = "usda") {
+  if (language !== "usda") return [];
+  const list = tokens(source), result = [], stack = [];
+  let pending = null;
+  for (let i = 0; i < list.length; i++) {
+    const token = list[i];
+    if (/^(def|over|class)$/.test(token.value)) {
+      const name = list[i + 1]?.value.startsWith('"') ? list[i + 1] : list[i + 2];
+      if (name?.value.startsWith('"')) pending = {name: JSON.parse(name.value), paren: 0};
+    }
+    if (token.value === '(' && pending) pending.paren++;
+    if (token.value === ')' && pending) pending.paren--;
+    if (token.value === '}') { stack.pop(); continue; }
+    if (token.value !== '{') continue;
+    if (pending && pending.paren === 0) {
+      stack.push({kind: 'prim', name: pending.name}); pending = null; continue;
+    }
+    const declaration = list.slice(Math.max(0, i - 5), i).map(t => t.value).join(' ')
+      .match(/(\w+)( \[ \])? ([\w:]+)\.timeSamples =$/);
+    if (declaration) {
+      const [, scalar, array, name] = declaration, type = scalar + (array ? '[]' : '');
+      const samples = []; let at = i + 1;
+      while (at < list.length && list[at].value !== '}') {
+        const timeToken = list[at], time = Number(timeToken.value);
+        if (!Number.isFinite(time) || list[at + 1]?.value !== ':') break;
+        const parsed = read(list, at + 2, language);
+        if (!parsed) break;
+        if (scalar === 'bool' && (array ? parsed.value : [parsed.value]).some(value => ![0, 1, true, false].includes(value))) break;
+        const value = scalar === 'bool' ? (array ? parsed.value.map(Boolean) : !!parsed.value) : parsed.value;
+        try { arrayLayout(array ? value : [value], scalar + '[]', name); } catch { break; }
+        samples.push({time, value, start: list[at + 2].start, end: list[parsed.next - 1].end});
+        at = parsed.next;
+        if (list[at]?.value === ',') at++;
+        else if (list[at]?.value !== '}') break;
+      }
+      if (samples.length && list[at]?.value === '}') {
+        const primPath = '/' + stack.filter(f => f.kind === 'prim').map(f => f.name).join('/');
+        const property = primPath !== '/' && !stack.some(f => f.kind === 'variant') ? {primPath, name, type, time: NaN} : null;
+        result.push({start: token.start, end: list[at].end, samples, sampled: true, value: array ? samples[0].value : [samples[0].value],
+          type: scalar + '[]', sampleType: type, name, property, language});
+        i = at; continue;
+      }
+    }
+    stack.push({kind: list.slice(Math.max(0, i - 4), i).some(t => t.value === 'variantSet') ? 'variant' : 'other'});
+  }
+  return result;
+}
+
+/** Source views collapse arrays and sampled attributes
+ * without leaving overlapping controls inside a sample dictionary. */
+export function findDataBlocks(source, language = 'javascript', options = {}) {
+  const samples = findTimeSamples(source, language).filter(options.sampleFilter || (() => true));
+  return [...findArrays(source, language, options).filter(array => !samples.some(sample => sample.start <= array.start && sample.end >= array.end)), ...samples]
+    .sort((a, b) => a.start - b.start);
 }

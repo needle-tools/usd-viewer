@@ -33,7 +33,7 @@ def Scope "Looks" {
 }
 `;
 const host = (page: Page) => page.locator('#property-navigation-host');
-const property = (page: Page, name: string) => host(page).locator('tr').filter({has: page.getByRole('rowheader', {name, exact: true})});
+const property = (page: Page, name: string) => host(page).locator('tr').filter({has: page.getByRole('rowheader', {name, exact: true, includeHidden:true})});
 async function mount(page: Page, target: string, callback = false) {
   await page.evaluate(async ({target, callback}) => {
     const w = window as any;
@@ -117,21 +117,23 @@ test('property links, history, filters, missing targets and instance context rem
   await host(page).screenshot({path: info.outputPath('property-navigation.png')});
 });
 
-test('refresh preserves table, expanded raw value, focus and scroll while updating time samples', async ({page}) => {
+test('refresh preserves the shared array sheet, raw value, focus and scroll while updating time samples', async ({page}) => {
   await openFixture(page); await mount(page, '/Test');
   await page.evaluate(async () => {await (window as any).usdHydra.setTime(1); (window as any).testInspector.refresh();});
   await expect(property(page, 'typeName').locator('td')).toHaveText(['Cube', 'custom-value']);
   await expect(property(page, 'documentation').locator('td')).toHaveText(['metadata-doc', 'attribute-doc']);
   const cell = property(page, 'longArray').locator('td');
-  await cell.dblclick(); await expect(cell).toHaveClass(/expanded/); await cell.focus();
-  const table = await host(page).locator('table').elementHandle(), originalCell = await cell.elementHandle();
+  await cell.getByRole('button',{name:'Open longArray array',exact:true}).click();
+  const sheet=host(page).locator('.usd-array-editor');await sheet.getByRole('button',{name:'Raw',exact:true}).click();
+  const raw=sheet.getByRole('textbox',{name:'Array source'});await raw.focus();
+  const table = await host(page).locator('.usd-property-scroller > table').elementHandle(), originalCell = await cell.elementHandle();
   const scroll = await host(page).locator('.usd-property-scroller').evaluate(el => el.scrollTop);
   await page.evaluate(async () => {await (window as any).usdHydra.setTime(2); (window as any).testInspector.refresh();});
   await expect(property(page, 'documentation').locator('td')).toHaveText(['metadata-doc', 'second-doc']);
   expect(await table!.evaluate(el => el.isConnected)).toBe(true); expect(await originalCell!.evaluate(el => el.isConnected)).toBe(true);
-  await expect(cell).toHaveClass(/expanded/); await expect(cell).toBeFocused();
+  await expect(raw).toBeVisible(); await expect(raw).toBeFocused();
   expect(await host(page).locator('.usd-property-scroller').evaluate(el => el.scrollTop)).toBe(scroll);
-  expect((await cell.textContent())!.length).toBeGreaterThan(200);
+  expect((await raw.inputValue()).length).toBeGreaterThan(200);
   await page.evaluate(() => (window as any).testInspector.show('/Test.links'));
   await expect(property(page, 'links')).toBeFocused();
   const geometry = await host(page).locator('.usd-property-scroller').evaluate(el => ({height: el.clientHeight, scroll: el.scrollHeight}));
@@ -174,14 +176,17 @@ test('delayed property snapshots cannot replace a newer navigation or a disposed
 
 test('large property arrays page without expanding the DOM, retain their page on refresh and copy the full value',async({page},info)=>{
  await openFixture(page);await mount(page,'/Test.pagedArray');
- const row=property(page,'pagedArray'),pager=row.locator('.usd-property-array-pager');
- await expect(pager).toContainText('1–256 / 4,096');
- await pager.getByRole('button',{name:'Next array values',exact:true}).click();await expect(pager).toContainText('257–512 / 4,096');
- await page.evaluate(()=>(window as any).testInspector.refresh());await expect(pager).toContainText('257–512 / 4,096');
- await pager.getByRole('button',{name:'Previous array values',exact:true}).click();await expect(pager).toContainText('1–256 / 4,096');
+ const row=property(page,'pagedArray');await row.getByRole('button',{name:'Open pagedArray array',exact:true}).click();
+ const sheet=host(page).locator('.usd-array-editor'),position=sheet.locator('.usd-array-position');
+ await expect(position).toHaveText('0–31 / 4,096');
+ await sheet.getByRole('button',{name:'Next rows',exact:true}).click();await expect(position).toHaveText('32–63 / 4,096');
+ await expect(sheet.locator('tbody tr').first().getByRole('cell')).toHaveText('32');
+ await page.evaluate(()=>(window as any).testInspector.refresh());await expect(position).toHaveText('32–63 / 4,096');
+ await sheet.getByRole('button',{name:'Previous rows',exact:true}).click();await expect(position).toHaveText('0–31 / 4,096');
+ await expect(sheet.locator('tbody tr')).toHaveCount(32);
  expect((await row.textContent())!.length).toBeLessThan(3000);
  await page.context().grantPermissions(['clipboard-read','clipboard-write']);
  await host(page).getByRole('button',{name:'Copy value',exact:true}).click();
  await expect.poll(()=>page.evaluate(async()=>JSON.parse(await navigator.clipboard.readText()).length)).toBe(4096);
- await row.scrollIntoViewIfNeeded();await host(page).screenshot({path:info.outputPath('paged-properties.png')});
+ await host(page).screenshot({path:info.outputPath('paged-properties.png')});
 });

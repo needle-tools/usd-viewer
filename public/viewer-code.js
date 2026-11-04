@@ -3,8 +3,8 @@ import {createSourceReader} from './viewer-code-reader.js';
 import {viewerIcon} from './usd/viewer/icons.js';
 import {stageLayers,readStageLayers} from './usd/scene/inspection.js';
 import {readStageLayerBytes} from './usd/scene/sources.js';
-import {findArrays, arrayLayout, serializeArray} from './usd/viewer/arrayData.js';
-import {mountArrayEditor, attachArrayInput} from './usd/viewer/arrayEditor.js';
+import {findDataBlocks, arrayLayout, serializeArray} from './usd/viewer/arrayData.js';
+import {mountArrayEditor, mountTimeSampleEditor, attachArrayInput} from './usd/viewer/arrayEditor.js';
 import {createArrayEdits} from './usd/editing/index.js';
 import {sourceLocations, referencedSource, referencePaths} from './viewer-source-links.js';
 
@@ -179,17 +179,31 @@ export function mountCodePane(container, {stateKey = 'needle-usd-code-source', i
       }
       if(definition){const span=element('span','usd-code-definition');span.dataset.usdPath=definition;return span;}
     };
-    const availableArrays=(large?sourceAnalysis.arrays:findArrays(text,source.language)).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));
+    const availableArrays=(large?sourceAnalysis.arrays:findDataBlocks(text,source.language)).filter(array=>![...locations.links.keys()].some(at=>at>=array.start&&at<array.end));
     hasArrays=availableArrays.some(array=>array.large||array.end-array.start>=64||array.value.flat(Infinity).length>4);refreshTools();
     const fragment=document.createDocumentFragment(),arrays=rawSource||sourceAnalysis?.rawOnly?[]:availableArrays;let last=0;
     for(const array of arrays){
       fragment.append(highlight(displayText.slice(last,array.start),source.language,decorate,last));
       const wrapper=element('span','usd-code-array'),raw=element('span','usd-code-array-literal',displayText.slice(array.start,array.end));
       const button=element('button','usd-code-array-button');button.type='button';const layout=array.summary||arrayLayout(array.value,array.type,array.name),count=array.count??array.value.length;
-      const literal=displayText.slice(array.start,array.end);button.dataset.summary=count*layout.width<=4&&literal.length<64?literal:layout.width===1?`[ ${count.toLocaleString()} ${count===1?'value':'values'} ]`:`[ ${count.toLocaleString()} × ${layout.dims.length===3?layout.dims.slice(1).join('×'):layout.columns.join('')} ]`;
-      button.dataset.arrayId=array.property?`${array.property.primPath}.${array.property.name}@${array.property.time}`:`${array.name}@${array.start}`;button.setAttribute('aria-label',`Open ${array.name} array`);button.title=`${array.property?.primPath||array.name} · ${array.type||'Array'}`;
+      const literal=displayText.slice(array.start,array.end);button.dataset.summary=array.sampled?`{ ${(array.sampleCount??array.samples.length).toLocaleString()} samples }`:count*layout.width<=4&&literal.length<64?literal:layout.width===1?`[ ${count.toLocaleString()} ${count===1?'value':'values'} ]`:`[ ${count.toLocaleString()} × ${layout.dims.length===3?layout.dims.slice(1).join('×'):layout.columns.join('')} ]`;
+      button.dataset.arrayId=array.property?`${array.property.primPath}.${array.property.name}@${array.sampled?'samples':array.property.time}`:`${array.name}@${array.start}`;button.setAttribute('aria-label',`Open ${array.name} array`);button.title=`${array.property?.primPath||array.name} · ${array.sampleType||array.type||'Array'}`;
       button.onclick=async()=>{
         closeArray();const baseline=text,bound=binding,key=selected,reader=sourceReader,editable=source.kind==='example'||source.kind==='layer'&&!!array.property&&!!editOwner;
+        if(array.sampled){
+          let samples=array.samples;
+          if(array.largeSamples){
+            status.textContent='Reading samples…';button.disabled=true;
+            try{samples=await reader.request('samples',{index:sourceAnalysis.arrays.indexOf(array)});}catch(error){if(reader===sourceReader)status.textContent=error.message;return;}finally{button.disabled=false;}
+            if(bound!==binding||key!==selected||reader!==sourceReader)return;status.textContent='';
+          }
+          arrayVisible(true);arrayEditor=mountTimeSampleEditor(arraySidebar,{...array,samples,editable,initialTime:binding?.handle?.getTime?.(),
+            onClose:()=>{arrayEditor=null;arrayVisible(false);button.focus({preventScroll:true});},onApply:async(value,sample)=>{
+              if(bound!==binding||key!==selected||baseline!==text)throw new Error('Source changed. Reopen the data.');
+              await editOwner.apply(source.identifier,{property:{...array.property,time:sample.time}},sourceAnalysis?undefined:baseline,value,{expected:sample.value});
+              dirty=true;await render();refreshTools();
+            }});return;
+        }
         let values=array.value;
         if(array.large){
           status.textContent='Reading array…';button.disabled=true;

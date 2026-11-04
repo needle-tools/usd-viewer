@@ -6,6 +6,7 @@ import {
   serializeArray,
   arrayLayout,
   fromRows,
+  findDataBlocks,
 } from "../../src/viewer/arrayData.js";
 
 test("recognizes typed USD arrays and leaves expression/string/comment contents alone", () => {
@@ -108,5 +109,30 @@ test("empty typed arrays retain their vector or matrix row shape", () => {
     const layout = arrayLayout([], type);
     assert.deepEqual(layout.dims, dims);
     if (columns) assert.deepEqual(layout.columns, columns);
+  }
+});
+
+test('sample dictionaries retain fractional times, native scalar types and varying array lengths', () => {
+  const source = `def Xform "World" {
+    quatf xformOp:orient.timeSamples = {-0.5: (1,0,0,0), 1.25e2: (0,1,0,0)}
+    double3 xformOp:translate.timeSamples = {0: (0,0,0), 1: (1,2,3)}
+    float size.timeSamples = {0: 0.25, 1: 2}
+    point3f[] points.timeSamples = {0: [(0,0,0)], 1: [(0,0,0),(1,1,1)]}
+    token visibility.timeSamples = {0: "inherited", 1: "invisible"}
+    custom matrix4d frames.timeSamples = {0: ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))}
+  }`;
+  const blocks = findDataBlocks(source, 'usda');
+  assert.equal(blocks.length, 6);
+  assert.ok(blocks.every(block => block.sampled && block.property.primPath === '/World'));
+  assert.deepEqual(blocks[0].samples.map(sample => sample.time), [-0.5, 125]);
+  assert.equal(blocks[0].property.type, 'quatf');
+  assert.deepEqual(arrayLayout(blocks[0].value, blocks[0].type).columns, ['W','X','Y','Z']);
+  assert.equal(blocks[3].samples[0].value.length, 1);
+  assert.equal(blocks[3].samples[1].value.length, 2);
+  assert.equal(blocks[4].samples[1].value, 'invisible');
+  assert.deepEqual(arrayLayout(blocks[5].value, blocks[5].type).dims, [1,4,4]);
+  for (const block of blocks) {
+    assert.equal(source[block.start], '{'); assert.equal(source[block.end - 1], '}');
+    for (const sample of block.samples) assert.ok(source.slice(sample.start,sample.end).length);
   }
 });

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Inspect and edit animated transforms and arrays in Properties and Code.
 - Switch between USD Viewer and USD Studio from the header. Fix header movement on hover and unwanted joint helpers.
 
 ## [1.2.0] - 2026-11-02
