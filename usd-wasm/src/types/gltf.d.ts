@@ -37,6 +37,8 @@ export type UsdSemanticMetadata = {
 };
 /** Export ordinary visuals as standard glTF. Authored SimReady or USD physics
  * data uses the optional SimReady package to preserve physics and schema metadata.
- * Reset any active simulation before exporting. Re-exporting a loaded GLB requires
- * its snapshot and usdMetadata; a native USD handle reads both from the stage. */
+ * Reset any active simulation before exporting. A native USD handle reads its
+ * snapshot and metadata from the stage. When re-exporting a loaded GLB, adapt
+ * runtime.snapshot with fromGltfPhysicsSnapshot from @needle-tools/simready/gltf
+ * and pass runtime.usdMetadata explicitly. */
 export function exportSimreadyGltf(options:{handle:Pick<NeedleThreeHydraHandle,'scene'|'ready'|'setPlaying'|'isPlaying'> & Partial<NeedleThreeHydraHandle>;exporter:GLTFExporter;snapshot?:UsdPhysicsSnapshot;usdMetadata?:UsdSemanticMetadata;textureResolution?:'original'|'preview';signal?:AbortSignal;onProgress?:(progress:{phase:string;completed:number;total:number})=>void}):Promise<ArrayBuffer>;

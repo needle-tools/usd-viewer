@@ -26,7 +26,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
  const revision=handle.revision,time=handle.getTime?.();
  const assertCurrent=()=>{if(signal?.aborted)throw new DOMException('Export cancelled','AbortError');if(revision!==undefined&&revision!==handle.revision||time!==undefined&&time!==handle.getTime?.())throw new Error('USD stage changed during SimReady export; retry the export.');};
  snapshot=plain(snapshot||await readUsdPhysics(handle));
- if(!(snapshot.metersPerUnit>0)||!(snapshot.kilogramsPerUnit>0))throw new Error('SimReady export requires valid USD length and mass units.');
+ if(!Number.isFinite(snapshot.metersPerUnit)||snapshot.metersPerUnit<=0||!Number.isFinite(snapshot.kilogramsPerUnit)||snapshot.kilogramsPerUnit<=0||!['X','Y','Z'].includes(snapshot.upAxis))throw new Error('SimReady export requires valid USD coordinates and units.');
  // The interactive inspector avoids extracting disabled mesh colliders. An
  // interchange export must retain their geometry too, so they can be enabled.
  for(const shape of snapshot.shapes)if(shape.type==='mesh'&&!shape.points?.length&&handle.readStage){
@@ -36,6 +36,9 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
  report('metadata');
  usdMetadata=usdMetadata?encodeUsdMetadata(usdMetadata):await readSimreadyMetadata(handle,snapshot);
  if(usdMetadata.version!==1||!Array.isArray(usdMetadata.prims))throw new Error('Invalid SimReady USD metadata.');
+ const sourceSnapshot=snapshot,m=sourceSnapshot.metersPerUnit;
+ const up=sourceSnapshot.upAxis==='Z'?new Vector3(0,0,1):sourceSnapshot.upAxis==='X'?new Vector3(1,0,0):new Vector3(0,1,0);
+ const conversion=new Matrix4().compose(new Vector3(),new Quaternion().setFromUnitVectors(up,new Vector3(0,1,0)),new Vector3(m,m,m));
  let simready;
  if(hasSimreadyData(snapshot,usdMetadata)){
   try{
@@ -43,22 +46,26 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
    if(typeof simready.createSimreadyExtension!=='function')throw new Error('The SimReady serializer is unavailable.');
   }
   catch(cause){throw new Error('Install @needle-tools/simready to preserve this asset’s SimReady or USD physics data in glTF export.',{cause});}
+  for(const shape of sourceSnapshot.shapes)if(shape.type==='mesh')validateCollisionPositions(shape);
+  const {toGltfPhysicsSnapshot}=await import('@needle-tools/simready/gltf');
+  snapshot=toGltfPhysicsSnapshot(sourceSnapshot);
+  // Source precision is checked before conversion. FLOAT accessors store the
+  // converted metre positions at their normal Float32 precision.
+  for(const shape of snapshot.shapes)if(shape.points)shape.points=Array.from(shape.points,Math.fround);
  }
  report('geometry');
- const stage=new Group();stage.name='USD stage';stage.rotation.x=snapshot.upAxis==='Z'?-Math.PI/2:0;stage.scale.setScalar(snapshot.metersPerUnit);
+ const stage=new Group();stage.name='Asset';
  const bodies=new Map(),bindings=[],physics=new Map(),colliders=[],jointFrames=[],mappingIssues=[],portableMaterials=new Map(),untintedGeometry=new WeakMap(),exportMaterials=new Map();
- const m=snapshot.metersPerUnit,k=snapshot.kilogramsPerUnit;
  for(const body of snapshot.bodies){
   const node=new Group();node.name=body.path;node.position.fromArray(body.position);node.quaternion.fromArray(body.rotation);stage.add(node);bodies.set(body.path,node);
   const motion={isKinematic:!!body.kinematicBody};
-  if(body.mass>0)motion.mass=body.mass*k;
-  // COM is a point in the node frame; the stage root applies the length unit.
+  if(body.mass>0)motion.mass=body.mass;
   if(body.centerOfMass)motion.centerOfMass=body.centerOfMass.map((v,i)=>v*(body.scale?.[i]??1));
-  if(body.diagonalInertia)motion.inertiaDiagonal=body.diagonalInertia.map(v=>v*k*m*m);
+  if(body.diagonalInertia)motion.inertiaDiagonal=body.diagonalInertia;
   if(body.principalAxes)motion.inertiaOrientation=body.principalAxes;
   const inverse=new Quaternion(...body.rotation).invert();
-  if(body.linearVelocity)motion.linearVelocity=new Vector3(...body.linearVelocity).applyQuaternion(inverse).multiplyScalar(m).toArray();
-  if(body.angularVelocity)motion.angularVelocity=new Vector3(...body.angularVelocity).applyQuaternion(inverse).multiplyScalar(Math.PI/180).toArray();
+  if(body.linearVelocity)motion.linearVelocity=new Vector3(...body.linearVelocity).applyQuaternion(inverse).toArray();
+  if(body.angularVelocity)motion.angularVelocity=new Vector3(...body.angularVelocity).applyQuaternion(inverse).toArray();
   physics.set(node,body.rigidBodyEnabled===false?{}:{motion});
   bindings.push({object:node,path:body.path});
  }
@@ -115,8 +122,13 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
    const mesh=object.isMesh?new Mesh(geometry,materials):object.clone(false);
    if(geometry)mesh.geometry=geometry;if(materials)mesh.material=materials;
    mesh.name=path;mesh.userData={};mesh.matrixAutoUpdate=false;
-   mesh.matrix.copy(inverseRoot).multiply(object.matrixWorld);
+   mesh.matrix.copy(conversion).multiply(inverseRoot).multiply(object.matrixWorld);
    if(object.isInstancedMesh){const instance=new Matrix4();object.getMatrixAt(i,instance);mesh.matrix.multiply(instance);}
+   if(object.isCamera||object.isLight){
+    mesh.matrix.scale(new Vector3(1/m,1/m,1/m));
+    if(object.isCamera)for(const key of ['near','far','left','right','top','bottom'])if(Number.isFinite(mesh[key]))mesh[key]*=m;
+    if(object.isLight&&Number.isFinite(mesh.distance))mesh.distance*=m;
+   }
    if(owner){const body=snapshot.bodies.find(item=>item.path===owner);mesh.matrix.premultiply(pose(body.position,body.rotation).invert());}
    (bodies.get(owner)||stage).add(mesh);bindings.push({object:mesh,path,body:owner||'',...(identity?{instance:plain(identity)}:{})});
   }
@@ -134,7 +146,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
   if(!parameters&&!(record&&['none','convexHull',undefined].includes(shape.approximation))){mappingIssues.push({path:shape.path,reason:'Collider mesh and USD approximation settings are retained in NEEDLE_simready; no exact Khronos physics projection is available.'});continue;}
   const node=new Group();node.name=shape.path+' collider';node.position.fromArray(shape.position||[0,0,0]);node.quaternion.fromArray(shape.rotation||[0,0,0,1]);(bodies.get(shape.body)||stage).add(node);
   const geometry={};
-  if(parameters){geometry.shape=shapes.length;shapes.push(parameters);if(['plane','capsule','cylinder','cone'].includes(shape.type))node.quaternion.multiply(new Quaternion().setFromUnitVectors(new Vector3(0,1,0),new Vector3(...(shape.axis==='X'?[1,0,0]:shape.axis==='Z'?[0,0,1]:[0,1,0]))));}
+  if(parameters){geometry.shape=shapes.length;shapes.push(parameters);if(['plane','capsule','cylinder','cone'].includes(shape.type))node.quaternion.multiply(new Quaternion().setFromUnitVectors(new Vector3(0,1,0),new Vector3(...(shape.axis==='Y'?[0,1,0]:shape.axis==='Z'?[0,0,1]:[1,0,0]))));}
   else{record.node=node;node.scale.fromArray(shape.meshScale||[1,1,1]);geometry.convexHull=shape.approximation==='convexHull';}
   const material=snapshot.materials.findIndex(item=>shape.materials?.includes(item.path));
   physics.set(node,{collider:{geometry,...(material>=0?{physicsMaterial:material}:{})}});
@@ -142,9 +154,9 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
  const physicsJoints=[];
  for(const joint of snapshot.joints){
   if(joint.jointEnabled===false)continue;
-  const projected=projectJoint(joint,m,k);
+  const projected=projectJoint(joint);
   if(!projected){mappingIssues.push({path:joint.path,reason:'Joint is retained in NEEDLE_simready; no exact Khronos projection is available.'});continue;}
-  const frames=[0,1].map(end=>{const node=new Group();node.name=joint.path+' frame '+end;node.position.fromArray(joint['position'+end]);node.quaternion.fromArray(joint['rotation'+end]);(bodies.get(joint['body'+end])||stage).add(node);return node;});
+  const frames=[0,1].map(end=>{const node=new Group();node.name=joint.path+' frame '+end;node.position.fromArray(joint['position'+end]||[0,0,0]);node.quaternion.fromArray(joint['rotation'+end]||[0,0,0,1]);(bodies.get(joint['body'+end])||stage).add(node);return node;});
   physics.set(frames[0],{joint:{joint:physicsJoints.length,enableCollision:!!joint.collisionEnabled}});jointFrames.push(frames);physicsJoints.push(projected);
  }
  for(const scene of snapshot.scenes)mappingIssues.push({path:scene.path,reason:'USD scene gravity and ownership are retained in NEEDLE_simready.'});
@@ -195,13 +207,17 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
 }
 function createCollisionMesh(shape,material){
  const points=shape.points,indices=shape.indices,count=points?.length/3;
- if(!points?.length||!Number.isInteger(count)||!points.every(value=>Number.isFinite(value)&&value===Math.fround(value)))throw new Error(`Collider ${shape.path} requires positions exactly representable as glTF FLOAT/VEC3; export would otherwise lose precision.`);
+ validateCollisionPositions(shape);
  if(indices?.length&&(!indices.every(value=>Number.isInteger(value)&&value>=0&&value<count)||indices.length%3))throw new Error(`Collider ${shape.path} has invalid triangle indices.`);
  if(!indices?.length&&shape.approximation!=='convexHull'&&count%3)throw new Error(`Collider ${shape.path} has incomplete non-indexed triangles.`);
  const geometry=new BufferGeometry();geometry.setAttribute('position',new BufferAttribute(Float32Array.from(points),3));
  if(indices?.length)geometry.setIndex(Array.from(indices));
  const mesh=!indices?.length&&shape.approximation==='convexHull'?new Points(geometry,material):new Mesh(geometry,material);
  mesh.name=shape.path+' collision geometry';return mesh;
+}
+function validateCollisionPositions(shape){
+ const points=shape.points,count=points?.length/3;
+ if(!points?.length||!Number.isInteger(count)||!points.every(value=>Number.isFinite(value)&&value===Math.fround(value)))throw new Error(`Collider ${shape.path} requires positions exactly representable as glTF FLOAT/VEC3; export would otherwise lose precision.`);
 }
 function implicitShape(shape){
  if(shape.type==='cube')return{type:'box',box:{size:shape.halfExtents.map(v=>v*2)}};
@@ -210,14 +226,13 @@ function implicitShape(shape){
  if(['capsule','cylinder','cone'].includes(shape.type)){const type=shape.type==='cone'?'cylinder':shape.type;return{type,[type]:{height:shape.halfHeight*2,radiusBottom:shape.radius,radiusTop:shape.type==='cone'?0:shape.radius}};}
  return null;
 }
-function projectJoint(joint,m,k){
+function projectJoint(joint){
  if(!['fixed','revolute','prismatic','spherical'].includes(joint.type)||joint.type==='spherical'&&joint.limit?.enabled)return null;
  const angular=joint.type==='revolute',axis=axisIndex(joint.axis),limits=[],drives=[];
  const lock=(key,values)=>{if(values.length)limits.push({[key]:values,min:0,max:0});};
  lock('linearAxes',joint.type==='prismatic'?axes.filter(a=>a!==axis):axes);
  if(joint.type!=='spherical')lock('angularAxes',angular?axes.filter(a=>a!==axis):axes);
- const factor=angular?Math.PI/180:m;
- if((angular||joint.type==='prismatic')&&joint.limit?.enabled)limits.push({[angular?'angularAxes':'linearAxes']:[axis],...(Number.isFinite(joint.limit.lower)?{min:joint.limit.lower*factor}:{}),...(Number.isFinite(joint.limit.upper)?{max:joint.limit.upper*factor}:{})});
- if((angular||joint.type==='prismatic')&&joint.drive?.enabled){const d=joint.drive,forceUnit=angular?k*m*m:k*m;drives.push({type:angular?'angular':'linear',axis,mode:d.acceleration?'acceleration':'force',positionTarget:d.targetPosition*factor,velocityTarget:d.targetVelocity*factor,stiffness:d.stiffness*(d.acceleration?1:forceUnit)/factor,damping:d.damping*(d.acceleration?1:forceUnit)/factor,...(Number.isFinite(d.forceLimit)?{maxForce:d.forceLimit*forceUnit}:{})});}
+ if((angular||joint.type==='prismatic')&&joint.limit?.enabled)limits.push({[angular?'angularAxes':'linearAxes']:[axis],...(Number.isFinite(joint.limit.lower)?{min:joint.limit.lower}:{}),...(Number.isFinite(joint.limit.upper)?{max:joint.limit.upper}:{} )});
+ if((angular||joint.type==='prismatic')&&joint.drive?.enabled){const d=joint.drive;drives.push({type:angular?'angular':'linear',axis,mode:d.acceleration?'acceleration':'force',positionTarget:d.targetPosition,velocityTarget:d.targetVelocity,stiffness:d.stiffness,damping:d.damping,...(Number.isFinite(d.forceLimit)?{maxForce:d.forceLimit}:{})});}
  return{limits,...(drives.length?{drives}:{})};
 }

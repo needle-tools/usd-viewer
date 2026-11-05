@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {Group,Mesh,InstancedMesh,Matrix4,Vector3,BoxGeometry,MeshStandardMaterial,ShaderMaterial,Float32BufferAttribute,Texture,Points,PointsMaterial,LineSegments,LineBasicMaterial,PerspectiveCamera,PointLight} from 'three';
+import {Group,Mesh,InstancedMesh,Matrix4,Vector3,Quaternion,BoxGeometry,MeshStandardMaterial,ShaderMaterial,Float32BufferAttribute,Texture,Points,PointsMaterial,LineSegments,LineBasicMaterial,PerspectiveCamera,PointLight} from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {exportSimreadyGltf} from '../../src/gltf/simready.js';
-import {registerSimreadyLoader} from '@needle-tools/simready/gltf';
+import {registerSimreadyLoader,toGltfPhysicsSnapshot,fromGltfPhysicsSnapshot} from '@needle-tools/simready/gltf';
+import {createSimulationWorld} from '@needle-tools/simready/rapier';
 import R from '@dimforge/rapier3d-compat';
 import {readFile} from 'node:fs/promises';
 import {getUsdModule} from '../runtime.mjs';
@@ -37,7 +38,7 @@ test('exports standard constraints and semantic metadata without embedding origi
  const f=fixture(),bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()});
  const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
  const data=result.userData.simready;
- assert.equal(data.handle,undefined,'glTF runtime has no USD/Hydra handle');assert.deepEqual(data.snapshot,f.snapshot);assert.deepEqual(data.usdMetadata,f.usdMetadata);
+ assert.equal(data.handle,undefined,'glTF runtime has no USD/Hydra handle');assert.deepEqual(data.snapshot,toGltfPhysicsSnapshot(f.snapshot));assert.deepEqual(data.usdMetadata,f.usdMetadata);
  assert.equal(result.parser.json.extensions.NEEDLE_simready.source,undefined);
  assert.equal(result.parser.json.extensions.KHR_physics_rigid_bodies.physicsJoints.length,2);
  const mechanism=await data.createMechanism();
@@ -92,7 +93,7 @@ test('authored SimReady metadata and physics-only stages retain their data witho
   const usdMetadata=example.metadata||metadata;
   const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata,exporter:new GLTFExporter()});
   const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
-  assert.deepEqual(result.userData.simready.snapshot,f.snapshot);
+  assert.deepEqual(result.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
   assert.deepEqual(result.userData.simready.usdMetadata,usdMetadata);
   assert.deepEqual(result.userData.simready.snapshot.bodies,[]);
   assert.ok(!result.parser.json.extensionsRequired?.includes('NEEDLE_simready'));
@@ -154,26 +155,26 @@ test('native USD extraction, GLB, contacts/drives and joint manipulation agree i
  const USD=await getUsdModule({print(){},printErr(){}});
  const buffer=await readFile(new URL('../fixtures/simready/assembly.usda',import.meta.url));
  const handle=await createThreeHydra({USD,scene:new Group(),url:'assembly.usda',buffer,autoPlay:false});
+ const nativeWorld=createSimulationWorld({rapier:R}),convertedWorld=createSimulationWorld({rapier:R});
  let original,converted,mechanism;
  try{
   const snapshot=await readUsdPhysics(handle);
   const bytes=await exportSimreadyGltf({handle,snapshot,exporter:new GLTFExporter()});
   const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,''),runtime=result.userData.simready;
-  assert.deepEqual(runtime.snapshot,snapshot);
-  original=await createUsdPhysics({handle,snapshot,rapier:R,allowPartial:false});converted=await runtime.createSimulation({rapier:R});
-  original.play();converted.play();
-  for(let i=0;i<240;i++){original.update(1/120);converted.update(1/120);}
+  assert.deepEqual(runtime.snapshot,toGltfPhysicsSnapshot(snapshot));
+  original=await createUsdPhysics({handle,snapshot,world:nativeWorld,allowPartial:false});converted=await runtime.createSimulation({world:convertedWorld});
+  for(let i=0;i<240;i++){nativeWorld.step();convertedWorld.step();}
   for(const [path,{body}]of original.bodies){
    assert.deepEqual({...converted.bodies.get(path).body.translation()},{...body.translation()});
    assert.deepEqual({...converted.bodies.get(path).body.rotation()},{...body.rotation()});
    assert.equal(converted.bodies.get(path).body.mass(),body.mass());
   }
-  assert.ok(converted.bodies.get('/Assembly/Slider').body.translation().x>20,'the authored slider drive actually runs');
+  assert.ok(converted.bodies.get('/Assembly/Slider').body.translation().x>.2,'the authored slider drive actually runs in metres');
   converted.dispose();converted=null;original.dispose();original=null;
   mechanism=await runtime.createMechanism();assert.deepEqual(mechanism.unsupported,[]);
   assert.equal(mechanism.setJointValue('/Assembly/Hinge',120),true);assert.ok(Math.abs(mechanism.getJointValue('/Assembly/Hinge')-90)<1e-4);
-  assert.ok(Math.abs(mechanism.bodies.get('/Assembly/Knob').body.translation().y-100)<1e-4);
-  assert.equal(mechanism.setJointValue('/Assembly/Slide',100),true);assert.ok(Math.abs(mechanism.getJointValue('/Assembly/Slide')-50)<1e-4);
+  assert.ok(Math.abs(mechanism.bodies.get('/Assembly/Knob').body.translation().z+1)<1e-4);
+  assert.equal(mechanism.setJointValue('/Assembly/Slide',1),true);assert.ok(Math.abs(mechanism.getJointValue('/Assembly/Slide')-.5)<1e-4);
   const assembly=runtime.usdMetadata.prims.find(prim=>prim.path==='/Assembly');
   assert.equal(assembly.attributes.find(attribute=>attribute.name==='simready:category').value,'regression assembly');
   assert.equal(runtime.usdMetadata.stage.customLayerData.SimReady_Metadata.profile,'regression');
@@ -187,7 +188,7 @@ test('native USD extraction, GLB, contacts/drives and joint manipulation agree i
   assert.ok(!runtime.usdMetadata.prims.some(prim=>prim.attributes?.some(attribute=>['physics:mass','physics:lowerLimit'].includes(attribute.name))),'canonical static physics values are stored once in the snapshot');
   assert.ok(!runtime.usdMetadata.prims.some(prim=>prim.attributes?.some(attribute=>attribute.metadata&&Object.hasOwn(attribute.metadata,'default'))),'schema defaults do not duplicate attribute values');
   assert.ok(!runtime.usdMetadata.prims.some(prim=>prim.attributes?.some(attribute=>['points','faceVertexIndices','normals','primvars:st'].includes(attribute.name))),'no original rendering geometry in semantic metadata');
- }finally{original?.dispose();converted?.dispose();mechanism?.dispose();await handle.dispose();}
+ }finally{original?.dispose();converted?.dispose();mechanism?.dispose();nativeWorld.dispose();convertedWorld.dispose();await handle.dispose();}
 });
 test('instances keep prototype identity and independent owners; mesh collision geometry remains non-rendering',async()=>{
  const f=fixture();f.root.clear();
@@ -210,7 +211,7 @@ test('instances keep prototype identity and independent owners; mesh collision g
   mechanism.setJointValue('/Hinge',90);
   for(const binding of bindings)assert.equal(mechanism.bodyForObject(await result.parser.getDependency('node',binding.node)).data.path,binding.body);
  }finally{mechanism.dispose();}
- const reexport=await exportSimreadyGltf({handle:{...f.handle,scene:runtime.root},snapshot:runtime.snapshot,usdMetadata:runtime.usdMetadata,exporter:new GLTFExporter()});
+ const reexport=await exportSimreadyGltf({handle:{...f.handle,scene:runtime.root},snapshot:fromGltfPhysicsSnapshot(runtime.snapshot),usdMetadata:runtime.usdMetadata,exporter:new GLTFExporter()});
  const again=await registerSimreadyLoader(new GLTFLoader()).parseAsync(reexport,'');
  const rebound=again.parser.json.extensions.NEEDLE_simready.bindings.filter(item=>item.instance);
  assert.deepEqual(rebound.map(item=>({path:item.path,body:item.body,instance:item.instance})),bindings.map(item=>({path:item.path,body:item.body,instance:item.instance})));
@@ -224,6 +225,39 @@ test('Khronos mass, inertia, COM and limits use their physical or geometric coor
  result.scene.updateMatrixWorld(true);assert.ok(node.localToWorld(new Vector3(...motion.centerOfMass)).distanceTo(new Vector3(.25,0,0))<1e-6);
  const hinge=json.extensions.KHR_physics_rigid_bodies.physicsJoints[0];assert.ok(hinge.limits.some(limit=>limit.angularAxes?.length===1&&Math.abs(limit.max-Math.PI/2)<1e-6));
 });
+test('a canonical reference root aligns converted collision geometry, visuals, cameras and lights',async()=>{
+ const f=fixture();Object.assign(f.snapshot,{metersPerUnit:.01,kilogramsPerUnit:.001,upAxis:'Z'});
+ const points=[0,0,0,1,0,0,0,1,0],geometry=new BoxGeometry();
+ geometry.setAttribute('position',new Float32BufferAttribute(points,3));geometry.setIndex([0,1,2]);geometry.deleteAttribute('normal');geometry.deleteAttribute('uv');geometry.clearGroups();
+ const visual=new Mesh(geometry,new MeshStandardMaterial());visual.userData.usdPath='/Static/Visual';visual.position.set(100,200,300);visual.scale.set(2,3,4);f.root.add(visual);
+ f.snapshot.shapes=[{path:'/Static/Collider',type:'mesh',points,indices:[0,1,2],position:[100,200,300],rotation:[0,0,0,1],meshScale:[2,3,4]}];
+ const camera=new PerspectiveCamera(45,1,1,1000),light=new PointLight(0xffffff,1,500);
+ for(const [object,path]of [[camera,'/Camera'],[light,'/Light']]){object.userData.usdPath=path;object.position.set(100,200,300);f.root.add(object);}
+ const before=structuredClone(f.snapshot),result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),'');
+ assert.deepEqual(f.snapshot,before,'export leaves the USD descriptor unchanged');
+ const runtime=result.userData.simready,shape=runtime.snapshot.shapes[0],json=result.parser.json;
+ assert.deepEqual(runtime.root.matrix.elements,new Matrix4().elements);
+ for(const key of ['metersPerUnit','kilogramsPerUnit','upAxis'])assert.equal(Object.hasOwn(json.extensions.NEEDLE_simready.snapshot,key),false);
+ const node=await result.parser.getDependency('node',json.nodes.findIndex(node=>node.name==='/Static/Visual'));result.scene.updateMatrixWorld(true);
+ const bodyMatrix=new Matrix4().compose(new Vector3(...shape.position),new Quaternion(...shape.rotation),new Vector3(1,1,1));
+ const position=node.geometry.getAttribute('position');
+ for(let i=0;i<3;i++){
+  const rendered=new Vector3().fromBufferAttribute(position,i).applyMatrix4(node.matrixWorld);
+  const collider=new Vector3(...shape.points.slice(i*3,i*3+3)).multiply(new Vector3(...shape.meshScale)).applyMatrix4(bodyMatrix);
+  assert.ok(rendered.distanceTo(collider)<1e-7,'render and collision positions share glTF metres and axes');
+ }
+ const exportedCamera=await result.parser.getDependency('node',json.nodes.findIndex(node=>node.name==='/Camera'));
+ assert.equal(exportedCamera.near,.01);assert.equal(exportedCamera.far,10);assert.ok(exportedCamera.scale.distanceTo(new Vector3(1,1,1))<1e-6);
+ const exportedLight=await result.parser.getDependency('node',json.nodes.findIndex(node=>node.name==='/Light'));
+ assert.equal(exportedLight.distance,5);
+ assert.ok(exportedLight.getWorldPosition(new Vector3()).distanceTo(new Vector3(1,3,-2))<1e-6);
+});
+test('joint frames retain identity defaults when attached to a body',async()=>{
+ const f=fixture();f.snapshot.joints=[{path:'/DefaultFrame',type:'fixed',body1:'/Knob'}];
+ const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),'');
+ const frame=await result.parser.getDependency('node',result.parser.json.nodes.findIndex(node=>node.name==='/DefaultFrame frame 1'));
+ assert.deepEqual(frame.position.toArray(),[0,0,0]);assert.deepEqual(frame.quaternion.toArray(),[0,0,0,1]);
+});
 test('ordinary glTF collision meshes reject higher-precision coordinates rather than rounding',async()=>{
  const f=fixture();f.snapshot.shapes=[{path:'/Knob/Collision',body:'/Knob',type:'mesh',approximation:'sdf',points:[1/3,0,0,1,0,0,0,1,0],indices:[0,1,2],position:[0,0,0],rotation:[0,0,0,1]}];
  await assert.rejects(exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),/exactly representable.*lose precision/);
@@ -233,7 +267,7 @@ test('SDF and disabled colliders use ordinary non-rendering meshes; portable col
  f.snapshot.shapes=['none','convexHull','sdf'].map((approximation,index)=>({path:'/Knob/Collider'+index,body:'/Knob',type:'mesh',approximation,points,indices,meshScale:[2,3,4],position:[0,0,0],rotation:[0,0,0,1]}));
  f.snapshot.shapes.push({...f.snapshot.shapes[2],path:'/Knob/Disabled',collisionEnabled:false});
  const gltf=await registerSimreadyLoader(new GLTFLoader()).parseAsync(await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),'');
- assert.deepEqual(gltf.userData.simready.snapshot,f.snapshot);
+ assert.deepEqual(gltf.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
  let rendered=0;gltf.scene.traverse(object=>{if(object.isMesh)rendered++;});assert.equal(rendered,3);
  const data=gltf.parser.json.extensions.NEEDLE_simready;
  for(const shape of data.snapshot.shapes){
@@ -273,8 +307,14 @@ test('analytic colliders use KHR_implicit_shapes instead of tessellated meshes',
  const json=gltf.parser.json,shapes=json.extensions.KHR_implicit_shapes.shapes;
  assert.deepEqual(shapes.map(shape=>shape.type),['box','sphere','capsule','cylinder','cylinder','plane']);
  assert.deepEqual(shapes[0].box.size,[2,4,6]);assert.equal(shapes[4].cylinder.radiusTop,0);
+ for(const index of [4,5]){
+  const nodeIndex=json.nodes.findIndex(node=>node.extensions?.KHR_physics_rigid_bodies?.collider?.geometry?.shape===index);
+  const node=await gltf.parser.getDependency('node',nodeIndex);
+  const direction=new Vector3(0,1,0).applyQuaternion(node.quaternion);
+  assert.ok(direction.distanceTo(new Vector3(1,0,0))<1e-5,'an omitted collider axis projects onto source X');
+ }
  assert.ok(json.extensions.NEEDLE_simready.snapshot.shapes.every(shape=>shape.mesh===undefined));
- assert.deepEqual(gltf.userData.simready.snapshot,f.snapshot);
+ assert.deepEqual(gltf.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
 });
 test('runtime uses GLTFLoader triangulation for ordinary strips and fans',async()=>{
  const f=fixture(),points=[0,0,0,1,0,0,0,1,0,1,1,0];

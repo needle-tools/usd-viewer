@@ -25,7 +25,7 @@ async function inspectExportedRuntime(page:Page,file:string,simulate=false) {
    const before=mechanism.getJointValue(record.data.path),target=Math.abs(before-record.upper)>1?record.upper:record.lower;
    const changed=mechanism.setJointValue(record.data.path,simulate?120:target);
    result={changed,before,after:mechanism.getJointValue(record.data.path),issues:mechanism.unsupported,
-    knob:mechanism.bodies.get('/Assembly/Knob')?.body.translation().y,slider:0};
+    knob:mechanism.bodies.get('/Assembly/Knob')?.body.translation().z,slider:0};
   } finally {mechanism.dispose();}
   if(simulate){
    const rapierPath='/rapier/rapier.mjs',R=(await import(rapierPath)).default;await R.init();
@@ -61,12 +61,15 @@ for(const viewer of ['three','needle'])test(`${viewer}: USD exports to an explic
  const bytes=await readFile(file);
  const json=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
  expect(json.extensionsRequired).toContain('NEEDLE_simready');expect(json.extensions.NEEDLE_simready.snapshot.joints.length).toBe(3);
+ for(const key of ['metersPerUnit','kilogramsPerUnit','upAxis'])expect(json.extensions.NEEDLE_simready.snapshot).not.toHaveProperty(key);
+ expect(json.extensions.NEEDLE_simready.snapshot.joints.find((joint:any)=>joint.type==='revolute').limit.upper).toBeCloseTo(Math.PI/2,10);
  const posed=await inspectExportedRuntime(page,file,true);
- expect(posed.issues).toEqual([]);expect(posed.after).toBeCloseTo(90,3);expect(posed.knob).toBeCloseTo(100,3);
- expect(posed.slider).toBeGreaterThan(20);
- // File → Open follows the normal glTF-in-USD route, even for our exported GLB.
+ expect(posed.issues).toEqual([]);expect(posed.after).toBeCloseTo(90,3);expect(posed.knob).toBeCloseTo(-1,3);
+ expect(posed.slider).toBeGreaterThan(.2);
+ // File → Open follows the normal glTF-in-USD route without starting simulation.
  await page.evaluate(()=>(window as any).previousExportHandle=(window as any).usdHydra);
- await page.locator('input[type=file][accept*=".glb"]').first().setInputFiles(file);
+ await openAppMenu(page,'file');const chooser=page.waitForEvent('filechooser');
+ await page.getByRole('button',{name:'Open…',exact:true}).click();await(await chooser).setFiles(file);
  await expect.poll(()=>page.evaluate(()=>!!(window as any).usdHydra&&(window as any).usdHydra!==(window as any).previousExportHandle)).toBe(true);
  await stageReady(page);
  await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics)).toBe(false);
