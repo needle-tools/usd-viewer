@@ -163,7 +163,7 @@
     "@needle-tools/three-test-matrix": "^0.2.0",
     "@playwright/test": "^1.60.0",
     "@sparkjsdev/spark": "2.2.0",
-    "@types/three": "^0.164.1",
+    "@types/three": "^0.185.4",
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "typescript": "5.9.3",
     "vite": "^8.1.0",

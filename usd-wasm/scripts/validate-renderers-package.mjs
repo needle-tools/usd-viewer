@@ -8,7 +8,6 @@ import { spawnSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 const sdk = fileURLToPath(new URL('..', import.meta.url));
-const simreadyDependency=JSON.parse(await readFile(join(sdk,'package.json'),'utf8')).peerDependencies['@needle-tools/simready'];
 const kinematicsDependency=JSON.parse(await readFile(join(sdk,'../package.json'),'utf8')).dependencies['closed-chain-ik'];
 const output = resolve(process.argv[2] || join(sdk, '.cache/package-validation', `renderers-${Date.now()}`));
 await mkdir(output, { recursive: true });
@@ -22,13 +21,22 @@ const tarball = join(output, pack.filename), sha256 = createHash('sha256').updat
 const source = (await command('source-revision', sdk, 'git', ['rev-parse', 'HEAD'])).trim();
 const result = { tarball, sha256, source, consumers: [], errors: [], requests: [] };
 try {
+  let simreadyDependency=process.env.USD_PACKAGE_SIMREADY;
+  if (!simreadyDependency) {
+    // Test the pinned submodule package, including its committed declarations.
+    const simreadyPack=JSON.parse(await command('simready-pack',join(sdk,'../modules/simready'),'npm',['pack','--ignore-scripts','--json','--pack-destination',output]))[0];
+    const simreadyTarball=join(output,simreadyPack.filename);
+    simreadyDependency=`file:${simreadyTarball}`;
+    result.simreadyPackage={tarball:simreadyTarball,sha256:createHash('sha256').update(await readFile(simreadyTarball)).digest('hex')};
+  }
   for (const [name, three] of [['modern', process.env.USD_PACKAGE_THREE || 'npm:@needle-tools/three@0.185.2-alpha.8'], ['legacy', '0.160.0']]) {
     const root = await mkdtemp(join(tmpdir(), `needle-usd-renderers-${name}-`));
     result.consumers.push({ name, root, three });
     await writeFile(join(root, 'package.json'), JSON.stringify({ name: `usd-renderers-${name}`, private: true, type: 'module', scripts: { build: 'vite build' },
-      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(name === 'modern' ? {'@needle-tools/simready':process.env.USD_PACKAGE_SIMREADY || simreadyDependency} : {}), ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { 'closed-chain-ik':kinematicsDependency, '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
+      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(name === 'modern' ? {'@needle-tools/simready':simreadyDependency} : {}), ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { 'closed-chain-ik':kinematicsDependency, '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
     await command(`${name}-install`, root, 'npm', ['install', '--no-audit', '--no-fund', '--prefer-offline']);
     assert.equal(await realpath(join(root, 'node_modules/@needle-tools/usd')), join(await realpath(root), 'node_modules/@needle-tools/usd'));
+    if (name === 'modern') assert.equal(await realpath(join(root,'node_modules/@needle-tools/simready')),join(await realpath(root),'node_modules/@needle-tools/simready'));
     if (name === 'legacy') await assert.rejects(access(join(root,'node_modules/@needle-tools/simready')),{code:'ENOENT'});
     await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });

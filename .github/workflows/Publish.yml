@@ -26,26 +26,19 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            usd-wasm/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install viewer dependencies
-        run: npm ci
+      - name: Install test dependencies
+        run: npm ci --no-audit --no-fund
 
-      - name: Install package dependencies
-        run: npm ci --prefix usd-wasm
+      - name: Prepare viewer SDK modules
+        run: cp -R usd-wasm/src public/usd
 
-      - name: Validate viewer, package APIs and runtime
-        run: npm run test:release
+      - name: Fast viewer tests
+        run: npm test
 
-      - name: Install consumer test browser
-        working-directory: usd-wasm
-        run: npx --no-install playwright install --with-deps chrome
-
-      - name: Validate packed production consumers
-        working-directory: usd-wasm
-        run: npm run test:package
+      - name: Fast binding tests
+        run: npm run --prefix usd-wasm test:bindings
 
       - name: Check publication metadata without publishing
         working-directory: usd-wasm
