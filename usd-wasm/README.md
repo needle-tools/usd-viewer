@@ -866,12 +866,11 @@ const assembly = await createUsdPhysics({handle, world, id: 'assembly'});
 assembly.play();
 ```
 
-This requires an Engine version exposing `RapierPhysics.registerExternalPhysics`.
-The adapter initializes or reuses the Engine's Rapier world. Engine registers
-the imported bodies and colliders for ordinary collision callbacks, queries and
-Rigidbody access; SimReady supplies raw physics objects and their visual mappings.
-Engine owns their component identities and lifecycle; external packages do not
-construct or maintain Engine components.
+This needs a Needle Engine version with `physics.createAsset`. The adapter starts or
+reuses Engine's physics world. SimReady describes the asset's bodies, colliders and
+joints, and Engine creates them together with their Rigidbody and Collider components,
+so collision callbacks, raycasts and Rigidbody access work as usual. Engine also
+removes them when the asset or the world goes away.
 Engine advances physics and synchronizes the visuals, so do not call
 `world.step()` or `assembly.update()` here. At unload, dispose the assembly and
 then its adapter; the Engine world and other assets remain alive. The

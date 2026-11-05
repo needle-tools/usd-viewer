@@ -47,8 +47,8 @@ for (const viewer of ['three', 'needle']) {
     await simulate.click();
     await expect(page.getByRole('button', { name: viewer === 'needle' ? 'Stop' : 'Pause', exact: true })).toBeVisible();
     if (viewer === 'needle') expect(await page.evaluate(async () => {
-      const engine = await import('@needle-tools/engine');
-      return (window as any).usdPhysics.simulation.world instanceof engine.NEEDLE_ENGINE_MODULES.RAPIER_PHYSICS.MODULE.World;
+      const simulation = (window as any).usdPhysics.simulation;
+      return !simulation.physicsAsset.isDisposed && simulation.rigidbodies.size > 0;
     })).toBe(true);
     await page.screenshot({ path: `.cache/coverage-validation/physics-${viewer}.png` });
     await expect.poll(() => page.evaluate(() => {
@@ -79,10 +79,11 @@ for (const viewer of ['three', 'needle']) {
       return { x: rect.left + (position.x + 1) * rect.width / 2, y: rect.top + (1 - position.y) * rect.height / 2 };
     });
     await page.mouse.move(point.x, point.y); await page.mouse.down();
-    await expect.poll(() => page.evaluate(() => (window as any).usdPhysics.simulation.world.impulseJoints.len())).toBe(1);
+    // A drag adds one spring joint. Needle assets have no world of their own; the spring is in Engine's world.
+    await expect.poll(() => page.evaluate(() => { const w = window as any; return (w.usdPhysics.simulation.world || w.needleEngineContext.physics.engine.world).impulseJoints.len(); })).toBe(1);
     await page.mouse.move(point.x + 100, point.y - 100, { steps: 10 });
     await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => (window as any).usdPhysics.simulation.world.impulseJoints.len())).toBe(0);
+    await expect.poll(() => page.evaluate(() => { const w = window as any; return (w.usdPhysics.simulation.world || w.needleEngineContext.physics.engine.world).impulseJoints.len(); })).toBe(0);
     await page.getByRole('button', { name: 'Reset', exact: true }).click();
     await expect(simulate).toBeVisible();
     expect(await page.evaluate(() => (window as any).usdPhysics.simulation)).toBeNull();
@@ -179,8 +180,8 @@ for(const existing of [false,true])test(`viewer joins the actual ${existing?'exi
   const {NEEDLE_ENGINE_MODULES}=await import('@needle-tools/engine');
   const engine=context.physics.getOrCreatePhysicsEngine();
   if(!engine||engine.world)throw new Error('Expected the real, uninitialized Engine backend.');
-  let world:any,ground:any,initializations=0,activeExtensions=0,steps=0;
-  const initialize=engine.initialize.bind(engine),register=engine.registerWorldExtension.bind(engine);
+  let world:any,ground:any,initializations=0,steps=0;const assets:any[]=[];
+  const initialize=engine.initialize.bind(engine),createAsset=engine.createAsset.bind(engine);
   engine.initialize=async()=>{
    const result=await initialize();
    if(!world){
@@ -192,16 +193,13 @@ for(const existing of [false,true])test(`viewer joins the actual ${existing?'exi
    if(engine.world!==world)throw new Error('Engine replaced its active world.');
    return result;
   };
-  engine.registerWorldExtension=(extension:any)=>{
-   const detach=register(extension);activeExtensions++;let detached=false;
-   return()=>{if(!detached){detached=true;activeExtensions--;detach();}};
-  };
+  engine.createAsset=(description:any)=>{const asset=createAsset(description);assets.push(asset);return asset;};
   if(existing)await engine.initialize();
   h.scene.position.set(3,0,1);h.scene.rotation.y=.4;h.scene.updateWorldMatrix(true,true);
   const original=h.scene.matrixWorld.toArray();
   const {setupViewerPhysics}=await import('/viewer-physics.js');
   const controls=await setupViewerPhysics(h,context,w.camera,w._controls,()=>true,{loadRapier(){throw new Error('A borrowed world must ignore standalone runtime injection.');}});
-  w.hostPhysicsProbe={controls,engine,original,stats:()=>({initializations,activeExtensions,steps,hostValid:ground.isValid()}),step(){engine.step(1/60);engine.postStep();},cleanup(){controls.dispose();world.removeCollider(ground,true);}};
+  w.hostPhysicsProbe={controls,engine,original,stats:()=>({initializations,activeAssets:assets.filter(asset=>!asset.isDisposed).length,steps,hostValid:ground.isValid()}),step(){engine.step(1/60);engine.postStep();},cleanup(){controls.dispose();world.removeCollider(ground,true);}};
   w.usdWorkbench.openPanel('simulation');
  },existing);
  await page.locator('#usd-physics-controls').getByRole('button',{name:'Simulate',exact:true}).click();
@@ -209,20 +207,20 @@ for(const existing of [false,true])test(`viewer joins the actual ${existing?'exi
  const result=await page.evaluate(async()=>{
   const {getComponent,Rigidbody,Collider}=await import('@needle-tools/engine');
   const w=window as any,p=w.hostPhysicsProbe,sim=p.controls.simulation;
-  const shared=sim.world===p.engine.world,placement=sim.root.matrixWorld.toArray();
+  const shared=[...sim.rigidbodies.values()].every((body:any)=>p.engine.getComponent(p.engine.getBody(body))===body),placement=sim.root.matrixWorld.toArray();
   const initial=p.stats().steps;p.controls.update(.1);const afterUpdate=p.stats().steps;
   for(let i=0;i<300;i++)p.step();
   const components=[...sim.rigidbodies.values()].every((body:any)=>getComponent(body.gameObject,Rigidbody)===body);
-  const colliders=[...sim.colliderComponents.entries()].every(([handle,component]:any)=>component instanceof Collider&&p.engine.getComponent(p.engine.world.getCollider(handle))===component);
+  const colliders=[...sim.colliderComponents.values()].every((component:any)=>component instanceof Collider&&p.engine.getComponent(p.engine.getBody(component))===component);
   return {shared,components,colliders,placement,original:p.original,initial,afterUpdate,height:sim.bodies.get('/World/BodyA').body.translation().y,stats:p.stats()};
  });
  expect(result.shared).toBe(true);expect(result.components).toBe(true);expect(result.colliders).toBe(true);expect(result.afterUpdate).toBe(result.initial);
  result.placement.forEach((value:number,index:number)=>expect(value).toBeCloseTo(result.original[index],5));
  expect(result.height).toBeGreaterThan(.5);expect(result.height).toBeLessThan(1);
- expect(result.stats.initializations).toBe(1);expect(result.stats.hostValid).toBe(true);expect(result.stats.activeExtensions).toBeGreaterThan(0);
+ expect(result.stats.initializations).toBe(1);expect(result.stats.hostValid).toBe(true);expect(result.stats.activeAssets).toBe(1);
  await page.locator('#usd-physics-controls').getByRole('button',{name:'Stop',exact:true}).click();
  const stopped=await page.evaluate(()=>{const p=(window as any).hostPhysicsProbe;return {simulation:p.controls.simulation,colliders:p.engine.world.colliders.len(),bodies:p.engine.world.bodies.len(),...p.stats()};});
- expect(stopped.simulation).toBeNull();expect(stopped.colliders).toBe(1);expect(stopped.bodies).toBe(0);expect(stopped.activeExtensions).toBe(0);expect(stopped.hostValid).toBe(true);expect(stopped.initializations).toBe(1);
+ expect(stopped.simulation).toBeNull();expect(stopped.colliders).toBe(1);expect(stopped.bodies).toBe(0);expect(stopped.activeAssets).toBe(0);expect(stopped.hostValid).toBe(true);expect(stopped.initializations).toBe(1);
  await page.evaluate(()=>(window as any).hostPhysicsProbe.cleanup());expect(errors).toEqual([]);
 });
 
@@ -243,22 +241,22 @@ test('viewer respects a disabled Engine physics backend',async({page})=>{
  await page.evaluate(()=>(window as any).disabledHostProbe.cleanup());
 });
 
-test('viewer refuses a second simulation world when the active Engine lacks registration support',async({page})=>{
+test('viewer refuses a second simulation world when the active Engine lacks physics assets',async({page})=>{
  await page.goto('/?viewer=needle&physics=off&assetCache=0&file=/test-fixtures/coverage/advanced/physics-mass.usda');await stageReady(page);
  await page.evaluate(async()=>{
   const w=window as any,context=w.needleEngineContext,url=new URL(location.href);url.searchParams.delete('physics');history.replaceState({},'',url);
   const engine=context.physics.getOrCreatePhysicsEngine();await engine.initialize();
   const {NEEDLE_ENGINE_MODULES}=await import('@needle-tools/engine'),R=NEEDLE_ENGINE_MODULES.RAPIER_PHYSICS.MODULE;
   const world=engine.world,ground=world.createCollider(R.ColliderDesc.cuboid(10,.1,10));
-  const register=engine.registerExternalPhysics;engine.registerExternalPhysics=undefined;
+  const createAsset=engine.createAsset;engine.createAsset=undefined;
   w.hostRuntimeLoads=0;
   const {setupViewerPhysics}=await import('/viewer-physics.js');
   const controls=await setupViewerPhysics(w.usdHydra,context,w.camera,w._controls,()=>true,{loadRapier(){w.hostRuntimeLoads++;throw new Error('Do not load another runtime.');}});
-  w.oldHostProbe={controls,stats:()=>({loads:w.hostRuntimeLoads,simulation:controls.simulation,shared:engine.world===world,hostValid:ground.isValid(),colliders:world.colliders.len(),bodies:world.bodies.len()}),cleanup(){controls.dispose();engine.registerExternalPhysics=register;world.removeCollider(ground,true);}};
+  w.oldHostProbe={controls,stats:()=>({loads:w.hostRuntimeLoads,simulation:controls.simulation,shared:engine.world===world,hostValid:ground.isValid(),colliders:world.colliders.len(),bodies:world.bodies.len()}),cleanup(){controls.dispose();engine.createAsset=createAsset;world.removeCollider(ground,true);}};
   w.usdWorkbench.openPanel('simulation');
  });
  await page.locator('#usd-physics-controls').getByRole('button',{name:'Simulate',exact:true}).click();
- await expect(page.locator('#usd-physics-controls [role=status]')).toContainText('does not support external physics registration');
+ await expect(page.locator('#usd-physics-controls [role=status]')).toContainText('does not support physics assets');
  expect(await page.evaluate(()=>(window as any).oldHostProbe.stats())).toEqual({loads:0,simulation:undefined,shared:true,hostValid:true,colliders:1,bodies:0});
  await page.evaluate(()=>(window as any).oldHostProbe.cleanup());
 });
