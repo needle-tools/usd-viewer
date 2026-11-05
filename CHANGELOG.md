@@ -1,13 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.1] - 2026-11-05
 
-- Simulate USD assets alongside other objects in Needle Engine, with shared collisions and physics queries.
-- Control SimReady joints and motors in shared simulations, with correct asset units.
-- Inspect and edit animated transforms and arrays in Properties and Code.
-- Switch between USD Viewer and USD Studio from the header. Fix header movement on hover and unwanted joint helpers.
-- Choose original or preview textures for ZIP, USDZ, glTF and Cloud exports. Remember the choice independently of viewport quality.
-- Export SimReady GLBs with physics, joint constraints, object identities and schema metadata preserved, including through compatible Mesh Baker optimization.
+- Inspect and edit animated properties and large arrays in Code and Properties, with table controls and undo/redo.
+- Download USD scenes as GLB files or share them on Needle Cloud.
+- Choose original or preview textures for ZIP, USDZ, GLB and Cloud exports, independently of viewport quality.
+- Refine the Viewer/Studio switch and restore Feedback, What’s New, About and example links. New sessions use the light theme.
+- Fix header movement on hover and leave joint helpers hidden until enabled or selected.
+- Simulate USD assets alongside Needle Engine objects, with shared collisions, physics queries, joint controls and motors. Export SimReady physics, object identities and schema metadata to GLB, including for compatible Mesh Baker workflows.
 
 ## [1.2.0] - 2026-11-02
 

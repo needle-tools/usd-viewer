@@ -1,17 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.1] - 2026-11-05
 
-- Export ordinary USD assets as standard GLB files without requiring SimReady. Preserve authored SimReady and USD physics data when present.
-- Preserve articulation structure, joint exclusions and collision filters when importing USD physics.
-- Simulate USD assets alongside other Needle Engine objects, with shared collisions, physics queries and controls.
-- Support standalone glTF loading, joint interaction and headless simulation through `@needle-tools/simready`, while retaining the existing USD physics API.
-- Keep dragging correctly aligned in shared worlds and clean up simulations when scenes close.
-- Honor USD units in Needle Engine and find loaded USD assets from selected child objects.
-- Inspect and edit animated transforms and large arrays in Properties and Code, with undo and redo.
-- Choose original or preview textures for ZIP, USDZ, glTF and Cloud exports, independently of viewport quality.
-- Export glTF with correct instance visibility and material colors, or share directly on Needle Cloud.
-- Preserve SimReady physics, joint constraints, object identities and schema metadata in GLB exports, including through compatible Mesh Baker optimization.
+- Export USD scenes as GLB through `/gltf`, including materials, instancing, cameras, lights, lines and points.
+- Choose original or preview textures for ZIP, USDZ and GLB exports with the reusable Download control. Integrate Needle Cloud sharing through the same control.
+- Inspect and edit animated properties and large arrays in Code and Properties with shared table controls, typed values and undo/redo.
+- Simulate USD assets in shared Needle Engine worlds, with collisions, physics queries, joint controls and motors. Use `@needle-tools/simready` for standalone Three.js and headless simulation.
+- Export authored SimReady and USD physics data with GLB scenes, including articulations, joint constraints and exclusions, collision filters, object identities and schema metadata. Compatible Mesh Baker workflows retain this data during optimization.
 
 ## [1.2.0] - 2026-11-02
 

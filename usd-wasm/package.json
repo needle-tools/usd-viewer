@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/usd",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "OpenUSD WebAssembly runtime, Three.js Hydra delegate, MaterialX and WebGPU viewer tools",
   "main": "src/index.js",
   "types": "src/index.d.ts",
