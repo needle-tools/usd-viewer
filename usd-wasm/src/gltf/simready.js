@@ -1,6 +1,7 @@
 import {BufferAttribute,BufferGeometry,Color,Group,Matrix4,Mesh,MeshPhysicalMaterial,Points,Quaternion,Vector3} from 'three';
 import {readUsdPhysics} from '../physics/readPhysics.js';
 import {encodeUsdMetadata,hasSimreadyData,readSimreadyMetadata} from './metadata.js';
+import {parseGltfBlob} from './blob.js';
 
 export const SIMREADY_EXTENSION='NEEDLE_simready';
 const PHYSICS='KHR_physics_rigid_bodies',SHAPES='KHR_implicit_shapes';
@@ -11,9 +12,10 @@ const axes=[0,1,2],axisIndex=name=>({X:0,Y:1,Z:2})[name||'X'];
 
 /** Export rigid visuals, physics and composed schema semantics. Supplying the
  * exporter keeps renderer/texture setup with the host. */
-export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,onProgress,textureResolution='original',signal}){
+export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,onProgress,textureResolution='original',output='arraybuffer',signal}){
  const report=(phase,completed=0,total=0)=>onProgress?.({phase,completed,total});
  if(!['preview','original'].includes(textureResolution))throw new RangeError('Invalid export texture resolution.');
+ if(!['arraybuffer','blob'].includes(output))throw new RangeError('Invalid glTF export output.');
  let textureExport;
  const ownedMaterials=new Set(),ownedGeometry=new Set();
  const wasPlaying=handle.isPlaying?.()||false;
@@ -55,7 +57,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
  }
  report('geometry');
  const stage=new Group();stage.name='Asset';
- const bodies=new Map(),bindings=[],physics=new Map(),colliders=[],jointFrames=[],mappingIssues=[],portableMaterials=new Map(),untintedGeometry=new WeakMap(),exportMaterials=new Map();
+ const bodies=new Map(),bindings=[],physics=new Map(),colliders=[],jointFrames=[],mappingIssues=[],portableMaterials=new Map(),exportGeometries=new WeakMap(),untintedGeometry=new WeakMap(),exportMaterials=new Map();
  for(const body of snapshot.bodies){
   const node=new Group();node.name=body.path;node.position.fromArray(body.position);node.quaternion.fromArray(body.rotation);stage.add(node);bodies.set(body.path,node);
   const motion={isKinematic:!!body.kinematicBody};
@@ -114,6 +116,14 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
    let materials=Array.isArray(object.material)?await Promise.all(object.material.map(exportMaterial)):object.material?await exportMaterial(object.material):undefined;
    if(object.instanceColor){const tint=new Color();object.getColorAt(i,tint);const tinted=material=>{const copy=material.clone();copy.color.multiply(tint);ownedMaterials.add(copy);return copy;};materials=Array.isArray(materials)?materials.map(tinted):tinted(materials);}
    let geometry=object.geometry;
+   if(geometry){
+    if(!exportGeometries.has(geometry)){
+     const projected=projectGeometry(geometry);
+     if(projected!==geometry)ownedGeometry.add(projected);
+     exportGeometries.set(geometry,projected);
+    }
+    geometry=exportGeometries.get(geometry);
+   }
    const usedMaterials=Array.isArray(materials)?geometry.groups.filter(group=>group.count>0).map(group=>materials[group.materialIndex]):[materials];
    if(geometry?.getAttribute('color')&&!usedMaterials.some(material=>material?.vertexColors)){
     if(!untintedGeometry.has(geometry)){const copy=geometry.clone();copy.deleteAttribute('color');untintedGeometry.set(geometry,copy);ownedGeometry.add(copy);}
@@ -180,7 +190,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
   afterParse(){writer.pending.push((async()=>{
    const storedSnapshot=plain(snapshot);
    for(const {index,node,mesh} of colliders){
-    const meshIndex=await writer.processMeshAsync(mesh);
+    const meshIndex=await (writer.processMeshAsync?writer.processMeshAsync(mesh):writer.processMesh(mesh));
     if(node)physics.get(node).collider.geometry.mesh=meshIndex;
     for(const primitive of writer.json.meshes[meshIndex].primitives)delete primitive.material;
     const shape=storedSnapshot.shapes[index];shape.mesh=meshIndex;delete shape.points;delete shape.indices;
@@ -201,9 +211,46 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,usdMetadata,o
   })());},
  });
  exporter.register(plugin);
- try{assertCurrent();report('writing');const result=await exporter.parseAsync(stage,{binary:true,onlyVisible:false,maxTextureSize:textureResolution==='preview'?(textureExport?.maxTextureSize||512):Infinity});assertCurrent();report('complete',1,1);return result;}
+ try{assertCurrent();report('writing');const options={binary:true,onlyVisible:false,maxTextureSize:textureResolution==='preview'?(textureExport?.maxTextureSize||512):Infinity};const result=output==='blob'?await parseGltfBlob(exporter,stage,{...options,signal}):await exporter.parseAsync(stage,options);assertCurrent();report('complete',1,1);return result;}
   finally{exporter.unregister(plugin);}
  }finally{for(const material of ownedMaterials)material.dispose();for(const geometry of ownedGeometry)geometry.dispose();textureExport?.dispose();handle.setPlaying?.(wasPlaying);}
+}
+function projectGeometry(source){
+ let geometry;
+ const copy=()=>{
+  if(!geometry){
+   geometry=new BufferGeometry();geometry.index=source.index;geometry.attributes={...source.attributes};
+   geometry.groups=source.groups.map(group=>({...group}));geometry.drawRange={...source.drawRange};
+   geometry.morphAttributes={...source.morphAttributes};geometry.morphTargetsRelative=source.morphTargetsRelative;
+   geometry.userData={...source.userData};
+  }
+  return geometry;
+ };
+ for(const [name,attribute]of Object.entries(source.attributes)){
+  if(!(attribute.array instanceof Int32Array||attribute.array instanceof Uint32Array))continue;
+  if(['position','normal','tangent','color','uv','uv1','uv2','uv3','skinIndex','skinWeight'].includes(name))continue;
+  if(!Number.isInteger(attribute.count)||attribute.itemSize<1||attribute.itemSize>4)throw new Error(`Attribute ${name} requires a scalar or vector glTF vertex accessor.`);
+  const values=[],getters=['getX','getY','getZ','getW'];
+  let min=Infinity,max=-Infinity;
+  for(let row=0;row<attribute.count;row++)for(let column=0;column<attribute.itemSize;column++){
+   const value=attribute[getters[column]](row);values.push(value);min=Math.min(min,value);max=Math.max(max,value);
+  }
+  // glTF vertex attributes have no signed INT or unsigned INT representation.
+  // Keep integer values exact; normalized attributes describe shader floats.
+  const Type=attribute.normalized?Float32Array:min>=0&&max<=65535?Uint16Array:min>=-32768&&max<=32767?Int16Array:Float32Array;
+  if(!attribute.normalized&&Type===Float32Array&&values.some(value=>Math.fround(value)!==value))throw new Error(`Attribute ${name} cannot be represented exactly by a glTF vertex accessor.`);
+  copy().setAttribute(name,new BufferAttribute(Type.from(values),attribute.itemSize));
+ }
+ // glTF requires contiguous TEXCOORD sets. Keep authored channel numbers and
+ // alias unused gaps, including Hydra's shared uv/uv2 ambient-occlusion UVs.
+ const uvs=['uv','uv1','uv2','uv3'],last=uvs.findLastIndex(name=>source.attributes[name]);
+ let previous=uvs.map(name=>source.attributes[name]).find(Boolean);
+ for(let index=0;index<=last;index++){
+  const attribute=source.attributes[uvs[index]];
+  if(attribute)previous=attribute;
+  else copy().setAttribute(uvs[index],previous);
+ }
+ return geometry||source;
 }
 function createCollisionMesh(shape,material){
  const points=shape.points,indices=shape.indices,count=points?.length/3;

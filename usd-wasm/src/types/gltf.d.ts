@@ -41,4 +41,17 @@ export type UsdSemanticMetadata = {
  * snapshot and metadata from the stage. When re-exporting a loaded GLB, adapt
  * runtime.snapshot with fromGltfPhysicsSnapshot from @needle-tools/simready/gltf
  * and pass runtime.usdMetadata explicitly. */
-export function exportSimreadyGltf(options:{handle:Pick<NeedleThreeHydraHandle,'scene'|'ready'|'setPlaying'|'isPlaying'> & Partial<NeedleThreeHydraHandle>;exporter:GLTFExporter;snapshot?:UsdPhysicsSnapshot;usdMetadata?:UsdSemanticMetadata;textureResolution?:'original'|'preview';signal?:AbortSignal;onProgress?:(progress:{phase:string;completed:number;total:number})=>void}):Promise<ArrayBuffer>;
+export interface GltfExportOptions {
+    handle: Pick<NeedleThreeHydraHandle,'scene'|'ready'|'setPlaying'|'isPlaying'> & Partial<NeedleThreeHydraHandle>;
+    exporter: GLTFExporter;
+    snapshot?: UsdPhysicsSnapshot;
+    usdMetadata?: UsdSemanticMetadata;
+    textureResolution?: 'original' | 'preview';
+    /** Blob output avoids allocating a contiguous GLB buffer for downloads. */
+    output?: 'arraybuffer' | 'blob';
+    signal?: AbortSignal;
+    onProgress?: (progress: {phase: string; completed: number; total: number}) => void;
+}
+export function exportSimreadyGltf(options: GltfExportOptions & {output: 'blob'}): Promise<Blob>;
+export function exportSimreadyGltf(options: GltfExportOptions & {output?: 'arraybuffer'}): Promise<ArrayBuffer>;
+export function exportSimreadyGltf(options: GltfExportOptions): Promise<ArrayBuffer | Blob>;

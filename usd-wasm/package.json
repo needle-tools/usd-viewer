@@ -159,7 +159,7 @@
     "test:package": "node scripts/validate-renderers-package.mjs"
   },
   "devDependencies": {
-    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@needle-tools/engine": "6.0.0-canary.1793922509.calm-banana.4b54649",
     "@needle-tools/three-test-matrix": "^0.2.0",
     "@playwright/test": "^1.60.0",
     "@sparkjsdev/spark": "2.2.0",
@@ -167,7 +167,8 @@
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "typescript": "5.9.3",
     "vite": "^8.1.0",
-    "@needle-tools/simready": "file:../modules/simready"
+    "@needle-tools/simready": "file:../modules/simready",
+    "gltf-validator": "^2.0.0-dev.3.10"
   },
   "publishConfig": {
     "access": "public",

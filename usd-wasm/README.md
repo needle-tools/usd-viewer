@@ -364,7 +364,7 @@ coordinates, so the same data can be inspected, edited and passed to physics.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@needle-tools/engine": "6.0.0-canary.1793922509.calm-banana.4b54649",
     "@needle-tools/usd": "1.2.1",
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "vite": "^8.1.0"

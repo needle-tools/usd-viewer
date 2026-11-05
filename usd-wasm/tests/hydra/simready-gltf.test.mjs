@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {Group,Mesh,InstancedMesh,Matrix4,Vector3,Quaternion,BoxGeometry,MeshStandardMaterial,ShaderMaterial,Float32BufferAttribute,Texture,Points,PointsMaterial,LineSegments,LineBasicMaterial,PerspectiveCamera,PointLight} from 'three';
+import {Group,Mesh,InstancedMesh,Matrix4,Vector3,Quaternion,BoxGeometry,BufferAttribute,InterleavedBuffer,InterleavedBufferAttribute,MeshStandardMaterial,ShaderMaterial,Float32BufferAttribute,Texture,Points,PointsMaterial,LineSegments,LineBasicMaterial,PerspectiveCamera,PointLight} from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {exportSimreadyGltf} from '../../src/gltf/simready.js';
@@ -11,6 +11,7 @@ import {readFile} from 'node:fs/promises';
 import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
 import {createUsdPhysics,readUsdPhysics} from '../../src/physics/createPhysics.js';
+import {validateBytes} from 'gltf-validator';
 
 // Three's exporter uses FileReader in Node as well as in the browser.
 globalThis.FileReader ||= class {
@@ -48,6 +49,54 @@ test('exports standard constraints and semantic metadata without embedding origi
  mechanism.dispose();
  const sim=await data.createSimulation({rapier:R,allowPartial:false});
  sim.play();for(let i=0;i<60;i++)sim.update(1/120);assert.deepEqual(sim.unsupported,[]);sim.dispose();
+});
+
+for(const [Type,values,componentType,normalized]of [
+ [Int32Array,[-32768,0,32767],5122,false],
+ [Uint32Array,[0,32768,65535],5123,false],
+ [Int32Array,[-1073741824,65536,16777216],5126,false],
+ [Uint32Array,[0,2147483648,4294967295],5126,true],
+])test(`custom ${Type.name} geometry attributes export as legal ${componentType} accessors (normalized: ${normalized})`,async()=>{
+ const f=fixture(),mesh=f.root.children[0],geometry=mesh.geometry;
+ const array=Type.from({length:geometry.attributes.position.count},(_,i)=>values[i%values.length]);
+ const attribute=new BufferAttribute(array,1,normalized);geometry.setAttribute('primvars:HyperFaceGizmo',attribute);
+ geometry.setAttribute('uv2',geometry.attributes.uv);
+ geometry.userData={label:'Section',properties:{finish:'painted'}};
+ f.usdMetadata.prims=[{path:mesh.userData.usdPath,type:'Mesh',attributes:[{name:'primvars:HyperFaceGizmo',type:'int[]',value:Array.from(array)}]}];
+ const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata:f.usdMetadata,exporter:new GLTFExporter()});
+ const report=await validateBytes(new Uint8Array(bytes),{maxIssues:100});
+ assert.equal(report.issues.numErrors,0,JSON.stringify(report.issues));
+ assert.ok(!report.issues.messages.some(issue=>issue.code==='VALUE_NOT_IN_LIST'));
+ const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
+ const json=result.parser.json,primitive=json.meshes[json.nodes.find(node=>node.name===mesh.userData.usdPath).mesh].primitives[0];
+ const accessor=json.accessors[primitive.attributes['_PRIMVARS:HYPERFACEGIZMO']];assert.equal(accessor.componentType,componentType);
+ assert.deepEqual(primitive.extras,geometry.userData);
+ assert.equal(primitive.attributes.TEXCOORD_0,primitive.attributes.TEXCOORD_1);assert.equal(primitive.attributes.TEXCOORD_0,primitive.attributes.TEXCOORD_2);
+ const object=await result.parser.getDependency('node',json.nodes.findIndex(node=>node.name===mesh.userData.usdPath));
+ const imported=object.geometry.attributes['_primvars:hyperfacegizmo'];
+ for(let i=0;i<array.length;i++)assert.equal(imported.getX(i),Math.fround(attribute.getX(i)));
+ assert.deepEqual(result.userData.simready.usdMetadata,f.usdMetadata);
+ assert.equal(mesh.geometry,geometry);assert.equal(geometry.attributes['primvars:HyperFaceGizmo'],attribute);assert.equal(geometry.attributes.uv1,undefined);assert.equal(geometry.attributes.uv2,geometry.attributes.uv);
+ assert.deepEqual(Array.from(array),Array.from({length:array.length},(_,i)=>values[i%values.length]));
+});
+
+test('interleaved integer primvars export without changing their source buffer',async()=>{
+ const f=fixture(),geometry=f.root.children[0].geometry,count=geometry.attributes.position.count;
+ const source=Int32Array.from({length:count*2},(_,i)=>i%2?-999:i/2),data=new InterleavedBuffer(source,2);
+ const attribute=new InterleavedBufferAttribute(data,1,0);geometry.setAttribute('primvars:id',attribute);
+ const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata:f.usdMetadata,exporter:new GLTFExporter()});
+ const report=await validateBytes(new Uint8Array(bytes));assert.equal(report.issues.numErrors,0);
+ const gltf=await new GLTFLoader().parseAsync(bytes,'');let imported;
+ gltf.scene.traverse(object=>{if(object.geometry?.attributes['_primvars:id'])imported=object.geometry.attributes['_primvars:id'];});
+ assert.ok(imported);assert.equal(imported.count,count);assert.deepEqual(Array.from({length:count},(_,i)=>imported.getX(i)),Array.from({length:count},(_,i)=>i));
+ assert.equal(geometry.attributes['primvars:id'],attribute);assert.deepEqual(Array.from(source),Array.from({length:count*2},(_,i)=>i%2?-999:i/2));
+});
+
+test('unrepresentable integer primvars fail before writing a lossy GLB',async()=>{
+ const f=fixture(),geometry=f.root.children[0].geometry;
+ const attribute=new BufferAttribute(new Int32Array(geometry.attributes.position.count).fill(16777217),1);geometry.setAttribute('primvars:id',attribute);
+ await assert.rejects(exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,usdMetadata:f.usdMetadata,exporter:new GLTFExporter()}),/primvars:id cannot be represented exactly/);
+ assert.equal(geometry.attributes['primvars:id'],attribute);assert.equal(attribute.getX(0),16777217);
 });
 test('ordinary stages retain cameras, lights, lines and points without requiring the SimReady runtime',async()=>{
  const f=fixture();

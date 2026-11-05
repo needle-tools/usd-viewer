@@ -181,7 +181,10 @@ export async function mountWorkbench() {
   theme.onchange = () => { save(THEME, theme.value); applyTheme(); }; media.addEventListener('change', applyTheme); applyTheme();
   const themeRow = element('label', 'usd-menu-row', 'Theme'); themeRow.append(theme); viewCommands.append(themeRow);
   viewCommands.classList.add('usd-view-menu');
-  header.replaceChildren(identity, menuToggle, actions, fileContext, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
+  // ?debug shows the asset test runner button. It shares the file name's header cell.
+  const headerStatus = element('div', 'usd-header-status'), debugTest = document.getElementById('debug-test-button');
+  headerStatus.append(fileContext); if (debugTest) headerStatus.append(debugTest);
+  header.replaceChildren(identity, menuToggle, actions, headerStatus, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
   root.append(header);
   const workspace = element('main', 'usd-workspace'); workspace.setAttribute('aria-label', 'USD workspace'); root.append(workspace);
   const dockHost = element('div', 'usd-dock'); workspace.append(dockHost);

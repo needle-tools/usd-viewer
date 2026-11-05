@@ -74,6 +74,7 @@ const standaloneDownload: typeof mountDownloadButton = mountDownloadOnly;
 const archiveFormat: DownloadFormat = 'zip'; void [standaloneDownload, archiveFormat];
 const downloadSource: DownloadSource = {handle: stage, filename:'scene.usda', formats:['zip','usdz']};
 downloadSource.exportGltf=async({onProgress,signal,textureResolution})=>{const quality:'original'|'preview'=textureResolution;void quality;signal.throwIfAborted();onProgress({phase:'writing',completed:0,total:0});return new ArrayBuffer(0);};
+downloadSource.exportGltf=async()=>new Blob(['glTF']);
 downloadSource.share=async()=>{};
 const downloadControl = mountDownloadButton({getSource:()=>downloadSource, stateKey:'my-download-format', onFormatChange(format){const selected:'zip'|'usdz'|'gltf'=format;void selected;},onProgress(value){value.completed.toFixed();value.total.toFixed();}});
 downloadControl.setTextureResolution('original');const textureScope=stage.createTextureExport();textureScope.dispose();

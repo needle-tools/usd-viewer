@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Export integer custom attributes and multiple UV channels as valid glTF accessors while preserving source geometry and metadata.
+- Add `output: 'blob'` for large GLB downloads. The default export result remains an `ArrayBuffer`.
+- Retain mesh colliders when exporting with older supported Three.js versions.
+
 ## [1.2.1] - 2026-11-05
 
 - Export USD scenes as GLB through `/gltf`, including materials, instancing, cameras, lights, lines and points.

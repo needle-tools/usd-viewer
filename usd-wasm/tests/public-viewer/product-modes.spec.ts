@@ -15,6 +15,20 @@ function sameLayout(actual: any, expected: any) {
   } else expect(actual).toEqual(expected);
 }
 
+test('workspace switch stays separate from menus across intermediate header widths',async({page})=>{
+ await page.goto('/?viewer=three&workspace=studio');await ready(page);
+ for(const width of [1280,800,760,670,390,320]){
+  await page.setViewportSize({width,height:800});
+  const bounds=await page.locator('#container').evaluate(header=>{
+   const rect=(selector:string)=>header.querySelector(selector)!.getBoundingClientRect();
+   const leading=rect('.header-tool-leading'),switcher=rect('.usd-product-mode'),menus=rect('.header-tool-actions'),toggle=rect('.usd-menubar-toggle'),download=rect('.usd-download');
+   const next=toggle.width?toggle:menus;
+   return{overlap:leading.right-next.left,switchOverflow:switcher.right-leading.right,edge:download.right-innerWidth};
+  });
+  expect(bounds.overlap).toBeLessThanOrEqual(0);expect(bounds.switchOverflow).toBeLessThanOrEqual(0);expect(bounds.edge).toBeLessThanOrEqual(0);
+ }
+});
+
 async function fullViewport(page: Page) {
   await expect.poll(() => page.locator('#usd-viewport').evaluate(el => {
     const box = el.getBoundingClientRect(), header = document.querySelector('#container')!.getBoundingClientRect();

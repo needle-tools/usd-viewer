@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Refine the Viewer/Studio switch in light and dark themes and prevent header controls from overlapping at narrower widths.
+- Fix GLB exports containing integer custom attributes or multiple UV channels, including files opened in Mesh Baker.
+- Improve large GLB downloads with full-resolution textures.
+
 ## [1.2.1] - 2026-11-05
 
 - Inspect and edit animated properties and large arrays in Code and Properties, with table controls and undo/redo.

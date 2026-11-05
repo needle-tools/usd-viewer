@@ -10,6 +10,8 @@ void usdGltf.registerSimreadyLoader;
 const loader=registerSimreadyLoader(new GLTFLoader());
 loader.register(parser=>new NeedleSimreadyLoaderPlugin(parser));
 const bytes:Promise<ArrayBuffer>=exportSimreadyGltf({handle,exporter:new GLTFExporter()});
+const download:Promise<Blob>=exportSimreadyGltf({handle,exporter:new GLTFExporter(),output:'blob'});
+void download;
 const runtime:SimreadyRuntime|null=getSimreadyRuntime(handle.scene);
 if(runtime){
  const metadata=runtime.usdMetadata;

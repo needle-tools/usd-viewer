@@ -1,7 +1,6 @@
 import {renderStructuredValue} from './structuredValue.js';
 import { inspectPrimAsync } from '../scene/index.js';
 import { viewerIcon } from './icons.js';
-import {mountArrayEditor} from './arrayEditor.js';
 import {arrayLayout} from './arrayData.js';
 
 const node = (tag, className = '', text = '') => {
@@ -95,11 +94,15 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
   root.append(toolbar, address, instancing, status, provenance, scroller); container.append(root);
   const alive = () => !disposed && isCurrent();
   function message(text = '') { status.textContent = text; status.hidden = !text; }
-  function closeArray() {arrayEditor?.dispose(); arrayEditor = null; scroller.hidden = false;}
-  function openArray(value, path, trigger) {
+  // The array editor is an authoring module. Load it when an array is first opened, not with the inspector.
+  let arrayOpening = 0;
+  function closeArray() {++arrayOpening; arrayEditor?.dispose(); arrayEditor = null; scroller.hidden = false;}
+  async function openArray(value, path, trigger) {
     closeArray();
-    const time = snapshotTime ?? handle.getTime?.() ?? 0, target = current;
-    arrayRevision = handle.revision;
+    const opening = arrayOpening, time = snapshotTime ?? handle.getTime?.() ?? 0, target = current, revision = handle.revision;
+    const {mountArrayEditor} = await import('./arrayEditor.js');
+    if (opening !== arrayOpening || !alive() || current !== target || revision !== handle.revision) return;
+    arrayRevision = revision;
     const paged = value.arraySize > value.value.length;
     scroller.hidden = true;
     arrayEditor = mountArrayEditor(root, {name: value.name, type: value.type || '', editable: false,
@@ -297,7 +300,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
         if (layout) {
           const count = value.arraySize ?? value.value.length;
           const summary = layout.width === 1 ? `[ ${count.toLocaleString()} ${count === 1 ? 'value' : 'values'} ]` : `[ ${count.toLocaleString()} × ${layout.columns.join('')} ]`;
-          const open = makeButton(`Open ${value.name} array`, null, () => openArray(value, path, open));
+          const open = makeButton(`Open ${value.name} array`, null, () => openArray(value, path, open).catch(error => { if (alive()) message(`Could not open the array: ${error.message}`); }));
           open.textContent = summary;
           td.replaceChildren(open); td.removeAttribute('tabindex'); td.ondblclick = td.onkeydown = null;
           continue;

@@ -84,7 +84,8 @@ const sampleTexture = ( textureFile, uvNode, compileContext, fallback, addressMo
 
 	if ( ! textureFile ) return fallback;
 
-	const textureUvNode = compileContext.mxFromBottomLeftUvSpace( uvNode );
+	// MaterialX coordinates start at the bottom; the loader stores image rows top-first.
+	const textureUvNode = compileContext.mxFromBottomLeftUvSpace( uvNode ).flipY();
 	const sampled = texture( textureFile, textureUvNode );
 	return addressModes ? applyTextureAddressModeDefault( sampled, textureUvNode, addressModes, defaultNode ) : sampled;
 

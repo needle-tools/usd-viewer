@@ -16,7 +16,7 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
-    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@needle-tools/engine": "6.0.0-canary.1793922509.calm-banana.4b54649",
     "@needle-tools/materialx": "1.8.1",
     "@needle-tools/usd": "file:..",
     "@types/three": "^0.185.4",

@@ -37,13 +37,26 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-app-header .needle-logo { flex: none; width: var(--usd-logo-width); height: var(--usd-logo-height); object-fit: contain; }
 .usd-app-header .header-tool-title-group { flex: none; }
 .usd-app-header .usd-product-mode {
+  --control-segmented-track-background: var(--surface-panel-muted);
+  --control-segmented-track-border-width: 0px;
+  --control-segmented-track-gap: var(--usd-space-1);
+  --control-segmented-track-padding: var(--usd-space-1);
+  --control-segmented-track-radius: var(--usd-radius-menu);
+  --control-segmented-segment-min-height: calc(var(--usd-menubar-height) - 2 * var(--usd-space-1));
+  --control-segmented-segment-background: transparent;
+  --control-segmented-segment-background-selected: var(--surface-panel);
+  --control-segmented-segment-border-color-selected: transparent;
+  --control-segmented-segment-radius: var(--usd-radius-control);
   max-width: 100%; height: var(--usd-menubar-height);
 }
-.usd-app-header .usd-product-mode > button { white-space: nowrap; font: inherit; padding-inline: var(--usd-space-2); }
+.usd-app-header .usd-product-mode > button { white-space: nowrap; font: inherit; gap: var(--usd-space-small); padding-inline: var(--usd-space-2); border-radius: var(--usd-radius-control); }
 #container.usd-app-header button.usd-menubar-toggle { display: none; grid-row: 1; grid-column: 2; }
 .usd-app-header .usd-file-context { grid-row: 1; grid-column: 3; justify-self: end; max-width: 100%; margin-left: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: var(--usd-text-size); }
 .usd-app-header .header-tool-actions { grid-row: 1; grid-column: 2; justify-content: flex-start; flex: none; flex-wrap: nowrap; gap: var(--usd-space-1); }
 .usd-app-header .usd-download { grid-row: 1; grid-column: 4; }
+.usd-app-header .usd-header-status { grid-row: 1; grid-column: 3; justify-self: end; display: flex; align-items: center; gap: var(--usd-space-2); min-width: 0; max-width: 100%; }
+.usd-app-header .usd-header-status .debug-test-button { margin: 0; padding: 4px 10px; }
+.usd-app-header .usd-header-status .debug-test-button[hidden] { display: none; }
 #container.usd-app-header :is(.header-tool-button,.export-button), .usd-compact-header button {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--usd-space-field); height: var(--usd-menubar-height); min-height: var(--usd-menubar-height); padding: var(--usd-space-small) 9px;
   border: 1px solid transparent; border-radius: var(--usd-radius-control); background: transparent; color: var(--text-primary); font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap;
@@ -320,7 +333,7 @@ body.usd-product .ui-tooltip { inset: auto; margin: 0; width: max-content; box-s
 body.usd-product .ui-tooltip::before { display: none; }
 
 @media(max-width:900px) { .usd-app-header .usd-file-context { display: none; } }
-@media(max-width:620px) {
+@media(max-width:760px) {
   #container.usd-app-header .usd-download > button { font-size: 0; gap: 0; }
   #container.usd-app-header .usd-download > button .usd-icon { width: var(--usd-icon-size); height: var(--usd-icon-size); }
   #container.usd-app-header { grid-template-columns: minmax(0,1fr) auto auto; padding-inline: var(--usd-space-2); gap: var(--usd-space-2); }
@@ -329,6 +342,7 @@ body.usd-product .ui-tooltip::before { display: none; }
   .usd-app-header .usd-product-prefix { display:none; }
   #container.usd-app-header button.usd-menubar-toggle { display: inline-flex; }
   #container.usd-app-header .usd-download { grid-column: 3; }
+  #container.usd-app-header .usd-header-status { display: none; }
   #container.usd-app-header .header-tool-actions { display: none; }
   .usd-workbench[data-menu-open=true] #container.usd-app-header .header-tool-actions {
     position: fixed; display: flex; top: calc(var(--usd-header-bottom,44px) + 4px); left: 8px; right: 8px; width: auto;
