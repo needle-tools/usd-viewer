@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { Matrix4, Vector3 } from 'three';
 // standard_surface consumes a tangent basis even on an untextured analytic Cube.
 // Author it explicitly so these tests measure shadows on a genuinely lit receiver.

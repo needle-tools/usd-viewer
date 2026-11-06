@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 import {openAppMenu, stageReady} from './workbench-menus';
 
 const fixture = `#usda 1.0

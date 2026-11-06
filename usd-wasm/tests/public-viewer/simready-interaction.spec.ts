@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 const base='https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/';
 const url=(name:string)=>'/?workspace=studio&viewer=three&render=beauty&file='+encodeURIComponent(`${base}${name}/simready_usd/sm_${name}_01.usd`);

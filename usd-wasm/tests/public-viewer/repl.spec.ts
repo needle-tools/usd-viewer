@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/repl-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><main></main></body></html>' }));

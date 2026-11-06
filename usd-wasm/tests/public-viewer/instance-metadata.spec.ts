@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 
 const source=`#usda 1.0

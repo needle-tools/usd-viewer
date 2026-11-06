@@ -144,6 +144,7 @@
     "test:coverage": "node scripts/validate-coverage-browser.mjs",
     "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
+    "test:assets": "node tests/public-viewer/remote-assets.mjs",
     "test:bindings": "node --test tests/bindings/*.test.mjs",
     "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.nodenext.json",
     "test:viewer-icons": "node scripts/icon-audit/lint.mjs --source=src/viewer/icons.js --json=.cache/icon-review/lint-gate.json",

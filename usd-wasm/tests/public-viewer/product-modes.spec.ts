@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Page} from './test';
 
 test.use({storageState: {cookies: [], origins: []}});
 const fixture = '/test-fixtures/coverage/lighting-mdl/studio-variants.usda';

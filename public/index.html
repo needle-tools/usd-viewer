@@ -129,16 +129,9 @@
 <body class="usd-product">
   <script type="text/javascript" async src="modules/es-module-shims@1.8.0.js"></script>
   <script>
+    // The server sends modules with Cache-Control: no-cache, so reloads revalidate
+    // every module and never mix cached code with a newer UI.
     window.__usdViewerImportsReady = (async () => {
-      const response = await fetch('/viewer-module-versions.json', {cache:'no-store'});
-      if (!response.ok) throw new Error(`Could not load viewer module versions: HTTP ${response.status}`);
-      const versions = await response.json();
-      globalThis.__usdViewerModuleVersions = versions;
-      // Keep product chrome in the same revision as the modules that build it.
-      const stylesReady=Promise.all([...document.querySelectorAll('link[rel=stylesheet]')].map(link=>{
-        const href=versions[new URL(link.href).pathname];if(!href)return;
-        return new Promise((resolve,reject)=>{link.onload=resolve;link.onerror=()=>reject(new Error(`Could not load ${href}`));link.href=href;});
-      }));
       const params = new URLSearchParams(location.search);
       const viewerMode = params.get("viewer") === "needle" || params.get("viewer") === "needle-loader" ? "needle" : "three";
       const useNeedleLoader = viewerMode === "needle";
@@ -176,12 +169,9 @@
       for (const entry of ["rapier", "kinematics", "three", "gltf", "needle"]) imports["@needle-tools/simready/" + entry] = "/simready/" + entry + ".js";
       imports["@needle-tools/simready"] = "/simready/index.js";
       imports["closed-chain-ik/core"] = "/modules/kinematics.js";
-      for (const key of Object.keys(imports)) imports[key] = versions[imports[key]] || imports[key];
-      Object.assign(imports, versions);
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });
       document.head.append(importMap);
-      await stylesReady;
     })();
   </script>
   <script>

@@ -1,5 +1,5 @@
 import {stageReady,openSettings,openAppMenu} from './workbench-menus';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 const stage = '/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 test('Needle workspace resizes the viewport, restores layouts and keeps UI theme independent of scene background', async ({ page }, info) => {
@@ -82,7 +82,7 @@ test('floating properties and popout windows retain their content and theme', as
 test('small viewports start with a usable canvas and can open a local file',async({page})=>{
   await page.setViewportSize({width:700,height:600}); await page.goto('/?viewer=three');
   const source='#usda 1.0\n def Cube "LocalCube" {}';
-  await page.locator('[data-usd-menu=file] > summary').click();
+  await openAppMenu(page,'file');
   await expect(page.getByRole('button',{name:'Open…',exact:true})).toBeEnabled();
   await page.locator('input[type=file]').setInputFiles({name:'local.usda',mimeType:'application/octet-stream',buffer:Buffer.from(source)});
   await expect(page.locator('[data-prim-path="/LocalCube"]')).toBeAttached();

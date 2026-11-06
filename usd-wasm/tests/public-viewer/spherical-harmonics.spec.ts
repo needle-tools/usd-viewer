@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test';
 
 // Sample corresponding particle centers, not whole-frame differences: orbiting
 // changes projection even if a renderer silently drops the directional bands.

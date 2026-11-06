@@ -2204,6 +2204,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    // Automation waits on this to know which requested file finished loading.
+    window.__usdViewerLoaded = { generation, file: new URL(location.href).searchParams.get('file') };
     setAssetDownload(handle,generation);
     messageLog.textContent = "";
 

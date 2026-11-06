@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Keep these local rendering checks independent of the web-font CDN.
 test.beforeEach(async ({ page }) => {

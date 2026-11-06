@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 
 test('large source compacts numeric data in a worker, preserves declarations, pages raw text and releases workers',async({page})=>{

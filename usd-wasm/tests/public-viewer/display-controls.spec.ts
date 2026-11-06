@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady,openSettings,openAppMenu} from './workbench-menus';
 const asset='/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 for(const theme of ['light','dark'])test(`${theme}: inline menubar, direct View controls and shared UI tokens`,async({page},info)=>{
@@ -7,7 +7,10 @@ for(const theme of ['light','dark'])test(`${theme}: inline menubar, direct View 
   for(const width of [1440,390,320]){
     await page.setViewportSize({width,height:800});await openSettings(page);
     const geometry=await page.evaluate(()=>{const header=document.querySelector('#container')!,menu=document.querySelector('.usd-menubar')!,logo=document.querySelector('.needle-logo-link')!,title=document.querySelector('.header-tool-leading')!;return{header:header.getBoundingClientRect().toJSON(),menu:menu.getBoundingClientRect().toJSON(),title:title.getBoundingClientRect().toJSON(),border:getComputedStyle(logo).borderRightWidth,overflow:header.scrollWidth>header.clientWidth};});
-    expect(geometry.menu.left).toBeGreaterThan(geometry.title.right);expect(geometry.menu.top).toBeLessThan(geometry.header.bottom);expect(geometry.header.height).toBe(45);expect(geometry.border).toBe('0px');expect(geometry.overflow).toBe(false);
+    // Up to 760px the menubar collapses behind the Menu toggle and opens as a dropdown below the header.
+    if(width>760){expect(geometry.menu.left).toBeGreaterThan(geometry.title.right);expect(geometry.menu.top).toBeLessThan(geometry.header.bottom);}
+    else{await expect(page.getByRole('button',{name:'Application menus',exact:true})).toHaveAttribute('aria-expanded','true');expect(geometry.menu.top).toBeGreaterThanOrEqual(geometry.header.bottom);}
+    expect(geometry.header.height).toBe(45);expect(geometry.border).toBe('0px');expect(geometry.overflow).toBe(false);
     await expect(page.getByRole('combobox',{name:'Tone mapping',exact:true})).toHaveValue('needle-agx');
     await expect(page.getByRole('combobox',{name:'Render mode',exact:true})).toBeVisible();
     expect(await page.evaluate(()=>(window as any).usdWorkbench.dock.getPanel('settings'))).toBeUndefined();

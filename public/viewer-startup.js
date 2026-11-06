@@ -42,11 +42,6 @@ export const startupSimreadyReady = simreadyLocation(file)
 // Progress is replayed when the app's loading controls become available.
 const runtimeOptions = {
   asyncRuntime: 'auto',
-  locateFile: file => {
-    const url=new URL(file,new URL('/usd/bindings/',location.href));
-    const versioned=url.origin===location.origin && globalThis.__usdViewerModuleVersions?.[url.pathname];
-    return versioned ? new URL(versioned,location.href).href : undefined;
-  },
   printErr: (...args) => {
     const text = args.join(' ');
     if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);

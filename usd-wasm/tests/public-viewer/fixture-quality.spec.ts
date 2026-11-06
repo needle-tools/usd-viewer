@@ -1,5 +1,5 @@
 import {selectExampleFolder, openSamples, stageReady} from './workbench-menus';
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 
 test('Draco overrides retain visible red and blue surfaces under authored lights', async ({page}, info) => {
   await page.goto('/?viewer=three&render=beauty&assetCache=0&file=/test-fixtures/draco/draco_mixed_overrides.usda');

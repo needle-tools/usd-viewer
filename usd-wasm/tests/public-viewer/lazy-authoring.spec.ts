@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 import {stageReady} from './workbench-menus';
 
 const asset = '/?viewer=three&file=/test-fixtures/coverage/core/analytic-primitives.usda';
@@ -46,7 +46,8 @@ for (const action of ['close', 'dispose'] as const) {
   test(`${action} while authoring imports are pending does not mount editors`, async ({page}) => {
     const released: (() => void)[] = [];
     const pending: string[] = [];
-    await page.route(/\/(viewer-code\.js|usd\/viewer\/repl\.js)$/, async route => {
+    // Module URLs carry a ?v= content hash from the import map.
+    await page.route(/\/(viewer-code\.js|usd\/viewer\/repl\.js)(?:\?|$)/, async route => {
       pending.push(new URL(route.request().url()).pathname);
       await new Promise<void>(resolve => released.push(resolve));
       await route.continue();

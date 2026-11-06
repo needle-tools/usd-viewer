@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 import {readFile, writeFile} from 'node:fs/promises';
 import {unzipSync} from 'three/addons/libs/fflate.module.js';

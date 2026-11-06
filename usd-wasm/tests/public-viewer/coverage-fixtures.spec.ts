@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples} from './workbench-menus';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test';
 
 // Keep these local rendering checks independent of the web-font CDN.
 test.beforeEach(async ({ page }) => {

@@ -1,5 +1,5 @@
 import {openSettings,stageReady} from './workbench-menus';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 // No external fonts are needed to verify local GPU rendering.
 test.beforeEach(async ({ page }) => {

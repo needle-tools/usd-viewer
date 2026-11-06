@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page} from './test';
 import {openAppMenu,stageReady} from './workbench-menus';
 import {replExamples} from '../fixtures/api/examples.js';
 
@@ -221,7 +221,7 @@ test('file and folder labels share fixed indentation and array expansion describ
 
 test('remote USDZ sources expose public names and packaged image previews remain readable',async({page},info)=>{
  const name='NormalsTextureBiasAndScale.usdz';
- const url='https://raw.githubusercontent.com/usd-wg/assets/main/test_assets/NormalsTextureBiasAndScale/'+name;
+ const url='https://raw.githubusercontent.com/usd-wg/assets/091bb5c6f8eb665ad4cf9d6c10025cecc07eda88/test_assets/NormalsTextureBiasAndScale/'+name;
  await page.goto('/?workspace=studio&viewer=three&render=beauty&complexity=low&background=dark&file='+encodeURIComponent(url));
  await stageReady(page);await openCode(page);await wide(page);
  const files=await sources(page),root=files.find((file:any)=>file.role==='root');

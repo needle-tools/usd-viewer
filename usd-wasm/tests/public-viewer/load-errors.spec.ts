@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 
 const animated = '/test-fixtures/coverage/core/animated-translation.usda';
 

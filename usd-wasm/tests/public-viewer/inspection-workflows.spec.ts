@@ -1,4 +1,4 @@
-import {test, expect, type Page} from '@playwright/test';
+import {test, expect, type Page} from './test';
 import {stageReady, openAppMenu} from './workbench-menus';
 
 async function sample(page: Page, viewer: string, file: string) {
@@ -110,7 +110,7 @@ for(const viewer of ['three','needle']) {
     await page.evaluate(()=>(window as any).usdRepl.run('follow("/World/Sphere1.radius")'));
     await expect.poll(()=>page.evaluate(()=>(window as any).usdStagePanel.selectedProperty)).toBe('/World/Sphere1.radius');
     await page.evaluate(()=>(window as any).usdRepl.run('await edit(stage => { const p=stage.GetPrimAtPath("/World/Sphere1"); const a=p.GetAttribute("radius"); try { a.SetDouble(0.7, NaN); } finally { a.delete(); p.delete(); } })'));
-    await expect.poll(()=>page.evaluate(()=>(window as any).usdRepl.run('(await inspect("/World/Sphere1")).attributes.find(a => a.name === "radius").value'))).toBe('0.7');
+    await expect.poll(()=>page.evaluate(()=>(window as any).usdRepl.run('(await inspect("/World/Sphere1")).attributes.find(a => a.name === "radius").value'))).toBe(0.7);
     await page.evaluate(()=>(window as any).usdRepl.run('await edit(async stage => { const p=stage.GetPrimAtPath("/World/Sphere1"); try { await p.SetActive(false); } finally {p.delete();} throw new Error("after mutation"); })').catch(()=>{}));
     await expect(page.getByRole('button',{name:'Activate /World/Sphere1',exact:true})).toHaveAttribute('aria-pressed','false');
     await expect.poll(()=>page.evaluate(()=>{const w=window as any;let visible=0;(w.needleEngineContext?.scene||w.scene).traverse((o:any)=>{if(o.isMesh&&o.visible&&o.userData.usdPath==='/World/Sphere1')visible++;});return visible;})).toBe(0);

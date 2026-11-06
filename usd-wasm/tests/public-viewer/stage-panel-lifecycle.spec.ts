@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './test';
 
 async function mount(page: Page, gate: 'before' | 'driver') {
   await page.route('**/stage-panel-lifecycle.html', route => route.fulfill({

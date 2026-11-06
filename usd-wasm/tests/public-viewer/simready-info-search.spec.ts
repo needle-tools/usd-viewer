@@ -1,9 +1,9 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openSamples,selectExampleFolder,stageReady} from './workbench-menus';
 
 test('AGIBOT folder search and Info use shared controls and authored metadata',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'collection:'+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));
+ await page.goto('/?workspace=studio&viewer=three&render=basic&collection='+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));await openSamples(page);await selectExampleFolder(page,'collection:'+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));
  await page.getByRole('searchbox',{name:'Search examples'}).fill('g2_swiftpicker');
  const card=page.locator('.gallery-card:visible').filter({hasText:'g2 swiftpicker'});
  await expect(card).toHaveCount(1,{timeout:25000});await expect(card.locator('img')).toBeVisible();

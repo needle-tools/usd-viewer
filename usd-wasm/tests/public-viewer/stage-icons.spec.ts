@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {stageReady} from './workbench-menus';
 for(const theme of ['light','dark'])test(`${theme}: Stage icons stay legible on hover and selection without checkbox chrome`,async({page},info)=>{
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);

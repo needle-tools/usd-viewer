@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 
 test('concurrent download rows expose totals, percentages and ETA in both themes',async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));

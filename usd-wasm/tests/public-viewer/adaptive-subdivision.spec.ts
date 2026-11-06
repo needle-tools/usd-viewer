@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 
 // Six disjoint UV charts on a fully sharp cube. Averaging edge normals or

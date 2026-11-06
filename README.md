@@ -44,8 +44,8 @@ when selected. Both asset and preview URLs use the dataset revision recorded in
 [the catalog](public/data/nvidia-simready.json). Refresh it with
 `npm run prepare:simready-manifest` (or pass a full dataset commit SHA after `--`).
 
-Additional collections appear as their own Examples folders. AGIBOT is included by
-default. To open a Hugging Face dataset or dataset folder, add
+Additional collections appear as their own Examples folders. To open a Hugging
+Face dataset or dataset folder, add
 `collection=https://huggingface.co/datasets/OWNER/DATASET` to the viewer URL
 (repeat `collection=` for multiple folders). For example:
 [AGIBOT collection](https://usd-viewer.needle.tools/?workspace=studio&collection=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fagibot-assets%2Fsimready-assets).
@@ -65,11 +65,10 @@ percentages, transfer speed and estimated time remaining. Unknown file sizes
 stay indeterminate until reported; totals cover dependencies discovered so far.
 Exports retain the original USD dependencies, independently of this display setting.
 
-App and SDK modules use content-versioned URLs so reloads do not mix cached
-inspection code with a newer UI. `npm run prepare:public` generates
-`public/viewer-module-versions.json` for static uploads; include that file with
-the rest of `public/`. The local server generates the same manifest from the
-current source files.
+App and SDK modules are served with `Cache-Control: no-cache`, so browsers
+revalidate them on every load and a reload never mixes cached modules with a
+newer UI. Unchanged files return 304. Hosts other than `server.js` need the same
+header for `.js`, `.mjs`, `.css`, `.wasm`, `.json` and `.html` files.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
 COOP/COEP headers:
@@ -113,7 +112,7 @@ package. Code and Console load when opened. Embedded viewers can use `/runtime`,
 
 Use **Examples** to browse 192 Needle coverage fixtures, 63 executable JavaScript lessons,
 the complete NVIDIA SimReady library, the separate 14-asset Hugging Face test set,
-AGIBOT collections, USD Working Group assets and glTF samples.
+collections opened by URL, USD Working Group assets and glTF samples.
 The Examples footer switches between Beauty previews and native usdview/Storm
 captures, and remembers your choice.
 The animation collection includes a rolling cube, heartbeat, lighthouse day/night

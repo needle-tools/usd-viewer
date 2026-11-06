@@ -1,4 +1,4 @@
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Page} from './test';
 import {stageReady} from './workbench-menus';
 
 test.use({video: 'on'});
@@ -25,12 +25,10 @@ for (const viewer of ['three', 'needle']) {
     await page.locator('[data-prim-path="/World/Lights/Animated"]').click();
     await page.getByRole('button', {name: 'Last frame', exact: true}).click();
     await expect(property(page, 'inputs:intensity')).toHaveText('100');
-    const matrix = property(page, 'xformOp:transform');
-    await matrix.dblclick(); await expect(matrix).toHaveClass(/expanded/);
     await property(page, 'inputs:intensity').scrollIntoViewIfNeeded();
     const scroll = await page.locator('[data-panel=properties]').evaluate(el => el.scrollTop);
     const originalTable = await page.locator('[data-panel=properties] table').elementHandle();
-    const originalCell = await matrix.elementHandle();
+    const originalCell = await property(page, 'inputs:intensity').elementHandle();
     await page.screenshot({path: info.outputPath('last-frame.png')});
     const play = page.getByRole('button', {name: 'Play or pause'});
     await play.click();
@@ -48,13 +46,24 @@ for (const viewer of ['three', 'needle']) {
     await expect(play).toBeFocused();
     expect(await originalTable!.evaluate(el => el.isConnected)).toBe(true);
     expect(await originalCell!.evaluate(el => el.isConnected)).toBe(true);
-    await expect(matrix).toHaveClass(/expanded/);
     expect(await page.locator('[data-panel=properties]').evaluate(el => el.scrollTop)).toBe(scroll);
     // The same preservation applies to keyboard-driven manual seeks.
     const frame = page.getByRole('spinbutton', {name: 'Current frame'});
     await frame.fill('12'); await frame.press('Enter');
     await expect.poll(async () => Math.abs(Number(await property(page, 'inputs:intensity').textContent()) - lightIntensity(12))).toBeLessThan(0.02);
-    await expect(frame).toBeFocused(); await expect(matrix).toHaveClass(/expanded/);
+    await expect(frame).toBeFocused();
+    expect(await originalCell!.evaluate(el => el.isConnected)).toBe(true);
+    // Matrices open in the data view. Time changes keep it open; only stage edits close it.
+    await page.getByRole('button', {name: 'Open xformOp:transform array', exact: true}).click();
+    const data = page.getByRole('region', {name: 'xformOp:transform data', exact: true});
+    await expect(data).toBeVisible();
+    const originalData = await data.elementHandle();
+    await play.click(); await page.waitForTimeout(300);
+    await play.click(); await expect(play).toHaveAttribute('aria-pressed', 'false');
+    await frame.fill('40'); await frame.press('Enter');
+    await expect.poll(() => page.evaluate(() => (window as any).usdHydra.getTime())).toBe(40);
+    expect(await originalData!.evaluate(el => el.isConnected)).toBe(true);
+    await expect(data).toBeVisible();
   });
 
   test(`${viewer}: paused hierarchy visibility matches sampled visibility after playback and seeking`, async ({page}, info) => {

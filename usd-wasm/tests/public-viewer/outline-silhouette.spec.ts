@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {stageReady} from './workbench-menus';
 for(const backend of ['webgpu','webgl'])test(`${backend}: selected silhouettes show dashed hidden edges without occluder intersections`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

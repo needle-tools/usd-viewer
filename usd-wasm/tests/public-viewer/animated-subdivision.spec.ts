@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 
 for (const viewer of ['three', 'needle']) for (const detail of ['adaptive', 'very-high']) {

@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page} from './test';
 import {stageReady,openAppMenu} from './workbench-menus';
 
 async function openHelpers(page:Page){await openAppMenu(page,'view');const group=page.locator('[data-usd-menu=view] .usd-settings-section').filter({has:page.locator('summary',{hasText:'Helpers'})});if(await group.getAttribute('open')===null)await group.locator(':scope > summary').click();}

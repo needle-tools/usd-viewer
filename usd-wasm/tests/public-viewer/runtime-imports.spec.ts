@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {readFile} from 'node:fs/promises';
 import {clearStage, openAppMenu, stageReady} from './workbench-menus';
 

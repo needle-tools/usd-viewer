@@ -1,5 +1,5 @@
 import {selectExampleFolder, stageReady, openSamples} from './workbench-menus';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test';
 import {apiExampleAssets} from '../fixtures/api/examples.js';
 
 for (const viewer of ['three', 'needle']) test(`${viewer}: API examples execute into the viewport and restore from their URL`, async ({ page }, info) => {

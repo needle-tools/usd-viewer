@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { clearStage, stageReady } from './workbench-menus';
 
 test('REPL reads real embind objects and invalidates them when the viewer closes', async ({ page }) => {

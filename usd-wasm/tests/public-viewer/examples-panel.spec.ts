@@ -1,5 +1,5 @@
 import {selectExampleFolder, openSamples, stageReady} from './workbench-menus';
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 for(const theme of ['light','dark'])test(`${theme}: Examples docks left, resizes, filters and persists preview controls`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);
   await page.setViewportSize({width:1440,height:900});await page.goto('/?viewer=three');await page.waitForFunction(()=>(window as any).__usdViewerUiReady);

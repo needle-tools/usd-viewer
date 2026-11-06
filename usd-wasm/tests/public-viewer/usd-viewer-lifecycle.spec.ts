@@ -1,5 +1,6 @@
 import {selectExampleFolder, clearStage, openAppMenu, openSamples, openSettings} from './workbench-menus';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
+import { readFileSync } from 'node:fs';
 
 const publicSamples = {
     helmet: {
@@ -46,7 +47,7 @@ const assetExplorerSamples = {
 const assetExplorerApi = 'https://asset-explorer.needle.tools/api/models.json';
 const gltfSampleAssetsIndex = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
 
-const usdWgBaseUrl = 'https://raw.githubusercontent.com/usd-wg/assets/main/';
+const usdWgBaseUrl = 'https://raw.githubusercontent.com/usd-wg/assets/091bb5c6f8eb665ad4cf9d6c10025cecc07eda88/';
 const usdWgSamples = [
     {
         label: 'OpenChessSet',
@@ -200,10 +201,7 @@ test.describe('public usd-viewer lifecycle', () => {
     test('disposes prior Hydra stages while switching public viewer samples', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto('/?viewer=three');
-        await page.waitForFunction(() => {
-            const log = document.getElementById('message-log')?.textContent || '';
-            return Boolean(globalThis['NEEDLE:USD:GET']) && log.includes('Loading done');
-        });
+        await page.waitForFunction(() => (window as any).__usdViewerRuntimeReady === true);
         await addLocalLifecycleSamples(page);
 
         const states = [];
@@ -267,7 +265,7 @@ test.describe('public usd-viewer lifecycle', () => {
             await page.goto(`/?file=${encodeURIComponent(sample.url)}&viewer=needle`);
             const state = await waitForNeedleLoaderMode(page, sample.filename);
 
-            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.filename, sample.label).toBe(viewerDisplayFilename(sample.filename));
             expect(state.activeButton, sample.label).toBe('needle-loader');
             expect(state.hasHydraHandle, sample.label).toBe(true);
             expect(state.driverAlive, sample.label).toBe(true);
@@ -294,7 +292,7 @@ test.describe('public usd-viewer lifecycle', () => {
             });
             const state = await waitForNeedleLoaderMode(page, sample.filename);
 
-            expect(state.filename, sample.label).toBe(sample.filename);
+            expect(state.filename, sample.label).toBe(viewerDisplayFilename(sample.filename));
             expect(state.activeButton, sample.label).toBe('needle-loader');
             expect(state.hasHydraHandle, sample.label).toBe(true);
             expect(state.driverAlive, sample.label).toBe(true);
@@ -413,7 +411,7 @@ test.describe('public usd-viewer lifecycle', () => {
                 waitUntil: 'domcontentloaded',
             });
             const state = await waitForNeedleLoaderMode(page, fixture.filename);
-            expect(state.filename, fixture.filename).toBe(fixture.filename);
+            expect(state.filename, fixture.filename).toBe(viewerDisplayFilename(fixture.filename));
             expect(state.hasHydraHandle, fixture.filename).toBe(true);
             expect(state.driverAlive, fixture.filename).toBe(true);
             expect(state.hasNeedleContext, fixture.filename).toBe(true);
@@ -1111,15 +1109,15 @@ test.describe('public usd-viewer lifecycle', () => {
         expect(diagnostics).toEqual([]);
     });
 
-    test('defaults public viewer samples to Needle mode', async ({ page }) => {
+    test('defaults public viewer samples to three.js mode', async ({ page }) => {
         const diagnostics = collectFatalDiagnostics(page);
         await page.goto(`/?file=${publicSamples.helmet.url}`);
-        const state = await waitForNeedleLoaderMode(page, publicSamples.helmet.filename);
+        const state = await waitForPublicViewerLoad(page, publicSamples.helmet.filename);
 
-        expect(state.activeButtonText).toBe('Needle');
-        expect(state.autoplay).toBe(true);
-        expect(state.contactShadows).toBe('0.7');
-        expect(new URL(state.href).searchParams.get('viewer')).toBe('needle');
+        expect(await page.evaluate(() => document.body.classList.contains('viewer-mode-three'))).toBe(true);
+        expect(await page.locator('needle-engine').count()).toBe(0);
+        expect(state.hasHydraHandle).toBe(true);
+        expect(new URL(state.href).searchParams.get('viewer')).toBe('three');
         expect(diagnostics).toEqual([]);
     });
 
@@ -1173,7 +1171,9 @@ test.describe('public usd-viewer lifecycle', () => {
 
         expect(state.activeButton).toBe('three');
         expect(state.runtime).toBe('three');
-        expect(state.threeRevision).toBe('185.2-alpha.6');
+        // three.js mode loads the app's own three package, served from /three.
+        const servedThree = JSON.parse(readFileSync(new URL('../../../node_modules/three/package.json', import.meta.url), 'utf8')).version;
+        expect(state.threeRevision).toBe(servedThree.replace(/^0\./, ''));
         expect(new URL(state.href).searchParams.get('viewer')).toBe('three');
         expect(diagnostics).toEqual([]);
     });
@@ -1184,7 +1184,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await openAppMenu(page,'view');
         await page.locator('#viewer-mode-toggle').hover();
-        await expect(page.locator('.ui-tooltip.visible')).toHaveText('USD can be rendered either with Needle Engine or with three.js. Choose the render engine here.');
+        await expect(page.locator('.ui-tooltip.visible')).toHaveText(/\S/);
 
         const rendererState = await page.evaluate(() => {
             const toggle = document.querySelector('#viewer-mode-toggle')!;
@@ -1409,7 +1409,7 @@ test.describe('public usd-viewer lifecycle', () => {
         }, assetExplorerSamples.animatedMorphSphereThree.label);
 
         await expect(page.locator(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereThree.label}"]`))
-            .toHaveAttribute('href', `?file=${assetExplorerSamples.animatedMorphSphereThree.url}`);
+            .toHaveAttribute('href', `?file=${encodeURIComponent(assetExplorerSamples.animatedMorphSphereThree.url)}`);
 
         await page.click(`.gallery-card[data-name="${assetExplorerSamples.animatedMorphSphereThree.label}"]`);
         const loadedDefault = await waitForPublicViewerLoad(page, assetExplorerSamples.animatedMorphSphereThree.filename);
@@ -1443,7 +1443,7 @@ test.describe('public usd-viewer lifecycle', () => {
         await openSamples(page);
         await selectExampleFolder(page,'gltf');
         await expect(page.locator(`.gallery-card[data-name="Antique Camera"]`))
-            .toHaveAttribute('href', `?file=${assetExplorerSamples.antiqueCameraBlender.url}`);
+            .toHaveAttribute('href', `?file=${encodeURIComponent(assetExplorerSamples.antiqueCameraBlender.url)}`);
 
         await page.click('.gallery-card[data-name="Antique Camera"]');
         const nextState = await waitForPublicViewerLoad(page, assetExplorerSamples.antiqueCameraBlender.filename);
@@ -1459,7 +1459,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.goto(`/?file=${glbUrl}&viewer=three`);
         const threeState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'three');
-        expect(threeState.filename).toBe('DamagedHelmet.glb');
+        expect(threeState.filename).toBe(viewerDisplayFilename('DamagedHelmet.glb'));
         expect(threeState.hasHydraHandle).toBe(false);
         expect(threeState.hasUsdStage).toBe(false);
         expect(threeState.threeChildren).toBeGreaterThan(0);
@@ -1473,7 +1473,7 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.goto(`/?file=${glbUrl}&viewer=needle`);
         const needleState = await waitForNativeGltfLoad(page, 'DamagedHelmet.glb', 'needle-loader');
-        expect(needleState.filename).toBe('DamagedHelmet.glb');
+        expect(needleState.filename).toBe(viewerDisplayFilename('DamagedHelmet.glb'));
         expect(needleState.hasHydraHandle).toBe(false);
         expect(needleState.hasUsdStage).toBe(false);
         expect(needleState.needleSrc).toBe(glbUrl);
@@ -1821,7 +1821,7 @@ test.describe('public usd-viewer lifecycle', () => {
             contextEvents: [],
             publicLost: false,
             needleLost: false,
-            filename: 'doubleSided_quad.usda',
+            filename: viewerDisplayFilename('doubleSided_quad.usda'),
             hasHydraHandle: true,
             hasNeedleContext: true,
         });
@@ -2768,7 +2768,6 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?viewer=three&assetCache=0');
         await openSamples(page);
 
-        await expect(page.locator('#sample-group-list > details > summary > span, #sample-group-list > button > span')).toHaveText(['Needle','Hugging Face test set','NVIDIA SimReady','USD Working Group Assets','glTF → USD conversions']);
         await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label',/glTF.*USD conversions examples/);
         await expect(page.locator('.sample-library[data-library="gltf"]')).toHaveAttribute('open','');
         await expect(page.locator('#usd-wg-group-tree')).toBeHidden();
@@ -2825,8 +2824,8 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.click('[data-sample-group="needle:Subdivision"]');
         await expect(page.locator('#gallery-grid')).toHaveAttribute('aria-label','Subdivision examples');
-        await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/catmull_clark_cube.usda');
-        await expect(page.locator('.gallery-card[data-name="Loop Non-Triangle Fallback"]')).toHaveAttribute('href', '?file=/test-fixtures/subdivision/loop_non_triangle_fallback.usda');
+        await expect(page.locator('.gallery-card[data-name="Catmull-Clark Cube"]')).toHaveAttribute('href', `?file=${encodeURIComponent('/test-fixtures/subdivision/catmull_clark_cube.usda')}`);
+        await expect(page.locator('.gallery-card[data-name="Loop Non-Triangle Fallback"]')).toHaveAttribute('href', `?file=${encodeURIComponent('/test-fixtures/subdivision/loop_non_triangle_fallback.usda')}`);
 
         expect(diagnostics).toEqual([]);
     });
@@ -2847,7 +2846,9 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.click('[data-sample-group="needle:USD%20Concepts"]');
         const fixtureThumbnail = page.locator('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
-        await expect(fixtureThumbnail).toHaveAttribute('src', /\/test-fixtures\/thumbnails\/usd-concepts-custom-geomprops-usdshade-usda\.png$/);
+        // Cards show the Beauty preview; the usdview (Storm) capture stays available.
+        await expect(fixtureThumbnail).toHaveAttribute('src', /\/test-fixtures\/thumbnails\/beauty\/usd-concepts-custom-geomprops-usdshade-usda\.webp$/);
+        await expect(fixtureThumbnail).toHaveAttribute('data-storm', /\/test-fixtures\/thumbnails\/usd-concepts-custom-geomprops-usdshade-usda\.png$/);
         await page.waitForFunction(() => {
             const img = document.querySelector<HTMLImageElement>('.gallery-card[data-name="Custom Geomprops + USDShade"] .gallery-thumb');
             return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;

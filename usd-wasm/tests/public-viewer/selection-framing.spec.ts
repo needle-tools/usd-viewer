@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 
 test('F frames an unbound GeomSubset rather than its whole parent mesh or stage',async({page})=>{

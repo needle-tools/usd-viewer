@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page} from './test';
 import {unzipSync} from 'three/addons/libs/fflate.module.js';
 import {readFile,link} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 for (const viewer of ['three', 'needle']) {
   test(`${viewer}: native glTF loading retains its fallback environment`, async ({ page }) => {
