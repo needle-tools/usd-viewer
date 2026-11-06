@@ -1,10 +1,15 @@
 # Changelog
 
-## Unreleased
+## [1.3.0] - 2026-11-06
 
-- Refine the Viewer/Studio switch in light and dark themes and prevent header controls from overlapping at narrower widths.
-- Fix GLB exports containing integer custom attributes or multiple UV channels, including files opened in Mesh Baker.
-- Improve large GLB downloads with full-resolution textures.
+- USD physics assets are now native Needle Engine objects. Their bodies, colliders and joints become regular Rigidbody and Collider components, so collision events, raycasts and drag interaction work with them like with any other Engine object.
+- Grippers and other assets with mimic joints now simulate.
+- Joints break at their authored thresholds and respect spherical cone limits.
+- Motor-driven joints keep moving instead of falling asleep.
+- GLB downloads keep integer custom attributes and multiple UV channels, including for Mesh Baker, and large scenes download with full-resolution textures.
+- Scenes open faster: editing code loads only when you edit, and reloading after an update always gets the new version.
+- Dropping files onto the viewport loads them again.
+- MaterialX textures, such as on photogrammetry scans, show the right way up in the three.js viewer.
 
 ## [1.2.1] - 2026-11-05
 

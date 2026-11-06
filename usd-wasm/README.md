@@ -169,10 +169,10 @@ both owned target handles. Complete examples are in
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.2.1 three@npm:@needle-tools/three@0.185.2-alpha.8
+npm install @needle-tools/usd@1.3.0 three@npm:@needle-tools/three@0.185.2-alpha.8
 ```
 
-Version 1.2.1 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
+Version 1.3.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
 three.js. The wasm bundle includes Adobe `usdGltf` with Draco-compressed
 glTF/GLB import, native `usdDraco` mesh payloads, MaterialX, and OpenSubdiv
 support.
@@ -365,7 +365,7 @@ coordinates, so the same data can be inspected, edited and passed to physics.
   },
   "dependencies": {
     "@needle-tools/engine": "6.0.0-canary.1793922509.calm-banana.4b54649",
-    "@needle-tools/usd": "1.2.1",
+    "@needle-tools/usd": "1.3.0",
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "vite": "^8.1.0"
   }
@@ -450,7 +450,7 @@ property so USD references can resolve.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/usd": "1.2.1",
+    "@needle-tools/usd": "1.3.0",
     "three": "npm:@needle-tools/three@0.185.2-alpha.8",
     "vite": "^8.1.0"
   }

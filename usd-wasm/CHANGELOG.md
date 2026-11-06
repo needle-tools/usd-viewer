@@ -1,10 +1,15 @@
 # Changelog
 
-## Unreleased
+## [1.3.0] - 2026-11-06
 
+- Create Needle Engine dynamics through Engine physics assets: `createUsdPhysics` with `createNeedleSimulationWorld` adds the asset's bodies, colliders and joints as Engine Rigidbody and Collider components. Requires Needle Engine `6.0.0-canary.1793922509` or later; with older versions, `createNeedleSimulationWorld` throws an error asking to update Engine.
+- Simulate mimic joints and pass joint break thresholds and spherical cone limits to physics engines that support them.
+- Keep motor-driven joints moving when their bodies would otherwise fall asleep.
 - Export integer custom attributes and multiple UV channels as valid glTF accessors while preserving source geometry and metadata.
 - Add `output: 'blob'` for large GLB downloads. The default export result remains an `ArrayBuffer`.
 - Retain mesh colliders when exporting with older supported Three.js versions.
+- Sample MaterialX image nodes the right way up in three.js node materials. Their textures appeared vertically flipped.
+- Load the property inspector's array editor when an array is first opened, so inspection without editing loads less code.
 
 ## [1.2.1] - 2026-11-05
 
