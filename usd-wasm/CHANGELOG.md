@@ -53,7 +53,7 @@
 - Preserve the legacy Three.js integration and existing package-root exports. Modern renderers require a compatible host Three.js/WebGPU setup; optional runtime and renderer dependencies remain host-owned.
 - Update the MaterialX dependency to `@needle-tools/materialx@1.8.1`.
 
-Viewer application changes and fixture updates are recorded in the repository's [viewer changelog](../CHANGELOG.md).
+Viewer application changes and fixture updates are recorded in the repository's [viewer changelog](https://github.com/needle-tools/usd-viewer/blob/main/CHANGELOG.md).
 
 ## [1.1.2] - 2026-07-17
 ### Changed
