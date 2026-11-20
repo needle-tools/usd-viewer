@@ -5,7 +5,7 @@ import {createTransferTracker,downloadAmount,formatBytes,formatEta} from './view
 export function createDownloadProgress({getHost,onUpdate = () => {},now} = {}) {
   const tracker = createTransferTracker(now), rows = new Map();
   let root, heading, amount, bar, timing, count, list, toggle, timer, idleTimer, disposed = false;
-  let expanded = true;
+  let expanded = false, runtime;
   const node = (tag,className) => {const el=document.createElement(tag);el.className=className;return el;};
   function setBar(element,ratio) {
     if (ratio == null) element.removeAttribute('value');
@@ -17,7 +17,7 @@ export function createDownloadProgress({getHost,onUpdate = () => {},now} = {}) {
     // The panel lives over the viewport. OrbitControls must not capture its
     // pointer or treat scrolling the transfer list as camera zoom.
     for(const type of ['pointerdown','pointerup','wheel'])root.addEventListener(type,event=>event.stopPropagation());
-    toggle=node('button','usd-download-heading');toggle.type='button';toggle.setAttribute('aria-expanded','true');
+    toggle=node('button','usd-download-heading');toggle.type='button';toggle.setAttribute('aria-expanded','false');
     const icon=viewerIcon('download');heading=node('span','usd-download-title');heading.setAttribute('role','status');
     toggle.append(icon,heading,viewerIcon('expand_more'));toggle.onclick=()=>{expanded=!expanded;list.hidden=!expanded;toggle.setAttribute('aria-expanded',String(expanded));};
     const summary=node('div','usd-download-summary');amount=node('span','usd-download-amount');count=node('span','usd-download-count');summary.append(amount,count);
@@ -27,16 +27,28 @@ export function createDownloadProgress({getHost,onUpdate = () => {},now} = {}) {
   }
   function render() {
     timer=undefined;if(disposed)return;
-    const snapshot=tracker.snapshot();onUpdate(snapshot);
-    if (!snapshot.files.length) return;
+    const snapshot=tracker.snapshot();onUpdate(snapshot,runtime);
+    if (!runtime && !snapshot.files.length) { if(root)root.hidden=true; return; }
     mount();const host=getHost?.();if(host&&root.parentElement!==host)host.append(root);
-    root.hidden=false;root.dataset.state=snapshot.active?'active':snapshot.failed?'error':'done';
+    root.hidden=false;
+    if (runtime) {
+      const downloading = runtime.total > 0 && runtime.loaded < runtime.total;
+      heading.textContent = downloading ? 'Downloading OpenUSD' : 'Initializing OpenUSD';
+      toggle.setAttribute('aria-label',heading.textContent);
+      toggle.disabled=true;toggle.setAttribute('aria-expanded','false');list.hidden=true;
+      root.dataset.state='active';root.title='';count.textContent='';timing.textContent='';
+      amount.textContent=downloading ? downloadAmount({...runtime,ratio:runtime.loaded/runtime.total}) : '';
+      setBar(bar,downloading ? runtime.loaded/runtime.total : null);
+      timer=setTimeout(render,250);
+      return;
+    }
+    root.dataset.state=snapshot.active?'active':snapshot.failed?'error':'done';
     const title=snapshot.active?`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}`:snapshot.failed?'Download failed':'Downloads complete';
     if(heading.textContent!==title)heading.textContent=title;toggle.setAttribute('aria-label',title);
     root.title=snapshot.files.filter(file=>file.state!=='done').map(file=>file.url.split('/').pop()).join('\n');
     amount.textContent=snapshot.total==null?`${formatBytes(snapshot.loaded)} downloaded`:downloadAmount(snapshot);count.textContent=`${snapshot.completed} / ${snapshot.files.length} ${snapshot.files.length===1?'file':'files'}`;
     setBar(bar,snapshot.failed?null:snapshot.ratio);
-    timing.textContent=[snapshot.rate>0?`${formatBytes(snapshot.rate)}/s`:snapshot.active?snapshot.loaded?'Waiting…':'Connecting…':'',snapshot.active?formatEta(snapshot.eta):'',snapshot.unknown?`${snapshot.unknown} ${snapshot.unknown===1?'size':'sizes'} unknown`:''].filter(Boolean).join(' · ');
+    timing.textContent=[`${Math.floor(snapshot.elapsed)} s elapsed`,snapshot.rate>0?`${formatBytes(snapshot.rate)}/s`:snapshot.active?snapshot.loaded?'Waiting…':'Connecting…':'',snapshot.active?(formatEta(snapshot.eta)||'Time left unknown'):'',snapshot.unknown?`${snapshot.unknown} ${snapshot.unknown===1?'size':'sizes'} unknown`:''].filter(Boolean).join(' · ');
     const visible=new Set();
     for (const file of snapshot.files.filter(file=>file.state!=='done')) {
       visible.add(file.url);let row=rows.get(file.url);
@@ -57,8 +69,11 @@ export function createDownloadProgress({getHost,onUpdate = () => {},now} = {}) {
     else if(!snapshot.failed)idleTimer=setTimeout(()=>{if(root)root.hidden=true;},1200);
   }
   return {
+    setRuntime(progress) {
+      runtime=progress;clearTimeout(timer);clearTimeout(idleTimer);render();
+    },
     update(event) {if(disposed||!tracker.update(event))return;clearTimeout(idleTimer);if(!timer)timer=setTimeout(render,100);},
-    reset() {clearTimeout(timer);clearTimeout(idleTimer);timer=undefined;tracker.reset();for(const row of rows.values())row.element.remove();rows.clear();if(root)root.hidden=true;onUpdate(tracker.snapshot());},
+    reset() {clearTimeout(timer);clearTimeout(idleTimer);timer=undefined;tracker.reset();for(const row of rows.values())row.element.remove();rows.clear();render();},
     get snapshot() {return tracker.snapshot();},
     dispose() {disposed=true;clearTimeout(timer);clearTimeout(idleTimer);root?.remove();tracker.reset();rows.clear();},
   };

@@ -2,10 +2,17 @@ import {loadSimreadyResources,warmSimreadyComposition,simreadyLocation} from './
 import {getUsdModule} from './usd/bindings/index.js';
 import {fetchAsset} from './usd/assetFetch.js';
 import {createViewerMemory} from './viewer-memory.js';
+import {createDownloadProgress} from './viewer-download-progress.js';
 
-const listeners = new Set();
-let downloadProgress;
-const assetProgress = new Map();
+export const assetDownloads = createDownloadProgress({
+  getHost: () => window.usdWorkbench?.viewport,
+  onUpdate(snapshot,runtime) {
+    if (runtime) return;
+    window.updateLoadingOverlayProgress?.(snapshot.active ? {text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null);
+    window.usdStagePanel?.refreshInfoFiles?.();
+  },
+});
+assetDownloads.setRuntime({});
 
 export const startupPackageAbort = new AbortController();
 const params = new URL(location.href).searchParams;
@@ -28,8 +35,7 @@ export function takeStartupPackage(url) {
 }
 
 function reportAssetProgress(progress) {
-  if(progress?.url)assetProgress.set(progress.url,progress);
-  for(const listener of listeners)listener.asset(progress);
+  assetDownloads.update(progress);
 }
 export const startupSimreadyReady = simreadyLocation(file)
   ? Promise.resolve(window.__usdViewerAssetCacheReady).then(async()=>{
@@ -40,7 +46,6 @@ export const startupSimreadyReady = simreadyLocation(file)
   : Promise.resolve();
 
 // Start the runtime independently of the renderer, examples and workbench.
-// Progress is replayed when the app's loading controls become available.
 const runtimeOptions = {
   printErr: (...args) => {
     const text = args.join(' ');
@@ -48,8 +53,7 @@ const runtimeOptions = {
     else console.error(...args);
   },
   onDownloadProgress: (downloaded, total) => {
-    downloadProgress = [downloaded, total];
-    for (const listener of listeners) listener.download(...downloadProgress);
+    assetDownloads.setRuntime({loaded:downloaded,total});
   },
   onAssetFetchProgress: reportAssetProgress,
 };
@@ -60,13 +64,5 @@ if(viewerMemory)runtimeOptions.wasmMemory=viewerMemory;
 export const viewerUsdReady = simreadyLocation(file) && window.__usdViewerAssetCacheMode
   ? Promise.resolve(window.__usdViewerAssetCacheReady).then(()=>getUsdModule(runtimeOptions))
   : getUsdModule(runtimeOptions);
-// The app attaches its error handler after its dependency graph has loaded.
-void viewerUsdReady.catch(() => {});
-
-export function subscribeRuntimeProgress(download, asset) {
-  const listener = {download, asset};
-  listeners.add(listener);
-  if (downloadProgress) download(...downloadProgress);
-  for(const progress of assetProgress.values())asset(progress);
-  return () => listeners.delete(listener);
-}
+// Keep the shared panel on initialization until the module can open a stage.
+viewerUsdReady.then(() => assetDownloads.setRuntime(null), () => assetDownloads.setRuntime(null));

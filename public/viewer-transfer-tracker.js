@@ -17,7 +17,7 @@ export function downloadAmount(item) {
 /** Tracks discovered files, not a guessed total for the whole USD composition. */
 export function createTransferTracker(now = () => performance.now()) {
   const files = new Map();
-  let received = 0, samples = [];
+  let received = 0, samples = [], started, finished;
   function sample(history, loaded, time) {
     if (history.length > 1 && time - history.at(-1).time < 100) Object.assign(history.at(-1),{time,loaded});
     else history.push({time,loaded});
@@ -34,6 +34,7 @@ export function createTransferTracker(now = () => performance.now()) {
       // Warmup and the resolver can report the same immutable file. Keep a
       // completed file complete instead of flashing it back to zero.
       if (previous?.state === 'done') return false;
+      started ??= time;
       const restart = event.state === 'start' && previous?.state === 'error';
       const file = !previous || restart ? {url:event.url,loaded:0,total:0,samples:[{time,loaded:0}]} : previous;
       const loaded = Math.max(file.loaded, Number(event.loaded) || 0);
@@ -50,6 +51,7 @@ export function createTransferTracker(now = () => performance.now()) {
       // precision and a bounded recent window for speed estimates.
       speed(file.samples,loaded,time);speed(samples,received,time);
       files.set(event.url,file);
+      finished = time;
       return true;
     },
     snapshot() {
@@ -66,11 +68,12 @@ export function createTransferTracker(now = () => performance.now()) {
       const loaded = entries.reduce((sum,file) => sum+file.loaded,0);
       const total = unknown ? null : entries.reduce((sum,file) => sum+file.total,0);
       const rate = speed(samples,received,time);
-      return {files:entries,active:active.length,completed:entries.filter(file=>file.state==='done').length,
+      const elapsed = started == null ? 0 : ((active.length ? time : finished) - started) / 1000;
+      return {files:entries,elapsed,active:active.length,completed:entries.filter(file=>file.state==='done').length,
         failed:entries.filter(file=>file.state==='error').length,unknown,loaded,total,rate,
         ratio:total == null ? null : total ? loaded/total : 1,
         eta:total != null && rate > 0 && !entries.some(file=>file.state==='error') ? Math.max(0,total-loaded)/rate : null};
     },
-    reset() {files.clear();received=0;samples=[];},
+    reset() {files.clear();received=0;samples=[];started=finished=undefined;},
   };
 }

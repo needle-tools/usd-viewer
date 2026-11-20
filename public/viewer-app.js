@@ -2,7 +2,7 @@ import {GLTF_SAMPLE_ASSETS_INDEX, mergeGltfSampleCards, normalizeModelKey, origi
 import {showViewportHelpers,syncViewportHelpers} from './viewer-helpers.js';
 import {loadSimreadyResources,simreadyLocation,warmSimreadyComposition} from './viewer-simready.js';
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
-import {viewerUsdReady, startupSimreadyReady, subscribeRuntimeProgress, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
+import {viewerUsdReady, startupSimreadyReady, assetDownloads, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
 import {viewerToneMapping,mountDisplayControl} from './viewer-display.js';
 import {
   Vector3,
@@ -39,7 +39,6 @@ import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/t
 import { fixtureNavigation } from './viewer-fixture-routing.js';
 import { runApiExample } from './viewer-api-examples.js';
 import { createSourceFiles } from './viewer-source-files.js';
-import {createDownloadProgress} from './viewer-download-progress.js';
 import {fetchAsset} from './usd/assetFetch.js';
 import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
@@ -1086,10 +1085,6 @@ function updateLoadingByteProgress(loaded, total, label = currentDisplayFilename
   }
 }
 
-const assetDownloads = createDownloadProgress({
-  getHost:()=>window.usdWorkbench?.viewport || document.getElementById('loading-overlay')?.parentElement,
-  onUpdate:snapshot=>{window.updateLoadingOverlayProgress?.(snapshot.active?{text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null);window.usdStagePanel?.refreshInfoFiles?.();},
-});
 function updateUsdAssetFetchProgress(progress) {assetDownloads.update(progress);}
 function resetAssetTransfers() {assetDownloads.reset();}
 let simreadyResources = null, compositionWarmupAbort, requestFileLinkLoad;
@@ -1231,11 +1226,6 @@ if (viewerMode === VIEWER_MODE_THREE && /\.usdz(?:[?#]|$)/i.test(filename) && !a
   void startupPackagePromise.catch(() => {});
 }
 try {
-  const unsubscribeProgress = subscribeRuntimeProgress(
-    (downloaded, total) => updateLoadingByteProgress(downloaded, total, "OpenUSD runtime"),
-    updateUsdAssetFetchProgress,
-  );
-  window.addEventListener('pagehide', unsubscribeProgress, {once: true});
   Promise.all([viewerUsdReady, initPromise]).then(async ([Usd]) => {
     USD = Usd;
     resolveUsdModuleReady?.(USD);

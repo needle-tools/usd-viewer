@@ -30,6 +30,7 @@ test('the requested package downloads before runtime readiness and is consumed o
     const response = await downloaded;
     expect(response.ok()).toBe(true);
     await response.finished();
+    await expect(page.locator('.usd-asset-progress:visible .usd-download-title')).toHaveText(/OpenUSD/);
     expect(await page.evaluate(() => !!(window as any).usdHydra)).toBe(false);
   } finally { release(); }
   await stageReady(page);

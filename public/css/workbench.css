@@ -546,7 +546,7 @@ body.usd-product ::-webkit-scrollbar-thumb { background: var(--usd-scrollbar-col
 .usd-download-summary,.usd-download-file-heading { display:flex; align-items:baseline; justify-content:space-between; gap:var(--usd-space-2); }
 .usd-download-summary { margin-block:var(--usd-space-field); }
 .usd-download-count,.usd-download-file-amount,.usd-download-timing { color:var(--text-secondary); white-space:nowrap; }
-.usd-download-timing { min-height:1.5em; margin-top:var(--usd-space-field); }
+.usd-download-timing { white-space:normal; min-height:1.5em; margin-top:var(--usd-space-field); }
 .usd-download-bar { display:block; width:100%; height:var(--usd-download-bar-height); appearance:none; border:0; border-radius:var(--usd-radius-small); overflow:hidden; background:var(--surface-panel-muted); accent-color:var(--accent-brand); }
 .usd-download-bar::-webkit-progress-bar { background:transparent; }
 .usd-download-bar::-webkit-progress-value { background:var(--accent-brand); }
