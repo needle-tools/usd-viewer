@@ -82,9 +82,8 @@ res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 
 ```sh
 git submodule update --init --recursive
-npm install
-npm run prepare:public
-npm run start
+npm ci
+npm start
 ```
 
 Then open the local URL printed by the server. `0.0.0.0` is not a good browser
@@ -95,10 +94,10 @@ The public viewer entrypoint lives in `public/`. The package and the three.js
 Hydra bridge live under `usd-wasm/`. Node.js 22.12 or newer is required for local
 development. The npm package version is maintained in `usd-wasm/package.json`;
 the private server has its own version.
-`prepare:public` also generates lossless Brotli/gzip runtime files for HTTP
-delivery. They stay out of the npm package; rerun preparation after updating
-the native artifacts. The development server serves the current original if
-its compressed files are missing or older.
+The Node server serves browser assets from the installed packages and bundles the
+kinematics module at startup. For production, run `npm run build` before
+`npm start` to precompress the runtime assets. The server can also serve the
+original files. `npm run prepare:public` copies assets for static distribution.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 

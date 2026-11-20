@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {assetSourceLinks,nvidiaAssetLink} from '../public/viewer-asset-info.js';
+import {assetSourceLinks,nvidiaAssetLink} from '../public/viewer-asset-links.js';
 
 test('source links preserve HF revisions and reject non-web sources',()=>{
  const path='cabinet/simready_usd/model.usd',source=`https://huggingface.co/datasets/nvidia/simready-assets/resolve/abc/${path}?download=true`;

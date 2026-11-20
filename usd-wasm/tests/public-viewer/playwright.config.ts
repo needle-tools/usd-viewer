@@ -31,7 +31,7 @@ export default defineConfig({
         ]}] },
     },
     webServer: {
-        command: `npm run prepare:public && PORT=${port} npm run start`,
+        command: `PORT=${port} npm run start`,
         cwd: '../../..',
         port,
         // Always start the server from the current tree; a reused one can serve stale code.

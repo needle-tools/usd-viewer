@@ -288,53 +288,36 @@ fastify.register(require('@fastify/static'), {
   decorateReply: false,
 });
 
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@needle-tools/materialx'),
-  prefix: '/materialx',
-  setHeaders,
-  decorateReply: false,
+const browserPackages = {
+  '/materialx': '@needle-tools/materialx',
+  '/needle-engine': '@needle-tools/engine',
+  '/needle-three': 'three',
+  '/three': 'three',
+  '/spark': '@sparkjsdev/spark',
+  '/simready': '@needle-tools/simready/src',
+  '/rapier': '@dimforge/rapier3d-compat/dist',
+  '/dockview': 'dockview-core/dist',
+  '/three-mesh-bvh': 'three-mesh-bvh',
+  '/mutracer': '@meimu/mutracer',
+  '/oidn-webgpu': 'oidn-webgpu',
+};
+for (const [prefix, folder] of Object.entries(browserPackages)) {
+  fastify.register(require('@fastify/static'), {
+    root: path.join(__dirname, 'node_modules', folder),
+    prefix, setHeaders, decorateReply: false,
+  });
+}
+fastify.get('/modules/mesh-bvh.umd.js', (_request, reply) => {
+  return reply.type('text/javascript').sendFile('index.umd.cjs', path.dirname(require.resolve('three-mesh-bvh')), { contentType: false });
 });
 
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@needle-tools/engine'),
-  prefix: '/needle-engine',
-  setHeaders,
-  decorateReply: false,
-});
-
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/three'),
-  prefix: '/needle-three',
-  setHeaders,
-  decorateReply: false,
-});
-
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@sparkjsdev/spark'),
-  prefix: '/spark',
-  setHeaders,
-  decorateReply: false,
-});
-
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@needle-tools/simready/src'),
-  prefix: '/simready',
-  setHeaders,
-  decorateReply: false,
-});
-
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/@dimforge/rapier3d-compat/dist'),
-  prefix: '/rapier',
-  setHeaders,
-  decorateReply: false,
-});
-
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname, 'node_modules/three'),
-  prefix: '/three',
-  setHeaders,
-  decorateReply: false,
+fastify.register(async function kinematicsRoutes(app) {
+  const { kinematicsAssets } = await import('./scripts/kinematics-assets.mjs');
+  for (const [name, contents] of kinematicsAssets) {
+    app.get('/modules/' + name, (_request, reply) => {
+      return reply.type(name.endsWith('.js') ? 'text/javascript' : 'text/plain').send(contents);
+    });
+  }
 });
 
 fastify.register(require('@fastify/static'), {
@@ -370,6 +353,6 @@ fastify.listen({port, host: '0.0.0.0'}, function(err, address) {
   // We bind to 0.0.0.0 (all interfaces) so the server is reachable from other
   // devices, but 0.0.0.0 isn't a browsable address — print a clickable
   // localhost URL for local development instead.
-  console.log(`Your app is listening on http://localhost:${port}`);
+  console.log(`Your app is listening on http://localhost:${new URL(address).port}`);
   fastify.log.info(`server listening on ${address}`);
 });
