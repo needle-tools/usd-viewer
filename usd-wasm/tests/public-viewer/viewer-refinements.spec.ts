@@ -29,7 +29,7 @@ test('Stage fits full type names and Simulation has its own pane',async({page},i
   const types=await page.locator('.usd-tree-row .usd-tree-type').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,clipped:node.scrollWidth>node.clientWidth,width:node.getBoundingClientRect().width})));
   expect(types.some(t=>t.text==='RectLight')).toBe(true);expect(types.every(t=>!t.clipped)).toBe(true);expect(new Set(types.map(t=>t.width)).size).toBe(1);
   await openAppMenu(page,'view');expect(await page.locator('[data-usd-menu=view] #usd-physics-controls').count()).toBe(0);await page.keyboard.press('Escape');
-  await openAppMenu(page,'window');await page.getByRole('checkbox',{name:'Show Simulation',exact:true}).check();await expect(page.locator('[data-panel=simulation]')).toBeVisible();await expect(page.locator('[data-panel=simulation]')).toContainText('No simulation');
+  await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();await expect(page.locator('[data-panel=simulation]')).toBeVisible();await expect(page.locator('[data-panel=simulation]')).toContainText('No simulation');
   await page.screenshot({path:info.outputPath('types-simulation.png')});
 });
 test('MuTracer does not turn a bright backdrop into environment illumination',async({page},info)=>{

@@ -161,3 +161,26 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
     await page.screenshot({path:info.outputPath(`${theme}-narrow-${name}.png`)});
   }
 });
+
+test('an existing Inspect layout gains the Simulation tab once and remembers closing it',async({page})=>{
+  await page.goto(stage);
+  await stageReady(page);
+  const simulation=page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/});
+  await expect(simulation).toBeVisible();
+  const close=()=>page.evaluate(()=>(window as any).usdWorkbench.dock.getPanel('simulation').api.close());
+  await close();
+  await page.addInitScript(()=>{
+    if (sessionStorage.getItem('tested-previous-layout')) return;
+    const key='needle-usd-workspace-v2',layout=JSON.parse(localStorage.getItem(key)!);
+    delete layout.simulationTabIntroduced;
+    localStorage.setItem(key,JSON.stringify(layout));
+    sessionStorage.setItem('tested-previous-layout','1');
+  });
+  await page.reload();
+  await stageReady(page);
+  await expect(simulation).toBeVisible();
+  await close();
+  await page.reload();
+  await stageReady(page);
+  await expect(simulation).toHaveCount(0);
+});

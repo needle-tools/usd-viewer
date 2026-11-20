@@ -86,7 +86,7 @@ for(const viewer of ['three','needle'])test(`${viewer}: direct exported GLB link
  try{
   await page.goto(`/?viewer=${viewer}&workspace=studio&file=`+encodeURIComponent(`http://127.0.0.1:${address.port}/assembly.glb`));
   await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics)).toBe(true);
-  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+  await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
   await page.getByRole('button',{name:'Interact',exact:true}).click();
   await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
   await dragAssemblyKnob(page);

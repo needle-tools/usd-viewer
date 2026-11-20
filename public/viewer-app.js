@@ -2157,6 +2157,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   let handle = null;
   let needleContext = null;
   try {
+    await window.usdWorkbench?.prepareStage();
+    if (generation !== loadGeneration) return;
     if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
       const result = await loadNeedleEngineFile(filename, path, filesForHydra, generation);
       if (!result) return;

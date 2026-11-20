@@ -42,7 +42,7 @@ for (const viewer of ['three', 'needle']) {
     });
     await page.goto(`/?viewer=${viewer}&file=/test-fixtures/coverage/advanced/physics-mass.usda`);
     const simulate = page.getByRole('button', { name: 'Simulate', exact: true });
-    await openAppMenu(page,'window');await page.getByRole('checkbox',{name:'Show Simulation',exact:true}).check();
+    await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
     await expect(simulate).toBeVisible();
     await simulate.click();
     await expect(page.getByRole('button', { name: viewer === 'needle' ? 'Stop' : 'Pause', exact: true })).toBeVisible();
@@ -103,7 +103,7 @@ test('physics runtime is downloaded only when simulation starts', async ({ page 
   await expect(page.locator('#usd-physics-controls')).toBeHidden();
   expect(requests).toEqual([]);
   await page.goto('/?viewer=three&file=/test-fixtures/coverage/advanced/physics-dominoes.usda');
-  await openAppMenu(page,'window');await page.getByRole('checkbox',{name:'Show Simulation',exact:true}).check();
+  await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
   await expect(page.getByRole('button', { name: 'Simulate', exact: true })).toBeVisible();
   expect(requests).toEqual([]);
   await page.getByRole('button', { name: 'Simulate', exact: true }).click();

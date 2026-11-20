@@ -287,7 +287,7 @@ export async function mountWorkbench() {
   });
   dock.layout(desktopWidth, desktopHeight);
   const codePane=mountLazyCodePane(hosts.code,{isVisible:()=>!restoring && isPanelVisible('code')});
-  function add(id, position) { const [title, minimumWidth, minimumHeight] = definitions[id]; return dock.addPanel({ id, title, component: id, minimumWidth, minimumHeight, renderer: 'always', ...(position ? { position } : {}) }); }
+  function add(id, position, inactive = false) { const [title, minimumWidth, minimumHeight] = definitions[id]; return dock.addPanel({ id, title, component: id, minimumWidth, minimumHeight, inactive, renderer: 'always', ...(position ? { position } : {}) }); }
   function defaultKind() { return workspace.clientWidth < COMPACT_WIDTH ? 'viewport' : workspace.clientWidth < 1100 ? 'review' : 'inspect'; }
   function defaults(kind = defaultKind(), explicit = true) {
     if (explicit) { awaitingStage = false; }
@@ -302,9 +302,11 @@ export async function mountWorkbench() {
       if (kind === 'inspect') {
         add('properties', { referencePanel: 'viewport', direction: 'right' });
       }
+      add('simulation', { referencePanel: kind === 'inspect' ? 'properties' : 'stage', direction: 'within' }, true);
       dock.getPanel('stage').api.setActive();
       dock.getPanel('stage').api.setSize({ width: navigationWidth });
     }
+    if (kind === 'viewport' && !explicit && !awaitingStage) add('simulation',{referencePanel:'viewport',direction:'within'});
     if (kind === 'viewport' && !explicit && !new URLSearchParams(location.search).get('file')) { add('examples',{referencePanel:'viewport',direction:'left'}).api.setSize({width:state.examplesWidth||dimension('examples-width',360)}); }
     if (browsing && dock.getPanel('examples')) { dock.getPanel('examples').api.setActive(); dock.getPanel('examples').api.setSize({width:browserWidth}); }
     dock.getPanel('properties')?.api.setSize({ width: inspectorWidth });
@@ -332,7 +334,7 @@ export async function mountWorkbench() {
     productMode = next; save(PRODUCT_MODE, next);
     const url = new URL(location.href); url.searchParams.set('workspace', next); history.replaceState({}, '', url);
     for (const [value, option] of productButtons) option.setAttribute('aria-pressed', String(value === next));
-    if (next === 'studio' && awaitingStage && stageInfo) { awaitingStage = false; defaults(defaultKind(), false); }
+    if (next === 'studio' && awaitingStage && (stageInfo || physicsController)) { awaitingStage = false; defaults(defaultKind(), false); }
     else layoutResponsive();
   }
   function showCompact(id) { compactPanel = id; renderCompact(); }
@@ -495,6 +497,18 @@ export async function mountWorkbench() {
   for (const body of [fileCommands, helpCommands]) body.addEventListener('click', event => { if (event.target.closest('button,a')) closeMenus(); });
   if (state.current) restore(state.current); else defaults('viewport', false);
   if (!state.examplesPanelIntroduced) { const active=dock.activePanel; if(state.current && !dock.getPanel('examples'))add('examples',{referencePanel:'viewport',direction:'left'}).api.setSize({width:state.examplesWidth||dimension('examples-width',360)}); active?.api.setActive(); state.examplesPanelIntroduced=true; }
+  if (!state.simulationTabIntroduced) {
+    // Upgrade the previous built-in layout in place, keeping its active tabs and sizes.
+    const inspector = state.preset === 'inspect';
+    const expected = inspector ? ['viewport','stage','layers','examples','properties'] : ['viewport','stage','layers','examples'];
+    if (state.current && (inspector || state.preset === 'review') && dock.panels.length === expected.length
+        && expected.every(id => dock.getPanel(id)?.api.location.type === 'grid')
+        && dock.getPanel('stage').group.panels.length === 3
+        && ['examples','layers'].every(id => dock.getPanel(id).group === dock.getPanel('stage').group)) {
+      add('simulation',{referencePanel:inspector ? 'properties' : 'stage',direction:'within'},true);
+    }
+    state.simulationTabIntroduced = true;
+  }
   if (migrating) dock.getPanel('console')?.api.close();
   restoring = false;
   function layoutResponsive() {
