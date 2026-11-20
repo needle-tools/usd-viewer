@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openSettings,stageReady} from './workbench-menus';
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const url=(viewer='three')=>`/?viewer=${viewer}&file=${asset}`;

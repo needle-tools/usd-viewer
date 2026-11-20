@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 
 const holes = [5,7,13,15,21,23,29,31,37,39,45,47,69,71,77,79,85,87,93,95];

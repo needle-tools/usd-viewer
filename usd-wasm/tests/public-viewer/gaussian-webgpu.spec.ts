@@ -1,5 +1,5 @@
 import {openSettings,stageReady} from './workbench-menus';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 // No external fonts are needed to verify local GPU rendering.
 test.beforeEach(async ({ page }) => {
@@ -117,6 +117,8 @@ for (const backend of ['webgpu', 'webgl']) test(`orthographic splats retain size
         w.usdRenderCamera.position.set(0,0,5); w.usdRenderCamera.lookAt(0,0,0);
     });
     await page.addStyleTag({ content: '#top-center,#render-mode-controls,#usd-suite,.usd-timeline {visibility:hidden!important}' });
+    // The downloads panel covers the canvas until it hides itself after loading.
+    await expect(page.locator('.usd-asset-progress')).toBeHidden();
     const canvas = page.locator('canvas.usd-viewer-three-canvas'), before = await canvas.screenshot();
     await page.evaluate(() => { const w = window as any; w.usdRenderCamera.position.z = 10; w.usdRenderCamera.updateMatrixWorld(); });
     expect(await imageDifference(page, before, await canvas.screenshot())).toBeLessThan(30);
@@ -170,6 +172,8 @@ for (const backend of ['webgpu','webgl']) test(`Gaussian tails stay smooth on da
   expect(pixels[1][1]/pixels[1][0]).toBeGreaterThan(2);
   await page.evaluate(()=>{const w=window as any;w.tailSplat.removeFromParent();w.tailSplat.dispose();w.usdRoot.visible=true;});
   await openSettings(page);
+  // The downloads panel covers the canvas until it hides itself after loading.
+  await expect(page.locator('.usd-asset-progress')).toBeHidden();
   const background=page.getByRole('combobox',{name:'Background',exact:true});
   for(const mode of ['basic','beauty']){
     await page.evaluate(mode=>(window as any).usdRenderModes.setMode(mode),mode);

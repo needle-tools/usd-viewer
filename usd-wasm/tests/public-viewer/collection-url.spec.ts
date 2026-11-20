@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 
 test('a dataset folder supplied by URL opens as a collection without a custom manifest',async({page})=>{
  const url='https://huggingface.co/datasets/agibot-assets/simready-assets/tree/main/g2_swiftpicker';

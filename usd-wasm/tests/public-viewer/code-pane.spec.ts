@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples, stageReady, clearStage} from './workbench-menus';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './test';
 import { replExamples, apiExampleAssets } from '../fixtures/api/examples.js';
 
 const exampleCode = (id: string) => replExamples[apiExampleAssets.findIndex(asset => asset.executable === id)].code;

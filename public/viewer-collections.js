@@ -1,7 +1,6 @@
 // Add a dataset URL here to register another built-in example folder.
 export const DEFAULT_COLLECTIONS = [
   {title:'NVIDIA SimReady',url:'https://huggingface.co/datasets/nvidia/simready-assets'},
-  {title:'AGIBOT SimReady',url:'https://huggingface.co/datasets/agibot-assets/simready-assets'},
 ];
 
 const encodePath = path => path.split('/').map(encodeURIComponent).join('/');

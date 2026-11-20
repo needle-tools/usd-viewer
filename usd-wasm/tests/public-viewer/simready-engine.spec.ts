@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {writeFile} from 'node:fs/promises';
 import {stageReady} from './workbench-menus';
 
@@ -33,10 +33,13 @@ test('large engine stays responsive with remembered geometry source and oversize
  expect(meshPaths.length).toBeGreaterThan(0);
  await page.evaluate(path=>{(window as any).__engineLongTasks=[];(window as any).usdStagePanel.selectPrim(path);},meshPaths[0]);
  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('properties'));
- await expect(page.locator('[data-panel=properties] .usd-property-array-pager').first()).toBeVisible();
+ // Arrays open in the array editor, which reads one page at a time from the stage.
  const row=page.locator('[data-panel=properties] tr[data-property-path="'+meshPaths[0]+'.points"]');
- await expect(row).toContainText('256 /');
- await row.getByRole('button',{name:'Next array values',exact:true}).click();await expect(row).toContainText('257–512 /');
+ await row.getByRole('button',{name:'Open points array',exact:true}).click();
+ const position=page.locator('[data-panel=properties] [aria-label="points data"] .usd-array-position');
+ await expect(position).toHaveText(/^0–31 \/ /);
+ await page.locator('[data-panel=properties] [aria-label="points data"]').getByRole('button',{name:'Next rows',exact:true}).click();
+ await expect(position).toHaveText(/^32–63 \/ /);
  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
  const rapier:string[]=[];page.on('request',r=>{if(r.url().includes('/rapier/'))rapier.push(r.url());});
  const interact=page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true});await interact.click();await expect(interact).toHaveAttribute('aria-pressed','true');

@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {stageReady} from './workbench-menus';
 
 test('Code links hierarchy selection to the declaring layer and remembers the toggle',async({page},info)=>{

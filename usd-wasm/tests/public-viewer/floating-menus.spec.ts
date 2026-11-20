@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 import {openAppMenu, openSamples} from './workbench-menus';
 
 for (const width of [800, 1440]) {

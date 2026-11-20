@@ -1,7 +1,6 @@
 const fastify = require('fastify')()
 const path = require('path')
 const {runtimeCompressionGuard} = require('./scripts/precompressed-runtime')
-const {createModuleVersions} = require('./scripts/module-versions')
 const { injectClientIpIntoAnalyticsTrackBody } = require('./scripts/analytics-proxy')
 
 // Headers are required for SharedArrayBuffers and WebAssembly
@@ -17,7 +16,6 @@ function setHeaders(res, path, stat) {
   }
 
   const normalizedPath = path.replaceAll("\\", '/');
-  if(normalizedPath.endsWith('.css'))res.setHeader('Cache-Control','no-cache');
   if (normalizedPath.endsWith('/usd-asset-cache-sw.js')) {
     res.setHeader("Service-Worker-Allowed", "/");
     res.setHeader("Cache-Control", "no-cache");
@@ -265,10 +263,14 @@ fastify.route({
   handler: proxyToAnalytics,
 });
 
-const readModuleVersions = createModuleVersions(__dirname);
-fastify.get('/viewer-module-versions.json', async (_request,reply) => {
-  reply.header('Cache-Control','no-store').type('application/json');
-  return await readModuleVersions();
+// Revalidate app and SDK code on every load (ETag/Last-Modified make unchanged
+// files a 304), so a reload never mixes cached modules with newer ones.
+// @fastify/static applies its own Cache-Control after setHeaders, so set it here.
+const revalidated = /\.(?:m?js|css|wasm|json|html)$/;
+fastify.addHook('onSend', async (request, reply, payload) => {
+  const pathname = request.url.split('?')[0];
+  if (pathname === '/' || revalidated.test(pathname)) reply.header('Cache-Control', 'no-cache');
+  return payload;
 });
 
 fastify.register(require('@fastify/static'), {

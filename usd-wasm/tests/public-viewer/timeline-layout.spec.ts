@@ -1,4 +1,4 @@
-import {test, expect, type Page} from '@playwright/test';
+import {test, expect, type Page} from './test';
 import {openAppMenu, stageReady, clearStage} from './workbench-menus';
 
 const source = (animated: boolean) => `#usda 1.0

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test';
 import { readFileSync } from 'node:fs';
 
 // Independent oracle: the installed Needle Engine's original GLSL, not a second

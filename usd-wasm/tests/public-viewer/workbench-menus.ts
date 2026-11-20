@@ -1,6 +1,8 @@
 import {expect, type Page} from '@playwright/test';
 
 async function showMenubar(page:Page) {
+  // The compact menu toggle only shows once the workbench has laid itself out.
+  await page.waitForFunction(()=>(window as any).__usdViewerUiReady);
   const toggle=page.getByRole('button',{name:'Application menus',exact:true});
   if(await toggle.isVisible() && await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
 }

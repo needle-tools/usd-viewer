@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples} from './workbench-menus';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './test';
 
 // Keep these local rendering checks independent of the web-font CDN.
 test.beforeEach(async ({ page }) => {
@@ -131,13 +131,19 @@ for (const viewer of ['three', 'needle']) {
         await page.waitForFunction(() => !!(window as any).usdHydra && !!(window as any).usdStage, null, { timeout: 120_000 });
         await page.waitForFunction(viewer => !!(viewer === 'needle' ? (window as any).needleEngineContext?.scene : (window as any).scene)?.environment, viewer);
         const initial = await page.evaluate(viewer => (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environment.uuid, viewer);
+        // Domes carry a fixed basis from USD's lat-long orientation to three's, so compare the
+        // rotated variant with the unrotated one.
+        const unrotatedY = await page.evaluate(viewer => (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environmentRotation.y, viewer);
         await page.evaluate(() => (window as any).usdWorkbench.openPanel('properties'));
     const selection = page.locator('select[data-stage-variant="environment"]');
         await selection.selectOption('night');
         await page.waitForFunction(({viewer, initial}) => (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environment?.uuid !== initial, {viewer,initial});
         await expect(selection).toHaveValue('night');
         await selection.selectOption('dayRotated');
-        await page.waitForFunction(viewer => Math.abs((viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environmentRotation.y - Math.PI / 2) < 0.01, viewer);
+        await page.waitForFunction(({viewer, unrotatedY}) => {
+            const turn = (viewer === 'needle' ? (window as any).needleEngineContext.scene : (window as any).scene).environmentRotation.y - unrotatedY;
+            return Math.abs(((turn - Math.PI / 2) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) < 0.01;
+        }, {viewer, unrotatedY});
         await expect(selection).toHaveValue('dayRotated');
     });
 }

@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 import {hierarchyFiles} from '../fixtures/hierarchy-audit.mjs';
 const row=(page:any,path:string)=>page.locator(`[data-prim-path="${path}"]`);

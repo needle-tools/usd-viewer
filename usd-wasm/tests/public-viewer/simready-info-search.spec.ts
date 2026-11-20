@@ -1,9 +1,9 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openSamples,selectExampleFolder,stageReady} from './workbench-menus';
 
 test('AGIBOT folder search and Info use shared controls and authored metadata',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'collection:'+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));
+ await page.goto('/?workspace=studio&viewer=three&render=basic&collection='+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));await openSamples(page);await selectExampleFolder(page,'collection:'+encodeURIComponent('https://huggingface.co/datasets/agibot-assets/simready-assets'));
  await page.getByRole('searchbox',{name:'Search examples'}).fill('g2_swiftpicker');
  const card=page.locator('.gallery-card:visible').filter({hasText:'g2 swiftpicker'});
  await expect(card).toHaveCount(1,{timeout:25000});await expect(card.locator('img')).toBeVisible();
@@ -25,14 +25,16 @@ test('AGIBOT folder search and Info use shared controls and authored metadata',a
   await section.evaluate(el=>el.scrollTop=0);
   await expect(section.getByRole('link',{name:'NVIDIA SimReady'})).toHaveCSS('display','inline-flex');
   const styles=await page.evaluate(()=>[...document.querySelectorAll<HTMLLinkElement>('link[rel=stylesheet]')].filter(link=>/workbench\.css|brand\.css|viewer\/style\.css/.test(link.href)).map(link=>link.href));
-  expect(styles).toHaveLength(3);expect(styles.every(href=>href.includes('?v='))).toBe(true);
+  // Stylesheets are revalidated on every load instead of carrying a version in their URL.
+  expect(styles).toHaveLength(3);
+  for(const href of styles)expect((await page.request.head(href)).headers()['cache-control']).toBe('no-cache');
   await page.screenshot({path:info.outputPath(`swiftpicker-info-${theme}.png`)});
  }
- const opened=page.context().waitForEvent('page');await section.getByRole('link',{name:'NVIDIA SimReady'}).click();const nvidia=await opened;
- await expect(nvidia.getByText('g2_swiftpicker',{exact:true}).last()).toBeVisible({timeout:25000});
- await expect(nvidia.getByRole('button',{name:'Interactive USD',exact:true})).toBeVisible();
- await expect(nvidia.getByText('Robot-Body',{exact:true}).last()).toBeVisible();
- await nvidia.screenshot({path:info.outputPath('nvidia-swiftpicker-link.png')});await nvidia.close();
+ // The link opens NVIDIA's SimReady browser (a live third-party app the offline suite cannot
+ // replay) filtered to this asset.
+ expect(target.origin).toBe('https://nvidia-simready-central.hf.space');
+ expect(new RegExp(target.searchParams.get('filter_url_regexp')!).test('https://huggingface.co/datasets/agibot-assets/simready-assets/resolve/main/g2_swiftpicker/simready_usd/g2_swiftpicker.usda')).toBe(true);
+ await expect(section.getByRole('link',{name:'NVIDIA SimReady'})).toHaveAttribute('target','_blank');
  expect(errors).toEqual([]);
 });
 

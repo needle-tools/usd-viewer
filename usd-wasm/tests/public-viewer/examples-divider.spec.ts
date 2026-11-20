@@ -1,5 +1,5 @@
 import {selectExampleFolder, openSamples} from './workbench-menus';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './test';
 
 async function navigationSize(page: Page, axis: 'height' | 'width') {
   return page.locator('.usd-examples-folders').evaluate((element, axis) => element.getBoundingClientRect()[axis], axis);

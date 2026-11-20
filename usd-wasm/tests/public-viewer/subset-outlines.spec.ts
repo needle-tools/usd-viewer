@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 
 for(const viewer of ['three','needle'])test(`${viewer}: selected and hovered subsets outline their own faces`,async({page},info)=>{

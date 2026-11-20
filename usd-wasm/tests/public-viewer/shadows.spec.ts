@@ -1,7 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { Matrix4, Vector3 } from 'three';
 // standard_surface consumes a tangent basis even on an untextured analytic Cube.
 // Author it explicitly so these tests measure shadows on a genuinely lit receiver.
+// A distant light's illuminance is its intensity times the sun disk's solid angle (UsdLux), so
+// the key uses UsdLux's default sun intensity.
 function scene(type:string,variants=false,materialX=false) {
  const pos=new Vector3(-2,4,2),m=new Matrix4().lookAt(pos,new Vector3(),new Vector3(0,1,0)).setPosition(pos);
  const transform=Array.from({length:4},(_,i)=>`(${m.elements.slice(i*4,i*4+4).join(',')})`).join(',');
@@ -41,7 +43,7 @@ def Xform "World" {
   prepend apiSchemas = ["ShadowAPI"${type==='spot'?', "ShapingAPI"':''}]
   ${variants?'variants = { string shadows = "on" }\n  prepend variantSets = "shadows"':''}
  ) {
-  float inputs:intensity = ${type==='distant'?100:10000}
+  float inputs:intensity = ${type==='distant'?50000:10000}
   ${type==='spot'?'float inputs:shaping:cone:angle = 60':''}
   matrix4d xformOp:transform = (${transform})
   uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -149,10 +151,10 @@ for(const viewer of ['three','needle'])test(`${viewer}: gallery Distant sun shad
 });
 
 for(const viewer of ['three','needle'])test(`${viewer}: MaterialX per-light shadow changes retain matching shadow-map order`,async({page},testInfo)=>{
- let source=scene('distant',false,true).replace('float inputs:intensity = 100','color3f inputs:color = (1,0.1,0.05)\n  float inputs:intensity = 100');
+ let source=scene('distant',false,true).replace('float inputs:intensity = 50000','color3f inputs:color = (1,0.1,0.05)\n  float inputs:intensity = 50000');
  const fill=`
  def DistantLight "Fill" (prepend apiSchemas = ["ShadowAPI"]) {
-  float inputs:intensity = 100
+  float inputs:intensity = 50000
   color3f inputs:color = (0.05,0.1,1)
   bool inputs:shadow:enable = true
   float3 xformOp:rotateXYZ = (-50,40,0)
@@ -180,6 +182,8 @@ for(const viewer of ['three','needle'])test(`${viewer}: MaterialX per-light shad
  expect(initial).toHaveLength(2);
  expect(initial.every((path:any)=>typeof path==='string')).toBe(true);
  const canvas=page.locator(viewer==='three'?'canvas.usd-viewer-three-canvas':'needle-engine canvas').first();
+ // The downloads panel covers the canvas until it hides itself after loading.
+ await expect(page.locator('.usd-asset-progress')).toBeHidden();
  await page.waitForTimeout(150);const bothOn=await canvas.screenshot();
  await page.evaluate(async(path:string)=>{
   await (window as any).usdHydra.editStage(async(stage:any)=>{

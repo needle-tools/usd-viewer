@@ -1,4 +1,4 @@
-import {test, expect, type Page} from '@playwright/test';
+import {test, expect, type Page} from './test';
 import {stageReady} from './workbench-menus';
 
 async function coloredPixels(page: Page, png: Buffer) {

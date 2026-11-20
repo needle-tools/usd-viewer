@@ -1,5 +1,5 @@
 import {clearStage,openSettings,stageReady} from './workbench-menus';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 test.beforeEach(async ({ page }) => {
     await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//, route => route.fulfill({ contentType: 'text/css', body: '' }));

@@ -1,5 +1,5 @@
 import {clearStage,openSettings,stageReady} from './workbench-menus';
-import {expect,test,type Page} from '@playwright/test';
+import {expect,test,type Page} from './test';
 import {openAppMenu} from './workbench-menus';
 
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';

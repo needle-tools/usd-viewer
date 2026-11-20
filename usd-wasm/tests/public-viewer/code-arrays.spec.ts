@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from './test';
 import { openAppMenu, stageReady } from "./workbench-menus";
 test.beforeEach(async ({ page }) => {
   (page as any).arrayErrors = [];

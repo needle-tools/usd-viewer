@@ -1,9 +1,8 @@
-import { cpSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import './prepare-static-assets.mjs';
 import './prepare-kinematics.mjs';
-import moduleVersions from './module-versions.js';
 
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
@@ -61,5 +60,3 @@ for (const copy of copies) {
   console.log(`Prepared ${copy.label}: ${copy.to}`);
 }
 
-// Static uploads use the same versioned imports as the local server.
-writeFileSync(join(root,'public/viewer-module-versions.json'),JSON.stringify(await moduleVersions.createModuleVersions(root)())+'\n');

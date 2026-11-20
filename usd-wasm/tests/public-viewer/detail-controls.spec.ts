@@ -1,5 +1,5 @@
 import {clearStage,openSettings,stageReady} from './workbench-menus';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 for (const viewer of ['three', 'needle']) {
   test(`${viewer}: detail changes subdivision in place and survives reload`, async ({ page }, testInfo) => {

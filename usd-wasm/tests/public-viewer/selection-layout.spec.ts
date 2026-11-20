@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {stageReady} from './workbench-menus';
 
 for(const viewer of ['three','needle'])test(`${viewer}: viewport selection cannot scroll a dock containing a stale hidden Stage`,async({page},info)=>{

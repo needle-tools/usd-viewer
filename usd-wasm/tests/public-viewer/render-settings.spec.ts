@@ -1,5 +1,5 @@
 import {openSettings,stageReady} from './workbench-menus';
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 const stage='/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 test.beforeEach(async({page})=>{await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//,r=>r.fulfill({contentType:'text/css',body:''}));});
 

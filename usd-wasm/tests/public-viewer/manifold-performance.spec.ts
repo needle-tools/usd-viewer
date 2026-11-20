@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady} from './workbench-menus';
 const asset='https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/fuelSystem_intake_manifold_d01/simready_usd/sm_fuelSystem_intake_manifold_d01_01.usd';
 

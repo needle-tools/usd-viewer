@@ -22,7 +22,7 @@ public/three-mesh-bvh
 public/dockview
 public/modules/mesh-bvh.umd.js
 
-# Local planning, review evidence and release preparation.
+# Local files and generated output.
 /.cache/
 /TODO.md
 /docs/releases/
@@ -38,12 +38,12 @@ public/modules/mesh-bvh.umd.js
 # Optional browser kinematics bundle (prepare:public).
 /public/modules/kinematics.js*
 
-# Generated module URLs for static uploads.
-/public/viewer-module-versions.json
-
-# Native Hydra experiment build products.
+# Native renderer build output.
 /native/.build/
 /native/renderer/renderer.js
 /native/renderer/assets/
 /native/**/__pycache__/
 native/node_modules/
+
+# Downloaded browser-test assets (npm run test:assets)
+/usd-wasm/tests/data/remote/

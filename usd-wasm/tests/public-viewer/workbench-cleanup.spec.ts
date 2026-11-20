@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openAppMenu} from './workbench-menus';
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const ready=(page:any)=>page.waitForFunction(()=>!!(window as any).usdStagePanel,null,{timeout:15000});

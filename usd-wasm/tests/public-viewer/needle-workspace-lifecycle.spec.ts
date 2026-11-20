@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {clearStage} from './workbench-menus';
 
 for(const legacyMoves of [false,true])test(`Needle keeps the loaded context through workspace moves${legacyMoves?' without state-preserving DOM moves':''}`,async({page},info)=>{

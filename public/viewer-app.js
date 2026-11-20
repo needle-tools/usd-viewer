@@ -1236,6 +1236,8 @@ try {
     resolveUsdModuleReady?.(USD);
     updateOpenUsdBuildInfo(USD);
     if (window.setViewerLoading) window.setViewerLoading(false);
+    // Automation waits on this flag rather than on visible messages.
+    window.__usdViewerRuntimeReady = true;
     if (messageLog) messageLog.innerHTML = '<svg class="log-icon notranslate" translate="no" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Loading done. Drop a USD file and its dependencies to view it, or select a sample above.';
     animate();
     if (startupFilename && loadGeneration === startupGeneration) {
@@ -1301,7 +1303,7 @@ catch (error) {
 
 // The header owns format selection, progress and saving; every glTF download
 // goes through the same exporter regardless of the current viewer mode.
-async function exportCurrentGltf({onProgress,signal,textureResolution='original'}={}) {
+async function exportCurrentGltf({onProgress,signal,textureResolution='original',output='blob'}={}) {
   const generation=loadGeneration;
   track('export_gltf_started',{textures:textureResolution,simready:!!currentHydraHandle});
   try {
@@ -1309,10 +1311,10 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     viewerPhysics?.reset?.();
     const handle=currentHydraHandle;
-    const bytes=handle?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({handle,exporter:new GLTFExporter(),onProgress,textureResolution,signal})
+    const bytes=handle?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({handle,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal})
       :await new GLTFExporter().parseAsync(window.usdRoot,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
-    track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes.byteLength),simready:!!handle});
+    track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes instanceof Blob?bytes.size:bytes.byteLength),simready:!!handle});
     return bytes;
   } catch(error) {if(error.name!=='AbortError')trackError('export_gltf',error);throw error;}
 }
@@ -1331,7 +1333,8 @@ async function shareCurrentAsset({format='gltf',textureResolution='original',sig
   if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Share cancelled','AbortError');
   const basename=cloudUploadBasename(loadedSourceUrl||'',currentDisplayFilename||loadedSourceFilename).replace(/\.[^.]+$/,'');
   const rootFilename=basename+(format==='gltf'?'.glb':'.'+format);
-  const buffer=bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  const buffer=bytes instanceof Blob?await bytes.arrayBuffer():bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Share cancelled','AbortError');
   try {sessionStorage.setItem('needle_cloud_base',needleCloudBase());}catch{}
   const returnUrl=location.href;
   if(await uploadToNeedleCloud({files:[{relativePath:rootFilename,bytes:buffer}],rootFilename}))location.assign('/cloud-handoff.html?return='+encodeURIComponent(returnUrl));
@@ -1880,6 +1883,42 @@ async function waitForNeedleHydraReady(handle, timeoutMs = 15000) {
   }
 }
 
+function fitNeedleCamera(context) {
+  let fitted = false;
+  context?.scene?.traverse(object => {
+    if (fitted) return;
+    for (const component of object.userData?.components || []) {
+      if (typeof component.fitCamera === 'function' && component.controls?.object === context.mainCamera) {
+        // Immediate: a later fit by the user (F, selection) must not be overridden by an animation.
+        component.fitCamera({ immediate: true });
+        fitted = true;
+        return;
+      }
+    }
+  });
+}
+
+// Bounds of the geometry that is currently shown, or null when nothing is.
+function visibleSceneBounds(scene) {
+  const bounds = new Box3();
+  const part = new Box3();
+  scene?.updateMatrixWorld?.();
+  scene?.traverseVisible?.(object => {
+    const geometry = object.geometry;
+    if (!geometry || !(object.isMesh || object.isPoints || object.isLine)) return;
+    if (!geometry.boundingBox) geometry.computeBoundingBox?.();
+    if (!geometry.boundingBox || geometry.boundingBox.isEmpty()) return;
+    bounds.union(part.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld));
+  });
+  return bounds.isEmpty() ? null : bounds;
+}
+
+function sameBounds(a, b) {
+  if (!a || !b) return a === b;
+  const tolerance = 1e-3 * Math.max(a.min.distanceTo(a.max), b.min.distanceTo(b.max), 1e-6);
+  return a.min.distanceTo(b.min) <= tolerance && a.max.distanceTo(b.max) <= tolerance;
+}
+
 async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   const element = await ensureNeedleEngineLoader();
   needleLoaderFiles = filesForHydra || [];
@@ -1923,7 +1962,20 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   if (waitForMaterials) {
     await handle.materialsReady?.();
   } else {
-    void handle.materialsReady?.().catch(err => {
+    // Needle Engine fits the camera when the file finishes loading. Meshes whose
+    // materials are still compiling (MaterialX) are hidden then, so that fit can
+    // find nothing. Fit again once they show, unless the view has changed since
+    // or the shown content is the same as at load.
+    const camera = context?.mainCamera;
+    camera?.updateMatrixWorld();
+    const loadedView = camera?.matrixWorld.clone();
+    const loadedBounds = visibleSceneBounds(context?.scene);
+    void handle.materialsReady?.().then(() => {
+      if (generation !== loadGeneration || !camera || !loadedView) return;
+      camera.updateMatrixWorld();
+      const unchanged = camera.matrixWorld.elements.every((value, index) => Math.abs(value - loadedView.elements[index]) < 1e-6);
+      if (unchanged && !sameBounds(loadedBounds, visibleSceneBounds(context.scene))) fitNeedleCamera(context);
+    }, err => {
       console.warn("Needle Engine USD materials finished with errors", err);
     });
   }
@@ -2201,6 +2253,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
     await startRenderMode?.();
     if (window.setViewerLoading) window.setViewerLoading(false);
     if (window.hideLoadingOverlay) window.hideLoadingOverlay();
+    // Automation waits on this to know which requested file finished loading.
+    window.__usdViewerLoaded = { generation, file: new URL(location.href).searchParams.get('file') };
     setAssetDownload(handle,generation);
     messageLog.textContent = "";
 
@@ -2656,7 +2710,9 @@ async function init() {
   const endDrag = () => { dragDepth = 0; setDragActive(false); };
   window.addEventListener("drop", (ev) => {
     endDrag();
-    if (!ev.defaultPrevented) dropHandler(ev);
+    // Dock panels prevent the default of every drop, so check whether the
+    // viewer itself already handled this one instead.
+    if (!handledDrops.has(ev)) dropHandler(ev);
   });
   window.addEventListener("dragend", endDrag);
 
@@ -4846,7 +4902,11 @@ async function handleFilesystemEntries(entries) {
 /**
  * @param {DragEvent} ev
  */
+/** Drop events the viewer has loaded files from, so bubbling does not load them twice. */
+const handledDrops = new WeakSet();
+
 function dropHandler(ev) {
+  handledDrops.add(ev);
   if (debugFileHandling) console.log('File(s) dropped', ev.dataTransfer?.items, ev.dataTransfer?.files);
 
   // Prevent default behavior (Prevent file from being opened)

@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 
 test('worker picking preserves shared indexed/nonindexed geometry, instances, groups and source edits',async({page},info)=>{
  const errors:string[]=[],warnings:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='warning'&&/picking/i.test(m.text()))warnings.push(m.text());});

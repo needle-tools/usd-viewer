@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples, openSettings, stageReady} from './workbench-menus';
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Page} from './test';
 
 const fixture = '/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const bounds = (page: Page, selector: string) => page.locator(selector).evaluate(el => el.getBoundingClientRect().toJSON());

@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {openSettings, stageReady} from './workbench-menus';
 
 for (const viewer of ['three','needle']) test(`${viewer}: purpose round trips restore the initial visible objects`, async ({page}, info) => {

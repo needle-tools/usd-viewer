@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady,openAppMenu,openSettings} from './workbench-menus';
 const file='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 for(const viewer of ['three','needle'])test(`${viewer}: F frames selection and all, preserves direction and ignores text input`,async({page},info)=>{

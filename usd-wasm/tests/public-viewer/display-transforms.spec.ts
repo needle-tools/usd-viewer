@@ -1,4 +1,4 @@
-import{test,expect}from'@playwright/test';
+import{test,expect}from'./test';
 test('MuTracer ACES and Khronos Neutral match the original Three GLSL over HDR inputs',async({page})=>{
  await page.goto('/?viewer=three');
  const result=await page.evaluate(async()=>{

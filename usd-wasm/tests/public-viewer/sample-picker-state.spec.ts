@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples} from './workbench-menus';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 async function openPicker(page: Page) {
   await openSamples(page);

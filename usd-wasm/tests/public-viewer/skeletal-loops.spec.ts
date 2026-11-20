@@ -1,20 +1,18 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {writeFile} from 'node:fs/promises';
-import {stageReady} from './workbench-menus';
 
 const fixtures = ['skel-rest', 'skel-bind', 'skel-joint-names', 'skel-weighted',
   'skel-dual-quaternion', 'skel-translation', 'skel-rotation',
   'blendshape', 'blendshape-sparse', 'blendshape-inbetween'];
 
-for (const viewer of ['three', 'needle']) {
-  test(`${viewer}: skeletal performances loop and seek without losing their pose`, async ({page}, info) => {
-    test.setTimeout(300_000);
-    const results: any[] = [], errors: string[] = [];
-    page.on('pageerror', error => errors.push(error.message));
-    for (const name of fixtures) await test.step(name, async () => {
+// One test per fixture so they spread across workers.
+for (const viewer of ['three', 'needle']) for (const name of fixtures) {
+  test(`${viewer}: skeletal performance ${name} loops and seeks without losing its pose`, async ({app}, info) => {
+    const results: any[] = [];
+    const {page, errors, load} = await app(`viewer=${viewer}&render=beauty`);
+    {
       const root = `coverage/advanced/${name}.usda`;
-      await page.goto(`/?viewer=${viewer}&render=beauty&file=${encodeURIComponent('/test-fixtures/' + root)}`);
-      await stageReady(page);
+      await load('/test-fixtures/' + root);
       const range = await page.evaluate(() => {
         const h = (window as any).usdHydra; h.setPlaying(false);
         return [h.driver.GetStageStartTimeCode(), h.driver.GetStageEndTimeCode()];
@@ -65,9 +63,7 @@ for (const viewer of ['three', 'needle']) {
       results.push({id: 'advanced-' + name, root,
         samples: samples.slice(0, 9).map(sample => ({time: sample.time, positions: uniquePoints(sample.positions)}))});
       await writeFile(info.outputPath('positions.json'), JSON.stringify({viewer, results}));
-      await page.evaluate(() => (window as any).usdHydra.setTime(25));
-      await page.screenshot({path: info.outputPath(name + '.png')});
-    });
+    }
     expect(errors).toEqual([]);
   });
 }

@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openSettings,stageReady} from './workbench-menus';
 
 for(const mode of ['basic','beauty'])test(`${mode}: compact properties pauses hidden drawing and returning resumes it`,async({page})=>{

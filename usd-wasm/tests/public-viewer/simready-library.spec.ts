@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {openSamples,selectExampleFolder,stageReady,openAppMenu} from './workbench-menus';
 
 test('SimReady is a lazy, complete folder catalog with searchable IDs and NVIDIA theme previews',async({page},info)=>{

@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 
 for (const viewer of ['three','needle']) test(`${viewer}: API look variants compose distinct visible warm and cool options`, async ({page}, info) => {

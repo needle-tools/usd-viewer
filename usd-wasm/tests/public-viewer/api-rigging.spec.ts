@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {stageReady} from './workbench-menus';
 
 const rigs = [
@@ -15,6 +15,7 @@ for (const viewer of ['three', 'needle']) for (const [id, path] of rigs) {
       await handle.setTime(time);
       const {Vector3, Matrix4} = await import('three');
       handle.scene.updateMatrixWorld(true);
+      const stageFromWorld = handle.scene.matrixWorld.clone().invert();
       const values: number[] = [];
       handle.scene.traverse((object: any) => {
         if (!object.isMesh || object.userData.usdPath !== path) return;
@@ -22,8 +23,9 @@ for (const viewer of ['three', 'needle']) for (const [id, path] of rigs) {
         // changing its local vertex buffer. Compare the rendered world points.
         const position = object.geometry.attributes.position;
         const point = new Vector3(), matrix = new Matrix4();
+        // Measure in stage units: Needle scales the USD root by metersPerUnit.
         if (object.isInstancedMesh) object.getMatrixAt(0, matrix);
-        matrix.premultiply(object.matrixWorld);
+        matrix.premultiply(object.matrixWorld).premultiply(stageFromWorld);
         for (let i = 0; i < position.count; i++)
           values.push(...point.fromBufferAttribute(position, i).applyMatrix4(matrix).toArray());
       });

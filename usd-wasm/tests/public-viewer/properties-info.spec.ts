@@ -1,4 +1,4 @@
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 import {stageReady} from './workbench-menus';
 
 const revision='4763fbfaa4f8e97658e68b57d01b4c86659e08b5';

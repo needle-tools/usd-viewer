@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './test';
 import {clearStage, stageReady} from './workbench-menus';
 
 const asset = '/test-fixtures/asset-explorer/DamagedHelmet.glb.three.usdz';
@@ -8,7 +8,7 @@ test('runtime and package requests start while the app module is still loading',
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/viewer-app.js', async route => { await held; await route.continue(); });
-  const runtime = page.waitForRequest(/\/emHdBindings(?:\.jspi)?\.wasm$/);
+  const runtime = page.waitForRequest(/\/emHdBindings(?:\.jspi)?\.wasm(?:\?|$)/);
   const model = page.waitForRequest('**' + asset);
   await page.goto(url, {waitUntil:'commit'});
   try {
@@ -22,7 +22,7 @@ test('the requested package downloads before runtime readiness and is consumed o
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   let requests = 0;
-  await page.route(/\/emHdBindings(?:\.jspi)?\.wasm$/, async route => { await held; await route.continue(); });
+  await page.route(/\/emHdBindings(?:\.jspi)?\.wasm(?:\?|$)/, async route => { await held; await route.continue(); });
   page.on('request', request => { if (new URL(request.url()).pathname === asset) requests++; });
   const downloaded = page.waitForResponse(response => new URL(response.url()).pathname === asset);
   await page.goto(url, {waitUntil:'domcontentloaded'});

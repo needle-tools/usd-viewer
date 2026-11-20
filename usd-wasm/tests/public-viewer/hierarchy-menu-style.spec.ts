@@ -1,5 +1,5 @@
 import {selectExampleFolder, openAppMenu, openSamples, stageReady} from './workbench-menus';
-import {expect,test} from '@playwright/test';
+import {expect,test} from './test';
 
 for(const theme of ['light','dark'])test(`${theme}: icons, four navigation states, menu geometry and typography`,async({page},info)=>{
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);

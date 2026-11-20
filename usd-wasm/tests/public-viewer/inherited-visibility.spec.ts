@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './test';
 import {stageReady,openAppMenu} from './workbench-menus';
 
 const scene=`#usda 1.0

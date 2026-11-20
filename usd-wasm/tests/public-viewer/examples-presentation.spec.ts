@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './test';
 import {openAppMenu, openSamples, selectExampleFolder, stageReady} from './workbench-menus';
 
 const initial='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
@@ -74,7 +74,7 @@ for (const theme of ['light','dark']) test(`${theme}: tooltip delay, menu placem
   expect(await tip.evaluate(el=>getComputedStyle(el).fontSize)).toBe('11px');
   await page.screenshot({path:info.outputPath(`${theme}-menu-tooltip.png`)});
   await page.keyboard.press('Escape');await expect(tip).toBeHidden();
-  await page.getByRole('combobox',{name:'Workspace mode'}).selectOption('viewer');
+  await page.getByRole('group',{name:'Workspace mode'}).getByRole('button',{name:'USD Viewer',exact:true}).click();
   await page.setViewportSize({width:390,height:700});await openSamples(page);
   await selectExampleFolder(page,'needle');
   const details=page.getByRole('button',{name:'Details',exact:true});await details.hover();

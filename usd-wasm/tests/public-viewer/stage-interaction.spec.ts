@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page} from './test';
 import {stageReady,openAppMenu} from './workbench-menus';
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 async function point(page:Page,path:string){return page.evaluate(async path=>{const w=window as any,T=await import('three'),state={scene:w.needleEngineContext?.scene||w.scene,camera:w.needleEngineContext?.mainCamera||w.usdRenderCamera||w.camera};state.scene.updateMatrixWorld(true);state.camera.updateMatrixWorld();let mesh:any;state.scene.traverse((o:any)=>{if(o.isMesh&&o.userData.usdPath===path)mesh=o;});const p=new T.Box3().setFromObject(mesh).getCenter(new T.Vector3()).project(state.camera),r=w.usdWorkbench.viewport.getBoundingClientRect();return{x:r.x+(p.x+1)*r.width/2,y:r.y+(1-p.y)*r.height/2};},path);}
