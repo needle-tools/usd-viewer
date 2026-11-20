@@ -23,6 +23,7 @@ public/dockview
 public/modules/mesh-bvh.umd.js
 
 # Local files and generated output.
+/issues/
 /.cache/
 /TODO.md
 /docs/releases/
