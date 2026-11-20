@@ -2696,14 +2696,14 @@ test.describe('public usd-viewer lifecycle', () => {
 
         await page.goto('/?viewer=needle&assetCache=0');
         await openSamples(page);
-        await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
+        await expect(page.locator('.gallery-card[data-name="Synthetic Converter Matrix"]')).toBeVisible();
 
         const state = await page.evaluate(() => ({
             topSelectExists: Boolean(document.querySelector('#converter-select-wrap, #converter-select')),
             galleryConverterExists: Boolean(document.querySelector('#converter-toggle')),
-            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.conversions || '{}')),
-            converterOrder: JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.converterOrder || '[]'),
-            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
+            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card[data-name="Synthetic Converter Matrix"]')?.dataset.conversions || '{}')),
+            converterOrder: JSON.parse(document.querySelector<HTMLElement>('.gallery-card[data-name="Synthetic Converter Matrix"]')?.dataset.converterOrder || '[]'),
+            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card[data-name="Synthetic Converter Matrix"]')?.getAttribute('href') || '',
         }));
 
         expect(state.topSelectExists).toBe(false);
@@ -2748,12 +2748,12 @@ test.describe('public usd-viewer lifecycle', () => {
         await page.goto('/?viewer=needle');
         await openSamples(page);
         await selectExampleFolder(page, 'gltf');
-        await page.waitForFunction(() => document.querySelectorAll('.gallery-card').length === 1);
+        await expect(page.locator('.gallery-card[data-name="Object Variant Matrix"]')).toBeVisible();
 
         const state = await page.evaluate(() => ({
             galleryConverterExists: Boolean(document.querySelector('#converter-toggle')),
-            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card')?.dataset.conversions || '{}')),
-            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card')?.getAttribute('href') || '',
+            converters: Object.keys(JSON.parse(document.querySelector<HTMLElement>('.gallery-card[data-name="Object Variant Matrix"]')?.dataset.conversions || '{}')),
+            firstHref: document.querySelector<HTMLAnchorElement>('.gallery-card[data-name="Object Variant Matrix"]')?.getAttribute('href') || '',
         }));
 
         expect(state.galleryConverterExists).toBe(false);

@@ -1,3 +1,4 @@
+import {GLTF_SAMPLE_ASSETS_INDEX, mergeGltfSampleCards, normalizeModelKey, originalGltfConverter} from './viewer-gltf-catalog.mjs';
 import {showViewportHelpers,syncViewportHelpers} from './viewer-helpers.js';
 import {loadSimreadyResources,simreadyLocation,warmSimreadyComposition} from './viewer-simready.js';
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
@@ -45,6 +46,8 @@ import { viewerIcon } from './usd/viewer/icons.js';
 import { createSimreadyLibrary } from './viewer-simready.js';
 import {createCollectionLibrary,parseCollection,DEFAULT_COLLECTIONS} from './viewer-collections.js';
 import { setupViewerPhysics } from './viewer-physics.js';
+import {createGltfPhysicsSource} from './viewer-gltf-physics.mjs';
+import {registerSimreadyLoader} from '@needle-tools/simready/gltf';
 import { createViewerLighting } from './viewer-lighting.js';
 import { stageVariants, setVariant } from './usd/scene/index.js';
 
@@ -752,8 +755,10 @@ let resizeRequested = false;
 let needleBackdrop = null;
 window.addEventListener('pagehide', () => needleBackdrop?.dispose(), {once:true});
 let removeNeedleEngineUsdPlugin = null;
+let needleEngineSimreadyPlugin;
 let needleLoaderFiles = [];
 let nativeGltfRoot = null;
+let nativeGltfRootOwnedByNeedle = false;
 let nativeGltfMixers = [];
 let fileLinkLoadRunning = false;
 let pendingFileLinkRequest = null;
@@ -1311,8 +1316,12 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     viewerPhysics?.reset?.();
     const handle=currentHydraHandle;
-    const bytes=handle?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({handle,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal})
-      :await new GLTFExporter().parseAsync(window.usdRoot,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
+    const root=nativeGltfRoot||window.usdRoot;
+    const nativeSource=handle?null:createGltfPhysicsSource(root);
+    const bytes=handle||nativeSource?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({
+      handle:handle||nativeSource.handle,snapshot:nativeSource?await nativeSource.source.readSnapshot():undefined,
+      semantics:nativeSource?.semantics,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal})
+      :await new GLTFExporter().parseAsync(root,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes instanceof Blob?bytes.size:bytes.byteLength),simready:!!handle});
     return bytes;
@@ -1718,6 +1727,11 @@ function disposeMaterial(material) {
 
 function disposeNativeGltfRoot() {
   if (!nativeGltfRoot) return;
+  if (nativeGltfRootOwnedByNeedle) {
+    nativeGltfRoot = null;
+    nativeGltfRootOwnedByNeedle = false;
+    return;
+  }
   nativeGltfRoot.traverse?.(object => {
     object.geometry?.dispose?.();
     disposeMaterial(object.material);
@@ -1763,7 +1777,11 @@ async function waitMaybeAsync(value) {
 }
 
 async function ensureNeedleEngineLoader() {
-  await import("@needle-tools/engine");
+  const engine = await import("@needle-tools/engine");
+  if (!needleEngineSimreadyPlugin) {
+    needleEngineSimreadyPlugin = {name: 'SimReady', onImport: registerSimreadyLoader};
+    engine.addCustomExtensionPlugin(needleEngineSimreadyPlugin);
+  }
   if (!removeNeedleEngineUsdPlugin) {
     removeNeedleEngineUsdPlugin = await addPluginForNeedleEngine({
       waitForMaterials,
@@ -2014,13 +2032,13 @@ async function loadNativeNeedleEngineGltf(filename, path, generation) {
   if (generation !== loadGeneration) return null;
   applyAgXToneMapping(context?.renderer);
   applyViewerBackground(context);
-  return context;
+  return {context, asset: loadDetail.loadedFiles?.[0]?.file ?? context.scene};
 }
 
 async function loadThreeGltf(path, generation) {
   const GLTFLoader = await loadGltfLoader();
   if (generation !== loadGeneration) return null;
-  const loader = new GLTFLoader();
+  const loader = registerSimreadyLoader(new GLTFLoader());
   loader.setCrossOrigin?.("anonymous");
   return new Promise((resolve, reject) => {
     loader.load(
@@ -2050,13 +2068,24 @@ async function loadNativeGltfFile(filename, path) {
 
   try {
     if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
-      const context = await loadNativeNeedleEngineGltf(filename, path, generation);
-      if (!context || generation !== loadGeneration) return;
+      const loaded = await loadNativeNeedleEngineGltf(filename, path, generation);
+      if (!loaded || generation !== loadGeneration) return;
+      const {context, asset} = loaded;
+      nativeGltfRoot = asset.scene || asset;
+      nativeGltfRootOwnedByNeedle = true;
       window.needleEngineContext = context;
       window.usdHydra = undefined;
       window.driver = undefined;
       window.usdStage = undefined;
       window.renderInterface = undefined;
+      const source = createGltfPhysicsSource(asset);
+      if (source) {
+        const configuration = options.physics === false ? false : {...options.physics, source: source.source};
+        const physics = await setupViewerPhysics(source.handle, context, window.camera, window._controls,
+          () => generation === loadGeneration, configuration);
+        if (generation !== loadGeneration) { physics?.dispose(); return; }
+        setViewerPhysics(physics);
+      }
     } else {
       const gltf = await loadThreeGltf(path, generation);
       if (generation !== loadGeneration) return;
@@ -2070,6 +2099,14 @@ async function loadNativeGltfFile(filename, path) {
       const environment = await loadHostEnvironment(window.renderer);
       if (generation !== loadGeneration) return;
       window.scene.environment = environment;
+      const source = createGltfPhysicsSource(gltf);
+      if (source) {
+        const configuration = options.physics === false ? false : {...options.physics, source: source.source};
+        const physics = await setupViewerPhysics(source.handle, null, window.camera, window._controls,
+          () => generation === loadGeneration, configuration);
+        if (generation !== loadGeneration) { physics?.dispose(); return; }
+        setViewerPhysics(physics);
+      }
       window.needleEngineContext = undefined;
       window.usdHydra = undefined;
       window.driver = undefined;
@@ -2719,7 +2756,6 @@ async function init() {
   // ---- Docked example library ---------------------------------------------
   // The library/folder navigator and card grid remain mounted while assets load. Converter variants are exposed on the loaded-file row.
   const ASSET_EXPLORER_API = 'https://asset-explorer.needle.tools/api/models.json';
-  const GLTF_SAMPLE_ASSETS_INDEX = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
   const USD_WG_MANIFEST_URL = './data/usd-wg-assets.json';
   const NEEDLE_CLOUD_GROUP_ID = 'needle:cloud';
   const EXCLUDED_ASSET_EXPLORER_MODEL_KEYS = new Set(['nodeperformancetest']);
@@ -2743,7 +2779,7 @@ async function init() {
   let savedSamplePicker = {};
   try { savedSamplePicker = JSON.parse(localStorage.getItem(samplePickerStorageKey)) || {}; } catch {}
   const savedGroup = typeof savedSamplePicker.group === 'string' ? savedSamplePicker.group : '';
-  const validSavedGroup = /^(?:gltf|usd-wg|needle|simready|collection)(?::.*)?$|^usd-assets$/.test(savedGroup);
+  const validSavedGroup = /^(?:gltf|gltf-samples|usd-wg|needle|simready|collection)(?::.*)?$|^usd-assets$/.test(savedGroup);
   const samplePickerPositions = new Map(Object.entries(savedSamplePicker.positions || {}));
   const expandedSampleFolders = new Set(Array.isArray(savedSamplePicker.expandedFolders) ? savedSamplePicker.expandedFolders : []);
   let renderedSampleGroup = '';
@@ -2755,8 +2791,10 @@ async function init() {
   let galleryFetchStarted = false; // guards against duplicate fetches
   let galleryFetchPromise = null;
   let galleryModels = null;
+  let convertedModels = [];
   let gltfTagIndexPromise = null;
   let gltfTagIndex = null;
+  let gltfSampleEntries = [];
   let gltfTreeRendered = false;
   let usdWgManifest = null;
   let usdWgManifestPromise = null;
@@ -2821,12 +2859,6 @@ async function init() {
   }
   window.addEventListener('pagehide', () => saveSamplePicker());
   const converterMetadataById = new Map();
-  const originalGltfConverter = {
-    id: 'original-gltf',
-    label: 'Original glTF',
-    name: 'Original glTF',
-    title: 'Original glTF/GLB source asset',
-  };
   const converterIconSvg = {
     three: '<svg class="conv-logo notranslate" translate="no" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.38 0a.268.268 0 0 0-.256.332l2.894 11.716a.268.268 0 0 0 .01.04l2.89 11.708a.268.268 0 0 0 .447.128L23.802 7.15a.268.268 0 0 0-.112-.45l-5.784-1.667a.268.268 0 0 0-.123-.035L6.38 1.715a.268.268 0 0 0-.144-.04L.456.01A.268.268 0 0 0 .38 0zm.374.654L5.71 2.08 1.99 5.664zM6.61 2.34l4.864 1.4-3.65 3.515zm-.522.12l1.217 4.926-4.877-1.4zm6.28 1.538l4.878 1.404-3.662 3.53zm-.52.13l1.208 4.9-4.853-1.392zm6.3 1.534l4.947 1.424-3.715 3.574zm-.524.12l1.215 4.926-4.876-1.398zm-15.432.696l4.964 1.424-3.726 3.586zM8.047 8.15l4.877 1.4-3.66 3.527zm-.518.137l1.236 5.017-4.963-1.432zm6.274 1.535l4.965 1.425-3.73 3.586zm-.52.127l1.235 5.012-4.958-1.43zm-9.63 2.438l4.873 1.406-3.656 3.523zm5.854 1.687l4.863 1.403-3.648 3.51zm-.54.04l1.214 4.927-4.875-1.4zm-3.896 4.02l5.037 1.442-3.782 3.638z"/></svg>',
     blender: '<svg class="conv-logo conv-logo-blender notranslate" translate="no" viewBox="0 0 24 24" fill="#E87D0D" aria-hidden="true"><path d="M12.51 13.214c.046-.8.438-1.506 1.03-2.006a3.424 3.424 0 0 1 2.212-.79c.85 0 1.631.3 2.211.79.592.5.983 1.206 1.028 2.005.045.823-.285 1.586-.865 2.153a3.389 3.389 0 0 1-2.374.938 3.393 3.393 0 0 1-2.376-.938c-.58-.567-.91-1.33-.865-2.152M7.35 14.831c.006.314.106.922.256 1.398a7.372 7.372 0 0 0 1.593 2.757 8.227 8.227 0 0 0 2.787 2.001 8.947 8.947 0 0 0 3.66.76 8.964 8.964 0 0 0 3.657-.772 8.285 8.285 0 0 0 2.785-2.01 7.428 7.428 0 0 0 1.592-2.762 6.964 6.964 0 0 0 .25-3.074 7.123 7.123 0 0 0-1.016-2.779 7.764 7.764 0 0 0-1.852-2.043h.002L13.566 2.55l-.02-.015c-.492-.378-1.319-.376-1.86.002-.547.382-.609 1.015-.123 1.415l-.001.001 3.126 2.543-9.53.01h-.013c-.788.001-1.545.518-1.695 1.172-.154.665.38 1.217 1.2 1.22V8.9l4.83-.01-8.62 6.617-.034.025c-.813.622-1.075 1.658-.563 2.313.52.667 1.625.668 2.447.004L7.414 14s-.069.52-.063.831zm12.09 1.741c-.97.988-2.326 1.548-3.795 1.55-1.47.004-2.827-.552-3.797-1.538a4.51 4.51 0 0 1-1.036-1.622 4.282 4.282 0 0 1 .282-3.519 4.702 4.702 0 0 1 1.153-1.371c.942-.768 2.141-1.183 3.396-1.185 1.256-.002 2.455.41 3.398 1.175.48.391.87.854 1.152 1.367a4.28 4.28 0 0 1 .522 1.706 4.236 4.236 0 0 1-.239 1.811 4.54 4.54 0 0 1-1.035 1.626"/></svg>',
@@ -2957,7 +2989,12 @@ async function init() {
     ['gltf', {
       title: 'glTF → USD conversions',
       subtitle: 'Converted from glTF Sample Assets',
-      load: loadAssetExplorerCards,
+      load: () => loadGltfCards(),
+    }],
+    ['gltf-samples', {
+      title: 'glTF Sample Assets',
+      subtitle: 'Original Khronos sample assets',
+      load: loadGltfSourceCards,
     }],
     ['usd-wg', {
       title: 'USD Working Group Assets',
@@ -3169,6 +3206,7 @@ async function init() {
     if (!url) return null;
     return {
       name: model.name || model.slug || 'Model',
+      catalogNames: [model.name, model.slug],
       meta: assetExplorerMetaLine(model),
       thumbnail: model.thumbnail || model.previewUri,
       conversions,
@@ -3177,10 +3215,6 @@ async function init() {
       url,
       tags: model.tags || [],
     };
-  }
-
-  function normalizeModelKey(value) {
-    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
 
   function isExcludedAssetExplorerModel(model) {
@@ -3198,7 +3232,8 @@ async function init() {
         const res = await fetch(GLTF_SAMPLE_ASSETS_INDEX);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const entries = await res.json();
-        for (const entry of Array.isArray(entries) ? entries : []) {
+        gltfSampleEntries = Array.isArray(entries) ? entries : [];
+        for (const entry of gltfSampleEntries) {
           const tags = normalizeGltfTags(entry.tags);
           for (const key of [entry.name, entry.label]) {
             const normalized = normalizeModelKey(key);
@@ -3501,6 +3536,17 @@ async function init() {
     return labels.get(String(folder || '')) || prettySampleLabel(folder);
   }
 
+  function setLibraryCount(group, count) {
+    const control = sampleGroupList.querySelector(`[data-sample-group="${group}"]`);
+    if (!control) return;
+    let total = control.querySelector(':scope > small');
+    if (!total) {
+      total = document.createElement('small');
+      control.append(total);
+    }
+    total.textContent = String(count);
+  }
+
   function renderNeedleTree() {
     if (!needleGroupTree || needleTreeRendered) return;
     needleGroupTree.textContent = '';
@@ -3509,6 +3555,7 @@ async function init() {
     for (const group of sortedNeedleFixtureGroups()) {
       needleGroupTree.appendChild(createNeedleTreeControl(group, groups.get(group)?.length || 0));
     }
+    setLibraryCount('needle', needleCloudCards.length + testAssetLibrary.length);
     needleTreeRendered = true;
     syncSampleTreeVisibility();
   }
@@ -3520,10 +3567,10 @@ async function init() {
           if (!response.ok) throw new Error('HTTP ' + response.status);
           return response.json();
         })
-        .then(assets => assets.map(asset => ({
-          ...asset,
-          meta: `${asset.publisher} · ${asset.license}`,
-        })));
+        .then(assets => {
+          setLibraryCount('usd-assets', assets.length);
+          return assets.map(asset => ({...asset, meta: `${asset.publisher} · ${asset.license}`}));
+        });
     }
     try {
       return await usdSampleCardsPromise;
@@ -3567,6 +3614,7 @@ async function init() {
       const res = await fetch(USD_WG_MANIFEST_URL);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       usdWgManifest = await res.json();
+      setLibraryCount('usd-wg', collectUsdWgCards(usdWgManifest.root).length);
       renderUsdWgTree();
       return usdWgManifest;
     })();
@@ -3588,35 +3636,52 @@ async function init() {
   }
 
   async function loadGltfCards(tag) {
-    const cards = await loadAssetExplorerCards();
-    if (!tag) return cards;
-    return cards.filter((card) => (card.tags || []).includes(tag));
+    await loadAssetExplorerCards();
+    if (!tag) return convertedModels;
+    return convertedModels.filter(card => (card.tags || []).includes(tag));
   }
 
-  async function loadAssetExplorerCards() {
+  async function loadGltfSourceCards() {
+    const cards = await loadAssetExplorerCards();
+    return cards.filter(card => card.conversions?.[originalGltfConverter.id]).map(card => ({
+      ...card,
+      url: card.conversions[originalGltfConverter.id],
+      conversions: {[originalGltfConverter.id]: card.conversions[originalGltfConverter.id]},
+      converterOrder: [originalGltfConverter.id],
+    }));
+  }
+
+  async function loadAssetExplorerCards({silent = false} = {}) {
     if (galleryModels) return galleryModels;
     if (galleryFetchPromise) return galleryFetchPromise;
     galleryFetchStarted = true;
     galleryFetchPromise = (async () => {
-    setGalleryStatus('Loading sample models…');
+    if (!silent) setGalleryStatus('Loading sample models…');
     try {
-      const [res, tagIndex] = await Promise.all([
-        fetch(ASSET_EXPLORER_API),
+      const [data, tagIndex] = await Promise.all([
+        fetch(ASSET_EXPLORER_API).then(response => {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.json();
+        }).catch(error => {
+          console.warn('USD conversions unavailable:', error);
+          return {models: []};
+        }),
         loadGltfTagIndex(),
       ]);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
       const models = Array.isArray(data.models) ? data.models : [];
-      galleryModels = models.map((model) => assetExplorerModelToCard(attachGltfTags(model, tagIndex))).filter(Boolean);
+      convertedModels = models.map(model => assetExplorerModelToCard(attachGltfTags(model, tagIndex))).filter(Boolean);
+      galleryModels = mergeGltfSampleCards(gltfSampleEntries, convertedModels);
+      setLibraryCount('gltf', convertedModels.length);
+      setLibraryCount('gltf-samples', galleryModels.filter(card => card.conversions?.[originalGltfConverter.id]).length);
       for (const card of galleryModels) indexConversionCard(card);
       registerConverterMetadataForCards(galleryModels);
-      renderGltfTagTree(galleryModels);
-      if (!galleryModels.length) setGalleryStatus('No sample models available right now.', true);
+      renderGltfTagTree(convertedModels);
+      if (!silent && !galleryModels.length) setGalleryStatus('No sample models available right now.', true);
       return galleryModels;
     } catch (err) {
       galleryFetchStarted = false; // allow a retry on next open
       galleryFetchPromise = null;
-      setGalleryStatus('Couldn’t load sample models. Try the external library link instead.', true);
+      if (!silent) setGalleryStatus('Couldn’t load sample models. Try the external library link instead.', true);
       trackError('gallery_fetch', err, { api: ASSET_EXPLORER_API });
       return [];
     }
@@ -4262,6 +4327,21 @@ async function init() {
       track('gallery_select_group', { group: groupId, action });
     });
   }
+  let countsRequested = false;
+  function loadLibraryCounts() {
+    if (countsRequested) return;
+    countsRequested = true;
+    void Promise.allSettled([
+      loadUsdWgManifest(),
+      loadAssetExplorerCards({silent: true}),
+      simreadyLibrary.load().then(catalog => setLibraryCount('simready', catalog.cards.length)),
+    ]);
+  }
+  renderNeedleTree();
+  examplesRoot.addEventListener('usd-examples-visibility', event => {
+    if (event.detail) loadLibraryCounts();
+  });
+  if (examplesVisible()) loadLibraryCounts();
   syncConverterControls();
   selectSampleGroup(selectedSampleGroup);
   refreshLoadedConverterState(filename);

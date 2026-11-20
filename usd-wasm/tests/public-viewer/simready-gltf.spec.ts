@@ -38,6 +38,95 @@ async function inspectExportedRuntime(page:Page,file:string,simulate=false) {
  finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 }
 
+async function dragAssemblyKnob(page:Page) {
+  const drag = await page.evaluate(() => {
+   const w = window as any, sim = w.usdPhysics.simulation;
+   const camera = w.usdRenderCamera || w.needleEngineContext?.mainCamera || w.camera;
+   const element = (w.needleEngineContext?.renderer || w.renderer).domElement;
+   const rect = element.getBoundingClientRect();
+   const projectKnob = () => {
+    const position = sim.bodies.get('/Assembly/Knob').body.translation().clone();
+    const ndc = sim.root.localToWorld(position).project(camera);
+    return [rect.left+(ndc.x+1)*rect.width/2,rect.top+(1-ndc.y)*rect.height/2];
+   };
+   const start = projectKnob();
+   sim.setJointValue('/Assembly/Hinge',30);
+   const end = projectKnob();
+   sim.setJointValue('/Assembly/Hinge',0);
+   return {start,end};
+  });
+  await page.mouse.move(drag.start[0],drag.start[1]);await page.mouse.down();
+  await page.mouse.move(drag.end[0],drag.end[1],{steps:8});await page.mouse.up();
+  expect(await page.evaluate(()=>(window as any).usdPhysics.simulation.getJointValue('/Assembly/Hinge'))).toBeGreaterThan(5);
+}
+
+test('USD interaction drags a fixed attachment through its ancestor hinge',async({page})=>{
+ await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
+ await stageReady(page);
+ await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+ await page.getByRole('button',{name:'Interact',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+ await dragAssemblyKnob(page);
+});
+
+for(const viewer of ['three','needle'])test(`${viewer}: direct exported GLB links expose working joint and simulation controls`,async({page},info)=>{
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/?viewer=three&workspace=studio&file='+encodeURIComponent('/test-fixtures/simready/assembly.usda'));
+ await stageReady(page);
+ await openAppMenu(page,'file');await page.locator('#export-gltf').click();
+ const download=page.waitForEvent('download');
+ await page.locator('#export-dialog').getByRole('button',{name:'Just the raw GLB',exact:true}).click();
+ const file=info.outputPath('direct-assembly.glb');await(await download).saveAs(file);
+ const server=createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'model/gltf-binary','Access-Control-Allow-Origin':'*','Cross-Origin-Resource-Policy':'cross-origin'});
+  createReadStream(file).on('error',error=>response.destroy(error)).pipe(response);
+ });
+ await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const address=server.address();if(!address||typeof address==='string')throw new Error('Expected TCP address');
+ try{
+  await page.goto(`/?viewer=${viewer}&workspace=studio&file=`+encodeURIComponent(`http://127.0.0.1:${address.port}/assembly.glb`));
+  await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics)).toBe(true);
+  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+  await page.getByRole('button',{name:'Interact',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+  await dragAssemblyKnob(page);
+  await page.getByLabel('Joint /Assembly/Hinge',{exact:true}).evaluate((input:HTMLInputElement)=>{
+   input.value='45';input.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const posed=await page.evaluate(()=>{
+   const sim=(window as any).usdPhysics.simulation;
+   return {angle:sim.getJointValue('/Assembly/Hinge'),knob:sim.bodies.get('/Assembly/Knob').body.translation().z};
+  });
+  expect(posed.angle).toBeCloseTo(45,3);expect(posed.knob).toBeLessThan(-.5);
+  await page.getByRole('button',{name:'Reset',exact:true}).click();
+  await page.getByRole('button',{name:'Simulate',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics.simulation?.isPlaying())).toBe(true);
+  if(viewer==='needle'){
+   expect(await page.evaluate(()=>{
+    const sim=(window as any).usdPhysics.simulation;
+    (window as any).loadedPhysicsAsset=sim.physicsAsset;
+    return !!sim.physicsAsset&&!sim.physicsAsset.isDisposed&&sim.rigidbodies.size===4;
+   })).toBe(true);
+   await expect.poll(()=>page.evaluate(()=>(window as any).usdPhysics.simulation.bodies.get('/Assembly/Slider').body.translation().x)).toBeGreaterThan(.2);
+  }
+  const driven=await page.evaluate(viewer=>{
+   const sim=(window as any).usdPhysics.simulation;if(viewer==='three')for(let frame=0;frame<240;frame++)sim.update(1/120);
+   return {slider:sim.bodies.get('/Assembly/Slider').body.translation().x,unsupported:sim.unsupported};
+  },viewer);
+  expect(driven.slider).toBeGreaterThan(.2);expect(driven.unsupported).toEqual([]);
+  await page.getByRole('button',{name:'Reset',exact:true}).click();
+  expect(await page.evaluate(()=>(window as any).usdPhysics.simulation)).toBeNull();
+  if(viewer==='needle')expect(await page.evaluate(()=>(window as any).loadedPhysicsAsset.isDisposed)).toBe(true);
+  await openAppMenu(page,'file');await page.locator('#export-gltf').click();
+  const saved=page.waitForEvent('download');
+  await page.locator('#export-dialog').getByRole('button',{name:'Just the raw GLB',exact:true}).click();
+  const reexport=info.outputPath('direct-assembly-reexport.glb');await(await saved).saveAs(reexport);
+  const restored=await inspectExportedRuntime(page,reexport,true);
+  expect(restored.issues).toEqual([]);expect(restored.after).toBeCloseTo(90,3);expect(restored.slider).toBeGreaterThan(.2);
+  await page.screenshot({path:info.outputPath('direct-glb-controls.png')});expect(errors).toEqual([]);
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
 for(const viewer of ['three','needle'])test(`${viewer}: USD exports to an explicitly loaded SDK runtime with working limits, attachments and drive`,async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(`/?viewer=${viewer}&workspace=studio&file=`+encodeURIComponent('/test-fixtures/simready/assembly.usda'));
@@ -60,7 +149,7 @@ for(const viewer of ['three','needle'])test(`${viewer}: USD exports to an explic
  const file=info.outputPath('assembly.glb');await(await download).saveAs(file);
  const bytes=await readFile(file);
  const json=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
- expect(json.extensionsRequired).toContain('NEEDLE_simready');expect(json.extensions.NEEDLE_simready.snapshot.joints.length).toBe(3);
+ expect(json.extensionsUsed).toContain('NEEDLE_simready');expect(json.extensionsRequired??[]).not.toContain('NEEDLE_simready');expect(json.extensions.NEEDLE_simready.snapshot.joints.length).toBe(3);
  for(const key of ['metersPerUnit','kilogramsPerUnit','upAxis'])expect(json.extensions.NEEDLE_simready.snapshot).not.toHaveProperty(key);
  expect(json.extensions.NEEDLE_simready.snapshot.joints.find((joint:any)=>joint.type==='revolute').limit.upper).toBeCloseTo(Math.PI/2,10);
  const posed=await inspectExportedRuntime(page,file,true);
@@ -88,11 +177,7 @@ test('NVIDIA SimReady glasses export keeps resolved instance ownership and artic
  const bytes=await readFile(file),json=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
  const data=json.extensions.NEEDLE_simready;expect(data.bindings.filter((binding:any)=>binding.instance).length).toBe(4);expect(data.bindings.filter((binding:any)=>binding.body).length).toBe(4);
  for(const mesh of json.meshes)for(const primitive of mesh.primitives)if(primitive.material!==undefined)expect(primitive.attributes.COLOR_0).toBeUndefined();expect(data.snapshot.joints.length).toBeGreaterThan(0);expect(data.bindings.some((binding:any)=>binding.instance)).toBe(true);
- expect(data.source).toBeUndefined();expect(data.usdMetadata.prims.length).toBeGreaterThan(0);
- expect(data.usdMetadata.prims.every((prim:any)=>(prim.attributes||[]).every((attribute:any)=>!['points','faceVertexIndices','normals','primvars:st'].includes(attribute.name)))).toBe(true);
- expect(Buffer.byteLength(JSON.stringify(data.usdMetadata))).toBeLessThan(32768);
- expect(data.usdMetadata.prims.some((prim:any)=>prim.attributes?.some((attribute:any)=>attribute.name==='omni:simready:nonvisual:base'&&attribute.value==='aluminum'))).toBe(true);
- expect(data.usdMetadata.prims.some((prim:any)=>prim.type==='GeomSubset'&&prim.attributes?.some((attribute:any)=>attribute.name==='indices'))).toBe(false);
+ expect(data.version).toBe(3);expect(Array.isArray(data.semantics)).toBe(true);
  expect(data.snapshot.shapes.filter((shape:any)=>shape.type==='mesh').every((shape:any)=>Number.isInteger(shape.mesh)&&!!json.meshes[shape.mesh]&&shape.points===undefined&&shape.indices===undefined)).toBe(true);
  const moved=await inspectExportedRuntime(page,file);
  expect(moved.issues).toEqual([]);expect(moved.changed).toBe(true);expect(Math.abs(moved.after-moved.before)).toBeGreaterThan(1);

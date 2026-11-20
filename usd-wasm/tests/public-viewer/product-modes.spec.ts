@@ -133,14 +133,20 @@ test('Viewer hides floating Studio panels and restores their arrangement', async
   sameLayout(await layout(page), before);
 });
 
-test('saved workspaces migrate to Studio, and explicit URL mode overrides the remembered choice', async ({page}) => {
+test('saved layouts keep Viewer as the default, and explicit URL mode overrides the remembered choice', async ({page}) => {
   await page.goto('/?viewer=three&workspace=studio'); await ready(page);
   await page.waitForFunction(() => !!localStorage.getItem('needle-usd-workspace-v2'));
-  await page.evaluate(() => localStorage.removeItem('needle-usd-product-mode'));
-  await page.goto('/?viewer=three'); await ready(page); await expect(mode(page).getByRole('button', {name: 'USD Studio', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => {
+    localStorage.removeItem('needle-usd-product-mode-v2');
+    localStorage.setItem('needle-usd-product-mode', JSON.stringify('studio'));
+  });
+  await page.goto('/?viewer=three'); await ready(page); await expect(mode(page).getByRole('button', {name: 'USD Viewer', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  await fullViewport(page);
   await mode(page).getByRole('button', {name: 'USD Viewer', exact: true}).click();
   await page.goto('/?viewer=three'); await ready(page); await expect(mode(page).getByRole('button', {name: 'USD Viewer', exact: true})).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/?viewer=three&workspace=studio'); await ready(page); await expect(mode(page).getByRole('button', {name: 'USD Studio', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/?viewer=three'); await ready(page);
+  await expect(mode(page).getByRole('button', {name: 'USD Studio', exact: true})).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('choosing an example closes the Viewer browser and keeps Viewer mode', async ({page}) => {

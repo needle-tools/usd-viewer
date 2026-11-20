@@ -16,15 +16,17 @@ export async function showViewportHelpers(container, handle, onPurposesChange = 
   if(stored.guides===true && !handle.includedPurposes.includes('guide'))await handle.setIncludedPurposes([...handle.includedPurposes,'guide']);
   if(owners.get(container)!==owner)return;
   const persist=()=>saveRenderSettings({helpers:{...handle.helpers,guides:handle.includedPurposes.includes('guide')}});
+  const checks=[];
   for(const [key,title] of choices) {
     const label=document.createElement('label');label.className='usd-menu-row';label.textContent=title;
     const check=document.createElement('input');check.type='checkbox';check.setAttribute('aria-label',`Show ${title.toLowerCase()}`);check.checked=handle.helpers[key];
     check.onchange=()=>{handle.setHelpers({[key]:check.checked});persist();};
+    checks.push([key,check]);
     label.append(check);container.append(label);
   }
   const label=document.createElement('label');label.className='usd-menu-row';label.textContent='Guide geometry';
   const check=document.createElement('input');check.type='checkbox';check.setAttribute('aria-label','Show guide geometry');
-  const sync=()=>{check.checked=handle.includedPurposes.includes('guide');};sync();
+  const sync=()=>{check.checked=handle.includedPurposes.includes('guide');for(const [key,input] of checks)input.checked=handle.helpers[key];};sync();
   synchronizers.set(container,sync);container.parentElement.ontoggle=sync;
   check.onchange=async()=>{
     check.disabled=true;

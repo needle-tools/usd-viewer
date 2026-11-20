@@ -27,7 +27,7 @@ export default defineConfig({
         // Existing workspace tests exercise Studio. Product-mode tests start
         // with empty storage to cover the first-visit Viewer experience.
         storageState: { cookies: [], origins: [{origin, localStorage: [
-            {name: 'needle-usd-product-mode', value: JSON.stringify('studio')},
+            {name: 'needle-usd-product-mode-v2', value: JSON.stringify('studio')},
         ]}] },
     },
     webServer: {

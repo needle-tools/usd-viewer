@@ -6,7 +6,7 @@ import { mountDownloadButton } from './usd/viewer/downloadButton.js';
 import { mountLazyCodePane } from './viewer-lazy-code.js';
 
 const STORAGE = 'needle-usd-workspace-v2';
-const PRODUCT_MODE = 'needle-usd-product-mode';
+const PRODUCT_MODE = 'needle-usd-product-mode-v2';
 const THEME = 'needle-usd-theme';
 const dimension = (name, fallback) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(`--usd-${name}`)) || fallback;
 const COMPACT_WIDTH = dimension('compact-breakpoint', 800);
@@ -41,8 +41,7 @@ export async function mountWorkbench() {
   const requestedMode = new URLSearchParams(location.search).get('workspace');
   const rememberedMode = read(PRODUCT_MODE, null);
   const validMode = value => value === 'viewer' || value === 'studio';
-  const hasSavedWorkspace = previousWorkspace?.current || read('needle-usd-workspace-v1', null)?.current;
-  let productMode = validMode(requestedMode) ? requestedMode : validMode(rememberedMode) ? rememberedMode : hasSavedWorkspace ? 'studio' : 'viewer';
+  let productMode = validMode(requestedMode) ? requestedMode : validMode(rememberedMode) ? rememberedMode : 'viewer';
   save(PRODUCT_MODE, productMode);
   document.body.classList.add('usd-product');
   const root = element('div', 'usd-workbench'); root.id = 'usd-workbench'; root.dataset.loaded = 'false';

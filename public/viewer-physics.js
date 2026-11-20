@@ -1,5 +1,9 @@
-import { Matrix4, Plane, Quaternion, Raycaster, Vector2, Vector3 } from 'three';
+import { Matrix4, Quaternion, Vector3 } from 'three';
+import {bindPointerDrag} from '@needle-tools/simready/three';
 import { readUsdPhysics, inspectUsdPhysics } from '/usd/physics/readPhysics.js';
+import {holdAssemblyBases, withViewerDamping} from './viewer-physics-policy.mjs';
+import {viewerIcon} from './usd/viewer/icons.js';
+import {saveRenderSettings} from './viewer-preferences.js';
 
 const runtimePromises = new Map();
 
@@ -42,24 +46,37 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     return null;
   }
   const options = configuration || {};
-  if (!handle.driver?.GetPhysicsSceneJson) return null;
-  const overview = await inspectUsdPhysics(handle);
+  const source = options.source;
+  if (!source && !handle.driver?.GetPhysicsSceneJson) return null;
+  const overview = source ? await source.inspect() : await inspectUsdPhysics(handle);
   if (!isCurrent()) return null;
   const owner = Symbol('USD physics controls');
   container.physicsOwner = owner;
   container.replaceChildren(); container.hidden = true;
   if (!overview.dynamic) return null;
   const snapshots = new Map();
-  let simulation, snapshot, jointHelpers, jointControls, disposed = false, dragging = false, previousControls = [], operation = 0, simulationMode = '', usesHostWorld = false;
+  let simulation, snapshot, jointHelpers, jointControls, colliderOverlay, disposed = false, previousControls = [], operation = 0, overlayOperation = 0, simulationMode = '', usesHostWorld = false;
   const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
   const canvas = context?.renderer?.domElement || fallbackControls?.domElement;
-  const raycaster = new Raycaster(), pointer = new Vector2(), plane = new Plane(), hit = new Vector3(), rootScale = new Vector3();
+  const rootScale = new Vector3();
   const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Simulate';
   const interact = document.createElement('button');interact.type='button';interact.textContent='Interact';interact.setAttribute('aria-pressed','false');interact.title='Drag movable parts within their joint limits';
   const hasJoints=overview.joints.length>0;interact.disabled=!hasJoints;
   if(!hasJoints)interact.title='This scene has no articulated joints';
+  const holdBases = document.createElement('input');
+  holdBases.type = 'checkbox';
+  holdBases.checked = options.holdAssemblyBases !== false;
+  const holdLabel = document.createElement('label');
+  holdLabel.append(holdBases, document.createTextNode('Hold assembly bases'));
+  holdLabel.title = 'Keep isolated rigid assets and mechanism bases in place.';
   const status=document.createElement('span');status.setAttribute('role','status');
-  const hint=document.createElement('p');hint.className='usd-physics-hint';hint.textContent='Interact: drag a movable part in the viewport.';
+  const colliders = document.createElement('input'); colliders.type = 'checkbox';
+  const colliderLabel = document.createElement('label');
+  colliderLabel.append(colliders, document.createTextNode('Colliders'));
+  colliderLabel.title = 'Show collision geometry; Simulate shows the solver shapes.';
+  const joints = document.createElement('input'); joints.type = 'checkbox'; joints.checked = handle.helpers?.joints !== false;
+  const jointLabel = document.createElement('label'); jointLabel.append(joints, document.createTextNode('Joints'));
+  jointLabel.title = 'Show joint axes and limits.';
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Reset'; reset.disabled = true;
   const sceneSelect = document.createElement('select'); sceneSelect.setAttribute('aria-label', 'Physics scene');
   for (const scene of overview.scenes) {
@@ -67,7 +84,56 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     sceneSelect.append(option);
   }
   if (sceneSelect.options.length > 1) container.append(sceneSelect);
-  container.append(interact, play, reset, status, hint); container.hidden = false;
+  container.append(interact, play, reset, holdLabel, colliderLabel, status); container.hidden = false;
+  if(hasJoints)container.insertBefore(jointLabel,status);
+  function clearStatus() {
+    status.replaceChildren(); status.title = '';
+    status.removeAttribute('data-warning'); status.removeAttribute('tabindex'); status.removeAttribute('aria-label');
+  }
+  function showWarnings(issues = []) {
+    clearStatus();
+    if (!issues.length) return;
+    const details = issues.map(issue => issue.path ? `${issue.path}: ${issue.reason}` : issue.reason).join('\n');
+    status.append(viewerIcon('warning')); status.title = details; status.dataset.warning = '';
+    status.tabIndex = 0; status.setAttribute('aria-label', details);
+  }
+  function readSnapshot(mode) {
+    if (!snapshots.has(mode)) {
+      const pending = (source ? source.readSnapshot(mode) : readUsdPhysics(handle, {meshGeometry: mode !== 'interaction'})).catch(error => {
+        if (snapshots.get(mode) === pending) snapshots.delete(mode);
+        throw error;
+      });
+      snapshots.set(mode, pending);
+    }
+    return snapshots.get(mode);
+  }
+  async function refreshColliders() {
+    const current = ++overlayOperation;
+    colliderOverlay?.dispose(); colliderOverlay = null;
+    if (!colliders.checked || disposed) return;
+    try {
+      const [{createColliderOverlay}, full] = await Promise.all([import('./viewer-colliders.js'), readSnapshot('simulation')]);
+      if (disposed || current !== overlayOperation || !colliders.checked || !isCurrent()) return;
+      let nativeCollider;
+      if (simulationMode === 'simulation' && simulation?.colliders) {
+        if (usesHostWorld) {
+          const physics = context.physics.getOrCreatePhysicsEngine();
+          nativeCollider = path => {
+            const component = simulation.colliderComponents.get(path);
+            return component ? physics.getBody(component) : undefined;
+          };
+        } else {
+          const native = new Map([...simulation.colliders.values()].map(record => [record.data.path, record.collider]));
+          nativeCollider = path => native.get(path);
+        }
+      }
+      colliderOverlay = createColliderOverlay({parent: usesHostWorld ? context.scene : handle.scene,
+        snapshot: full, simulation, nativeCollider, worldSpace: usesHostWorld});
+      colliderOverlay.update();
+    } catch (error) {
+      if (!disposed && current === overlayOperation) showWarnings([{reason: error.message}]);
+    }
+  }
   const controls = context ? (() => {
     const result = [];
     context.scene.traverse(object => {
@@ -75,42 +141,48 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     });
     return result;
   })() : [fallbackControls];
-  function release() {
-    if (!dragging) return;
-    dragging = false; simulation?.endDrag();canvas.style.cursor=simulationMode==='interaction'?'grab':'';
-    for (const [control, enabled] of previousControls) control.enabled = enabled;
-    previousControls = [];
-  }
   function stop() {
     operation++;
-    release();jointHelpers?.dispose();jointHelpers=null;jointControls?.dispose();jointControls=null;simulation?.dispose(); simulation = null;
-    status.textContent='';status.title='';simulationMode='';usesHostWorld=false;interact.setAttribute('aria-pressed','false');canvas.style.removeProperty('cursor');
+    pointerDrag.cancel();jointHelpers?.dispose();jointHelpers=null;jointControls?.dispose();jointControls=null;simulation?.dispose(); simulation = null;
+    clearStatus();simulationMode='';usesHostWorld=false;interact.setAttribute('aria-pressed','false');canvas.style.removeProperty('cursor');
     play.textContent = 'Simulate'; reset.disabled = true;
+    void refreshColliders();
   }
   async function start(mode) {
     if(simulation&&mode!==simulationMode)stop();
     const currentOperation=operation;
-    play.disabled=interact.disabled=true;status.textContent=mode==='interaction'?'Preparing joints…':'Preparing physics…';
+    play.disabled=interact.disabled=true;clearStatus();status.textContent=mode==='interaction'?'Preparing joints…':'Preparing physics…';
     try {
       if(!simulation){
         await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         if(disposed||currentOperation!==operation||!isCurrent())return;
-        snapshot = snapshots.get(mode) || await readUsdPhysics(handle,{meshGeometry:mode!=='interaction'});
-        snapshots.set(mode,snapshot);
+        snapshot = await readSnapshot(mode);
         if(disposed||currentOperation!==operation||!isCurrent())return;
-        const settings={handle,snapshot,scenePath:sceneSelect.value||undefined,mode};
+        const scenePath = sceneSelect.value || undefined;
+        let simulationSnapshot = mode === 'simulation' ? withViewerDamping(snapshot) : snapshot;
+        if (mode === 'simulation' && holdBases.checked)
+          simulationSnapshot = holdAssemblyBases(simulationSnapshot, {scenePath}).snapshot;
+        const settings={handle,snapshot:simulationSnapshot,scenePath,mode};
+        const helpers=hasJoints?await import('/usd/physics/jointHelpers.js'):null;
+        if(disposed||currentOperation!==operation||!isCurrent())return;
         let created,kinematics,createdInHost=false;
         if(mode==='interaction'){
           kinematics=await import('/usd/physics/kinematics.js');
           if(disposed||currentOperation!==operation||!isCurrent())return;
-          created=await kinematics.createUsdMechanism({handle,snapshot,loadKinematics:options.loadKinematics});
+          created=source ? await source.createMechanism({scenePath,dragMode:'point',loadKinematics:options.loadKinematics})
+            : await kinematics.createUsdMechanism({handle,snapshot,dragMode:'point',loadKinematics:options.loadKinematics});
         }
         else if(options.createSimulation)created=await options.createSimulation(settings);
         else{
-          const {createUsdPhysics,getUsdPhysicsLimitations}=await import('/usd/physics/createPhysics.js');
-          if(disposed||currentOperation!==operation||!isCurrent())return;
-          const limitations=getUsdPhysicsLimitations(snapshot);
-          if(!options.allowPartialSimulation&&limitations.length)throw new Error(`Simulation unavailable: ${(limitations.find(issue=>issue.type==='mesh')||limitations[0]).reason}`);
+          let createSimulation;
+          if(source)createSimulation=settings=>source.createSimulation(settings);
+          else{
+            const {createUsdPhysics,getUsdPhysicsLimitations}=await import('/usd/physics/createPhysics.js');
+            if(disposed||currentOperation!==operation||!isCurrent())return;
+            const limitations=getUsdPhysicsLimitations(snapshot);
+            if(!options.allowPartialSimulation&&limitations.length)throw new Error(`Simulation unavailable: ${(limitations.find(issue=>issue.type==='mesh')||limitations[0]).reason}`);
+            createSimulation=createUsdPhysics;
+          }
           if(context){
             const placement=hostPlacement(handle.scene,snapshot);
             const {createNeedleSimulationWorld}=await import('@needle-tools/simready/needle');
@@ -118,7 +190,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
             const world=await createNeedleSimulationWorld({context});
             if(disposed||currentOperation!==operation||!isCurrent()){world.dispose();return;}
             try{
-              created=await createUsdPhysics({...settings,...placement,world,allowPartial:options.allowPartialSimulation===true});
+              created=await createSimulation({...settings,...placement,world,allowPartial:options.allowPartialSimulation===true});
               const dispose=created.dispose.bind(created);
               created.dispose=()=>{try{dispose();}finally{world.dispose();}};
               createdInHost=true;
@@ -126,23 +198,28 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
           }else{
             const rapier=await loadRapier(context,options);
             if(disposed||currentOperation!==operation||!isCurrent())return;
-            created=await createUsdPhysics({...settings,rapier,allowPartial:options.allowPartialSimulation===true});
+            created=await createSimulation({...settings,rapier,allowPartial:options.allowPartialSimulation===true});
           }
         }
         if(disposed||currentOperation!==operation||!isCurrent()){created.dispose();return;}
         simulation=created;simulationMode=mode;usesHostWorld=createdInHost;
+        if(helpers && created.joints && created.bodies){
+          const visibility={visible:()=>handle.helpers?.joints!==false,selected:(path,body)=>handle.isHelperSelected?.(path)||handle.isHelperSelected?.(body)};
+          jointHelpers=mode==='interaction'?helpers.createJointHelpers(created,visibility)
+            :helpers.createSimulationJointHelpers(created,snapshot,{...visibility,worldSpace:usesHostWorld});
+        }
         if(mode==='interaction'){
-          jointHelpers=kinematics.createJointHelpers(created,{visible:()=>handle.helpers?.joints!==false,selected:(path,body)=>handle.isHelperSelected?.(path)||handle.isHelperSelected?.(body)});
-          jointControls=kinematics.mountJointControls(container,created,{onError:message=>{status.textContent=message;}});
+          jointControls=kinematics.mountJointControls(container,created,{onError:message=>showWarnings(message ? [{reason:message}] : created.unsupported)});
         }
       }
-      if(simulation.isPlaying()){release();simulation.pause();}
+      if(simulation.isPlaying()){pointerDrag.cancel();simulation.pause();}
       else simulation.play();
+      jointControls?.update();
       interact.setAttribute('aria-pressed',String(mode==='interaction'&&simulation.isPlaying()));
       canvas.style.cursor=mode==='interaction'&&simulation.isPlaying()?'grab':'';
       play.textContent=mode==='simulation'&&simulation.isPlaying()?(usesHostWorld?'Stop':'Pause'):'Simulate';reset.disabled=false;
-      status.textContent=simulation.unsupported?.length?`${simulation.unsupported.length} unsupported ${mode==='interaction'?'joint':'physics'} features`:'';
-      status.title=simulation.unsupported?.map(item=>`${item.path}: ${item.reason}`).join('\n')||'';
+      showWarnings(simulation.unsupported);
+      void refreshColliders();
     }catch(error){if(disposed||currentOperation!==operation||!isCurrent())return;status.textContent=error.message;console.error('USD physics failed:',error);}
     finally{play.disabled=false;interact.disabled=!hasJoints;}
   }
@@ -150,63 +227,57 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   interact.addEventListener('click',()=>void start('interaction'));
   reset.addEventListener('click', stop);
   sceneSelect.addEventListener('change', stop);
-  function ray(event) {
-    const bounds = canvas.getBoundingClientRect();
-    pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, 1 - (event.clientY - bounds.top) / bounds.height * 2);
-    const camera = activeCamera();
-    camera.updateWorldMatrix(true, false); raycaster.setFromCamera(pointer, camera);
-    return camera;
-  }
-  function down(event) {
-    if (!simulation?.isPlaying() || event.button !== 0 || dragging) return;
-    const camera = ray(event); handle.scene.updateWorldMatrix(true, true);
-    raycaster.params.Line.threshold=.012*Math.abs(handle.scene.getWorldScale(rootScale).x)/(snapshot?.metersPerUnit||1);
-    raycaster.params.Points.threshold=raycaster.params.Line.threshold;
-    const intersections = raycaster.intersectObject(handle.scene, true);
-    for (const intersection of intersections) {
-      let helperObject=intersection.object;while(helperObject&&!helperObject.userData.usdJointPath)helperObject=helperObject.parent;
-      const helper=helperObject?.userData.usdJointPath;
-      let visible=true;for(let parent=intersection.object;parent;parent=parent.parent)if(!parent.visible||parent.userData.usdHelperFor&&!helper){visible=false;break;}
-      if(!visible)continue;
-      const body = helper?simulation.bodies.get(helperObject.userData.usdInteractBody):simulation.bodyForObject(intersection.object,intersection.instanceId);
-      // An opaque stationary part occludes geometry behind it. Do not grab a
-      // hidden drawer by casting through the cabinet's shell.
-      if (!body) { if(!helper)return;continue; }
-      const point = handle.scene.worldToLocal(intersection.point.clone());
-      if (!simulation.beginDrag(body.data.path, point)) return;
-      plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new Vector3()), intersection.point);
-      dragging = true;canvas.style.cursor='grabbing'; previousControls = controls.map(control => [control, control.enabled]);
-      for (const control of controls) control.enabled = false;
-      canvas.setPointerCapture(event.pointerId);
-      event.preventDefault(); event.stopImmediatePropagation(); return;
-    }
-  }
-  function move(event) {
-    if (!dragging) return;
-    ray(event);
-    if (raycaster.ray.intersectPlane(plane, hit)) simulation.moveDrag(handle.scene.worldToLocal(hit.clone()));
-    event.preventDefault(); event.stopImmediatePropagation();
-  }
-  function up(event) {
-    if (!dragging) return;
-    release();
-    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-    event.preventDefault(); event.stopImmediatePropagation();
-  }
-  canvas.addEventListener('pointerdown', down, true);
-  canvas.addEventListener('pointermove', move, true);
-  canvas.addEventListener('pointerup', up, true);
-  canvas.addEventListener('pointercancel', up, true);
+  holdBases.addEventListener('change', stop);
+  colliders.addEventListener('change', () => void refreshColliders());
+  joints.addEventListener('change',()=>{
+    handle.setHelpers({joints:joints.checked});
+    saveRenderSettings({helpers:{...handle.helpers,guides:handle.includedPurposes.includes('guide')}});
+    jointHelpers?.update();
+  });
+  const pointerDrag = bindPointerDrag({
+    element:canvas, camera:activeCamera,
+    controller:() => simulation?.isPlaying() ? simulation : null,
+    // Native USD controllers accept stage points. A glTF bound directly into
+    // the Engine's shared physics world accepts world points.
+    root:() => source && usesHostWorld ? null : handle.scene,
+    pick(_event, raycaster) {
+      handle.scene.updateWorldMatrix(true, true);
+      raycaster.params.Line.threshold=.012*Math.abs(handle.scene.getWorldScale(rootScale).x)/(snapshot?.metersPerUnit||1);
+      raycaster.params.Points.threshold=raycaster.params.Line.threshold;
+      const intersections = raycaster.intersectObject(handle.scene, true);
+      for (const intersection of intersections) {
+        let helperObject=intersection.object;while(helperObject&&!helperObject.userData.usdJointPath)helperObject=helperObject.parent;
+        const helper=helperObject?.userData.usdJointPath;
+        let visible=true;for(let parent=intersection.object;parent;parent=parent.parent)if(!parent.visible||parent.userData.usdHelperFor&&!helper){visible=false;break;}
+        if(!visible)continue;
+        const body = helper?simulation.bodies.get(helperObject.userData.usdInteractBody):simulation.bodyForObject(intersection.object,intersection.instanceId);
+        // An opaque stationary part occludes geometry behind it. Do not grab a
+        // hidden drawer by casting through the cabinet's shell.
+        if (!body) { if(!helper)return null;continue; }
+        return {path:body.data.path, point:intersection.point};
+      }
+      return null;
+    },
+    onDraggingChange(active) {
+      if (active) {
+        previousControls = controls.map(control => [control, control.enabled]);
+        for (const control of controls) control.enabled = false;
+      } else {
+        for (const [control, enabled] of previousControls) control.enabled = enabled;
+        previousControls = [];
+      }
+      canvas.style.cursor = active ? 'grabbing' : simulationMode === 'interaction' && simulation?.isPlaying() ? 'grab' : '';
+    },
+  });
   return {
     reset() { if (!disposed) stop(); },
-    update(dt) { simulation?.update(dt);jointHelpers?.update();jointControls?.update(); },
+    update(dt) { simulation?.update(dt);jointHelpers?.update();jointControls?.update();colliderOverlay?.update(); const visible=handle.helpers?.joints!==false;if(joints.checked!==visible)joints.checked=visible; },
     canInteract(path) { return !disposed && hasJoints && !!path && (overview.joints.includes(path) || overview.bodies.some(body=>path===body||path.startsWith(body+'/'))); },
     async interact() { if (!disposed && !interact.disabled && !(simulationMode==='interaction'&&simulation?.isPlaying())) await start('interaction'); },
     get simulation() { return simulation; },
     dispose() {
       disposed = true; stop(); snapshots.clear(); snapshot = null;
-      canvas.removeEventListener('pointerdown', down, true); canvas.removeEventListener('pointermove', move, true);
-      canvas.removeEventListener('pointerup', up, true); canvas.removeEventListener('pointercancel', up, true);
+      pointerDrag.dispose();
       if (container.physicsOwner === owner) { container.replaceChildren(); container.hidden = true; }
     },
   };

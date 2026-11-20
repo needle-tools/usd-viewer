@@ -108,3 +108,17 @@ test('export spinner respects reduced motion while retaining its busy status', a
   await page.waitForFunction(()=>typeof(window as any).finish==='function');
   await page.evaluate(()=>{const w=window as any;w.component.dispose();w.finish(new Uint8Array());});
 });
+
+test('glTF Blob downloads keep their contents without reading them into a contiguous buffer',async({page})=>{
+ await mount(page);
+ await page.evaluate(()=>{
+  const w=window as any;
+  const blob=new Blob([new Uint8Array([0x67,0x6c,0x54,0x46,0,1,2,3])],{type:'model/gltf-binary'});
+  blob.arrayBuffer=async()=>{throw new Error('A download must not read the GLB back into memory.');};
+  w.source.exportGltf=async()=>blob;w.component.refresh();w.component.setFormat('gltf');
+ });
+ const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Download',exact:true}).click();
+ const file=await downloaded;expect(file.suggestedFilename()).toBe('special sample.glb');
+ expect([...await readFile((await file.path())!)]).toEqual([0x67,0x6c,0x54,0x46,0,1,2,3]);
+ expect(await page.evaluate(()=>(window as any).errors)).toEqual([]);
+});

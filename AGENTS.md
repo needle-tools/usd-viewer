@@ -8,3 +8,5 @@
 - Do not remove, narrow or weaken product, marketing or support claims without explicit user approval. Report the exact wording and evidence first; treat implementation gaps as bugs to investigate rather than silently reducing the claims.
 
 - Do not put changing inventory, coverage or test totals in public Markdown. Keep counts in generated machine-readable reports and test output; document the behavior and link to the inventory instead.
+
+- Do not add verbose, redundant or implementation-focused UI labels and helper text. Keep control labels short and necessary. Put secondary explanations and diagnostic detail in tooltips; show warnings with an icon rather than raw unsupported-feature counts.
