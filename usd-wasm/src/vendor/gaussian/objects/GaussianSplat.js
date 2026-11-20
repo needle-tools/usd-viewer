@@ -26,6 +26,7 @@ import {
 	float,
 	highpModelViewMatrix,
 	instanceIndex,
+	log,
 	max,
 	min,
 	mix,
@@ -56,7 +57,8 @@ const BIN_COUNT = 4096;
 const WORKGROUP_SIZE = 256;
 const SORT_DIRECTION_THRESHOLD = 0.9995;
 const KERNEL_2D_SIZE = 0.3;
-const SPLAT_KERNEL_CUTOFF = Math.sqrt(-2 * Math.log(1 / 255));
+const MIN_SPLAT_ALPHA = 1 / 255;
+const SPLAT_KERNEL_CUTOFF = Math.sqrt( - 2 * Math.log( MIN_SPLAT_ALPHA ) );
 const COVARIANCE_FLATNESS = 1e-4;
 const MIN_RAYCAST_OPACITY = 0.2;
 const MAX_SCREEN_SPACE_SPLAT_SIZE = 1024;
@@ -955,8 +957,6 @@ function createMaterialNodes( buffers, sort, localCameraPosition ) {
 
 		}
 
-		splatUv.assign( positionGeometry.xy );
-
 		const viewCenter4 = highpModelViewMatrix.mul( vec4( center, 1 ) ).toVar( 'viewCenter4' );
 		const viewCenter = viewCenter4.xyz.toVar( 'viewCenter' );
 		const centerClip = cameraProjectionMatrix.mul( viewCenter4 ).toVar( 'centerClip' );
@@ -1013,6 +1013,11 @@ function createMaterialNodes( buffers, sort, localCameraPosition ) {
 
 		splatColor.assign( vec4( rgb.max( 0 ), color.a.mul( alphaScale ) ) );
 
+		// Match the fragment alpha cutoff using the antialiased opacity. Keep a
+		// small outward margin for rounding, and retain the maximum kernel extent.
+		const kernelRadius = min( sqrt( log( max( splatColor.a.div( MIN_SPLAT_ALPHA ), 1 ) ).mul( 2 ) ).add( 0.0001 ), SPLAT_KERNEL_CUTOFF ).toVar( 'kernelRadius' );
+		splatUv.assign( positionGeometry.xy.mul( kernelRadius.div( SPLAT_KERNEL_CUTOFF ) ) );
+
 		const halfTrace = a.add( c ).mul( 0.5 ).toVar( 'halfTrace' );
 		const radius = sqrt( max( a.sub( c ).mul( 0.5 ).pow2().add( b.mul( b ) ), 0 ) ).toVar( 'radius' );
 		const lambda1 = max( halfTrace.add( radius ), 0.0000001 ).toVar( 'lambda1' );
@@ -1030,13 +1035,14 @@ function createMaterialNodes( buffers, sort, localCameraPosition ) {
 
 		const scale1 = min( sqrt( lambda1 ), MAX_SCREEN_SPACE_SPLAT_SIZE ).toVar( 'scale1' );
 		const scale2 = min( sqrt( lambda2 ), MAX_SCREEN_SPACE_SPLAT_SIZE ).toVar( 'scale2' );
-		const offsetPixels = axis1.mul( positionGeometry.x ).mul( scale1 ).add( axis2.mul( positionGeometry.y ).mul( scale2 ) ).toVar( 'offsetPixels' );
+		const offsetPixels = axis1.mul( splatUv.x ).mul( scale1 ).add( axis2.mul( splatUv.y ).mul( scale2 ) ).toVar( 'offsetPixels' );
 		const offsetNdc = offsetPixels.mul( 2 ).div( cameraViewport.zw ).toVar( 'offsetNdc' );
 		const clip = centerClip.add( vec4( offsetNdc.mul( centerClip.w ), 0, 0 ) ).toVar( 'clip' );
 
 		const clipLimit = centerClip.w.mul( CLIP_XY ).toVar( 'clipLimit' );
 
-		If( viewCenter.z.greaterThanEqual( - 0.01 )
+		If( splatColor.a.lessThan( MIN_SPLAT_ALPHA )
+			.or( viewCenter.z.greaterThanEqual( - 0.01 ) )
 			.or( centerClip.z.lessThan( centerClip.w.negate() ) )
 			.or( centerClip.z.greaterThan( centerClip.w ) )
 			.or( centerClip.x.lessThan( clipLimit.negate() ) )
@@ -1058,14 +1064,15 @@ function createMaterialNodes( buffers, sort, localCameraPosition ) {
 	const fragmentNode = Fn( () => {
 
 		const r2 = dot( splatUv, splatUv ).toVar( 'r2' );
+		const alpha = exp( r2.mul( - 0.5 ) ).mul( splatColor.a ).toVar( 'splatAlpha' );
 
-		If( r2.greaterThan( SPLAT_KERNEL_CUTOFF * SPLAT_KERNEL_CUTOFF ), () => {
+		If( alpha.lessThan( MIN_SPLAT_ALPHA ), () => {
 
 			Discard();
 
 		} );
 
-		return vec4( splatColor.rgb, exp( r2.mul( - 0.5 ) ).mul( splatColor.a ) );
+		return vec4( splatColor.rgb, alpha );
 
 	} )();
 

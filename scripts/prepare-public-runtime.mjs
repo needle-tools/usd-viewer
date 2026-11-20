@@ -10,7 +10,7 @@ const copies = [
   { from: join(root, 'node_modules', '@needle-tools', 'simready', 'src'), to: join(root, 'public', 'simready'), label: '/simready' },
   { from: join(root, 'node_modules', 'three-mesh-bvh', 'build', 'index.umd.cjs'), to: join(root, 'public', 'modules', 'mesh-bvh.umd.js'), label: '/modules/mesh-bvh.umd.js' },
   { from: join(root, 'node_modules', 'dockview-core', 'dist'), to: join(root, 'public', 'dockview'), label: '/dockview' },
-  ...['three-gpu-pathtracer', 'three-mesh-bvh'].map(name => ({ from: join(root, 'node_modules', name), to: join(root, 'public', name), label: '/' + name })),
+  { from: join(root, 'node_modules', 'three-mesh-bvh'), to: join(root, 'public', 'three-mesh-bvh'), label: '/three-mesh-bvh' },
   { from: join(root, "node_modules", "@meimu", "mutracer"), to: join(root, "public", "mutracer"), label: "/mutracer" },
   { from: join(root, "node_modules", "oidn-webgpu"), to: join(root, "public", "oidn-webgpu"), label: "/oidn-webgpu" },
   {
@@ -34,6 +34,9 @@ const copies = [
     label: "/test-fixtures",
   },
 ];
+
+// Remove generated assets left by the retired optional renderer.
+rmSync(join(root, 'public', 'three-gpu-pathtracer'), { recursive: true, force: true });
 
 for (const copy of copies) {
   if (!existsSync(copy.from)) {

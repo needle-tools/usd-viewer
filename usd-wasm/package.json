@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/usd",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "description": "OpenUSD WebAssembly runtime, Three.js Hydra delegate, MaterialX and WebGPU viewer tools",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -79,6 +79,7 @@
     "src",
     "README.md",
     "CHANGELOG.md",
+    "UpgradeGuide.md",
     "LICENSE.txt",
     "THIRD_PARTY_NOTICES.txt"
   ],
@@ -110,12 +111,11 @@
     "url": "https://github.com/needle-tools/usd-viewer/issues"
   },
   "peerDependencies": {
-    "@needle-tools/engine": ">=5.0.0",
+    "@needle-tools/engine": ">=5.0.0 || ^6.0.0-0",
     "@needle-tools/simready": "^0.1.0",
     "@sparkjsdev/spark": ">=2.2.0",
     "three": ">=0.160.0",
-    "@meimu/mutracer": "^0.2.0",
-    "three-gpu-pathtracer": "^0.0.27",
+    "@meimu/mutracer": "0.3.0",
     "closed-chain-ik": ">=0.0.7"
   },
   "peerDependenciesMeta": {
@@ -131,9 +131,6 @@
     "@meimu/mutracer": {
       "optional": true
     },
-    "three-gpu-pathtracer": {
-      "optional": true
-    },
     "closed-chain-ik": {
       "optional": true
     }
@@ -144,6 +141,7 @@
     "test:coverage": "node scripts/validate-coverage-browser.mjs",
     "needle-engine-matrix:cache": "node scripts/cache-needle-engine-matrix.mjs",
     "three-matrix:cache": "node scripts/cache-three-matrix.mjs",
+    "test:assets": "node tests/public-viewer/remote-assets.mjs",
     "test:bindings": "node --test tests/bindings/*.test.mjs",
     "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.nodenext.json",
     "test:viewer-icons": "node scripts/icon-audit/lint.mjs --source=src/viewer/icons.js --json=.cache/icon-review/lint-gate.json",
@@ -159,15 +157,16 @@
     "test:package": "node scripts/validate-renderers-package.mjs"
   },
   "devDependencies": {
-    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
+    "@needle-tools/engine": "6.0.0-canary.1794268261.merry-flower.29c0102",
     "@needle-tools/three-test-matrix": "^0.2.0",
     "@playwright/test": "^1.60.0",
     "@sparkjsdev/spark": "2.2.0",
-    "@types/three": "^0.185.4",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
+    "@types/three": "^0.186.0",
+    "three": "npm:@needle-tools/three@0.186.2-alpha.0",
     "typescript": "5.9.3",
     "vite": "^8.1.0",
-    "@needle-tools/simready": "file:../modules/simready"
+    "@needle-tools/simready": "file:../modules/simready",
+    "gltf-validator": "^2.0.0-dev.3.10"
   },
   "publishConfig": {
     "access": "public",
@@ -177,6 +176,7 @@
     "@needle-tools/materialx": "1.8.1"
   },
   "overrides": {
+    "@types/three": "$@types/three",
     "@needle-tools/materialx": "$@needle-tools/materialx",
     "three": "$three"
   }

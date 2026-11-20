@@ -8,7 +8,9 @@ import { spawnSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
 const sdk = fileURLToPath(new URL('..', import.meta.url));
-const kinematicsDependency=JSON.parse(await readFile(join(sdk,'../package.json'),'utf8')).dependencies['closed-chain-ik'];
+const sdkDependencies=JSON.parse(await readFile(join(sdk,'package.json'),'utf8')).devDependencies;
+const runtimeDependencies=JSON.parse(await readFile(join(sdk,'../package.json'),'utf8')).dependencies;
+const kinematicsDependency=runtimeDependencies['closed-chain-ik'];
 const output = resolve(process.argv[2] || join(sdk, '.cache/package-validation', `renderers-${Date.now()}`));
 await mkdir(output, { recursive: true });
 function command(label, cwd, cmd, args) {
@@ -29,16 +31,16 @@ try {
     simreadyDependency=`file:${simreadyTarball}`;
     result.simreadyPackage={tarball:simreadyTarball,sha256:createHash('sha256').update(await readFile(simreadyTarball)).digest('hex')};
   }
-  for (const [name, three] of [['modern', process.env.USD_PACKAGE_THREE || 'npm:@needle-tools/three@0.185.2-alpha.8'], ['legacy', '0.160.0']]) {
+  for (const [name, three] of [['modern', process.env.USD_PACKAGE_THREE || runtimeDependencies.three], ['legacy', '0.160.0']]) {
     const root = await mkdtemp(join(tmpdir(), `needle-usd-renderers-${name}-`));
     result.consumers.push({ name, root, three });
     await writeFile(join(root, 'package.json'), JSON.stringify({ name: `usd-renderers-${name}`, private: true, type: 'module', scripts: { build: 'vite build' },
-      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(name === 'modern' ? {'@needle-tools/simready':simreadyDependency} : {}), ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { 'closed-chain-ik':kinematicsDependency, '@meimu/mutracer': '0.2.0', 'oidn-webgpu':'0.6.0', 'three-gpu-pathtracer': 'https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.27.tgz', 'three-mesh-bvh': 'https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.16.tgz', 'xatlas-web': 'https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz' } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
+      dependencies: { '@needle-tools/usd': `file:${tarball}`, ...(name === 'modern' ? {'@needle-tools/simready':simreadyDependency} : {}), ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': process.env.USD_PACKAGE_MATERIALX } : {}), three, vite: '8.1.0', ...(name === 'modern' ? { 'closed-chain-ik':kinematicsDependency, '@meimu/mutracer': runtimeDependencies['@meimu/mutracer'] } : {}) }, overrides: { three: '$three', ...(process.env.USD_PACKAGE_MATERIALX ? { '@needle-tools/materialx': '$@needle-tools/materialx' } : {}) } }, null, 2));
     await command(`${name}-install`, root, 'npm', ['install', '--no-audit', '--no-fund', '--prefer-offline']);
     assert.equal(await realpath(join(root, 'node_modules/@needle-tools/usd')), join(await realpath(root), 'node_modules/@needle-tools/usd'));
     if (name === 'modern') assert.equal(await realpath(join(root,'node_modules/@needle-tools/simready')),join(await realpath(root),'node_modules/@needle-tools/simready'));
     if (name === 'legacy') await assert.rejects(access(join(root,'node_modules/@needle-tools/simready')),{code:'ENOENT'});
-    await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer', 'three-gpu-pathtracer', 'three-mesh-bvh']);
+    await command(`${name}-dependencies`, root, 'npm', ['ls', '--all', 'three', '@needle-tools/usd', '@meimu/mutracer']);
     await cp(join(sdk, 'tests/renderers-consumer'), root, { recursive: true });
     if (name === 'modern') await cp(join(root,'node_modules/@meimu/mutracer/oidn/weights'),join(root,'public/weights'),{recursive:true});
     if (name === 'legacy') await writeFile(join(root, 'main.js'), "import { getUsdModule, createThreeHydra } from '@needle-tools/usd'; import { inspectStage } from '@needle-tools/usd/scene'; import { Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera } from 'three'; import { mountDownloadButton } from '@needle-tools/usd/viewer/download'; import { exportSimreadyGltf } from '@needle-tools/usd/gltf'; window.baseSdk = { getUsdModule, createThreeHydra, inspectStage, Group, Scene, WebGLRenderer, WebGLRenderTarget, PerspectiveCamera, mountDownloadButton, exportSimreadyGltf };\n");
@@ -46,7 +48,7 @@ try {
     await cp(join(sdk, 'tests/fixtures/coverage/lighting-mdl/studio-variants.usda'), join(root, 'public/scene.usda'));
     if (name === 'modern') await cp(join(sdk,'tests/fixtures/coverage/lighting-mdl'),join(root,'public/mdl'),{recursive:true});
     if (name === 'modern') await cp(join(sdk,'tests/fixtures/simready'),join(root,'public/simready'),{recursive:true});
-    await command(`${name}-type-dependencies`,root,'npm',['install','--save-dev','--no-audit','--no-fund','typescript@5.9.3','@types/three@0.185.4']);
+    await command(`${name}-type-dependencies`,root,'npm',['install','--save-dev','--no-audit','--no-fund',`typescript@${sdkDependencies.typescript}`,`@types/three@${name === 'modern' ? sdkDependencies['@types/three'] : '0.185.4'}`]);
     await cp(join(sdk,`tests/types/${name === 'modern' ? 'gltf-consumer.ts' : 'gltf-viewing-consumer.ts'}`),join(root,'gltf-consumer.ts'));
     await command(`${name}-gltf-types`,root,'npx',['--no-install','tsc','--noEmit','--strict','--skipLibCheck','false','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','gltf-consumer.ts']);
     await cp(join(sdk,'tests/fixtures/coverage/textures'),join(root,'public/textures'),{recursive:true});
@@ -127,23 +129,19 @@ try {
     await page.waitForFunction(() => window.packed.modes.samples === 32, null, { timeout: 90_000 });
     result.samples = await page.evaluate(() => window.packed.modes.samples);
     result.settings = await page.evaluate(() => window.packed.modes.settings);
-    assert.deepEqual(result.settings, {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null,bloom:false,bloomStrength:0.5,bloomRadius:0.5,bloomThreshold:1});
+    assert.deepEqual(result.settings, {maxSamples:32,bounces:4,denoiser:null,bloom:false,bloomStrength:0.5,bloomRadius:0.5,bloomThreshold:1});
     await page.screenshot({ path: join(output, 'pathtraced.png') });
-    await page.evaluate(() => window.packed.modes.setMode('pathtraced-gk'));
-    await page.waitForFunction(() => window.packed.modes.samples > 3, null, { timeout: 90_000 });
-    result.gkjohnsonSamples = await page.evaluate(() => window.packed.modes.samples);
-    assert.equal(await page.evaluate(() => window.packed.modes.pathCanvas.hidden), true, 'gkjohnson uses the host canvas');
-    await page.screenshot({ path: join(output, 'gkjohnson.png') });
     await page.getByRole('button', { name: 'Stage', exact: true }).click();
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('/World/Camera');
     await page.waitForTimeout(500); await page.screenshot({ path: join(output, 'authored-camera.png') });
     await page.getByRole('combobox', { name: 'Camera', exact: true }).selectOption('');
-    for(const mode of ['pathtraced-gk','pathtraced']) {
-      await page.evaluate(async mode=>{const p=window.packed;await p.modes.setSettings({maxSamples:2,bounces:2,denoiser:'oidn-fast',gkDenoiser:'oidn-fast'});await p.modes.setMode(mode);},mode);
+    for(const denoiser of ['oidn-fast','oidn']) {
+      await page.evaluate(async denoiser=>{await window.packed.modes.setSettings({maxSamples:2,bounces:2,denoiser});},denoiser);
       await page.waitForFunction(()=>window.packed.status?.status==='finished',null,{timeout:90000});
-      await page.screenshot({path:join(output,`${mode}-oidn.png`)});
+      await page.screenshot({path:join(output,`pathtraced-${denoiser}.png`)});
     }
-    result.denoising='OIDN small model completed on both tracers from self-hosted weights';
+    result.mutracerVersion = runtimeDependencies['@meimu/mutracer'];
+    result.denoising='MuTracer OIDN small and standard models completed from self-hosted weights';
     await page.evaluate(async()=>{const p=window.packed;await p.modes.setMode('basic');await p.setPrimVisible(p.handle,'/World/Sphere1',false);await p.setPrimVisible(p.handle,'/World/Sphere1',true);await p.setPrimActive(p.handle,'/World/Sphere1',false);await p.setPrimActive(p.handle,'/World/Sphere1',true);p.panel.refresh();});
     assert.equal(await page.getByRole('button',{name:'Deactivate /World/Sphere1',exact:true}).getAttribute('aria-pressed'),'true');
     result.stageEdits='Packed visibility/activation exports edit and restore the loaded stage';

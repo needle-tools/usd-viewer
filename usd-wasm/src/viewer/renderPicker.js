@@ -6,9 +6,9 @@ export async function mountRenderModePicker({ container = document.body, style =
   const panel = document.createElement('div'); panel.id = 'render-mode-controls'; panel.className = 'viewer-render-modes'; panel.dataset.layout = layout;
   const label = document.createElement('label'); label.className = 'usd-settings-row'; label.textContent = layout === 'settings' ? 'Mode' : 'Render ';
   const select = document.createElement('select'); select.setAttribute('aria-label', 'Render mode');
-  for (const [value, title] of [['basic', 'Basic'], ['beauty', 'Beauty'], ['pathtraced', 'Path traced (MuTracer)'], ['pathtraced-gk', 'Path traced (gkjohnson)']]) {
+  for (const [value, title] of [['basic', 'Basic'], ['beauty', 'Beauty'], ['pathtraced', 'Path traced (MuTracer)']]) {
     const option = document.createElement('option'); option.value = value; option.textContent = title;
-    option.disabled = value === 'beauty' && !options.renderer.isWebGPURenderer || value === 'pathtraced-gk' && !options.renderer.backend?.isWebGPUBackend; select.append(option);
+    option.disabled = value === 'beauty' && !options.renderer.isWebGPURenderer; select.append(option);
   }
   const status = document.createElement('span'); status.setAttribute('role', 'status');
   label.append(select); panel.append(label, status); container.append(panel);
@@ -19,9 +19,7 @@ export async function mountRenderModePicker({ container = document.body, style =
     else { delete panel.dataset.error; status.textContent = info.status === 'loading' ? 'Loading…' : info.mode.startsWith('pathtraced') ? info.status === 'previewing' ? 'Preview' : `${info.samples} / ${info.maxSamples}${info.status === 'denoising' ? ' · Denoising…' : ''}` : ''; }
     if (pathFields) {
       pathFields.hidden = !info.mode.startsWith('pathtraced');
-      const gk = info.mode === 'pathtraced-gk';
-      for (const option of denoiserInput.options) option.hidden = gk && option.value === 'jnlm';
-      denoiserInput.value = (gk ? modes.settings.gkDenoiser : modes.settings.denoiser) || 'none';
+      denoiserInput.value = modes.settings.denoiser || 'none';
     }
     if (bloomFields) bloomFields.hidden = info.mode.startsWith('pathtraced');
     select.value = info.mode; options.onStatus?.(info);
@@ -49,7 +47,7 @@ export async function mountRenderModePicker({ container = document.body, style =
     bounceInput=number('Bounces',modes.settings.bounces,1,20,value=>change({bounces:value}));
     denoiserInput=document.createElement('select');denoiserInput.setAttribute('aria-label','Denoiser');
     for(const [value,title] of [['jnlm','JNLM'],['oidn-fast','OIDN · Fast'],['oidn','OIDN · Quality'],['none','Off']]){const option=document.createElement('option');option.value=value;option.textContent=title;denoiserInput.append(option);}denoiserInput.value=modes.settings.denoiser||'none';
-    denoiserInput.onchange=()=>void change({[modes.mode==='pathtraced-gk'?'gkDenoiser':'denoiser']:denoiserInput.value==='none'?null:denoiserInput.value}).catch(error=>{status.textContent=error.message;panel.dataset.error='true';});
+    denoiserInput.onchange=()=>void change({denoiser:denoiserInput.value==='none'?null:denoiserInput.value}).catch(error=>{status.textContent=error.message;panel.dataset.error='true';});
     pathFields.append(field('Samples',sampleInput),field('Bounces',bounceInput),field('Denoiser',denoiserInput));panel.insertBefore(pathFields,status);
   }
   async function choose(mode) {

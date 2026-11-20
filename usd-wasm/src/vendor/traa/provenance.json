@@ -1,0 +1,16 @@
+{
+  "package": "@needle-tools/three",
+  "version": "0.185.2-alpha.8",
+  "upstream": "https://github.com/mrdoob/three.js",
+  "license": "MIT",
+  "files": [
+    {
+      "path": "TRAANode.js",
+      "source": "examples/jsm/tsl/display/TRAANode.js",
+      "sourceSha256": "0d4985dec99245f919df9a905bc469b0df37b2f264dea7eeeebce3a24741faba"
+    }
+  ],
+  "changes": [
+    "Clamp depth and colour neighbourhood reads to the texture boundary to prevent dark image borders on the WebGL backend after a history reset."
+  ]
+}

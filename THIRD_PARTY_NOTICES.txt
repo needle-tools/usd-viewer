@@ -1,4 +1,10 @@
-Third-party notices preserved from the previous LICENSE.txt.
+Third-party notices
+
+three-mesh-bvh 0.9.16
+https://github.com/gkjohnson/three-mesh-bvh
+Copyright (c) 2018 Garrett Johnson
+MIT license; full license: public/three-mesh-bvh/LICENSE
+Used by the viewer for accelerated mouse picking.
 
 NVIDIA MDL fixture materials
 The unmodified OmniPBR modules are from NVIDIA ovrtx 0.5.1.385782.

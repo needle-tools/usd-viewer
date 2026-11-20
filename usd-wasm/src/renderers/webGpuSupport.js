@@ -1,15 +1,44 @@
-import {BufferGeometry,Float32BufferAttribute,InstancedBufferAttribute,InstancedBufferGeometry,Points,Sprite} from 'three';
+import {BufferGeometry,Float32BufferAttribute,InstancedBufferAttribute,InstancedBufferGeometry,Points,REVISION,Sprite} from 'three';
 import { prepareWebGlAreaLights } from '../hydra/areaLightSupport.js';
 import { prepareInstancedMaterialUpdates } from './instancedMaterialUpdates.js';
 
+/**
+ * Before r186, WebGPURenderer freed only the attributes of the render object that first drew a
+ * disposed geometry. When that was a depth, shadow or picking pass, the attributes only the
+ * material pass reads (normals, uvs) kept their GPU buffers for the session. r186 also deletes
+ * the geometry's own attributes (mrdoob/three.js#33939); do the same on older revisions.
+ */
+function releaseDisposedGeometryAttributes(renderer) {
+  const geometries = renderer?._geometries;
+  if (Number.parseInt(REVISION, 10) >= 186 || typeof geometries?.initGeometry !== 'function'
+    || typeof geometries.attributes?.delete !== 'function' || geometries.usdReleasesGeometryAttributes) return;
+  geometries.usdReleasesGeometryAttributes = true;
+  const initGeometry = geometries.initGeometry;
+  geometries.initGeometry = function (target) {
+    const result = initGeometry.call(this, target);
+    const geometry = target?.isBufferGeometry ? target : target?.geometry;
+    if (geometry) {
+      const onDispose = () => {
+        geometry.removeEventListener('dispose', onDispose);
+        for (const attribute of Object.values(geometry.attributes)) this.attributes.delete(attribute);
+      };
+      geometry.addEventListener('dispose', onDispose);
+    }
+    return result;
+  };
+}
+
 /** Modern renderer support stays outside the base loader's dependency graph. */
-export async function createWebGpuSupport({ lazyAreaLights = false } = {}) {
+export async function createWebGpuSupport({ lazyAreaLights = false, renderer = null } = {}) {
+  if (renderer) releaseDisposedGeometryAttributes(renderer);
   const [{ MeshPhysicalNodeMaterial, RectAreaLightNode, PointsNodeMaterial }, TSL, { createMaterialXNodeMaterial }] = await Promise.all([
     import('three/webgpu'), import('three/tsl'), import('../hydra/materialxVolume.js'),
   ]);
   let areaLightPreparation;
   const strokeOpacity = new WeakMap();
   const support = {
+    /** Called by createThreeHydra with its renderer, after renderer.init(). */
+    prepareRenderer: releaseDisposedGeometryAttributes,
     prepareMaterial: prepareInstancedMaterialUpdates,
     SurfaceMaterial: MeshPhysicalNodeMaterial,
     createPointHelper(positions, options) {

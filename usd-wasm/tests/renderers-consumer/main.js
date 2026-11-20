@@ -18,7 +18,7 @@ const USD = await getUsdModule();
 const handle = await createThreeHydra({ USD, scene: root, renderScene: scene, renderer, url: '/scene.usda', scenePrimitiveLightIntensityScale: 0.1, webGpuSupport: await createWebGpuSupport() });
 await handle.ready(); await handle.materialsReady();
 let status;
-const picker = await mountRenderModePicker({ renderer, scene, camera, controls, settings: {maxSamples:32,bounces:4,denoiser:null,gkDenoiser:null}, onStatus(info){status=info;}, configurePathTracer: configureNeedleAgxDisplay, loadPathTracer: () => import('@meimu/mutracer'), loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu'), loadDenoiser:()=>import('oidn-webgpu'), denoiserWeightsBaseUrl:'/weights/' });
+const picker = await mountRenderModePicker({ renderer, scene, camera, controls, settings: {maxSamples:32,bounces:4,denoiser:null}, onStatus(info){status=info;}, configurePathTracer: configureNeedleAgxDisplay, loadPathTracer: () => import('@meimu/mutracer'), denoiserWeightsBaseUrl:'/weights/' });
 let activeCamera = camera;
 const stage = handle.driver.GetStage();
 const panel = await mountStagePanel({ handle, stage, scene, camera, controls, setCamera(value) { activeCamera = value; } });

@@ -1,5 +1,5 @@
 const STORAGE = 'needle-usd-render-settings';
-const modes = ['basic', 'beauty', 'pathtraced', 'pathtraced-gk'];
+const modes = ['basic', 'beauty', 'pathtraced'];
 
 export function readRenderSettings() {
   try {
@@ -12,7 +12,10 @@ export function saveRenderSettings(patch) {
   try { localStorage.setItem(STORAGE, JSON.stringify({...readRenderSettings(), ...patch})); } catch {}
 }
 export function preferredRenderMode(params) {
-  return [params.get('render'), readRenderSettings().mode].find(value => modes.includes(value)) || 'beauty';
+  // Preserve the intent of links and preferences saved for the retired tracer.
+  return [params.get('render'), readRenderSettings().mode]
+    .map(value => value === 'pathtraced-gk' ? 'pathtraced' : value)
+    .find(value => modes.includes(value)) || 'beauty';
 }
 function detailLevel(value) {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined;

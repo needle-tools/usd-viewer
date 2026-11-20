@@ -1,6 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGaussianParticleField } from '../../src/renderers/gaussian.js';
+import { CountingSort } from '../../src/vendor/gaussian/gpgpu/CountingSort.js';
+import { uint } from 'three/tsl';
+
+test('vendored counting sort releases replaced compute nodes', () => {
+    const sort = new CountingSort(3);
+    sort.setBinNode(() => uint(0));
+    let released = 0;
+    for (const node of [sort._resetNode, sort._histogramNode, sort._prefixNode, sort._scatterNode]) {
+        node.addEventListener('dispose', () => released++);
+    }
+    sort.setBinNode(() => uint(1));
+    assert.equal(released, 4);
+    for (const node of [sort._resetNode, sort._histogramNode, sort._prefixNode, sort._scatterNode]) node.dispose();
+});
 
 for (const degree of [0, 1, 2, 3]) test(`WebGPU Gaussian degree ${degree} retains HDR and signed coefficients, anisotropy and owned resources`, () => {
     const coefficients = new Float32Array((degree + 1) ** 2 * 3 * 2);

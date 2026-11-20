@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
+const port = Number(process.env.USD_VIEWER_TEST_PORT) || 5199;
+const origin = `http://127.0.0.1:${port}`;
 const runHeaded = process.env.USD_VIEWER_VISUAL_HEADED === '1';
 
 export default defineConfig({
@@ -17,21 +19,21 @@ export default defineConfig({
     },
     reporter: [['line'], ['json', {outputFile: 'test-results/report.json'}]],
     use: {
-        baseURL: 'http://127.0.0.1:5199',
+        baseURL: origin,
         channel: 'chrome',
         headless: !runHeaded,
         viewport: { width: 1280, height: 900 },
         deviceScaleFactor: 1,
         // Existing workspace tests exercise Studio. Product-mode tests start
         // with empty storage to cover the first-visit Viewer experience.
-        storageState: { cookies: [], origins: [{origin: 'http://127.0.0.1:5199', localStorage: [
+        storageState: { cookies: [], origins: [{origin, localStorage: [
             {name: 'needle-usd-product-mode', value: JSON.stringify('studio')},
         ]}] },
     },
     webServer: {
-        command: 'npm run prepare:public && PORT=5199 npm run start',
+        command: `npm run prepare:public && PORT=${port} npm run start`,
         cwd: '../../..',
-        port: 5199,
+        port,
         // Always start the server from the current tree; a reused one can serve stale code.
         reuseExistingServer: false,
         timeout: 180_000,

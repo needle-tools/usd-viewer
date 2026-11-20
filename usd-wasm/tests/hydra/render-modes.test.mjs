@@ -56,3 +56,17 @@ test('bloom settings reject invalid values atomically and remain optional on leg
     assert.equal(modes.settings.bloomStrength,2);
     modes.dispose();
 });
+
+
+test('path tracing rejects both legacy CubeUV atlases and r187 cubemap PMREMs before loading a tracer', async () => {
+    for (const environment of [{ mapping: 306 }, { isPMREMTexture: true }]) {
+        let imports = 0;
+        const state = setup(async () => { imports++; throw new Error('must not load'); });
+        state.scene.environment = environment;
+        const modes = await state.create();
+        await assert.rejects(modes.setMode('pathtraced'), /PMREM-only environments/);
+        assert.equal(imports, 0);
+        assert.equal(modes.mode, 'basic');
+        modes.dispose();
+    }
+});

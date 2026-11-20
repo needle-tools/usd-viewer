@@ -1,17 +1,20 @@
 import type { WebGpuSupport } from './hydra.js';
-/** With lazyAreaLights, USD emitters prepare lookup tables on demand. Before adding host area lights, await support.prepareAreaLights(). */
-export function createWebGpuSupport(options?: { lazyAreaLights?: boolean }): Promise<WebGpuSupport & { prepareAreaLights(): Promise<void> }>;
+/**
+ * With lazyAreaLights, USD emitters prepare lookup tables on demand. Before adding host area lights, await support.prepareAreaLights().
+ * Pass an initialized `renderer` (createThreeHydra does this for its renderer) so that, on three releases before r186, disposed
+ * geometry also releases the GPU buffers of every attribute it holds.
+ */
+export function createWebGpuSupport(options?: { lazyAreaLights?: boolean, renderer?: unknown }): Promise<WebGpuSupport & { prepareAreaLights(): Promise<void> }>;
 /** Register Needle's AgX look on a modern renderer, retaining its current exposure. */
 export function configureNeedleAgx(renderer: PresentationRenderer): Promise<boolean>;
 /** MuTracer Engine; installs a display pass and returns its unregister function. Requires WebGPU extended output. */
 export function configureNeedleAgxDisplay(engine: unknown, getToneMapping?: () => number): () => void;
 import type { Camera, Material, Light, Scene, Vector2, Color } from 'three';
-export type RenderMode = 'basic' | 'beauty' | 'pathtraced' | 'pathtraced-gk';
+export type RenderMode = 'basic' | 'beauty' | 'pathtraced';
 export interface RenderSettings {
   maxSamples: number;
   bounces: number;
   denoiser: 'jnlm' | 'oidn' | 'oidn-fast' | null;
-  gkDenoiser: 'oidn' | 'oidn-fast' | null;
   /** Optional HDR bloom in Basic and Beauty on WebGPURenderer. Default false. */
   bloom: boolean;
   /** 0–10; default 0.5. */
@@ -44,16 +47,13 @@ export interface RenderModes {
   render(camera?: Camera): void;
   dispose(): void;
 }
-/** Three.js r185+ is required for Beauty. Optional tracers are imported only when selected. */
+/** Three.js r185+ is required for Beauty. MuTracer is imported only when selected. */
 export function createRenderModes(options: {
   renderer: PresentationRenderer; scene: Scene; camera: Camera; controls?: import('three/addons/controls/OrbitControls.js').OrbitControls; settings?: Partial<RenderSettings>; canvas?: HTMLCanvasElement;
   onStatus?: (status: RenderModeStatus) => void;
   loadPathTracer?: () => Promise<unknown>;
   /** Configure a freshly initialized MuTracer engine; an optional returned disposer runs on mode exit. */
   configurePathTracer?: (engine: unknown) => void | (() => void) | Promise<void | (() => void)>;
-  loadGkPathTracer?: () => Promise<unknown>;
-  /** Optional OIDN module, loaded only when a gkjohnson denoiser is enabled. */
-  loadDenoiser?: () => Promise<unknown>;
   /** Self-hosted MuTracer-compatible OIDN weights (standard and small models). */
   denoiserWeightsBaseUrl?: string;
   /** Override MuTracer material/light conversion; returned objects must follow its OpenPBR interfaces. */

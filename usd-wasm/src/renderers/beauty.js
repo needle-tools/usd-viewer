@@ -1,7 +1,13 @@
-import { RenderTarget, DepthTexture, HalfFloatType, UnsignedByteType, RenderPipeline, NoToneMapping, Vector2, Color } from 'three/webgpu';
+import { RenderTarget, DepthTexture, HalfFloatType, UnsignedByteType, RenderPipeline, NoToneMapping, Vector2, Color, REVISION } from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { ssgi } from 'three/addons/tsl/display/SSGINode.js';
-import { traa } from 'three/addons/tsl/display/TRAANode.js';
+import { traa as legacyTraa } from '../vendor/traa/TRAANode.js';
+import { traa as runtimeTraa } from 'three/addons/tsl/display/TRAANode.js';
+// Use patched Needle r185/r186 addons and r187's matching camera hooks.
+// Earlier runtimes still require the bundled r185 border fix.
+const needle185 = /^185\.2-alpha\.(\d+)$/.exec(REVISION);
+const needle186 = /^186\.[12](?:-alpha\.\d+)?$/.test(REVISION);
+const traa = Number.parseInt(REVISION, 10) >= 187 || needle186 || needle185 && Number(needle185[1]) >= 9 ? runtimeTraa : legacyTraa;
 import { createBloomPresentation } from './bloom.js';
 
 /** Surface GI is resolved before transparent objects. Volumes composite once over linear HDR color/depth. */

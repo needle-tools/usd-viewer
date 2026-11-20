@@ -4,17 +4,17 @@ export { configureNeedleAgxDisplay } from './needleAgxDisplay.js';
 export async function configureNeedleAgx(renderer) {
   return (await import('./needleAgx.js')).configureNeedleAgx(renderer);
 }
-import { Vector2, Color, CubeUVReflectionMapping, NoToneMapping } from 'three';
+import { Vector2, Color, NoToneMapping } from 'three';
 import { createOrbitControlUpdater } from './orbitControls.js';
 
 /** Optional presentation modes. The caller retains ownership of the Three renderer and scene. */
-export async function createRenderModes({ renderer, scene, camera, canvas, controls, settings: initialSettings = {}, onStatus = () => {}, loadPathTracer, loadGkPathTracer, loadDenoiser, denoiserWeightsBaseUrl, configurePathTracer, convertMaterial, convertLight }) {
-  const settings = { maxSamples: 512, bounces: 8, denoiser: 'jnlm', gkDenoiser: loadDenoiser ? 'oidn-fast' : null, bloom: false, bloomStrength: 0.5, bloomRadius: 0.5, bloomThreshold: 1, ...initialSettings };
+export async function createRenderModes({ renderer, scene, camera, canvas, controls, settings: initialSettings = {}, onStatus = () => {}, loadPathTracer, denoiserWeightsBaseUrl, configurePathTracer, convertMaterial, convertLight }) {
+  const settings = { maxSamples: 512, bounces: 8, denoiser: 'jnlm', bloom: false, bloomStrength: 0.5, bloomRadius: 0.5, bloomThreshold: 1, ...initialSettings };
   const muDenoiser = type => !type ? null : type === 'jnlm' ? {type, schedule:'progressive'} : {type:'oidn', model:type === 'oidn-fast' ? 'small' : 'standard', schedule:'progressive', ...(denoiserWeightsBaseUrl ? {weightsBaseUrl:denoiserWeightsBaseUrl} : {})};
   function validateSettings(values) {
     if (!Number.isInteger(values.maxSamples) || values.maxSamples < 1 || values.maxSamples > 65536) throw new Error('Samples must be an integer from 1 to 65536.');
     if (!Number.isInteger(values.bounces) || values.bounces < 1 || values.bounces > 20) throw new Error('Bounces must be an integer from 1 to 20.');
-    if (![null, 'jnlm', 'oidn', 'oidn-fast'].includes(values.denoiser) || ![null,'oidn','oidn-fast'].includes(values.gkDenoiser)) throw new Error('Unknown denoiser.');
+    if (![null, 'jnlm', 'oidn', 'oidn-fast'].includes(values.denoiser)) throw new Error('Unknown denoiser.');
     if (typeof values.bloom !== 'boolean') throw new Error('Bloom must be a boolean.');
     for (const [key, max] of [['bloomStrength', 10], ['bloomRadius', 1], ['bloomThreshold', 100]]) {
       if (!Number.isFinite(values[key]) || values[key] < 0 || values[key] > max) throw new Error(`${key} must be between 0 and ${max}.`);
@@ -25,7 +25,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
   const orbit = controls ? createOrbitControlUpdater(controls) : null; let lastControlTime = performance.now();
   let mode = 'basic', disposed = false, revision = 0;
   let beauty, beautyPending, basic, basicPending, tracer, loop, sync, sourceCamera;
-  let gk, pathDisplayDispose, helperOverlay, helperOverlayPending;
+  let pathDisplayDispose, helperOverlay, helperOverlayPending;
   let lastStatus = '';
   const pathCanvas = canvas || document.createElement('canvas');
   const ownsCanvas = !canvas;
@@ -37,7 +37,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
   }
   pathCanvas.hidden = true;
   const notify = (detail = {}) => {
-    const state = { mode, samples: gk?.samples || loop?.samples || 0, status: gk?.status || loop?.status || 'ready', maxSamples: settings.maxSamples, ...detail };
+    const state = { mode, samples: loop?.samples || 0, status: loop?.status || 'ready', maxSamples: settings.maxSamples, ...detail };
     const key = JSON.stringify(state); if (key !== lastStatus) { lastStatus = key; onStatus(state); }
   };
   const showPath = (show) => { pathCanvas.hidden = !show; renderer.domElement.style.opacity = show ? '0' : originalOpacity; };
@@ -60,26 +60,25 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
     beauty = undefined;
   }
   function releaseBasic() { basic?.dispose(); basic = undefined; }
-  function validatePath(gkjohnson = false) {
+  function validatePath() {
     const issues = new Set();
     scene.traverseVisible(object => {
       if (object.userData?.usdHelperFor) return;
       if (object.userData?.usdTypeName === 'ParticleField3DGaussianSplat') issues.add('Gaussian splats');
-      if (gkjohnson && object.isLight && object.intensity && !object.isRectAreaLight && !object.isSpotLight && !object.isPointLight && !object.isDirectionalLight) issues.add(object.type);
       if (object.isPoints || object.isLine) issues.add('points and lines');
       if (!object.isMesh || object.userData?.usdHelperFor) return;
       if (object.geometry?.getAttribute('strokeOpacity')?.array.some(value => value < 1)) issues.add('point and curve opacity');
       for (const material of [object.material].flat()) {
-        if (convertMaterial && !gkjohnson) continue; // The application supplies its own shader translation.
+        if (convertMaterial) continue; // The application supplies its own shader translation.
         if (material?.isBoundedVolumeNodeMaterial) issues.add('volumes');
-        else if (gkjohnson && ['colorNode', 'opacityNode', 'normalNode', 'roughnessNode', 'metalnessNode', 'emissiveNode', 'positionNode'].some(key => material?.[key])) issues.add('custom node shaders');
         else if (material?.userData?.usdPreviewPrimvars?.length) issues.add('custom primvar shaders');
         else if (material?.userData?.usdMaterialX || material?.isMaterialXMaterial) issues.add('MaterialX graphs');
-        else if (!material?.isMeshStandardMaterial && (gkjohnson || !material?.isMeshBasicMaterial)) issues.add(material?.type || 'custom materials');
+        else if (!material?.isMeshStandardMaterial && !material?.isMeshBasicMaterial) issues.add(material?.type || 'custom materials');
       }
       if (object.isBatchedMesh || object.isInstancedMesh && (object.morphTexture || object.isSkinnedMesh)) issues.add('deformed instances');
     });
-    if (scene.environment?.mapping === CubeUVReflectionMapping) issues.add('PMREM-only environments');
+    // r187 marks cubemap PMREMs explicitly; older releases used CubeUV mapping 306.
+    if (scene.environment?.isPMREMTexture || scene.environment?.mapping === 306) issues.add('PMREM-only environments');
     if (issues.size) throw new Error(`Path tracing does not yet support ${[...issues].join(', ')}.`);
   }
   async function prepareBeauty(activeCamera = camera) {
@@ -128,7 +127,6 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
       const values = { ...settings, ...next };
       validateSettings(values);
       if (loop && values.denoiser !== settings.denoiser) await loop.final.setDenoiser(muDenoiser(values.denoiser));
-      await gk?.setSettings(values);
       if (mode === 'basic' && values.bloom && !basic) {
         const request = revision;
         const candidate = await prepareBasic();
@@ -142,15 +140,15 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
       if (loop) { loop.final.maxSamples = settings.maxSamples; loop.final.bounces = settings.bounces; }
       notify();
     },
-    get samples() { return gk?.samples || loop?.samples || 0; },
+    get samples() { return loop?.samples || 0; },
     get backend() { return mode === 'pathtraced' ? tracer?.backend : renderer.backend?.isWebGPUBackend ? 'webgpu' : 'webgl'; },
     get pathCanvas() { return pathCanvas; },
     async setMode(next) {
-      if (!['basic', 'beauty', 'pathtraced', 'pathtraced-gk'].includes(next)) throw new Error(`Unknown render mode: ${next}`);
+      if (!['basic', 'beauty', 'pathtraced'].includes(next)) throw new Error(`Unknown render mode: ${next}`);
       if (disposed) throw new Error('Render modes have been disposed.');
       const request = ++revision;
       if (next === mode && !(next === 'basic' && settings.bloom && !basic)) return;
-      if (next.startsWith('pathtraced')) validatePath(next === 'pathtraced-gk');
+      if (next === 'pathtraced') validatePath();
       notify({ status: 'loading', requestedMode: next });
       try {
         if (next === 'beauty' && !beauty) {
@@ -162,15 +160,6 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
           const candidate = await prepareBasic();
           if (disposed || request !== revision) { candidate.dispose(); return; }
           basic = candidate;
-        }
-        let nextGk;
-        if (next === 'pathtraced-gk') {
-          if (!renderer.backend?.isWebGPUBackend) throw new Error('gkjohnson path tracing requires the WebGPU backend.');
-          if (!loadGkPathTracer) throw new Error("Pass loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu') to enable this mode.");
-          const [api, { createGkjohnsonTracer }] = await Promise.all([loadGkPathTracer(), import('./gkjohnson.js')]);
-          if (disposed || request !== revision) return;
-          nextGk = await createGkjohnsonTracer({ api, renderer, scene, camera, settings, loadDenoiser, denoiserWeightsBaseUrl, onError: error => notify({ status: 'error', error: error.message }) });
-          if (disposed || request !== revision) { nextGk.dispose(); return; }
         }
         if (next === 'pathtraced') {
           if (!loadPathTracer) throw new Error("Pass loadPathTracer: () => import('@meimu/mutracer') to enable path tracing.");
@@ -195,14 +184,12 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
           tracer.display.toneMappingExposure = renderer.toneMapping === NoToneMapping ? 1 : renderer.toneMappingExposure;
           this.resize();
         } else releasePath();
-        gk?.dispose(); gk = nextGk;
         if (next !== 'beauty') releaseBeauty();
         if (next !== 'basic') releaseBasic();
         mode = next; if (!mode.startsWith('pathtraced')) helperOverlay?.hide(); showPath(mode === 'pathtraced'); notify();
       } catch (error) { notify({ error: error.message, status: 'error' }); throw error; }
     },
     resize() {
-      gk?.resize();
       if (tracer) {
         const size = renderer.getDrawingBufferSize(new Vector2());
         tracer.display.setSize(size.x, size.y);
@@ -212,10 +199,7 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
       if (disposed) return;
       if (!mode.startsWith('pathtraced')) helperOverlay?.hide();
       const now = performance.now(); orbit?.update(Math.min(0.1,Math.max(0,(now-lastControlTime)/1000))); lastControlTime=now;
-      if (mode === 'pathtraced-gk') {
-        try { validatePath(true); gk.render(activeCamera); renderHelpers(activeCamera); notify(); }
-        catch (error) { gk?.dispose(); gk = undefined; mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); }
-      } else if (mode === 'pathtraced') {
+      if (mode === 'pathtraced') {
         // Stage edits can introduce materials absent when this mode was selected.
         try { validatePath(); } catch (error) { releasePath(); mode = 'basic'; notify({ status: 'error', error: error.message }); renderer.render(scene, activeCamera); return; }
         if (sourceCamera !== activeCamera) { loop.removeSync(sync); makeSync(pathApi, activeCamera); loop.addSync(sync); }
@@ -246,6 +230,6 @@ export async function createRenderModes({ renderer, scene, camera, canvas, contr
         } else basic.render();
       } else renderer.render(scene, activeCamera);
     },
-    dispose() { if (disposed) return; disposed = true; revision++; helperOverlay?.dispose(); orbit?.dispose(); gk?.dispose(); gk = undefined; releasePath(); releaseBeauty(); releaseBasic(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
+    dispose() { if (disposed) return; disposed = true; revision++; helperOverlay?.dispose(); orbit?.dispose(); releasePath(); releaseBeauty(); releaseBasic(); if (ownsCanvas) pathCanvas.remove(); else pathCanvas.hidden = originalHidden; },
   };
 }

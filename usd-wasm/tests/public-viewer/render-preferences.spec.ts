@@ -28,12 +28,6 @@ test('render mode and tracer quality survive fresh URLs, including Basic',async(
   await expect(mode).toHaveValue('pathtraced');await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('pathtraced');
   for(const [name,value] of [['Samples','24'],['Bounces','4'],['Exposure','1.3']])await expect(page.getByRole('spinbutton',{name,exact:true})).toHaveValue(value);
   await expect(page.getByRole('combobox',{name:'Denoiser',exact:true})).toHaveValue('none');
-  await mode.selectOption('pathtraced-gk');await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('pathtraced-gk');
-  await page.getByRole('combobox',{name:'Denoiser',exact:true}).selectOption('none');
-  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')!).gkDenoiser)).toBe(null);
-  await page.goto(url());await stageReady(page);await openSettings(page);
-  await expect(mode).toHaveValue('pathtraced-gk');await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('pathtraced-gk');
-  await expect(page.getByRole('combobox',{name:'Denoiser',exact:true})).toHaveValue('none');
   await mode.selectOption('basic');await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings')!).mode)).toBe('basic');
   expect(new URL(page.url()).searchParams.get('render')).toBe('basic');
   await page.goto(url());await stageReady(page);await openSettings(page);await expect(mode).toHaveValue('basic');
@@ -62,4 +56,14 @@ test('a mode chosen before opening a file remains selected when it loads',async(
   const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('beauty');await mode.selectOption('basic');
   await page.locator('input[type=file]').setInputFiles({name:'cube.usda',mimeType:'text/plain',buffer:Buffer.from('#usda 1.0\ndef Cube "Cube" {}\n')});await stageReady(page);
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('basic');
+});
+
+for(const source of ['preference','url'])test(`retired tracer ${source} selects MuTracer without loading the retired renderer`,async({page})=>{
+  const requests:string[]=[];page.on('request',r=>requests.push(r.url()));
+  if(source==='preference')await page.addInitScript(()=>localStorage.setItem('needle-usd-render-settings',JSON.stringify({mode:'pathtraced-gk',denoiser:null,maxSamples:2})));
+  await page.goto(url()+(source==='url'?'&render=pathtraced-gk':''));await stageReady(page);await openSettings(page);
+  const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('pathtraced');
+  await expect(mode.locator('option')).toHaveText(['Basic','Beauty','Path traced (MuTracer)']);
+  await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(0);
+  expect(requests.some(url=>url.includes('/three-gpu-pathtracer/'))).toBe(false);
 });

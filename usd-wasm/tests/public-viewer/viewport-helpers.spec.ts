@@ -26,7 +26,7 @@ test('zero-width curves, control points and purpose filtering work through the H
   expect(errors).toEqual([]);
 });
 
-test('light and camera gizmos render in raster and both path tracers without entering their geometry',async({page},info)=>{
+test('light and camera gizmos render in raster and MuTracer without entering their geometry',async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('net::'))errors.push(message.text());});
   await page.goto('/?workspace=studio&viewer=three&render=basic&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda');await stageReady(page);
@@ -34,8 +34,8 @@ test('light and camera gizmos render in raster and both path tracers without ent
   const helpers=await page.evaluate(()=>{const w=window as any,items:string[]=[];w.usdRoot.traverseVisible((o:any)=>{if(o.userData.usdHelperFor)items.push(o.userData.usdHelperKind);});return items;});
   expect(helpers).toContain('lights');expect(helpers).toContain('cameras');
   await page.screenshot({path:info.outputPath('light-camera-helpers.png')});
-  for(const mode of ['pathtraced','pathtraced-gk']) {
-    await page.evaluate(async mode=>{const w=window as any;await w.usdRenderModes.setSettings({denoiser:null,gkDenoiser:null,maxSamples:2});await w.usdRenderModes.setMode(mode);},mode);
+  for(const mode of ['pathtraced']) {
+    await page.evaluate(async mode=>{const w=window as any;await w.usdRenderModes.setSettings({denoiser:null,maxSamples:2});await w.usdRenderModes.setMode(mode);},mode);
     await expect.poll(()=>page.evaluate(()=>document.querySelectorAll('canvas[data-usd-helper-overlay]').length)).toBe(1);
     await page.waitForTimeout(1000);await page.screenshot({path:info.outputPath(`${mode}-helpers.png`)});
     expect(await page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe(mode);

@@ -21,7 +21,7 @@ test('MuTracer resumes after a camera drag, rests without drift and persists ren
   for(const [name,value] of [['Samples','24'],['Bounces','4'],['Exposure','1.3']]){const input=page.getByRole('spinbutton',{name,exact:true});await input.fill(value);await input.press('Tab');}
   await page.getByRole('combobox',{name:'Denoiser',exact:true}).selectOption('none');
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBe(24);
-  expect(await page.evaluate(()=>(window as any).usdRenderModes.settings)).toMatchObject({maxSamples:24,bounces:4,denoiser:null,gkDenoiser:'oidn-fast'});
+  expect(await page.evaluate(()=>(window as any).usdRenderModes.settings)).toMatchObject({maxSamples:24,bounces:4,denoiser:null});
   await page.reload();await stageReady(page);await openSettings(page);for(const [name,value] of [['Samples','24'],['Bounces','4'],['Exposure','1.3']])await expect(page.getByRole('spinbutton',{name,exact:true})).toHaveValue(value);
   await expect(page.getByRole('combobox',{name:'Denoiser',exact:true})).toHaveValue('none');expect(errors).toEqual([]);
 });
@@ -49,10 +49,7 @@ test('Basic, Beauty and MuTracer share clear-color backgrounds and retain author
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);const exposedPath=await pixel(true);
   await page.evaluate(()=>(window as any).usdRenderModes.setMode('beauty'));await page.waitForTimeout(200);const exposedBeauty=await pixel();
   for(let i=0;i<3;i++)expect(Math.abs(exposedPath[i]-exposedBeauty[i])).toBeLessThanOrEqual(3);
-  await page.evaluate(()=>(window as any).usdRenderModes.setMode('pathtraced-gk'));
-  await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);const exposedGk=await pixel();
-  for(let i=0;i<3;i++)expect(Math.abs(exposedGk[i]-exposedBeauty[i])).toBeLessThanOrEqual(3);
-  await info.attach('background-pixels' ,{body:JSON.stringify({colors,authored:{path,basic},exposure2:{path:exposedPath,beauty:exposedBeauty,gkjohnson:exposedGk}},null,2),contentType:'application/json'});
+  await info.attach('background-pixels' ,{body:JSON.stringify({colors,authored:{path,basic},exposure2:{path:exposedPath,beauty:exposedBeauty}},null,2),contentType:'application/json'});
 });
 
 test('timeline transports and frame entry stay in sync and Space toggles stage playback',async({page},info)=>{

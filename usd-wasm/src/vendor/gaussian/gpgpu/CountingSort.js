@@ -144,6 +144,8 @@ class CountingSort {
 	 */
 	setBinNode( binNode ) {
 
+		disposeComputeNodes( this );
+
 		const { binCount, workgroupSize, count } = this;
 
 		this._resetNode = Fn( () => {
@@ -263,6 +265,23 @@ class CountingSort {
 		this.orderRead.setPBO( true );
 
 		this._webGLBuffersEnabled = true;
+
+	}
+
+}
+
+function disposeComputeNodes( sort ) {
+
+	for ( const key of [ '_resetNode', '_histogramNode', '_prefixNode', '_scatterNode' ] ) {
+
+		const node = sort[ key ];
+
+		if ( node !== null ) {
+
+			node.dispose();
+			sort[ key ] = null;
+
+		}
 
 	}
 

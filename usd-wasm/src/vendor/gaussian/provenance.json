@@ -23,8 +23,14 @@
     "TSL unpackUnorm4x8 compatibility with Three.js r185",
     "Preserve full-precision USD SH coefficients and linear HDR base colors",
     "Dispose owned compute pipelines and storage buffers",
+    "Release replaced counting-sort compute nodes",
     "Orthographic projection Jacobian and parallel-ray SH direction",
-    "Extend Gaussian tails to 1/255 opacity cutoff and retain HDR radiance in the shader",
+    "Cut off fragments below 1/255 opacity and retain HDR radiance in the shader",
+    "Use opacity-dependent quad bounds with antialiased opacity, including sub-threshold splat culling",
     "Keep isotropic projected covariance on a defined axis instead of atan(0, 0)"
-  ]
+  ],
+  "upstreamFidelity": {
+    "revision": "71f862d753fa0234c8c6075c14d804e27880d769",
+    "scope": "Fragment-alpha cutoff, opacity-dependent quad bounds and compute-node replacement cleanup. USD coefficient adapters and aggregate resource disposal are provided by this integration."
+  }
 }
