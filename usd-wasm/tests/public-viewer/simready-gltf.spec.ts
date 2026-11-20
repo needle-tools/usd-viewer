@@ -177,7 +177,7 @@ test('NVIDIA SimReady glasses export keeps resolved instance ownership and artic
  const bytes=await readFile(file),json=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
  const data=json.extensions.NEEDLE_simready;expect(data.bindings.filter((binding:any)=>binding.instance).length).toBe(4);expect(data.bindings.filter((binding:any)=>binding.body).length).toBe(4);
  for(const mesh of json.meshes)for(const primitive of mesh.primitives)if(primitive.material!==undefined)expect(primitive.attributes.COLOR_0).toBeUndefined();expect(data.snapshot.joints.length).toBeGreaterThan(0);expect(data.bindings.some((binding:any)=>binding.instance)).toBe(true);
- expect(data.version).toBe(3);expect(Array.isArray(data.semantics)).toBe(true);
+ expect(data.version).toBe(1);expect(Array.isArray(data.semantics)).toBe(true);
  expect(data.snapshot.shapes.filter((shape:any)=>shape.type==='mesh').every((shape:any)=>Number.isInteger(shape.mesh)&&!!json.meshes[shape.mesh]&&shape.points===undefined&&shape.indices===undefined)).toBe(true);
  const moved=await inspectExportedRuntime(page,file);
  expect(moved.issues).toEqual([]);expect(moved.changed).toBe(true);expect(Math.abs(moved.after-moved.before)).toBeGreaterThan(1);

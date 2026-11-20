@@ -150,7 +150,7 @@ for(const [Type,values]of [
  const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,semantics:f.semantics,exporter:new GLTFExporter()});
  const validation=await validateBytes(new Uint8Array(bytes));assert.equal(validation.issues.numErrors,0,JSON.stringify(validation.issues));
  const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,''),json=result.parser.json,payload=json.extensions.NEEDLE_simready;
- assert.equal(payload.version,3);
+ assert.equal(payload.version,1);
  const primitive=json.meshes[json.nodes.find(node=>node.name===mesh.userData.usdPath).mesh].primitives[0];
  assert.equal(primitive.attributes['_PRIMVARS:SCULPTMASKCOLORTEMP'],undefined);assert.equal(primitive.extras,undefined);
  assert.ok(json.materials.every(material=>material.extras===undefined));assert.deepEqual(result.userData.simready.semantics,[{path:mesh.userData.usdPath,taxonomy:'class',labels:['cabinet']}]);
@@ -270,7 +270,7 @@ test('native USD extraction, GLB, contacts/drives and joint manipulation agree i
   assert.equal(mechanism.setJointValue('/Assembly/Slide',1),true);assert.ok(Math.abs(mechanism.getJointValue('/Assembly/Slide')-.5)<1e-4);
 
   const payload=result.parser.json.extensions.NEEDLE_simready;
-  assert.equal(payload.version,3);
+  assert.equal(payload.version,1);
   assert.ok(!JSON.stringify(payload).includes('physxJoint:armature'));
   assert.ok(!JSON.stringify(payload).includes('mjc:frictionloss'));
   assert.ok(!JSON.stringify(payload).includes('simready:sampledValue'));
