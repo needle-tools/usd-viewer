@@ -1,5 +1,5 @@
 import {renderStructuredValue} from './structuredValue.js';
-import { inspectPrimAsync } from '../scene/index.js';
+import { inspectPrim } from '../scene/index.js';
 import { viewerIcon } from './icons.js';
 import {arrayLayout} from './arrayData.js';
 
@@ -172,7 +172,7 @@ export function mountPropertyInspector({ stage, handle, container, isCurrent = (
     const prim = stage.GetPrimAtPath(path);
     try {
       if (!prim?.IsValid()) return null;
-      const data = typeof prim.GetAllMetadata === 'function' ? await inspectPrimAsync(stage, path, time, {arrayLimit:256}) : {
+      const data = typeof prim.GetAllMetadata === 'function' ? await inspectPrim(stage, path, time, {arrayLimit:256}) : {
         path, type: prim.GetTypeName?.(), metadata: {},
         attributes: await vectorValuesAsync(prim.GetAttributes?.(), async attr => ({ name: attr.GetName(), type: attr.GetTypeName(), value: await attr.GetValueStringAtTime(time) })),
         relationships: vectorValues(prim.GetRelationships?.(), rel => ({ name: rel.GetName(), targets: vectorValues(rel.GetTargets?.()) })),

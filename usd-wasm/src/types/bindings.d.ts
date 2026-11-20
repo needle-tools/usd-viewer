@@ -44,9 +44,9 @@ declare type USD = {
     FS_rmdir: (path: string) => void,
     FS_analyzePath: (path: string) => FSNode,
     CreateStage: (path: string) => USDStage,
-    OpenStage: (path: string) => MaybePromise<USDStage>,
+    OpenStage: (path: string) => Promise<USDStage>,
     ReleaseStage: (stage: USDStage) => boolean,
-    CreateUsdzPackage: (assetPath: string, usdzPath: string) => MaybePromise<boolean>,
+    CreateUsdzPackage: (assetPath: string, usdzPath: string) => Promise<boolean>,
     GetBuildInfoJson: () => string,
     ReadFile: (path: string) => Uint8Array,
     SdfPath: SdfPathConstructor,
@@ -72,9 +72,8 @@ declare type USD = {
     UsdShadeInput: new(attr: USDAttribute) => UsdShadeInput,
     UsdShadeOutput: new(attr: USDAttribute) => UsdShadeOutput,
     UsdShadeMaterialBindingAPI: new(prim: USDPrim) => UsdShadeMaterialBindingAPI,
-    HdWebSyncDriver: new (delegate: hydraDelegate, filepath: string) => HdWebSyncDriver,
-    /** Asynchronous driver creation, available in the JSPI runtime. */
-    CreateHdWebSyncDriver?: (delegate: hydraDelegate, filepath: string) => Promise<HdWebSyncDriver>,
+    /** Opens a stage and creates the Hydra driver that syncs it to the render delegate. */
+    CreateHydraDriver: (delegate: hydraDelegate, filepath: string) => Promise<HydraDriver>,
     flushPendingDeletes: () => void,
     ready: Promise<any>,
     debug: boolean;
@@ -136,8 +135,6 @@ export type OpenUsdBuildInfo = {
 
 // Generated in OpenUSD from pxr/usdImaging/hdEmscripten/bindgen/core-bindings.json.
 // Keep this core USD surface in sync with the generated usd-core-bindings.d.ts.
-declare type MaybePromise<T> = T | Promise<T>
-
 /** @internal Low-level Emscripten std::vector wrapper, not a USD authoring API. */
 declare type EmbindVector<T> = {
     size(): number,
@@ -255,8 +252,8 @@ declare type UsdGeomXformOp = {
     GetOpName(): string,
     GetTypeName(): string,
     Set(value: unknown, timeCode: number): boolean,
-    Get(timeCode: number): MaybePromise<string>,
-    GetValue(timeCode: number): MaybePromise<unknown>,
+    Get(timeCode: number): Promise<string>,
+    GetValue(timeCode: number): Promise<unknown>,
     delete(): void,
 }
 
@@ -306,7 +303,7 @@ declare type USDLayer = {
     Export(path: string): boolean,
     Save(): boolean,
     GetSubLayerPaths(): string[],
-    SetSubLayerPaths(paths: string[]): MaybePromise<void>,
+    SetSubLayerPaths(paths: string[]): Promise<void>,
     delete(): void,
 }
 
@@ -324,16 +321,16 @@ declare type USDAttribute = {
     ClearMetadataByDictKey(key: string, keyPath: string): boolean,
     GetMetadataString(key: string): string,
     HasAuthoredMetadata(key: string): boolean,
-    GetValueString(): MaybePromise<string>,
-    GetValueStringAtTime(timeCode: number): MaybePromise<string>,
+    GetValueString(): Promise<string>,
+    GetValueStringAtTime(timeCode: number): Promise<string>,
     GetConnections(): StringVector,
-    GetResolveInfo(timeCode: number): MaybePromise<USDResolveInfo>,
+    GetResolveInfo(timeCode: number): Promise<USDResolveInfo>,
     HasAuthoredValue(): boolean,
     HasAuthoredValueOpinion(): boolean,
-    GetNumTimeSamples(): MaybePromise<number>,
-    GetTimeSamples(): MaybePromise<DoubleVector>,
-    GetPropertyStack(timeCode: number): MaybePromise<USDSpecStack>,
-    GetPropertyStackWithLayerOffsets(timeCode: number): MaybePromise<USDSpecStack>,
+    GetNumTimeSamples(): Promise<number>,
+    GetTimeSamples(): Promise<DoubleVector>,
+    GetPropertyStack(timeCode: number): Promise<USDSpecStack>,
+    GetPropertyStackWithLayerOffsets(timeCode: number): Promise<USDSpecStack>,
     SetBool(value: boolean, timeCode: number): boolean,
     SetInt(value: number, timeCode: number): boolean,
     SetFloat(value: number, timeCode: number): boolean,
@@ -347,7 +344,7 @@ declare type USDAttribute = {
     SetVec3d(x: number, y: number, z: number, timeCode: number): boolean,
     SetMatrix4d(m00: number, m01: number, m02: number, m03: number, m10: number, m11: number, m12: number, m13: number, m20: number, m21: number, m22: number, m23: number, m30: number, m31: number, m32: number, m33: number, timeCode: number): boolean,
     SetMetadata(key: string, value: unknown): boolean,
-    Get(timeCode: number): MaybePromise<unknown>,
+    Get(timeCode: number): Promise<unknown>,
 }
 
 declare type USDRelationship = {
@@ -381,14 +378,18 @@ declare type USDPrim = {
     GetAllMetadataValues(): Record<string, unknown>,
     GetMetadata(key: string): unknown,
     GetMetadataByDictKey(key: string, keyPath: string): unknown,
-    SetMetadataByDictKey(key: string, keyPath: string, value: unknown, typeName: string): MaybePromise<boolean>,
-    ClearMetadata(key: string): MaybePromise<boolean>,
-    ClearMetadataByDictKey(key: string, keyPath: string): MaybePromise<boolean>,
+    SetMetadataByDictKey(key: string, keyPath: string, value: unknown, typeName: string): Promise<boolean>,
+    ClearMetadata(key: string): Promise<boolean>,
+    ClearMetadataByDictKey(key: string, keyPath: string): Promise<boolean>,
     GetMetadataString(key: string): string,
     HasAuthoredMetadata(key: string): boolean,
     GetSpecifier(): string,
     IsActive(): boolean,
-    SetActive(active: boolean): MaybePromise<boolean>,
+    ComputePurpose(): Promise<string>,
+    ComputeVisibility(timeCode: number): Promise<string>,
+    MakeVisible(timeCode: number): Promise<boolean>,
+    MakeInvisible(timeCode: number): Promise<boolean>,
+    SetActive(active: boolean): Promise<boolean>,
     ApplyAPI(schemaIdentifier: string): boolean,
     IsDefined(): boolean,
     IsAbstract(): boolean,
@@ -405,9 +406,9 @@ declare type USDPrim = {
     HasAuthoredInherits(): boolean,
     HasAuthoredSpecializes(): boolean,
     HasAuthoredInstanceable(): boolean,
-    Load(): MaybePromise<void>,
-    Unload(): MaybePromise<void>,
-    AddPayload(assetPath: string, primPath: string): MaybePromise<boolean>,
+    Load(): Promise<void>,
+    Unload(): Promise<void>,
+    AddPayload(assetPath: string, primPath: string): Promise<boolean>,
     GetParent(): USDPrim,
     GetChildren(): USDPrimVector,
     GetAttributes(): USDAttributeVector,
@@ -422,21 +423,21 @@ declare type USDPrim = {
     GetRelationship(name: string): USDRelationship,
     CreateRelationship(name: string, custom: boolean): USDRelationship,
     AddVariant(variantSetName: string, variantName: string): boolean,
-    SetVariantSelection(variantSetName: string, variantName: string): MaybePromise<boolean>,
+    SetVariantSelection(variantSetName: string, variantName: string): Promise<boolean>,
     GetVariantSelection(variantSetName: string): string,
-    ClearVariantSelection(variantSetName: string): MaybePromise<boolean>,
-    BlockVariantSelection(variantSetName: string): MaybePromise<boolean>,
+    ClearVariantSelection(variantSetName: string): Promise<boolean>,
+    BlockVariantSelection(variantSetName: string): Promise<boolean>,
     GetVariantSetNames(): StringVector,
     GetVariantNames(variantSetName: string): StringVector,
-    DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): MaybePromise<USDPrim>,
-    SetMetadata(key: string, value: unknown): MaybePromise<boolean>,
-    AddReference(assetPath: string, primPath: string): MaybePromise<boolean>,
-    SetInstanceable(instanceable: boolean): MaybePromise<boolean>,
+    DefinePrimInVariant(variantSetName: string, variantName: string, path: string, typeName: string): Promise<USDPrim>,
+    SetMetadata(key: string, value: unknown): Promise<boolean>,
+    AddReference(assetPath: string, primPath: string): Promise<boolean>,
+    SetInstanceable(instanceable: boolean): Promise<boolean>,
     GetVariantEditTarget(variantSetName: string): USDEditTarget,
 }
 
 declare type USDStage = {
-    OpenLayerStage(identifier: string): MaybePromise<USDStage | null>,
+    OpenLayerStage(identifier: string): Promise<USDStage | null>,
     GetRootLayer(): USDLayer,
     GetPseudoRoot(): USDPrim,
     GetPrimAtPath(path: string): USDPrim,
@@ -444,7 +445,7 @@ declare type USDStage = {
     Traverse(): USDPrimVector,
     GetPrototypes(): USDPrimVector,
     TraversePrototypes(expandedPrototypes: string[] | null): USDPrimVector,
-    GetAnimationTimeRange(): MaybePromise<{start:number;end:number} | null>,
+    GetAnimationTimeRange(): Promise<{start:number;end:number} | null>,
     TraverseAll(): USDPrimVector,
     GetLayerStack(includeSessionLayers: boolean): USDLayerInfo[],
     GetUsedLayers(includeClipLayers: boolean): USDLayerInfo[],
@@ -459,8 +460,8 @@ declare type USDStage = {
     SetTimeCodesPerSecond(timeCodesPerSecond: number): void,
     GetUpAxis(): number,
     SetUpAxis(upAxis: string): boolean,
-    Export(path: string): MaybePromise<boolean>,
-    ExportToString(): MaybePromise<string>,
+    Export(path: string): Promise<boolean>,
+    ExportToString(): Promise<string>,
     GetEditTarget(): USDEditTarget,
     SetEditTarget(target: USDEditTarget): void,
 }
@@ -581,23 +582,22 @@ declare type UsdShadeShader = {
 }
 
 declare function CreateStage(path: string): USDStage
-declare function OpenStage(path: string): MaybePromise<USDStage>
+declare function OpenStage(path: string): Promise<USDStage>
 declare function ReleaseStage(stage: USDStage): boolean
-declare function CreateUsdzPackage(assetPath: string, usdzPath: string): MaybePromise<boolean>
+declare function CreateUsdzPackage(assetPath: string, usdzPath: string): Promise<boolean>
 declare function ReadFile(path: string): Uint8Array
 
-declare type HdWebSyncDriver = {
-    getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => MaybePromise<void>,
+declare type HydraDriver = {
+    getFile: (path: string, cb: (loadedFile: ArrayBufferLike) => void) => Promise<void>,
     resolveAssetUrl: (path: string) => string,
     HasStage(): boolean,
-    ResolvePick(renderPath: string, instanceIndex: number): MaybePromise<{path: string; instances: {path: string; index: number; id?: string}[]} | null>,
-    ResolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): MaybePromise<number[] | null>,
-    HasScopedHttpCache?(): boolean,
+    ResolvePick(renderPath: string, instanceIndex: number): Promise<{path: string; instances: {path: string; index: number; id?: string}[]} | null>,
+    ResolveSelection(renderPath: string, count: number, selections: readonly {path: string; instances?: readonly {path: string; index: number; id?: string}[]}[]): Promise<number[] | null>,
     GetStage(): USDStage,
     /** Read-only composed UsdPhysics descriptors, serialized as JSON. */
-    GetPhysicsSceneJson(): MaybePromise<string>,
-    GetPhysicsSceneMetadataJson(): MaybePromise<string>,
-    GetPhysicsMeshBuffers(path:string): MaybePromise<{points:Float32Array;indices:Int32Array}>,
+    GetPhysicsSceneJson(): Promise<string>,
+    GetPhysicsSceneMetadataJson(): Promise<string>,
+    GetPhysicsMeshBuffers(path:string): Promise<{points:Float32Array;indices:Int32Array}>,
     GetStageUpAxis(): number,
     GetStageStartTimeCode(): number,
     GetStageEndTimeCode(): number,
@@ -612,17 +612,17 @@ declare type HdWebSyncDriver = {
     SetAdaptiveSubdivision(enabled: boolean): void,
     SetTime(timecode: number): void,
     GetTime(): number,
-    Draw(): MaybePromise<void>,
+    Draw(): Promise<void>,
     DrawAsync(resolve: () => void, reject: (error: string) => void): boolean,
     ExportUsdzAsync(directory: string, resolve: () => void, reject: (error: string) => void,
         progress: (phase: string, completed: number, total: number) => void): boolean,
     StartDraw(): boolean,
     IsDrawPending(): boolean,
     ConsumeDrawError(): string,
-    Repopulate(): MaybePromise<void>,
+    Repopulate(): Promise<void>,
 
     /** ??? */
-    clone(): HdWebSyncDriver,
+    clone(): HydraDriver,
     /** ??? */
     delete(): void,
     /** ??? */
@@ -634,7 +634,7 @@ declare type HdWebSyncDriver = {
 
 export type GetUsdModuleOptions = {
     debug?: boolean,
-    /** Defaults to Asyncify for binding compatibility. Auto opts into JSPI when supported. The first call selects the shared runtime. */
+    /** Defaults to `auto`: JSPI where `WebAssembly.Suspending` and `WebAssembly.promising` exist, otherwise Asyncify. Both have the same API. The first call selects the shared runtime. */
     asyncRuntime?: "auto" | "jspi" | "asyncify",
     /** Override the selected runtime's worker script URL or Blob. */
     mainScriptUrlOrBlob?: string | Blob,

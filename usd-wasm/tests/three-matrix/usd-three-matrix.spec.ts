@@ -190,10 +190,7 @@ async function runMatrixPage(page, matrixPage: MatrixPage): Promise<MatrixResult
     }
     expect(suite.renderer.rendered).toBe(true);
     expect(suite.usd.moduleReady).toBe(true);
-    expect(suite.usd.bindingApi.hdWebSyncDriver).toBe('function');
-    expect(suite.usd.bindingApi.getStage).toBe('function');
-    expect(suite.usd.bindingApi.repopulate).toBe('function');
-    expect(suite.usd.bindingApi.setIncludedPurposes).toBe('function');
+    expect(suite.usd.bindingApi.createHydraDriver).toBe('function');
     expect(suite.usd.bindingApi.fsCreateDataFile).toBe('function');
     expect(suite.usd.bindingApi.fsCreatePath).toBe('function');
     expect(suite.usd.bindingApi.fsAnalyzePath).toBe('function');

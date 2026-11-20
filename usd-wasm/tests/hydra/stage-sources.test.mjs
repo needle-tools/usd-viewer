@@ -7,7 +7,7 @@ import { getUsdModule } from '../runtime.mjs';
 import { createThreeHydra } from '../../src/create.three.js';
 import { readStageAsset, readStageLayer, readStageLayerBytes, stageResources } from '../../src/scene/sources.js';
 import { inspectUsdPhysics, readUsdPhysics } from '../../src/physics/createPhysics.js';
-import { inspectStage, inspectStageAsync, inspectPrim, inspectPrimAsync } from '../../src/scene/index.js';
+import { inspectStage, inspectPrim } from '../../src/scene/index.js';
 
 const encode = text => new TextEncoder().encode(text);
 const files = [
@@ -34,16 +34,12 @@ test('async inspection preserves composed values, timeline and synchronous-runti
       finally { radius.delete(); prim.delete(); }
     });
     await handle.readStage(async stage => {
-      const overview = await inspectStageAsync(stage, 5);
-      const ball = await inspectPrimAsync(stage, '/World/Ball', 5);
+      const overview = await inspectStage(stage, 5);
+      const ball = await inspectPrim(stage, '/World/Ball', 5);
       assert.deepEqual(overview.time, { start: 0, end: 10 });
       assert.ok(overview.prims.some(prim => prim.path === '/World/Ball' && prim.visible));
       assert.equal(ball.attributes.find(attribute => attribute.name === 'radius').value, 2);
-      assert.equal(await inspectPrimAsync(stage, '/Missing'), null);
-      if (!USD.CreateHdWebSyncDriver) {
-        assert.deepEqual(overview, inspectStage(stage, 5));
-        assert.deepEqual(ball, inspectPrim(stage, '/World/Ball', 5));
-      }
+      assert.equal(await inspectPrim(stage, '/Missing'), null);
     });
   } finally { await handle.dispose(); }
 });

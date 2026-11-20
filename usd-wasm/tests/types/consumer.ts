@@ -33,7 +33,9 @@ await stage.setTime(24);
 const selectionBounds = await getSelectionBounds(stage, [{path:'/World/Mesh/Subset'}] as const);
 selectionBounds.getCenter(scene.position.clone());
 const snapshot = await readUsdPhysics(stage);
-const driver = new USD.HdWebSyncDriver(consoleRenderDelegate, 'scene.usda');
+const driver = await USD.CreateHydraDriver(consoleRenderDelegate, 'scene.usda');
+// @ts-expect-error Drivers are created with CreateHydraDriver; the class is not exported.
+void USD.HdWebSyncDriver;
 const config = { driver: () => driver, USD, usdRoot: scene };
 new threeJsRenderDelegate(config);
 // @ts-expect-error The delegate accepts one config argument, not a path and config.
@@ -45,11 +47,11 @@ needleUSD();
 const format: 'usd' | 'usda' | 'usdc' | 'usdz' | 'unknown' = tryDetermineFileFormat(new ArrayBuffer(16));
 void [info, loaded, snapshot, createUsdPhysics, format];
 
-import { inspectStage, inspectPrim, setVariant, setPayloadLoaded, stageCameras } from '@needle-tools/usd/scene';
+import { inspectStage, inspectPrim, setVariant, setPayloadLoaded, stageCameras, type StageInfo, type PrimDetails } from '@needle-tools/usd/scene';
 import { createRenderModes, configureNeedleAgx, configureNeedleAgxDisplay, type RenderModes } from '@needle-tools/usd/renderers';
 import { WebGLRenderer, PerspectiveCamera } from 'three';
-const inspection = inspectStage(await stage.driver.GetStage());
-inspectPrim(await stage.driver.GetStage(), '/World', 24);
+const inspection: StageInfo = await inspectStage(await stage.driver.GetStage());
+const primDetails: PrimDetails | null = await inspectPrim(await stage.driver.GetStage(), '/World', 24, {arrayLimit: 16});
 await setVariant(stage, '/World', 'look', 'red');
 await setPayloadLoaded(stage, '/World/Payload', true);
 stageCameras(scene);
@@ -67,7 +69,7 @@ void sampleCap;
 // @ts-expect-error Render modes are explicit.
 await modes.setMode('unknown');
 modes.dispose();
-void inspection;
+void [inspection, primDetails];
 import { mountStagePanel, mountRenderModePicker, mountDownloadButton, type DownloadSource } from '@needle-tools/usd/viewer';
 import {mountDownloadButton as mountDownloadOnly, type DownloadFormat} from '@needle-tools/usd/viewer/download';
 const standaloneDownload: typeof mountDownloadButton = mountDownloadOnly;

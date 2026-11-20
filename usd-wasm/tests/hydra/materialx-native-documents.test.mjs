@@ -37,7 +37,7 @@ async function documents(USD, path, source) {
     };
     let driver;
     try {
-        driver = await new USD.HdWebSyncDriver(delegate, `/tmp/${path}`);
+        driver = await USD.CreateHydraDriver(delegate, `/tmp/${path}`);
         await new Promise((resolve, reject) => driver.DrawAsync(resolve, reject));
         await delegate.waitForRprimsReady();
         return captured;

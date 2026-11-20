@@ -2626,7 +2626,7 @@ async function init() {
           scene:window.needleEngineContext?.scene || window.scene, selection:suiteControls.selection, panel:suiteControls, api, three,
           select:value=>Array.isArray(value)?suiteControls.selectMany(value):suiteControls.selectPrim(value),
           follow:target=>suiteControls.navigate(target),
-          inspect:(value=suiteControls.selectedPath)=>currentHydraHandle.readStage(stage=>api.inspectPrimAsync(stage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime())),
+          inspect:(value=suiteControls.selectedPath)=>currentHydraHandle.readStage(stage=>api.inspectPrim(stage,typeof value==='string'?value.split('.')[0]:value.path,currentHydraHandle.getTime())),
         }:null,
         edit:callback=>{
           const panel=suiteControls, handle=currentHydraHandle;

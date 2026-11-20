@@ -135,10 +135,7 @@ async function runSuite(THREE, renderer) {
         setStatus: status => setPhase(`suite-usd-status:${status}`),
     });
     const bindingApi = {
-        hdWebSyncDriver: typeof USD.HdWebSyncDriver,
-        getStage: typeof USD.HdWebSyncDriver?.prototype?.GetStage,
-        repopulate: typeof USD.HdWebSyncDriver?.prototype?.Repopulate,
-        setIncludedPurposes: typeof USD.HdWebSyncDriver?.prototype?.SetIncludedPurposes,
+        createHydraDriver: typeof USD.CreateHydraDriver,
         fsCreateDataFile: typeof USD.FS_createDataFile,
         fsCreatePath: typeof USD.FS_createPath,
         fsAnalyzePath: typeof USD.FS_analyzePath,

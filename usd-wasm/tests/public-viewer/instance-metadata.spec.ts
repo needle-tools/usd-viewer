@@ -33,7 +33,7 @@ test('instance material branches expand lazily, bindings navigate to them and sc
  const mesh=item(page,'/World/Instance/Mesh');await mesh.click();
  const row=page.locator('[data-property-key="metadata:apiSchemas"]');await expect(row.getByRole('list',{name:'apiSchemas',exact:true}).getByRole('listitem')).toHaveText(['MaterialBindingAPI']);
  await expect(row).not.toContainText('SdfTokenListOp');
- expect(await page.evaluate(async()=>{const w=window as any,{inspectPrimAsync}=await import('/usd/scene/index.js');return w.usdHydra.readStage(async(stage:any)=>Array.isArray((await inspectPrimAsync(stage,'/World/Instance/Mesh'))?.metadata.apiSchemas));})).toBe(true);
+ expect(await page.evaluate(async()=>{const w=window as any,{inspectPrim}=await import('/usd/scene/index.js');return w.usdHydra.readStage(async(stage:any)=>Array.isArray((await inspectPrim(stage,'/World/Instance/Mesh'))?.metadata.apiSchemas));})).toBe(true);
  await expect(mesh.locator('..').locator('[data-prim-action=activation]')).toBeDisabled();
  await instance.locator('.usd-tree-disclosure').click();await expect(mesh).toHaveCount(0);
  await page.getByRole('button',{name:'Follow /World/Instance/VisualMaterials/Mat',exact:true}).click();

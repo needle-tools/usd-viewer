@@ -755,9 +755,9 @@ kit.torus(stage, "/World/Drawer/Pull", [0, -0.3, 1.6], 0.23, 0.045, colors.gold)
 kit.box(stage, "/World/Drawer/Back", [0, 0, -1.25], [2.4, 1.8, 0.2], colors.cream);
 
 print({ before: holder.IsLoaded() });
-holder.Unload();
+await holder.Unload();
 print({ unloaded: holder.IsLoaded() });
-holder.Load();
+await holder.Load();
 print({ loaded: holder.IsLoaded() });`,
   },
   {

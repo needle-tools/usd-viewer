@@ -56,7 +56,8 @@ test('pthread workers share the module memory without allocating private shared 
     assert.equal(result.events.length, 1, JSON.stringify(result.events));
     assert.equal(result.events[0].main, true, 'only the main runtime constructs memory');
     assert.equal(result.events[0].shared, true);
-    assert.equal(result.events[0].maximum, 32768, 'the existing desktop capacity is preserved');
+    assert.equal(result.events[0].maximum, 65536, 'desktop memory can grow to the 4 GB maximum');
+    assert.equal(result.events[0].initial, 256, 'initial memory remains 16 MB');
 });
 
 test('the runtime preserves a supplied shared memory without replacing it in any thread', () => {

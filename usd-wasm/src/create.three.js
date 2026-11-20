@@ -69,7 +69,7 @@ function isAdaptiveDetail(value) {
 /**
  * Apply a detail selection. "adaptive" enables native Bfr limit-surface
  * tessellation; every other value selects uniform refinement.
- * @param {import(".").HdWebSyncDriver} driver
+ * @param {import(".").HydraDriver} driver
  * @param {unknown} value
  * @returns {boolean} whether a detail value was applied
  */
@@ -209,7 +209,6 @@ async function createFile(opts) {
     return "/" + parent + filepath;
 }
 
-const activeLegacyLoads = new WeakSet();
 const driverFactories = new WeakMap();
 let nextImportedFileScope = 0;
 
@@ -236,16 +235,8 @@ export async function createThreeHydra(config) {
 
     const { USD } = config;
 
-    const scopedHttpCache = typeof USD.HdWebSyncDriver?.prototype?.HasScopedHttpCache === "function";
-    // Older runtimes alias URL basenames in one global cache. Reject a second
-    // live handle before it can write files or open a corrupt native stage.
-    if (!scopedHttpCache && activeLegacyLoads.has(USD)) {
-        throw new Error("This OpenUSD runtime supports one live Hydra handle; dispose it before loading another, or update the runtime for isolated HTTP caches.");
-    }
-    if (!scopedHttpCache) activeLegacyLoads.add(USD);
-    const releaseLegacyLoad = () => { if (!scopedHttpCache) activeLegacyLoads.delete(USD); };
     const lifetime = {
-        USD, scopedHttpCache, releaseLegacyLoad,
+        USD,
         directory: `needle/${++nextImportedFileScope}/`,
         driver: null, renderInterface: null, scenePrimitiveRoot: null,
         waitForDrawCompletion: null, cleanupPromise: null,
@@ -290,14 +281,8 @@ async function disposeHydraLifetime(lifetime) {
             } finally {
                 try {
                     removeVirtualDirectory(lifetime.USD, "/" + lifetime.directory.replace(/\/$/, ""));
-                    if (!lifetime.scopedHttpCache) {
-                        // The exclusive-handle guard makes old global caches safe.
-                        removeVirtualDirectory(lifetime.USD, "/tmp/1");
-                        removeVirtualDirectory(lifetime.USD, "/1");
-                    }
                 } finally {
                     lifetime.releaseFactory?.();
-                    lifetime.releaseLegacyLoad();
                 }
             }
         }
@@ -379,7 +364,7 @@ async function createScopedThreeHydra(config, lifetime) {
     }
 
     /**
-     * @type {null | import(".").HdWebSyncDriver | Promise<import(".").HdWebSyncDriver>}
+     * @type {null | import(".").HydraDriver | Promise<import(".").HydraDriver>}
      */
     let driverOrPromise = null;
 
@@ -414,7 +399,7 @@ async function createScopedThreeHydra(config, lifetime) {
         paths: loadedFilePaths,
         USD,
         rootFile: file,
-        driver: () => /** @type {import(".").HdWebSyncDriver} */(driverOrPromise),
+        driver: () => /** @type {import(".").HydraDriver} */(driverOrPromise),
     };
 
     const renderInterface = new threeJsRenderDelegate(delegateConfig);
@@ -425,9 +410,7 @@ async function createScopedThreeHydra(config, lifetime) {
     const hydraTiming = hydraTimingEnabled();
     const useAsyncDraw = hydraAsyncDrawEnabled();
     if (hydraTiming) console.time("Hydra driver constructor");
-    const openDriver = () => typeof USD.CreateHdWebSyncDriver === "function"
-        ? USD.CreateHdWebSyncDriver(renderInterface, file)
-        : new USD.HdWebSyncDriver(renderInterface, file);
+    const openDriver = () => USD.CreateHydraDriver(renderInterface, file);
     // Keep construction and the first native sync together across handles in
     // one module. Their JS renderer callbacks must not bind to another open's
     // temporary values. Asyncify also permits only one suspended native stack.
@@ -444,7 +427,7 @@ async function createScopedThreeHydra(config, lifetime) {
         if (hydraTiming) console.timeEnd("Hydra driver constructor promise");
     }
 
-    const driver = /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise);
+    const driver = /** @type {import(".").HydraDriver} */ (driverOrPromise);
     lifetime.driver = driver;
     if (typeof driver.HasStage === "function" && !driver.HasStage()) {
         driver.delete();
@@ -671,7 +654,7 @@ async function createScopedThreeHydra(config, lifetime) {
             /^https?:\/\//i.test(sourceUrl) && (path === file || path === '/' + file)
                 ? sourceUrl : driver.resolveAssetUrl(path)}),
         scene: delegateConfig.usdRoot,
-        driver: /** @type {import(".").HdWebSyncDriver} */ (driverOrPromise),
+        driver: /** @type {import(".").HydraDriver} */ (driverOrPromise),
         ready: () => readyPromise,
         update: (dt) => {
             // ensure we're not dead

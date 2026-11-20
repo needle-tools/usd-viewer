@@ -50,6 +50,15 @@ function assertPortableBuildInfo(info) {
 }
 
 describe("OpenUSD wasm binding artifacts", () => {
+    it("keeps host filesystem paths out of both runtime bundles", async () => {
+        for (const name of ['emHdBindings.js', 'emHdBindings.wasm', 'emHdBindings.jspi.js', 'emHdBindings.jspi.wasm']) {
+            const bytes = await readFile(resolve(bindingsDir, name));
+            // /home/web_user is Emscripten's virtual home, not a build-machine path.
+            const hostPath = /\/Users\/|\/(?:private\/)?var\/folders\/|\/private\/tmp\/|\/home\/(?!web_user(?:[\/\x00"'\s]|$))|[A-Za-z]:[\\/](?:Users|home|actions-runner)[\\/]/.exec(bytes.toString('latin1'));
+            assert.ok(!hostPath, `${name} contains a host filesystem path at byte ${hostPath?.index}`);
+        }
+    });
+
     it("ships a JSPI artifact matching its build and optimization metadata", async () => {
         const [js, wasm, metadata, optimization] = await Promise.all([
             readFile(resolve(bindingsDir, 'emHdBindings.jspi.js'), 'utf8'),
@@ -76,7 +85,7 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.ok(Object.values(expected.modules).every(value => value === true), 'all existing native features remain linked');
         USD.FS_createDataFile('/', 'jspi-api.usda', new TextEncoder().encode('#usda 1.0\ndef Cube "Cube" {\n double size.timeSamples = { 0: 1, 2: 3 }\n}\n'), true, true, true);
         const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
-        const driver = await USD.CreateHdWebSyncDriver(delegate, '/jspi-api.usda');
+        const driver = await USD.CreateHydraDriver(delegate, '/jspi-api.usda');
         try {
             assert.equal(driver.HasStage(), true);
             const prim = driver.GetStage().GetPrimAtPath('/Cube'), size = prim.GetAttribute('size');
@@ -89,9 +98,6 @@ describe("OpenUSD wasm binding artifacts", () => {
                 assert.equal(await prim.SetActive(true), true);
             } finally { size.delete(); prim.delete(); }
         } finally { driver.delete(); }
-        const compatibilityDriver = await new USD.HdWebSyncDriver(delegate, '/jspi-api.usda');
-        try { assert.equal(compatibilityDriver.HasStage(), true); }
-        finally { compatibilityDriver.delete(); }
     });
 
     it("ships the JS and wasm artifacts used by getUsdModule", async () => {
@@ -120,12 +126,14 @@ describe("OpenUSD wasm binding artifacts", () => {
         assert.doesNotMatch(js, /remote_package_size/);
     });
 
-    it("uses a wasm32-compatible imported shared-memory ceiling", async () => {
-        const js = await readFile(jsPath, "utf8");
-
-        assert.doesNotMatch(js, /MAX_MEMORY_DESKTOP\s*=\s*4\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024/);
-        assert.match(js, /MAX_MEMORY_DESKTOP\s*=\s*2\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024/);
-        assert.match(js, /typeof navigator\s*===\s*"undefined"/);
+    it("permits a 4 GB desktop shared-memory ceiling", async () => {
+        for (const name of ['emHdBindings.js', 'emHdBindings.jspi.js']) {
+            const js = await readFile(resolve(bindingsDir, name), "utf8");
+            assert.doesNotMatch(js, /MAX_MEMORY_DESKTOP\s*=\s*2\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024/);
+            assert.match(js, /MAX_MEMORY_DESKTOP\s*=\s*4\s*\*\s*1024\s*\*\s*1024\s*\*\s*1024/);
+            assert.match(js, /MAX_MEMORY_MOBILE\s*=\s*1024\s*\*\s*1024\s*\*\s*1024/);
+            assert.match(js, /typeof navigator\s*===\s*"undefined"/);
+        }
     });
 
     it("has a valid wasm magic header", async () => {
@@ -141,14 +149,9 @@ describe("OpenUSD wasm binding artifacts", () => {
     it("loads in Node with the runtime APIs used by usd-viewer", async () => {
         const USD = await loadUsdModuleFromTempCopy();
 
-        assert.equal(typeof USD.HdWebSyncDriver, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.HasStage, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageUpAxis, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStage, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageStartTimeCode, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageEndTimeCode, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.GetStageTimeCodesPerSecond, "function");
-        assert.equal(typeof USD.HdWebSyncDriver.prototype.Repopulate, "function");
+        assert.equal(typeof USD.CreateHydraDriver, "function");
+        assert.equal("HdWebSyncDriver" in USD, false);
+        assert.equal("HydraDriver" in USD, false);
         assert.equal(typeof USD.CreateStage, "function");
         assert.equal(typeof USD.OpenStage, "function");
         assert.equal(typeof USD.ReleaseStage, "function");
@@ -225,9 +228,11 @@ def Xform "Root" {
 `;
         USD.FS_createDataFile("/", "stage-api.usda", new TextEncoder().encode(usda), true, true, true);
         const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
-        const driver = new USD.HdWebSyncDriver(delegate, "stage-api.usda");
+        const driver = await USD.CreateHydraDriver(delegate, "stage-api.usda");
+        for (const method of ["HasStage", "GetStage", "GetStageUpAxis", "GetStageStartTimeCode", "GetStageEndTimeCode", "GetStageTimeCodesPerSecond", "Repopulate"])
+            assert.equal(typeof driver[method], "function", method);
         assert.equal(driver.HasStage(), true);
-        driver.Repopulate();
+        await driver.Repopulate();
         const stage = driver.GetStage();
         const root = stage.GetPrimAtPath("/Root");
 
@@ -245,9 +250,40 @@ def Xform "Root" {
         } finally {
             allPrims.delete();
         }
-        assert.match(stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
+        assert.match(await stage.GetRootLayer().ExportToString(), /def Xform "Root"/);
         driver.delete();
     });
+
+    for (const runtime of ["asyncify", "jspi"]) {
+        it(`returns a Promise from every async binding with ${runtime}`, async () => {
+            const USD = await loadUsdModuleFromTempCopy(runtime);
+            assert.equal(USD.asyncRuntime, runtime);
+            USD.FS_createDataFile("/", `contract-${runtime}.usda`, new TextEncoder().encode('#usda 1.0\ndef Xform "Root" {\n    custom float x = 2\n}\n'), true, true, true);
+            const opening = USD.OpenStage(`/contract-${runtime}.usda`);
+            assert.ok(opening instanceof Promise, "OpenStage returns a Promise");
+            const stage = await opening;
+            try {
+                const prim = stage.GetPrimAtPath("/Root");
+                assert.equal(prim.GetPath(), "/Root", "synchronous bindings return values");
+                const attribute = prim.GetAttribute("x");
+                const value = attribute.Get(Number.NaN);
+                assert.ok(value instanceof Promise, "Attribute.Get returns a Promise even for local data");
+                assert.equal(await value, 2);
+                const invalid = USD.OpenStage();
+                assert.ok(invalid instanceof Promise, "argument errors are rejections, not exceptions");
+                await assert.rejects(invalid, /non-string/);
+                const purpose = prim.ComputePurpose();
+                assert.ok(purpose instanceof Promise);
+                assert.equal(await purpose, "default");
+            } finally { USD.ReleaseStage(stage); }
+            const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
+            const creating = USD.CreateHydraDriver(delegate, `contract-${runtime}.usda`);
+            assert.ok(creating instanceof Promise);
+            const driver = await creating;
+            assert.equal(driver.HasStage(), true);
+            driver.delete();
+        });
+    }
 
     it("imports the public ESM package entrypoints in Node", async () => {
         const usd = await import("@needle-tools/usd");
@@ -351,8 +387,8 @@ def Xform "Root" {
             const mesh = meshPrims[0];
             assert.equal(mesh.GetAttribute("points").HasAuthoredValue(), true);
             assert.equal(mesh.GetAttribute("primvars:normals").HasAuthoredValue(), true);
-            assert.match(mesh.GetAttribute("points").GetValueString(), /\[/);
-            assert.match(mesh.GetAttribute("primvars:normals").GetValueString(), /\[/);
+            assert.match(await mesh.GetAttribute("points").GetValueString(), /\[/);
+            assert.match(await mesh.GetAttribute("primvars:normals").GetValueString(), /\[/);
         } finally {
             USD.ReleaseStage(stage);
         }
@@ -392,9 +428,9 @@ def Xform "Root" {
             assert.equal(mesh.GetAttribute("points").HasAuthoredValue(), true);
             assert.equal(mesh.GetAttribute("faceVertexCounts").HasAuthoredValue(), true);
             assert.equal(mesh.GetAttribute("faceVertexIndices").HasAuthoredValue(), true);
-            assert.equal(mesh.GetAttribute("primvars:displayColor").GetValueString(), "[(0.217638, 0.217638, 0.217638)]");
-            assert.match(mesh.GetAttribute("points").GetValueString(), /\[/);
-            assert.match(mesh.GetAttribute("faceVertexIndices").GetValueString(), /\[/);
+            assert.equal(await mesh.GetAttribute("primvars:displayColor").GetValueString(), "[(0.217638, 0.217638, 0.217638)]");
+            assert.match(await mesh.GetAttribute("points").GetValueString(), /\[/);
+            assert.match(await mesh.GetAttribute("faceVertexIndices").GetValueString(), /\[/);
         } finally {
             USD.ReleaseStage(stage);
         }
@@ -470,9 +506,9 @@ def Scope "Looks"
         assert.ok(attributes.some(attribute => attribute.GetName() === "size"), "composed referenced attributes should be inspectable");
         const size = world.GetAttribute("size");
         assert.equal(size.IsValid(), true);
-        assert.equal(size.GetValueString(), "2");
-        assert.equal(size.GetResolveInfo(Number.NaN).source, "Default");
-        assert.equal(size.GetPropertyStackWithLayerOffsets(Number.NaN).length, 1);
+        assert.equal(await size.GetValueString(), "2");
+        assert.equal((await size.GetResolveInfo(Number.NaN)).source, "Default");
+        assert.equal((await size.GetPropertyStackWithLayerOffsets(Number.NaN)).length, 1);
 
         const rootNote = world.GetAttribute("userProperties:rootNote");
         assert.equal(rootNote.GetAllMetadata().custom, "1");
@@ -481,7 +517,7 @@ def Scope "Looks"
         assert.ok(relationships.some(relationship => relationship.GetName() === "material:binding"));
         const binding = world.GetRelationship("material:binding");
         assert.deepEqual(vectorToArray(binding.GetTargets()), ["/Looks/Warm"]);
-        assert.equal(binding.GetPropertyStackWithLayerOffsets(Number.NaN).length, 1);
+        assert.equal((await binding.GetPropertyStackWithLayerOffsets(Number.NaN)).length, 1);
 
         const primStack = world.GetPrimStackWithLayerOffsets();
         assert.ok(primStack.length >= 2, "referenced prim should expose root and referenced specs");
@@ -546,16 +582,16 @@ def Scope "Looks"
         const color = root.CreateAttribute("primvars:displayColor", "color3f", true);
         assert.equal(color.IsValid(), true);
         assert.equal(color.SetColor3f(1, 0.25, 0.5, Number.NaN), true);
-        assert.equal(color.GetValueString(), "(1, 0.25, 0.5)");
+        assert.equal(await color.GetValueString(), "(1, 0.25, 0.5)");
 
         const spin = root.CreateAttribute("userProperties:spin", "float", true);
         assert.equal(spin.SetFloat(0, 1), true);
         assert.equal(spin.SetFloat(90, 24), true);
-        assert.equal(spin.GetValueStringAtTime(24), "90");
+        assert.equal(await spin.GetValueStringAtTime(24), "90");
 
         const translate = root.CreateAttribute("xformOp:translate", "double3", false);
         assert.equal(translate.SetVec3d(1, 2, 3, Number.NaN), true);
-        assert.equal(translate.GetValueString(), "(1, 2, 3)");
+        assert.equal(await translate.GetValueString(), "(1, 2, 3)");
 
         const transform = root.CreateAttribute("xformOp:transform", "matrix4d", false);
         assert.equal(transform.SetMatrix4d(
@@ -565,7 +601,7 @@ def Scope "Looks"
             4, 5, 6, 1,
             Number.NaN,
         ), true);
-        assert.match(transform.GetValueString(), /\(4, 5, 6, 1\)/);
+        assert.match(await transform.GetValueString(), /\(4, 5, 6, 1\)/);
 
         const material = stage.DefinePrim("/Looks/Preview", "Material");
         const shader = stage.DefinePrim("/Looks/Preview/Shader", "Shader");
@@ -586,8 +622,8 @@ def Scope "Looks"
         assert.equal(material.IsValid(), true);
 
         assert.equal(root.AddVariant("lod", "low"), true);
-        assert.equal(root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope").IsValid(), true);
-        assert.equal(root.SetVariantSelection("lod", "high"), true);
+        assert.equal((await root.DefinePrimInVariant("lod", "high", "/World/HighGeom", "Scope")).IsValid(), true);
+        assert.equal(await root.SetVariantSelection("lod", "high"), true);
         assert.equal(root.GetVariantSelection("lod"), "high");
 
         const variantSetNames = root.GetVariantSetNames();
@@ -605,7 +641,7 @@ def Scope "Looks"
             variantNames.delete();
         }
 
-        const exported = stage.ExportToString();
+        const exported = await stage.ExportToString();
         assert.match(exported, /custom color3f primvars:displayColor = \(1, 0\.25, 0\.5\)/);
         assert.match(exported, /float userProperties:spin\.timeSamples = \{/);
         assert.match(exported, /apiSchemas = \["MaterialBindingAPI"\]/);
@@ -613,43 +649,43 @@ def Scope "Looks"
         assert.match(exported, /rel material:binding = <\/Looks\/Preview>/);
         assert.match(exported, /def Scope "HighGeom"/);
 
-        const rootLayerExport = stage.GetRootLayer().ExportToString();
+        const rootLayerExport = await stage.GetRootLayer().ExportToString();
         assert.match(rootLayerExport, /variants = \{/);
         assert.match(rootLayerExport, /variantSet "lod" = \{/);
 
-        assert.equal(stage.GetRootLayer().Export(usdPath), true);
+        assert.equal(await stage.GetRootLayer().Export(usdPath), true);
         assert.equal(USD.FS_analyzePath(usdPath).exists, true);
-        assert.equal(USD.CreateUsdzPackage(usdPath, usdzPath), true);
+        assert.equal(await USD.CreateUsdzPackage(usdPath, usdzPath), true);
 
         const usdz = USD.ReadFile(usdzPath);
         assert.ok(usdz instanceof Uint8Array);
         assert.ok(usdz.length > 100);
         assert.deepEqual([...usdz.subarray(0, 2)], [0x50, 0x4b]);
 
-        const reopened = USD.OpenStage(usdPath);
+        const reopened = await USD.OpenStage(usdPath);
         const reopenedRoot = reopened.GetPrimAtPath("/World");
         assert.equal(reopenedRoot.IsValid(), true);
         assert.equal(reopenedRoot.GetVariantSelection("lod"), "high");
         assert.equal(reopened.GetPrimAtPath("/World/HighGeom").IsValid(), true);
-        assert.equal(reopenedRoot.GetAttribute("userProperties:spin").GetValueStringAtTime(24), "90");
-        assert.match(reopened.GetRootLayer().ExportToString(), /variantSet "lod" = \{/);
+        assert.equal(await reopenedRoot.GetAttribute("userProperties:spin").GetValueStringAtTime(24), "90");
+        assert.match(await reopened.GetRootLayer().ExportToString(), /variantSet "lod" = \{/);
 
         const payloadPath = "/tmp/generated-payload.usda";
         const payloadStage = USD.CreateStage(payloadPath);
         payloadStage.DefinePrim("/PayloadRoot", "Xform");
         payloadStage.DefinePrim("/PayloadRoot/PayloadSphere", "Sphere");
-        assert.equal(payloadStage.Export(payloadPath), true);
+        assert.equal(await payloadStage.Export(payloadPath), true);
         USD.ReleaseStage(payloadStage);
 
         const payloadHolder = stage.DefinePrim("/World/PayloadHolder", "Xform");
-        assert.equal(payloadHolder.AddPayload("generated-payload.usda", "/PayloadRoot"), true);
+        assert.equal(await payloadHolder.AddPayload("generated-payload.usda", "/PayloadRoot"), true);
         assert.equal(payloadHolder.HasAuthoredPayloads(), true);
         assert.equal(payloadHolder.IsLoaded(), true);
-        payloadHolder.Unload();
+        await payloadHolder.Unload();
         assert.equal(payloadHolder.IsLoaded(), false);
-        payloadHolder.Load();
+        await payloadHolder.Load();
         assert.equal(payloadHolder.IsLoaded(), true);
-        assert.match(stage.GetRootLayer().ExportToString(), /prepend payload = @generated-payload\.usda@<\/PayloadRoot>/);
+        assert.match(await stage.GetRootLayer().ExportToString(), /prepend payload = @generated-payload\.usda@<\/PayloadRoot>/);
 
         USD.ReleaseStage(reopened);
         USD.ReleaseStage(stage);
@@ -660,39 +696,39 @@ def Scope "Looks"
         const base = USD.CreateStage('/tmp/authoring-base.usda');
         const tree = base.DefinePrim('/Tree', 'Xform');
         base.DefinePrim('/Tree/Leaf', 'Sphere');
-        assert.equal(base.GetRootLayer().Export('/tmp/authoring-base.usda'), true);
+        assert.equal(await base.GetRootLayer().Export('/tmp/authoring-base.usda'), true);
         const stage = USD.CreateStage('/tmp/authoring-root.usda');
         const root = stage.DefinePrim('/World', 'Xform');
         const copy = stage.DefinePrim('/World/Copy', 'Xform');
-        assert.equal(copy.AddReference('authoring-base.usda', '/Tree'), true);
-        assert.equal(copy.SetInstanceable(true), true);
+        assert.equal(await copy.AddReference('authoring-base.usda', '/Tree'), true);
+        assert.equal(await copy.SetInstanceable(true), true);
         assert.equal(copy.IsInstance(), true);
         assert.equal(stage.GetPrimAtPath('/World/Copy/Leaf').IsValid(), true);
         const matrix = USD.GfMatrix4d.Identity().SetTranslate(new USD.GfVec3d(0, 1.1, 0));
         const transforms = root.CreateAttribute('bindTransforms', 'matrix4d[]', false);
         assert.equal(transforms.Set([matrix, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,2.2,0,1]], time), true);
-        assert.match(transforms.GetValueString(), /2.2/);
+        assert.match(await transforms.GetValueString(), /2.2/);
         for (const type of ['quatf', 'quatd', 'quath']) {
             const rotations = root.CreateAttribute(type, type + '[]', true);
             assert.equal(rotations.Set([[1,0,0,0], [0.70710678,0,0,0.70710678]], time), true);
             assert.equal(rotations.Set([[1,0,0,0], [1,0,0,0]], 49), true);
-            assert.match(rotations.GetValueString(), /0.707/);
-            assert.equal(rotations.GetNumTimeSamples(), 1);
+            assert.match(await rotations.GetValueString(), /0.707/);
+            assert.equal(await rotations.GetNumTimeSamples(), 1);
         }
         const scales = root.CreateAttribute('scales', 'half3[]', false);
         assert.equal(scales.Set([[1,1,1],[0.5,1,1]], time), true);
         const weights = root.CreateAttribute('primvars:skel:jointWeights', 'float[]', false);
-        assert.equal(weights.SetMetadata('interpolation', 'vertex'), true);
-        assert.equal(weights.SetMetadata('elementSize', 3), true);
+        assert.equal(await weights.SetMetadata('interpolation', 'vertex'), true);
+        assert.equal(await weights.SetMetadata('elementSize', 3), true);
         assert.equal(weights.GetMetadataString('interpolation'), 'vertex');
         assert.equal(weights.GetMetadataString('elementSize'), '3');
-        stage.GetRootLayer().SetSubLayerPaths(['authoring-base.usda']);
+        await stage.GetRootLayer().SetSubLayerPaths(['authoring-base.usda']);
         assert.deepEqual(stage.GetRootLayer().GetSubLayerPaths(), ['authoring-base.usda']);
         assert.equal(stage.GetPrimAtPath('/Tree/Leaf').IsValid(), true);
-        const text = stage.GetRootLayer().ExportToString();
+        const text = await stage.GetRootLayer().ExportToString();
         assert.match(text, /matrix4d\[\] bindTransforms/);
         assert.match(text, /instanceable = true/);
-        assert.equal(stage.GetRootLayer().Export('/tmp/authoring-root.usda'), true);
+        assert.equal(await stage.GetRootLayer().Export('/tmp/authoring-root.usda'), true);
         USD.ReleaseStage(stage);
         const reopened = await USD.OpenStage('/tmp/authoring-root.usda');
         assert.equal(reopened.GetPrimAtPath('/World/Copy').IsInstance(), true);
@@ -714,9 +750,9 @@ def Scope "Looks"
             finally { stage.SetEditTarget(previous);target.delete(); }
         }
         await model.SetVariantSelection('size','small');
-        assert.equal(stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'1');
+        assert.equal(await stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'1');
         await model.SetVariantSelection('size','large');
-        assert.equal(stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'3');
+        assert.equal(await stage.GetPrimAtPath('/Model/Cube').GetAttribute('size').GetValueString(),'3');
         const rotations=model.CreateAttribute('rotations','quatf[]',true);
         assert.throws(()=>rotations.Set([[1,0,0]],Number.NaN),/quaternions use/);
         assert.throws(()=>rotations.Set([[1,'bad',0,0]],Number.NaN),/finite numbers/);
@@ -729,7 +765,7 @@ def Scope "Looks"
         assert.throws(()=>scales.Set([[1,2]],Number.NaN),/three components/);
         assert.throws(()=>scales.Set([[1,2,NaN]],Number.NaN),/finite numbers/);
         assert.equal(matrices.Set([[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,2,0,1]]],Number.NaN),true);
-        assert.match(matrices.GetValueString(),/\(0, 2, 0, 1\)/);
+        assert.match(await matrices.GetValueString(),/\(0, 2, 0, 1\)/);
         previous.delete();USD.ReleaseStage(stage);
     });
 
@@ -749,7 +785,7 @@ def Scope "Looks"
 
     it("opens actual composed layer views without copying referenced data", async()=>{
         const USD=await loadUsdModuleFromTempCopy();USD.FS_createPath('/','tmp',true,true);
-        const asset=USD.CreateStage('/tmp/layer-source.usda'),mesh=asset.DefinePrim('/Asset','Mesh');mesh.GetAttribute('points').Set([[0,0,0],[1,0,0],[0,1,0]],NaN);asset.GetRootLayer().Export('/tmp/layer-source.usda');
+        const asset=USD.CreateStage('/tmp/layer-source.usda'),mesh=asset.DefinePrim('/Asset','Mesh');mesh.GetAttribute('points').Set([[0,0,0],[1,0,0],[0,1,0]],NaN);await asset.GetRootLayer().Export('/tmp/layer-source.usda');
         const root=USD.CreateStage('/tmp/layer-root.usda');await root.DefinePrim('/World/Imported','Xform').AddReference('layer-source.usda','/Asset');
         const source=await root.OpenLayerStage(asset.GetRootLayer().GetIdentifier());assert.ok(source);
         source.GetPrimAtPath('/Asset').GetAttribute('points').Set([[2,3,4]],NaN);
@@ -763,16 +799,16 @@ def Scope "Looks"
         const stage=USD.CreateStage('/tmp/typed-values.usda'), prim=stage.DefinePrim('/World','Xform');
         const points=prim.CreateAttribute('points','point3f[]',true);
         points.Set([[1,2,3],[-4,5,6]],Number.NaN);
-        const first=points.Get(Number.NaN);
+        const first=await points.Get(Number.NaN);
         assert.deepEqual(first,[[1,2,3],[-4,5,6]]);
         points.Set([[7,8,9]],Number.NaN);
         assert.deepEqual(first,[[1,2,3],[-4,5,6]],'read arrays own their values');
-        const approved=prim.CreateAttribute('approved','bool',true);approved.Set(true,Number.NaN);assert.equal(approved.Get(Number.NaN),true);
-        const radius=prim.CreateAttribute('radius','double',true);radius.Set(2,1);radius.Set(4,3);assert.equal(radius.Get(2),3);
-        const unset=prim.CreateAttribute('unset','float',true);assert.equal(unset.Get(Number.NaN),undefined);
-        const quats=prim.CreateAttribute('rotations','quatf[]',true);quats.Set([[1,0,0,0]],Number.NaN);assert.deepEqual(quats.Get(Number.NaN),[[1,0,0,0]]);
+        const approved=prim.CreateAttribute('approved','bool',true);approved.Set(true,Number.NaN);assert.equal(await approved.Get(Number.NaN),true);
+        const radius=prim.CreateAttribute('radius','double',true);radius.Set(2,1);radius.Set(4,3);assert.equal(await radius.Get(2),3);
+        const unset=prim.CreateAttribute('unset','float',true);assert.equal(await unset.Get(Number.NaN),undefined);
+        const quats=prim.CreateAttribute('rotations','quatf[]',true);quats.Set([[1,0,0,0]],Number.NaN);assert.deepEqual(await quats.Get(Number.NaN),[[1,0,0,0]]);
         const matrices=prim.CreateAttribute('matrices','matrix4d[]',true), identity=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
-        matrices.Set([identity],Number.NaN);assert.deepEqual(matrices.Get(Number.NaN),[identity]);
+        matrices.Set([identity],Number.NaN);assert.deepEqual(await matrices.Get(Number.NaN),[identity]);
         USD.ReleaseStage(stage);
     });
 

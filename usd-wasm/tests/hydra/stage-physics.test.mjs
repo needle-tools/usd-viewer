@@ -92,8 +92,7 @@ test('physics export preserves composed body/collider/joint frames, units and op
     for (const [name, text] of [['physics-assembly.usda', assembly], ['physics-scene.usda', source]])
         USD.FS_createDataFile('/', name, new TextEncoder().encode(text), true, true, true);
     const delegate = { createRPrim() {}, createSPrim() {}, createBPrim() {}, CommitResources() {} };
-    const driver = await (USD.CreateHdWebSyncDriver?.(delegate, 'physics-scene.usda')
-        ?? new USD.HdWebSyncDriver(delegate, 'physics-scene.usda'));
+    const driver = await USD.CreateHydraDriver(delegate, 'physics-scene.usda');
     try {
         const raw = await driver.GetPhysicsSceneJson();
         assert.doesNotMatch(raw, /\b(?:NaN|Infinity)\b/);
@@ -147,8 +146,7 @@ def PhysicsCollisionGroup "Inverted" {
 `;
     USD.FS_createDataFile('/', 'physics-defaults.usda', new TextEncoder().encode(source), true, true, true);
     const delegate = {createRPrim(){}, createSPrim(){}, createBPrim(){}, CommitResources(){}};
-    const driver = await (USD.CreateHdWebSyncDriver?.(delegate, 'physics-defaults.usda')
-        ?? new USD.HdWebSyncDriver(delegate, 'physics-defaults.usda'));
+    const driver = await USD.CreateHydraDriver(delegate, 'physics-defaults.usda');
     try {
         for (let i=0; i<20; i++) {
             const data=JSON.parse(await driver.GetPhysicsSceneJson());
@@ -163,7 +161,7 @@ test('collision buffers are owned typed arrays and joint metadata excludes colli
  const USD=await getUsdModule({print(){},printErr(){}});
  for(const [name,text] of [['physics-assembly.usda',assembly],['physics-buffers.usda',source]])USD.FS_createDataFile('/',name,new TextEncoder().encode(text),true,true,true);
  const delegate={createRPrim(){},createSPrim(){},createBPrim(){},CommitResources(){}};
- const driver=await (USD.CreateHdWebSyncDriver?.(delegate,'physics-buffers.usda')??new USD.HdWebSyncDriver(delegate,'physics-buffers.usda'));
+ const driver=await USD.CreateHydraDriver(delegate,'physics-buffers.usda');
  try{
   const metadata=JSON.parse(await driver.GetPhysicsSceneMetadataJson()),full=JSON.parse(await driver.GetPhysicsSceneJson());
   assert.deepEqual(metadata.joints,full.joints);assert.deepEqual(metadata.bodies,full.bodies);
@@ -208,7 +206,7 @@ def Cube "Obstacle" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {}
 `;
  USD.FS_createDataFile('/',file,new TextEncoder().encode(text),true,true,true);
  const delegate={createRPrim(){},createSPrim(){},createBPrim(){},CommitResources(){}};
- const driver=await(USD.CreateHdWebSyncDriver?.(delegate,file)??new USD.HdWebSyncDriver(delegate,file));
+ const driver=await USD.CreateHydraDriver(delegate,file);
  try{
   const snapshot=JSON.parse(await driver.GetPhysicsSceneJson());
   assert.deepEqual(snapshot.unsupported,[]);

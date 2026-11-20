@@ -20,7 +20,6 @@ function fixture(options = {}) {
     };
     class Driver {
         constructor(delegate) { this.delegate = delegate; }
-        HasScopedHttpCache() { return true; }
         HasStage() { return options.hasStage !== false; }
         GetStage() { return stage; }
         SetTime() {}
@@ -38,8 +37,8 @@ function fixture(options = {}) {
             return true;
         }
     }
-    const USD = { ready: Promise.resolve(), HdWebSyncDriver: Driver, FS_analyzePath: () => ({}) };
-    if (options.factory) USD.CreateHdWebSyncDriver = options.factory;
+    const USD = { ready: Promise.resolve(), FS_analyzePath: () => ({}),
+        CreateHydraDriver: options.factory ?? (async (delegate, file) => new Driver(delegate, file)) };
     const scene = new Group();
     return { state, USD, scene, create: () => createThreeHydra({ USD, scene, url: 'https://example.test/scene.usda', autoPlay: true }) };
 }

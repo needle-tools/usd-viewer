@@ -14,7 +14,7 @@ function isNodeRuntime() {
 
 /** @param {undefined | import("..").GetUsdModuleOptions} opts */
 function selectAsyncRuntime(opts) {
-    const requested = opts?.asyncRuntime ?? "asyncify";
+    const requested = opts?.asyncRuntime ?? "auto";
     if (!["auto", "jspi", "asyncify"].includes(requested)) {
         throw new Error(`Unknown USD async runtime: ${requested}. Expected auto, jspi, or asyncify.`);
     }

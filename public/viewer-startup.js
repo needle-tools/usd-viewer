@@ -1,6 +1,7 @@
 import {loadSimreadyResources,warmSimreadyComposition,simreadyLocation} from './viewer-simready.js';
 import {getUsdModule} from './usd/bindings/index.js';
 import {fetchAsset} from './usd/assetFetch.js';
+import {createViewerMemory} from './viewer-memory.js';
 
 const listeners = new Set();
 let downloadProgress;
@@ -41,7 +42,6 @@ export const startupSimreadyReady = simreadyLocation(file)
 // Start the runtime independently of the renderer, examples and workbench.
 // Progress is replayed when the app's loading controls become available.
 const runtimeOptions = {
-  asyncRuntime: 'auto',
   printErr: (...args) => {
     const text = args.join(' ');
     if (/^Warning(?:\b|:| \()/.test(text)) console.warn(...args);
@@ -53,6 +53,8 @@ const runtimeOptions = {
   },
   onAssetFetchProgress: reportAssetProgress,
 };
+const viewerMemory=createViewerMemory();
+if(viewerMemory)runtimeOptions.wasmMemory=viewerMemory;
 // Dedicated workers inherit their owner's controller at creation. For remote
 // SimReady composition, establish it before starting the native worker pool.
 export const viewerUsdReady = simreadyLocation(file) && window.__usdViewerAssetCacheMode

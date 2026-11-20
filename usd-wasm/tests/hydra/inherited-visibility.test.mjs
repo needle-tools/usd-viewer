@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Group} from 'three';
 import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
-import {inspectStageAsync,setPrimVisible,setPayloadLoaded} from '../../src/scene/index.js';
+import {inspectStage,setPrimVisible,setPayloadLoaded} from '../../src/scene/index.js';
 
 const source=`#usda 1.0
 (defaultPrim="World")
@@ -47,12 +47,12 @@ test('computed hierarchy visibility and native MakeVisible preserve hidden sibli
  const handle=await createThreeHydra({USD,scene,url:'inherited-visibility.usda',buffer:new TextEncoder().encode(source),helpers:{curves:true}});
  try {
   await handle.ready();
-  let info=await handle.readStage(stage=>inspectStageAsync(stage));
+  let info=await handle.readStage(stage=>inspectStage(stage));
   let curve=info.prims.find(p=>p.path==='/World/Hidden/Curve');
   assert.equal(curve.localVisible,true);assert.equal(curve.visible,false);assert.equal(curve.hiddenBy,'/World/Hidden');assert.equal(curve.purpose,'guide');
   await setPrimVisible(handle,curve.path,true);
   await handle.setIncludedPurposes(['default','render','guide']);
-  info=await handle.readStage(stage=>inspectStageAsync(stage));curve=info.prims.find(p=>p.path===curve.path);
+  info=await handle.readStage(stage=>inspectStage(stage));curve=info.prims.find(p=>p.path===curve.path);
   assert.equal(curve.visible,true);assert.equal(info.prims.find(p=>p.path==='/World/Hidden/Sibling').visible,false);
   assert.equal(objects(scene).filter(o=>o.userData.usdPrimitiveType==='basisCurves').length,1);
   await handle.readStage(async stage=>{const p=stage.GetPrimAtPath(curve.path);try{assert.equal(await p.ComputeVisibility(0),'inherited');assert.equal(await p.ComputePurpose(),'guide');}finally{p.delete();}});
@@ -65,9 +65,9 @@ test('unloading a payload can preserve referenced hierarchy while updating its l
  const files=[['root.usda',root],['base.usda','#usda 1.0\n(defaultPrim="Base")\ndef Xform "Base" {\n def Cube "Shape" {}\n def Scope "Empty" {}\n}\n'],['physics.usda','#usda 1.0\n(defaultPrim="Physics")\ndef Xform "Physics" {\n custom float mass=2\n}\n']].map(([path,text])=>Object.assign(new File([text],path),{path}));
  const handle=await createThreeHydra({USD,scene,files});
  try{
-  await handle.ready();const before=await handle.readStage(stage=>inspectStageAsync(stage));assert.equal(objects(scene).length,1);
+  await handle.ready();const before=await handle.readStage(stage=>inspectStage(stage));assert.equal(objects(scene).length,1);
   await setPayloadLoaded(handle,'/World',false);
-  const after=await handle.readStage(stage=>inspectStageAsync(stage));
+  const after=await handle.readStage(stage=>inspectStage(stage));
   assert.deepEqual(after.prims.map(p=>p.path),before.prims.map(p=>p.path));assert.ok(after.prims.every(p=>!p.loaded));assert.equal(objects(scene).length,0);
   await setPayloadLoaded(handle,'/World',true);assert.equal(objects(scene).length,1);
  }finally{await handle.dispose();}

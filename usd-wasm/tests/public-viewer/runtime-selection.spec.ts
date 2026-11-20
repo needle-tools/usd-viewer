@@ -44,7 +44,7 @@ for (const supports of [true, false]) {
         const {getUsdModule} = await import(path);
         return getUsdModule(runtime ? {asyncRuntime:runtime} : undefined);
       }, runtime);
-      const expected = runtime === 'auto' && supports ? 'jspi' : 'asyncify';
+      const expected = runtime !== 'asyncify' && supports ? 'jspi' : 'asyncify';
       const stem = expected === 'jspi' ? 'emHdBindings.jspi' : 'emHdBindings';
       expect(module.runtime).toBe(expected);
       expect(new URL(module.script).pathname).toBe('/__runtime/' + stem + '.js');

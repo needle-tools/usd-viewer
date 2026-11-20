@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {Group} from 'three';
 import {getUsdModule} from '../runtime.mjs';
 import {createThreeHydra} from '../../src/create.three.js';
-import {inspectStageAsync,inspectPrimAsync,setVariant,setPayloadLoaded,setPrimActive} from '../../src/scene/index.js';
+import {inspectStage,inspectPrim,setVariant,setPayloadLoaded,setPrimActive} from '../../src/scene/index.js';
 import {hierarchyFiles} from '../fixtures/hierarchy-audit.mjs';
 async function load(){const USD=await getUsdModule({print(){},printErr(){}}),files=Object.entries(hierarchyFiles).map(([path,source])=>({path,name:path,arrayBuffer:async()=>new TextEncoder().encode(source).buffer}));const handle=await createThreeHydra({USD,scene:new Group(),files});await handle.ready();return handle;}
-const snapshot=(handle,options={})=>handle.readStage(stage=>inspectStageAsync(stage,1,options));
+const snapshot=(handle,options={})=>handle.readStage(stage=>inspectStage(stage,1,options));
 const prim=(info,path)=>info.prims.find(item=>item.path===path);
 
 test('hierarchy includes classes, undefined overs and composed instance proxies, and distinguishes generated prototypes',async()=>{
@@ -25,8 +25,8 @@ test('hierarchy includes classes, undefined overs and composed instance proxies,
   const roots=await snapshot(handle,{includePrototypes:true,expandedInstances:[]});assert.ok(roots.prims.some(item=>item.prototype));
   const full=await snapshot(handle,{includePrototypes:true});const source=prim(full,a.prototypePath+'/Animated');assert.ok(source.inPrototype);assert.equal(source.instanceProxy,false);
   await assert.rejects(setPrimActive(handle,source.path,false),/Prototype prim is read-only/);
-  const selected=await handle.readStage(stage=>inspectPrimAsync(stage,a.prototypePath));assert.deepEqual(selected.instancing.instances.sort(),['/World/A','/World/B']);
-  const points=await handle.readStage(stage=>inspectPrimAsync(stage,'/World/Scatter'));assert.deepEqual(points.instancing,{kind:'point-instancer',instanceCount:3,prototypes:['/World/Shapes/Red','/World/Shapes/Blue']});
+  const selected=await handle.readStage(stage=>inspectPrim(stage,a.prototypePath));assert.deepEqual(selected.instancing.instances.sort(),['/World/A','/World/B']);
+  const points=await handle.readStage(stage=>inspectPrim(stage,'/World/Scatter'));assert.deepEqual(points.instancing,{kind:'point-instancer',instanceCount:3,prototypes:['/World/Shapes/Red','/World/Shapes/Blue']});
  }finally{await handle.dispose();}
 });
 

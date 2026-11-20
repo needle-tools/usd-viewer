@@ -1,6 +1,6 @@
 import { Object3D } from "three"
 import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory, UsdViewportHelpers } from "./hydra.js"
-import { HdWebSyncDriver, USD, USDStage } from "./bindings.js"
+import { HydraDriver, USD, USDStage } from "./bindings.js"
 
 export type { UsdViewportHelpers } from "./hydra.js";
 
@@ -147,7 +147,7 @@ export declare type NeedleThreeHydraHandle = {
     readonly scene: Object3D,
     /** The hydra driver
     */
-    driver: HdWebSyncDriver,
+    driver: HydraDriver,
     /** Call update periodically to update the usd scene.
      * @param dt The delta time since the last update.
      */
@@ -198,12 +198,12 @@ export declare type NeedleThreeHydraHandle = {
     /** Run an imperative USD stage edit after the current draw settles, then redraw.
      * USD object-change notices and Hydra dirty/resync processing drive the update.
      */
-    editStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T | undefined>,
+    editStage: <T>(callback: (stage: USDStage, driver: HydraDriver) => T | Promise<T>) => Promise<T | undefined>,
     /** Inspect after pending native draws and stage operations, pausing animation
      * until the callback settles. Does not refresh or change the scene revision.
      * The callback must not author or enqueue another handle operation, and must
      * not retain native wrappers. Rejects if the stage closes before completion. */
-    readStage: <T>(callback: (stage: USDStage, driver: HdWebSyncDriver) => T | Promise<T>) => Promise<T>,
+    readStage: <T>(callback: (stage: USDStage, driver: HydraDriver) => T | Promise<T>) => Promise<T>,
     /** Resolves after the initial Hydra draw has settled.
      * If createThreeHydra was called with waitForMaterials, also waits for
      * asynchronous material generation and texture assignment.

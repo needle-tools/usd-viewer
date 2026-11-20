@@ -19,57 +19,6 @@ function readVector(vector, read = identity) {
 const identity = value => value;
 const strings = vector => readVector(vector, identity);
 
-/** Plain snapshots of the composed stage. No embind objects escape this API. */
-export function inspectStage(stage, time = 0, options = {}) {
-  let firstSample = Infinity, lastSample = -Infinity, timeVarying = false;
-  const prototypes=stagePrototypes(stage),counts=new Map(prototypes.map(item=>[item.path,item.instanceCount]));
-  const readPrim = prim => {
-    const path = prim.GetPath();
-    const variants = strings(prim.GetVariantSetNames()).map(setName => ({
-      path, setName, choices: strings(prim.GetVariantNames(setName)), selection: prim.GetVariantSelection(setName), readOnly: prim.IsInstanceProxy?.() || prim.IsInPrototype?.() || false,
-    }));
-    if (!stage.GetAnimationTimeRange && prim.IsActive() && prim.IsLoaded()) readVector(prim.GetAttributes?.(), attribute => {
-      const count = attribute.GetNumTimeSamples();
-      if (count > 1) {
-        timeVarying = true;
-        const samples = attribute.GetTimeSamples();
-        try { if (samples.size()) { firstSample = Math.min(firstSample, samples.get(0)); lastSample = Math.max(lastSample, samples.get(samples.size() - 1)); } }
-        finally { samples.delete?.(); }
-      } else {
-        const resolve = attribute.GetResolveInfo?.(0);
-        if (resolve?.valueSourceMightBeTimeVarying && ['ValueClips', 'Spline'].includes(resolve.source)) timeVarying = true;
-      }
-    });
-    const visibility = prim.GetAttribute('visibility');
-    let visible = true, imageable = false;
-    try { imageable = visibility.IsValid(); if (imageable) visible = visibility.Get(time) !== 'invisible'; }
-    finally { visibility.delete?.(); }
-    const flags=primCompositionFlags(prim);
-    return { ...flags, prototypeInstanceCount:counts.get(flags.prototypePath || path) || 0, path, name: prim.GetName(), type: prim.GetTypeName(), specifier: (prim.GetSpecifier?.() || '').replace(/^SdfSpecifier/, '').toLowerCase(), active: prim.IsActive(), visible, imageable, loaded: prim.IsLoaded(),
-      payload: prim.HasAuthoredPayloads(), reference: prim.HasAuthoredReferences(), purpose: prim.ComputePurpose?.() || 'default', variants };
-  };
-  let prims=readVector(stage.TraverseAllWithInstanceProxies?.(options.expandedInstances ?? null) || stage.TraverseAll(),readPrim);
-  if(options.includePrototypes && stage.TraversePrototypes)prims.push(...readVector(stage.TraversePrototypes(options.expandedInstances ?? null),readPrim));
-  resolveHierarchyVisibility(prims);
-  const start = stage.GetStartTimeCode?.(), end = stage.GetEndTimeCode?.();
-  const fallbackTimeRange = timeVarying ? (end > start ? { start, end } : Number.isFinite(firstSample) ? { start: firstSample, end: lastSample } : null) : null;
-  const timeRange=stage.GetAnimationTimeRange ? stage.GetAnimationTimeRange() : fallbackTimeRange;
-  return { prims, prototypes, time: timeRange, variants: prims.flatMap(prim => prim.variants), payloads: prims.filter(prim => prim.payload),
-    layers: stage.GetLayerStack?.(true) || [], errors: stage.GetCompositionErrors?.() || [] };
-}
-
-export function inspectPrim(stage, path, time = 0) {
-  const prim = stage.GetPrimAtPath(path);
-  try {
-    if (!prim?.IsValid()) return null;
-    const data={ path, type: prim.GetTypeName(), metadata: prim.GetAllMetadataValues?.() || prim.GetAllMetadata(),
-      attributes: readVector(prim.GetAttributes(), attribute => ({ name: attribute.GetName(), path: attribute.GetPath(), type: attribute.GetTypeName(), value: attribute.Get(time),
-        connections: strings(attribute.GetConnections?.()), resolveInfo: attribute.GetResolveInfo?.(time), authored: attribute.HasAuthoredValueOpinion?.() || false })),
-      relationships: readVector(prim.GetRelationships(), relation => ({ name: relation.GetName(), path: relation.GetPath(), targets: strings(relation.GetTargets()) })) };
-    data.instancing=primInstancing(prim,data.attributes,data.relationships);return data;
-  } finally { prim?.delete?.(); }
-}
-
 async function readVectorAsync(vector, read) {
   if (!vector) return [];
   try {
@@ -82,9 +31,9 @@ async function readVectorAsync(vector, read) {
   } finally { vector.delete?.(); }
 }
 
-/** Inspection that also supports asynchronously resolved value clips and JSPI.
+/** Plain snapshot of the composed stage. No embind objects escape this API.
  * Call inside handle.readStage() to keep the stage alive throughout the reads. */
-export async function inspectStageAsync(stage, time = 0, options = {}) {
+export async function inspectStage(stage, time = 0, options = {}) {
   let firstSample = Infinity, lastSample = -Infinity, timeVarying = false;
   const prototypes=stagePrototypes(stage),counts=new Map(prototypes.map(item=>[item.path,item.instanceCount]));
   const readPrim = async prim => {
@@ -130,8 +79,8 @@ async function readAttributeValue(attribute, time, options) {
   return { value: await attribute.Get(time) };
 }
 
-/** Asynchronous counterpart of inspectPrim; preserves wrapper ownership until each read completes. */
-export async function inspectPrimAsync(stage, path, time = 0, options = {}) {
+/** Plain snapshot of one prim; preserves wrapper ownership until each read completes. */
+export async function inspectPrim(stage, path, time = 0, options = {}) {
   if (options.arrayLimit !== undefined && (!Number.isInteger(options.arrayLimit) || options.arrayLimit < 0 || options.arrayLimit > 0xffffffff)) throw new RangeError('arrayLimit must be an unsigned 32-bit integer.');
   const prim = stage.GetPrimAtPath(path);
   try {

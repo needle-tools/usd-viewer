@@ -33,11 +33,11 @@ module.exports = async options => {
 }
 
 for (const supports of [true, false]) {
-    test(`Node keeps default Asyncify binding behavior (JSPI support: ${supports})`, async t => {
+    test(`Node defaults to auto runtime selection (JSPI support: ${supports})`, async t => {
         const {getUsdModule} = await fixture(t, {supports});
         const module = await getUsdModule();
-        assert.equal(module.runtime, 'asyncify');
-        assert.match(module.wasm, /emHdBindings\.wasm$/);
+        assert.equal(module.runtime, supports ? 'jspi' : 'asyncify');
+        assert.match(module.wasm, supports ? /emHdBindings\.jspi\.wasm$/ : /emHdBindings\.wasm$/);
     });
     test(`Node auto selects the matching generated CJS loader (JSPI support: ${supports})`, async t => {
         const {root, getUsdModule} = await fixture(t, {supports});

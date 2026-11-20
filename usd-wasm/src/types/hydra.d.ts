@@ -1,5 +1,5 @@
 import { Material, Object3D, Texture, WebGLRenderer } from 'three';
-import { HdWebSyncDriver, USD } from './bindings.js';
+import { HydraDriver, USD } from './bindings.js';
 
 /** Node renderer capabilities used by bounded MaterialX volumes. */
 export type HydraRenderer = WebGLRenderer | {
@@ -64,7 +64,7 @@ export type UsdViewportHelpers = {
 };
 
 export type threeJsRenderDelegateConfig = {
-    driver: () => HdWebSyncDriver,
+    driver: () => HydraDriver,
     USD?: USD,
     usdRoot: Object3D,
     includedPurposes?: string[],

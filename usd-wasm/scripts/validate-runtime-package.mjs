@@ -36,8 +36,7 @@ const exercise = `
       try {
         size.SetDouble(3, NaN);
         const value = size.GetValueString();
-        if ((!runtime || runtime === 'asyncify') && typeof value !== 'string') throw new Error('Default synchronous binding behavior changed');
-        if (runtime === 'jspi' && typeof value?.then !== 'function') throw new Error('JSPI getter did not return a promise');
+        if (typeof value?.then !== 'function') throw new Error('Async binding did not return a promise');
         if(await value !== '3') throw new Error('Authored value missing');
       }
       finally { size.delete(); }
@@ -74,7 +73,7 @@ const {preview} = await import(pathToFileURL(join(root, 'node_modules/vite/dist/
 const server = await preview({root, configFile:join(root,'vite.config.js'), preview:{port:0}});
 const browser = await chromium.launch({channel:'chrome'});
 try {
- for(const [runtime, supported, expected] of [[undefined,true,'asyncify'],['asyncify',true,'asyncify'],['jspi',true,'jspi'],['auto',true,'jspi'],['auto',false,'asyncify']]) {
+ for(const [runtime, supported, expected] of [[undefined,true,'jspi'],[undefined,false,'asyncify'],['asyncify',true,'asyncify'],['jspi',true,'jspi'],['auto',true,'jspi'],['auto',false,'asyncify']]) {
   const page=await browser.newPage(), errors=[], requests=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>requests.push({url:response.url(),status:response.status()}));

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {getUsdModule} from '../runtime.mjs';
-import {inspectPrimAsync} from '../../src/scene/index.js';
+import {inspectPrim} from '../../src/scene/index.js';
 
 test('native attribute pages bound transfers, preserve types and never modify the composed value',async()=>{
  const USD=await getUsdModule({print(){},printErr(){}});
@@ -21,9 +21,9 @@ test('native attribute pages bound transfers, preserve types and never modify th
   for(const [name,value,total] of [['points',[[4,5,6]],3],['names',['two'],3],['scalar',2,null]]){
    const attr=prim.GetAttribute(name);try{assert.deepEqual(await attr.GetValuePage(0,1,1),{value,total,offset:1});}finally{attr.delete();}
   }
-  const bounded=await inspectPrimAsync(stage,'/Data',0,{arrayLimit:2});
+  const bounded=await inspectPrim(stage,'/Data',0,{arrayLimit:2});
   assert.equal(bounded.attributes.find(a=>a.name==='values').arraySize,10000);
   assert.deepEqual(bounded.attributes.find(a=>a.name==='values').value,[0,1]);
-  const full=await inspectPrimAsync(stage,'/Data');assert.equal(full.attributes.find(a=>a.name==='values').value.length,10000);
+  const full=await inspectPrim(stage,'/Data');assert.equal(full.attributes.find(a=>a.name==='values').value.length,10000);
  }finally{prim.delete();USD.ReleaseStage(stage);USD.FS_unlink('/pages.usda');}
 });

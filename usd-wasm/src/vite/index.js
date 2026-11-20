@@ -15,6 +15,12 @@ const crossOriginIsolatedPlugin = {
             // Vite's Node config phase needs realpath expansion.
         }
         return {
+            // The runtime locates its WASM and worker beside import.meta.url.
+            // Dependency prebundling moves that URL into .vite/deps without the
+            // companion assets. Serve the package modules from their real paths.
+            optimizeDeps: {
+                exclude: ['@needle-tools/usd'],
+            },
             server: {
                 fs: {
                     allow: [...new Set([...allow, packageRoot, packageRootRealPath])],

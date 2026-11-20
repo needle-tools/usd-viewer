@@ -43,7 +43,7 @@ try {
 const called = new Set(cases.flatMap(example => example.calls));
 const report = {
   scope: 'Generated EditTarget, Layer, Attribute, Relationship, Prim, Stage methods and five core functions only. Calls entered during example execution (including example helpers); excludes preview/export harness calls.',
-  exclusions: ['Schema wrappers and math/vector types', 'HdWebSyncDriver', 'Emscripten internals/filesystem', 'SDK exports and returned controllers', 'Browser viewer integration', 'Assertions, argument combinations and failure-path coverage'],
+  exclusions: ['Schema wrappers and math/vector types', 'HydraDriver', 'Emscripten internals/filesystem', 'SDK exports and returned controllers', 'Browser viewer integration', 'Assertions, argument combinations and failure-path coverage'],
   examples: cases.length, callableEntries: entries.length, calledEntries: called.size,
   callEntryPercent: Number((called.size / entries.length * 100).toFixed(1)),
   byClass: schema.classes.map(type => ({ name: type.jsName, total: type.methods.length,

@@ -82,7 +82,7 @@ try {
         const {createArrayEdits}=await window.packed.loadEditing();
         const edits=createArrayEdits({usd:USD,stage,edit:action=>action(),isCurrent:()=>true});
         try {
-          await edits.apply(stage.GetRootLayer().GetIdentifier(),{property:{primPath:'/Asset',name:'rotations',type:'quatf[]',time:NaN}},stage.GetRootLayer().ExportToString(),[[0,1,0,0]]);
+          await edits.apply(stage.GetRootLayer().GetIdentifier(),{property:{primPath:'/Asset',name:'rotations',type:'quatf[]',time:NaN}},await stage.GetRootLayer().ExportToString(),[[0,1,0,0]]);
           await edits.undo();await edits.redo();await edits.undo();
         }finally{edits.dispose();}
         const weights=prototype.CreateAttribute('primvars:weights','float[]',false);
@@ -96,9 +96,9 @@ try {
         const layerView=await stage.OpenLayerStage(stage.GetRootLayer().GetIdentifier());
         try{layerView.GetPrimAtPath('/Asset').CreateAttribute('uvs','texCoord2f[]',true).Set([[0.25,0.5]],NaN);}
         finally{USD.ReleaseStage(layerView);}
-        return {uvs:prototype.GetAttribute('uvs').Get(NaN),instance:copy.IsInstance(),child:stage.GetPrimAtPath('/Copy/Child').IsValid(),
+        return {uvs:await prototype.GetAttribute('uvs').Get(NaN),instance:copy.IsInstance(),child:stage.GetPrimAtPath('/Copy/Child').IsValid(),
           interpolation:weights.GetMetadataString('interpolation'),elementSize:weights.GetMetadataString('elementSize'),
-          matrices:matrices.GetValueString(),typedMatrices:matrices.Get(Number.NaN),typedRotations:rotations.Get(Number.NaN),rotations:rotations.GetValueString(),variant:stage.GetPrimAtPath('/Asset/InVariant').IsValid()};
+          matrices:await matrices.GetValueString(),typedMatrices:await matrices.Get(Number.NaN),typedRotations:await rotations.Get(Number.NaN),rotations:await rotations.GetValueString(),variant:stage.GetPrimAtPath('/Asset/InVariant').IsValid()};
       } finally { USD.ReleaseStage(stage); }
     });
     assert.deepEqual(result.authoring.uvs,[[0.25,0.5]]);assert.equal(result.authoring.instance,true);assert.equal(result.authoring.child,true);
@@ -173,7 +173,7 @@ try {
       try {
         const prim = stage.GetPrimAtPath('/World/Sphere1'), radius = prim.GetAttribute('radius');
         try {
-          if (radius.GetValueString() !== '0.6') throw new Error('Packed USDZ lost the authored radius edit');
+          if (await radius.GetValueString() !== '0.6') throw new Error('Packed USDZ lost the authored radius edit');
         } finally { radius.delete(); prim.delete(); }
         return {bytes: bytes.length, editedRadius: 0.6};
       } finally { USD.ReleaseStage(stage); USD.FS_unlink('/tmp/packed-download.usdz'); }

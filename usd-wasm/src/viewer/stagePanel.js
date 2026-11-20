@@ -3,7 +3,7 @@ import { installViewerStyle } from './style.js';
 import { transportIcon, viewerIcon, primIcon } from './icons.js';
 import { createSelection } from './selection.js';
 import { mountPropertyInspector } from './propertyInspector.js';
-import { inspectStageAsync, readStageLayers, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
+import { inspectStage, readStageLayers, setVariant, setPayloadLoaded, setPrimActive, setPrimVisible, stageCameras } from '../scene/index.js';
 
 function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text) el.textContent = text; return el; }
 let inspectorId = 0;
@@ -333,7 +333,7 @@ export async function mountStagePanel({ handle, stage, usd, scene, camera, contr
     const revision = ++refreshRevision, time = handle.getTime?.() || 0;
     const nextInfo = await handle.readStage(currentStage => {
       if (disposed || !isCurrent() || revision !== refreshRevision) return null;
-      return inspectStageAsync(currentStage, time, {expandedInstances:search.value.trim()?null:[...expandedInstances],includePrototypes:showPrototypes});
+      return inspectStage(currentStage, time, {expandedInstances:search.value.trim()?null:[...expandedInstances],includePrototypes:showPrototypes});
     });
     if (nextInfo && usd) nextInfo.layers = await readStageLayers(handle, usd);
     if (disposed || !isCurrent() || revision !== refreshRevision || !nextInfo) return;

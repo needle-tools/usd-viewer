@@ -159,28 +159,6 @@ test('live HTTP stages isolate same-named payloads and keep the survivor usable 
     }
 });
 
-test('legacy runtime guard rejects a second live handle before opening it and permits sequential loads', async () => {
-    const USD = await getUsdModule({ print() {}, printErr() {} });
-    const prototype = USD.HdWebSyncDriver.prototype;
-    const capability = Object.getOwnPropertyDescriptor(prototype, 'HasScopedHttpCache');
-    if (capability) delete prototype.HasScopedHttpCache;
-    const source = new TextEncoder().encode('#usda 1.0\ndef Xform "Root" {}\n');
-    let first;
-    let next;
-    try {
-        first = await createThreeHydra({ USD, scene: new Group(), url: 'legacy.usda', buffer: source.buffer });
-        await first.ready();
-        await assert.rejects(createThreeHydra({ USD, scene: new Group(), url: 'https://must-not-fetch.invalid/root.usda' }), /one live Hydra handle/);
-        await first.dispose();
-        next = await createThreeHydra({ USD, scene: new Group(), url: 'legacy.usda', buffer: source.buffer });
-        await next.ready();
-    } finally {
-        await first?.dispose();
-        await next?.dispose();
-        if (capability) Object.defineProperty(prototype, 'HasScopedHttpCache', capability);
-    }
-});
-
 test('failed imports and failed native stage opens release their private files and allow retry', async () => {
     const USD = await getUsdModule({ print() {}, printErr() {} });
     const directories = () => USD.FS_analyzePath('/needle').exists

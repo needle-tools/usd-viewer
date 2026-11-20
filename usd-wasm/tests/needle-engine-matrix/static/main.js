@@ -113,7 +113,7 @@ try {
             createThreeHydra: typeof usdThree.createThreeHydra,
             addPluginForNeedleEngine: typeof usdPlugins.addPluginForNeedleEngine,
             getHydraHandleFromNeedleEngineAsset: typeof usdPlugins.getHydraHandleFromNeedleEngineAsset,
-            hdWebSyncDriver: typeof USD.HdWebSyncDriver,
+            createHydraDriver: typeof USD.CreateHydraDriver,
             stageGetUpAxis: typeof USD.Stage?.prototype?.GetUpAxis,
         },
         openusd: buildInfo.openusd.version,

@@ -104,7 +104,7 @@ async function runNeedleEnginePage(page, matrixPage: NeedleEnginePage): Promise<
     expect(state.usdExports.createThreeHydra).toBe('function');
     expect(state.usdExports.addPluginForNeedleEngine).toBe('function');
     expect(state.usdExports.getHydraHandleFromNeedleEngineAsset).toBe('function');
-    expect(state.usdExports.hdWebSyncDriver).toBe('function');
+    expect(state.usdExports.createHydraDriver).toBe('function');
     expect(state.usdExports.stageGetUpAxis).toBe('function');
     expect(state.openusd).toBe('0.26.5');
     expect(state.modules.materialX).toBe(true);
