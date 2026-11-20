@@ -27,6 +27,7 @@ public:
         const auto texture=parameter("texture:file");
         if(texture.IsHolding<SdfAssetPath>()) {
             const auto& asset=texture.UncheckedGet<SdfAssetPath>();
+            _state->RegisterAsset(asset);
             data["textureFile"]=JsValue(asset.GetAssetPath());data["textureResolvedPath"]=JsValue(asset.GetResolvedPath());
         }
         data["textureFormat"]=Convert(parameter("texture:format"));

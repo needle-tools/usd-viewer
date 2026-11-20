@@ -27,7 +27,7 @@ function unpack(value,binary) {
   if(Array.isArray(value))return value.map(entry=>unpack(entry,binary));
   if(value&&typeof value==='object'){
     if(value.$buffer!==undefined){
-      if(!['Float32Array','Int32Array','Uint32Array'].includes(value.type))throw new Error('Invalid buffer type');
+      if(!['Float32Array','Int32Array','Uint32Array','Uint8Array'].includes(value.type))throw new Error('Invalid buffer type');
       return new globalThis[value.type](binary.buffer,binary.byteOffset+value.$buffer,value.length);
     }
     return Object.fromEntries(Object.entries(value).map(([key,entry])=>[key,unpack(entry,binary)]));
@@ -47,6 +47,7 @@ bridge.onCommand(message=>{commands=commands.then(async()=>{
       const args=unpack(raw,message.binary);
       if(kind==='native'){
         if(method==='identity')viewport.identities.set(id,args[0]);
+        else if(method==='asset')viewport.registerAsset(id,args[0]);
         else if(method==='settings')await viewport.configure(args[0]);
         else throw new Error('Unknown native command: '+method);
         continue;

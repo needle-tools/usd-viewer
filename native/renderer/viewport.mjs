@@ -24,9 +24,12 @@ export async function createViewport(renderer, requestRender) {
   configureNeedleAgx(renderer);
   const support = await createWebGpuSupport({lazyAreaLights:true});
   const identities = new Map();
+  const assets = new Map();
   const driver = {
     resolveAssetUrl:path => path.startsWith('/') ? new URL('file://'+path).href : path,
     async getFile(path, callback) {
+      const bytes=assets.get(path);
+      if(bytes){callback(bytes);return;}
       const response = await fetch(this.resolveAssetUrl(path));
       if(!response.ok) throw new Error('Asset unavailable: '+path);
       callback(new Uint8Array(await response.arrayBuffer()));
@@ -56,6 +59,8 @@ export async function createViewport(renderer, requestRender) {
   const picking = createPicking(renderer,scene,camera,identities);
   return {
     scene,root,camera,delegate,identities,
+    // Own only the asset bytes, not a view retaining an entire geometry packet.
+    registerAsset(path,bytes){assets.set(path,bytes.slice());},
     get settings(){return settings;},
     async configure(next) {
       console.log('Hydra settings',JSON.stringify(next));

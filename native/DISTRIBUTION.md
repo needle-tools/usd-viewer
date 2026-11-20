@@ -1,5 +1,13 @@
 # Distributing Needle Three.js Hydra
 
+**A distributable binary package is not available yet.** The supported
+installation route is to build from source and register the plugins from that
+checkout. The installer creates links to the checkout and its Electron runtime;
+it does not create a portable package. Keep those files at their installed paths.
+
+This guide describes that source installation and the requirements for producing
+a distributable binary package.
+
 The usual Hydra delivery is a versioned archive or installer containing a
 renderer library, a USD `plugInfo.json` manifest, resources and any renderer
 runtime dependencies. USD discovers the manifest and loads the renderer library
@@ -21,19 +29,16 @@ runtime into the host's library search path.
 The plugin starts an Electron helper to run the shared Three.js renderer. Keep
 the pinned runtime in `native/package-lock.json`, its complete application
 bundle/frameworks, the native `surface.node` addon, compiled renderer and assets
-together. The helper's browser window is configured to stay hidden. A visible
-window is unintended, not an installation step. Moving away from Electron is
-deferred; it is a required runtime dependency for the current implementation.
+together. The helper's browser window is configured to stay hidden. Electron is a
+required runtime dependency for the current implementation.
 Electron's [shared-texture offscreen rendering](https://www.electronjs.org/docs/latest/tutorial/offscreen-rendering)
 is the GPU export path. The recipient does not need the web viewer running.
 
 ## Send a developer the current integration
 
-For a handoff today, send the paired source revisions and these instructions.
-Use `needle/feature/hdEmscripten` in `needle-tools/OpenUSD` and the consolidated
-viewer revision containing this guide. Record exact commit IDs rather than
-asking the recipient to combine arbitrary branch tips. The OpenUSD branch has
-`NEEDLE_NATIVE_HYDRA.md` explaining the consolidation and original wasm provenance.
+Use this repository and the `needle/feature/hdEmscripten` branch of
+`needle-tools/OpenUSD`. Record both source revisions with the host SDK version
+so the build can be reproduced.
 
 1. Check out both repositories beside each other as `openusd` and `usd-viewer`.
    Have the target host and its matching development headers/libraries
@@ -43,6 +48,7 @@ asking the recipient to combine arbitrary branch tips. The OpenUSD branch has
 2. Install the viewer and native runtime dependencies from their lockfiles:
 
    ```sh
+   git submodule update --init --recursive
    npm ci
    npm ci --prefix native
    # Only if lifecycle scripts were disabled during installation:
@@ -66,7 +72,7 @@ The current installer creates links and discovery entries pointing into the
 checkout. Keep that checkout and its runtime installed at their original paths.
 This is a developer installation, not a relocatable binary release.
 
-## Binary package to send an end user
+## Requirements for a distributable binary package
 
 Produce an archive/installer per host ABI and architecture, for example:
 
@@ -99,8 +105,6 @@ discovery, and adapt `main.cjs`/renderer asset paths and the Blender add-on's
 checkout-relative lookup to the release layout. `NEEDLE_HYDRA_ELECTRON` currently
 overrides only the executable, not the renderer script/runtime root. Copying
 today's `.build` directory to a different machine is therefore insufficient.
-For an internal fixed-location pilot, compiling and installing the complete
-runtime at the same agreed absolute prefix is possible, but is not portable.
 
 Audit dynamic-library dependencies and rpaths with `otool -L`/`otool -l`, then
 sign the native library, addon and nested Electron application appropriately

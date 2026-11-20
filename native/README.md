@@ -1,15 +1,20 @@
 # Native Three.js Hydra integration
 
+Installation currently requires building from source against each host's SDK.
+**A ready-to-install binary package is not available.** The installer registers
+plugins from this checkout; keep the checkout, compiled renderer assets and
+Electron runtime in place. Copying the plugin libraries alone to another
+computer is insufficient.
+
 This macOS integration exposes `HdNeedleRendererPlugin` to usdview, Blender and
 Houdini Solaris. It drives the browser's `ThreeRenderDelegateInterface` and
 Beauty pipeline, including SSGI and temporal antialiasing. The host sends Hydra
 changes and camera matrices to an isolated Electron WebGPU renderer. Renderer
 Sync consumes Hydra data; it never opens or traverses the host's USD stage.
 
-For a developer handoff, normal Hydra plugin distribution and the remaining
-work for a portable binary installer, see [DISTRIBUTION.md](DISTRIBUTION.md).
-The current integration retains its Electron runtime. A browserless replacement
-is deferred while the working host integrations are validated.
+For installation from source and Hydra plugin packaging, see
+[DISTRIBUTION.md](DISTRIBUTION.md). The Electron helper is a required runtime
+dependency and runs separately from the host application.
 
 The native adapter handles meshes, implicit surfaces converted by
 `HdsiImplicitSurfaceSceneIndex`, instancing, visibility, indexed primvars,
@@ -27,6 +32,10 @@ native/run-usdview path/to/scene.usda
 native/run-blender
 native/run-houdini-compat
 ```
+
+Build the matching host plugin first using the [build instructions](#build).
+In usdview, the launcher selects **Needle Three.js WebGPU** automatically;
+after installation it is also available in the **Renderer** menu.
 
 In Blender, choose **Needle Three.js WebGPU** in the Render Engine menu.
 The launcher registers the add-on for that session. Its Render Properties panel
@@ -91,6 +100,13 @@ SSGI is enabled by default. `needle:ssgi`, `needle:samples`,
 Hydra render settings. The fallback environment is suppressed when authored
 lights exist, following the browser lighting policy. MaterialX documents and
 texture paths come from the host's Hydra material network and resolver.
+
+The native asset bridge reads USDZ texture members through the host's
+`ArResolver` and transfers their encoded bytes to the shared Three.js loaders.
+The shared loaders handle image decoding, color spaces and GPU texture upload.
+
+MaterialX images use the same loader as the browser WebGPU integration. See the
+[vendored source provenance](../usd-wasm/src/vendor/materialx/README.md).
 
 Temporal filtering uses the shared Three.js SSGI/TRAA pipeline. Native hosts
 default to 128 temporal samples after scene or camera changes; `needle:samples`
@@ -181,8 +197,11 @@ The sibling OpenUSD checkout supplies the shared Hydra instancer and MaterialX
 helpers; set `NEEDLE_OPENUSD_SOURCE` if it lives elsewhere.
 
 ```sh
-npm install --prefix native
-node native/node_modules/electron/install.js
+git submodule update --init --recursive
+npm ci
+npm ci --prefix native
+# Only if npm lifecycle scripts were disabled:
+# node native/node_modules/electron/install.js
 node native/build.mjs
 cmake -S native -B native/.build/usdview \
   -Dpxr_DIR="$HOME/OpenUSD-26.05-native" \
@@ -190,14 +209,44 @@ cmake -S native -B native/.build/usdview \
 cmake --build native/.build/usdview --parallel 2
 ```
 
-Configure separate build directories with `-DNEEDLE_HOST=blender` or
-`-DNEEDLE_HOST=houdini`. CMake cache variables select the application and SDK
-locations. Blender requires matching USD, OpenSubdiv, MaterialX, TBB and Python headers
-from its official `blender/lib-macos_arm64` libraries repository; the SDK used
-locally is recorded in `.build/blender-sdk` itself. OpenSubdiv headers come from
-that SDK's `opensubdiv/include` directory. Houdini uses its installed toolkit
-headers and libraries directly. No full OpenUSD/wasm rebuild is needed
-for changes confined to this native integration.
+Use a separate build directory for each host. Blender requires matching USD,
+OpenSubdiv, MaterialX, TBB and Python headers from its official
+`blender/lib-macos_arm64` libraries repository. Replace the SDK path below with
+that library checkout, matched to the installed Blender build:
+
+```sh
+cmake -S native -B native/.build/blender \
+  -DNEEDLE_HOST=blender \
+  -DNEEDLE_BLENDER_APP=/Applications/Blender.app \
+  -DNEEDLE_BLENDER_SDK=/path/to/lib-macos_arm64 \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build native/.build/blender --parallel 2
+```
+
+Houdini uses its installed toolkit headers and libraries directly:
+
+```sh
+cmake -S native -B native/.build/houdini \
+  -DNEEDLE_HOST=houdini \
+  -DNEEDLE_HOUDINI_ROOT=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build native/.build/houdini --parallel 2
+```
+
+When targeting another Houdini installation, use its framework path for both
+the CMake option and the launcher's `NEEDLE_HOUDINI_ROOT` environment variable.
+Each plugin must be built against the application that will load it.
+
+After building, run `python3 native/install-hosts.py` to register the plugins,
+then restart the applications. In Blender, enable **Needle Three.js Hydra**
+in **Preferences → Add-ons**, select **Needle Three.js WebGPU** as the render
+engine and switch the viewport to **Rendered** shading. In Houdini, enter Solaris
+and select **Needle Three.js WebGPU** in the viewport's renderer menu. The
+[checkout launchers](#run-from-this-checkout)
+can also start each application directly.
+
+Building this integration does not require rebuilding OpenUSD or its WebAssembly
+runtimes.
 
 ## Verify
 
@@ -207,6 +256,7 @@ node --experimental-vm-modules --test native/tests/render-scheduling.test.mjs
 python3 native/tests/install-hosts.py
 python3 native/tests/animated-subdivision.py
 python3 native/tests/dome-presentation.py
+python3 native/tests/package-textures.py
 node native/tests/browser-parity-runner.mjs
 python3 native/tests/native-parity-runner.py
 native/run-blender --background --factory-startup --python native/tests/blender-parity.py
@@ -244,6 +294,11 @@ sequences for animated holes, creases and corners. Use `--scene /path/to/asset.u
 to exercise another asset, and `--ssgi` to include progressive Beauty rendering.
 `dome-presentation.py` compares actual Storm and Needle backgrounds using
 usdview's default dome light under several camera and light rotations.
+`package-textures.py` generates USDZ fixtures and compares packaged and loose
+PreviewSurface/MaterialX textures and an HDR dome. Package members are read
+through the host's asset resolver during Hydra Sync and sent once per resolved
+identifier to the shared Three.js image loaders; they are not filesystem URLs.
+The material checks also compare texture orientation to native Storm texels.
 Blender tests exercise actual rendered pixels, its viewport
 selection operator, native outlines and live SSGI setting changes in a fresh
 factory-startup process. They do not modify an already-open Blender scene.

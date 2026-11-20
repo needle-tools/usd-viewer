@@ -1,6 +1,10 @@
 #include "transport.h"
 #include "pxr/imaging/hgiMetal/hgi.h"
 #include "pxr/imaging/hgiMetal/texture.h"
+#include "pxr/usd/ar/asset.h"
+#include "pxr/usd/ar/packageUtils.h"
+#include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/sdf/assetPath.h"
 #include <servers/bootstrap.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -58,6 +62,27 @@ void NeedleTransport::Command(std::string const& kind,std::string const& id,std:
         _purposes=key;
     }
     _commands.emplace_back(JsArray{JsValue(kind),JsValue(id),JsValue(method),JsValue(args)});
+}
+void NeedleTransport::RegisterAsset(SdfAssetPath const& asset) {
+    const auto& path=asset.GetResolvedPath();
+    // Package-relative paths are Ar identifiers, not filesystem/HTTP URLs.
+    // Read them in the host's resolver context during Hydra Sync. The shared
+    // Three.js loaders still own image decoding, color spaces and GPU upload.
+    if(!ArIsPackageRelativePath(path))return;
+    std::lock_guard<std::mutex> assetLock(_assetMutex);
+    if(_assets.count(path))return;
+    const auto resource=ArGetResolver().OpenAsset(ArResolvedPath(path));
+    const auto bytes=resource?resource->GetBuffer():nullptr;
+    if(!bytes) {TF_WARN("Needle cannot read packaged asset '%s'",path.c_str());return;}
+    const auto size=resource->GetSize();
+    // Queue the byte descriptor and its command atomically with respect to Frame.
+    std::lock_guard<std::mutex> lock(_mutex);
+    const auto buffer=_Buffer(reinterpret_cast<uint8_t const*>(bytes.get()),size,"Uint8Array");
+    _commands.emplace_back(JsArray{JsValue("native"),JsValue(path),JsValue("asset"),JsValue(JsArray{buffer})});
+    // Canonical resolved identifiers keep identically named members in
+    // different packages separate. Match the delegate's texture-cache lifetime.
+    _assets.insert(path);
+    if(getenv("NEEDLE_HYDRA_TRACE"))fprintf(stderr,"Needle package asset %s %zu bytes\n",path.c_str(),size);
 }
 std::string NeedleTransport::Error() const{std::lock_guard<std::mutex> lock(_mutex);return _error;}
 void NeedleTransport::_Start(){

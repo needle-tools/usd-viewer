@@ -163,7 +163,10 @@ public:
             for(auto const& node:entry.second.nodes){
                 JsObject parameters{{"identifier",JsValue(node.identifier.GetString())},{"path",JsValue(node.path.GetString())}};
                 for(auto const& parameter:node.parameters){parameters[parameter.first.GetString()]=Convert(parameter.second);
-                    if(parameter.second.IsHolding<SdfAssetPath>()){const auto asset=parameter.second.UncheckedGet<SdfAssetPath>();parameters[parameter.first.GetString()+":resolvedPath"]=JsValue(asset.GetResolvedPath());}}
+                    if(parameter.second.IsHolding<SdfAssetPath>()){
+                        const auto& asset=parameter.second.UncheckedGet<SdfAssetPath>();
+                        state->RegisterAsset(asset);
+                        parameters[parameter.first.GetString()+":resolvedPath"]=JsValue(asset.GetResolvedPath());}}
                 if(node.identifier==TfToken("needle:MdlSurface")){auto document=node.parameters.find(TfToken("document"));if(document!=node.parameters.end())send("updateMdlMaterial",{Convert(document->second)});}
                 else send("updateNode",{JsValue(entry.first.GetString()),JsValue(node.path.GetString()),JsValue(parameters)});
             }
