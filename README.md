@@ -18,7 +18,7 @@ For commercial use of the source code, please contact [hi@needle.tools](mailto:h
 - Load folders or multiple dropped files so USD references, payloads, textures, and nested packages can resolve together.
 - Render OpenUSD composition through Hydra, including variants, payloads, visibility, purpose filtering, native instances, PointInstancer prims, cameras, and USD Lux lights.
 - Use OpenSubdiv, Adobe `usdGltf` with Draco-compressed glTF/GLB import, native `usdDraco` payloads, and Hydra-provided MaterialX documents in the OpenUSD 26.11.1 wasm bundle.
-- Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty, MuTracer or gkjohnson path tracing; optional tracers load when selected.
+- Render meshes, Gaussian particle fields and bounded volumes together with WebGPURenderer. Choose Basic, Beauty or MuTracer path tracing; MuTracer loads when selected.
 - Evaluate uniform or adaptive OpenSubdiv surfaces, including animated creases, corners and holes.
 - Inspect and follow individual properties, pick native/point instances, select multiple objects and run the embedded JavaScript REPL.
 - Arrange Stage, Examples, Properties, Layers, Code, Timeline and Console in a persistent workspace. The viewer preserves user-chosen timeline placement and open/closed state.
@@ -44,8 +44,8 @@ when selected. Both asset and preview URLs use the dataset revision recorded in
 [the catalog](public/data/nvidia-simready.json). Refresh it with
 `npm run prepare:simready-manifest` (or pass a full dataset commit SHA after `--`).
 
-Additional collections appear as their own Examples folders. AGIBOT is included by
-default. To open a Hugging Face dataset or dataset folder, add
+Additional collections appear as their own Examples folders. To open a Hugging
+Face dataset or dataset folder, add
 `collection=https://huggingface.co/datasets/OWNER/DATASET` to the viewer URL
 (repeat `collection=` for multiple folders). For example:
 [AGIBOT collection](https://usd-viewer.needle.tools/?workspace=studio&collection=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fagibot-assets%2Fsimready-assets).
@@ -65,11 +65,10 @@ percentages, transfer speed and estimated time remaining. Unknown file sizes
 stay indeterminate until reported; totals cover dependencies discovered so far.
 Exports retain the original USD dependencies, independently of this display setting.
 
-App and SDK modules use content-versioned URLs so reloads do not mix cached
-inspection code with a newer UI. `npm run prepare:public` generates
-`public/viewer-module-versions.json` for static uploads; include that file with
-the rest of `public/`. The local server generates the same manifest from the
-current source files.
+App and SDK modules are served with `Cache-Control: no-cache`, so browsers
+revalidate them on every load and a reload never mixes cached modules with a
+newer UI. Unchanged files return 304. Hosts other than `server.js` need the same
+header for `.js`, `.mjs`, `.css`, `.wasm`, `.json` and `.html` files.
 
 The viewer uses `SharedArrayBuffer`, so it must be served with the required
 COOP/COEP headers:
@@ -111,9 +110,9 @@ package. Code and Console load when opened. Embedded viewers can use `/runtime`,
 
 ## Examples and render settings
 
-Use **Examples** to browse 192 Needle coverage fixtures, 63 executable JavaScript lessons,
-the complete NVIDIA SimReady library, the separate 14-asset Hugging Face test set,
-AGIBOT collections, USD Working Group assets and glTF samples.
+Use **Examples** to browse Needle coverage fixtures, executable JavaScript lessons,
+the complete NVIDIA SimReady library, the separate Hugging Face test set,
+collections opened by URL, USD Working Group assets and glTF samples.
 The Examples footer switches between Beauty previews and native usdview/Storm
 captures, and remembers your choice.
 The animation collection includes a rolling cube, heartbeat, lighthouse day/night
@@ -167,6 +166,18 @@ viewport; joints keep their authored limits and attachments. **Reset** restores
 the scene. Joint sliders are also available in Simulation, and **View → Helpers →
 Joint constraints** controls viewport axes and limits. Interact uses an optional
 kinematics core; **Simulate** loads Rapier for supported contact simulations.
+The **Joints** toggle in Simulation controls the same helpers during either mode.
+Simulate holds isolated rigid assets and the bases of floating jointed assemblies
+by default, leaving movable parts dynamic. Uncheck **Hold assembly bases** to let
+the whole assembly move freely. Contacts follow the asset's collision shapes and filters.
+An [articulation root](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/108.0/dev_guide/rigid_bodies_articulations/articulations.html#floating-and-fixed-base)
+does not by itself fix an asset to the world. Holding its base is a viewer preview
+option; other unconstrained bodies need a supporting collider to rest on under gravity.
+The viewer preserves authored damping, including zero. When it is unspecified,
+linear damping defaults to 0 and angular damping to 1 per second, matching ordinary
+Needle rigid bodies. Grabs add temporary damping while the pointer is held.
+Enable **Colliders** in Simulation to inspect collision geometry with green
+outlines and translucent faces. During simulation, this shows the solver's shapes.
 
 Fresh viewer settings select Beauty and Adaptive. Render mode, quality and detail
 choices are remembered; an explicit URL overrides them. Scene background and UI
@@ -181,10 +192,19 @@ For native MDL comparisons, render complete USD scenes with an NVIDIA RTX render
 probes with the NVIDIA MDL SDK. See [Native MDL references](docs/mdl-reference-rendering.md)
 for setup and commands; configure the renderer host and SDK paths for your machine.
 
+## Hydra renderer for desktop applications
+
+The macOS Hydra plugin runs the Three.js renderer in usdview, Blender and
+Houdini Solaris. See [native setup](native/README.md) for building, installing
+and selecting the renderer in each application, and
+[distribution](native/DISTRIBUTION.md) for host compatibility and packaging.
+Installation requires building from source and keeping the checkout and Electron
+helper in place. A ready-to-install native binary package is not available yet.
+
 ## Viewer URL Options
 
 The main options are `viewer=three|needle`,
-`render=basic|beauty|pathtraced|pathtraced-gk`,
+`render=basic|beauty|pathtraced`,
 `complexity=adaptive|low|medium|high|very-high` and `background=light|dark`.
 Use `file=` for a USD URL; relative dependencies resolve from its source.
 

@@ -27,7 +27,7 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
   holes, world-space points with varying widths, evaluated Bézier/B-spline/NURBS
   curves, and rational NURBS patches.
 - **Volumes** — optional bounded MaterialX media and OpenVDB density/heat visualization.
-- **Rendering** — WebGPURenderer with Basic, Beauty, MuTracer and gkjohnson modes.
+- **Rendering** — WebGPURenderer with Basic, Beauty and MuTracer modes.
 - **Inspection and authoring** — stage/property navigation, multi-selection,
   instance picking, JavaScript REPL with a paged array table, and serialized in-memory edits.
   The app’s Code pane opens arrays beside the source in a resizable sidebar, with its width remembered.
@@ -42,7 +42,7 @@ Built on upstream **OpenUSD 26.11.1** with Hydra imaging and **MaterialX 1.39.5*
 | OpenUSD | **26.11.1**, with Hydra imaging and the Needle three.js render delegate |
 | Native MaterialX | **1.39.5**, for material documents and shader generation |
 | MaterialX web package | **`@needle-tools/materialx` 1.8.1**, for browser rendering, authoring and the TSL node library |
-| Three.js | **`@needle-tools/three` 0.185.2-alpha.8** in the viewer, including its MaterialX loader |
+| Three.js | **`@needle-tools/three` 0.186.2-alpha.0** in the viewer, including its MaterialX loader |
 | OpenSubdiv | **3.6.1**, including uniform and adaptive limit-surface evaluation |
 | `usdGltf` | Adobe's file-format plugin for glTF/GLB import, with Draco enabled |
 | `usdDraco` | Native Draco-compressed USD mesh payloads |
@@ -169,10 +169,17 @@ both owned target handles. Complete examples are in
 ## Install
 
 ```sh
-npm install @needle-tools/usd@1.2.1 three@npm:@needle-tools/three@0.185.2-alpha.8
+npm pkg set 'dependencies.three=npm:@needle-tools/three@0.186.2-alpha.0' 'overrides.three=$three'
+npm install @needle-tools/usd@2.0.0
 ```
 
-Version 1.2.1 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
+The override keeps the application and its plugins on one Three.js instance.
+Declare it before installing Needle's prerelease package: npm otherwise rejects
+the prerelease against stable peer ranges or installs another Three.js copy.
+Applications using a supported stable upstream Three.js version can install that
+version normally without this override.
+
+Version 2.0.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
 three.js. The wasm bundle includes Adobe `usdGltf` with Draco-compressed
 glTF/GLB import, native `usdDraco` mesh payloads, MaterialX, and OpenSubdiv
 support.
@@ -218,36 +225,21 @@ export default {
 };
 ```
 
-The default Asyncify runtime contains `emHdBindings.js` and
-`emHdBindings.wasm`. An additional JSPI runtime uses `emHdBindings.jspi.js` and
-`emHdBindings.jspi.wasm`. There is no separate worker script; pthread workers
-load the selected generated JavaScript entrypoint directly.
+The package contains two runtimes. `getUsdModule()` selects JSPI
+(`emHdBindings.jspi.js`, `emHdBindings.jspi.wasm`) where `WebAssembly.Suspending`
+and `WebAssembly.promising` are available, and Asyncify (`emHdBindings.js`,
+`emHdBindings.wasm`) elsewhere; applications download only the selected one.
+The JSPI Wasm is 19.7 MB instead of 36.4 MB, or 3.35 MB instead of 5.49 MB with
+Brotli. Both runtimes have the same API and native features. Pass
+`asyncRuntime: 'asyncify'` or `'jspi'` to force one; custom `locateFile` and
+`mainScriptUrlOrBlob` overrides must point to that runtime's files. Pthread
+workers load the selected JavaScript entrypoint; there is no separate worker
+script.
 
-Applications that await asynchronous native binding operations can opt into
-the smaller JSPI runtime with `getUsdModule({ asyncRuntime: 'auto' })`. This
-selects JSPI when both `WebAssembly.Suspending` and `WebAssembly.promising` are
-available and otherwise selects Asyncify. JSPI binding operations marked
-asynchronous return promises even when their data is already local. Use
-`await` for these calls. `createThreeHydra` handles driver creation for both
-runtimes. Direct binding consumers should select the optional async factory:
-
-```js
-const driver = await (USD.CreateHdWebSyncDriver
-  ? USD.CreateHdWebSyncDriver(delegate, file)
-  : new USD.HdWebSyncDriver(delegate, file));
-```
-
-Use `asyncRuntime: 'asyncify'` to retain the existing binding behavior or
-`asyncRuntime: 'jspi'` to require JSPI and receive an error on unsupported
-engines. Runtime initialization errors are reported without silently trying a
-different runtime. Concurrent calls share one initialization; the first call's
-options select the runtime. Custom `locateFile` and `mainScriptUrlOrBlob`
-overrides must point to matching artifacts for the selected runtime.
-
-The 1.2.0 JSPI Wasm artifact is 19.7 MB, versus 36.4 MB for Asyncify. With
-Brotli quality 11, this is 3.35 MB versus 5.49 MB (39% less transfer). Both
-contain the same native feature set. The package includes both runtimes;
-applications download only the selected runtime. The viewer app uses `auto`.
+Binding operations that can load data, such as `OpenStage` and `Attribute.Get`,
+return a Promise. Direct binding consumers create the driver with
+`await USD.CreateHydraDriver(delegate, file)`; `createThreeHydra` does this
+for you. Upgrading from 1.x: see the [upgrade guide](UpgradeGuide.md).
 
 Precompute Brotli compression for production Wasm delivery and serve it with
 `Content-Type: application/wasm`, `Content-Encoding: br` and
@@ -255,12 +247,11 @@ Precompute Brotli compression for production Wasm delivery and serve it with
 belongs to the host's build/server configuration; the npm package contains the
 original runtimes without compressed duplicates.
 
-For inspection with either runtime, use `inspectStageAsync` or
-`inspectPrimAsync` from `/scene` inside `handle.readStage()`. The synchronous
-helpers remain available for existing Asyncify integrations.
+For inspection, use `inspectStage` or `inspectPrim` from `/scene` inside
+`handle.readStage()`. Both return a Promise.
 
 For large meshes, pass `{arrayLimit: 256}` as the fourth argument to
-`inspectPrimAsync(stage, path, time, options)`. Array snapshots then include
+`inspectPrim(stage, path, time, options)`. Array snapshots then include
 `arraySize` and `valueOffset`; `value` contains only the requested preview.
 `attribute.GetValuePage(time, offset, limit)` reads further pages without copying
 the full array into JavaScript. Omitting the option retains full-value reads.
@@ -287,7 +278,7 @@ composition rules; authored source remains available through layer inspection.
 Stage animation discovery scans shared prototype data once and does not depend
 on which tree branches are expanded. Seeking recomputes inherited visibility.
 
-`inspectPrim` and `inspectPrimAsync` return typed metadata: list operations such as
+`inspectPrim` returns typed metadata: list operations such as
 `apiSchemas` become arrays, dictionaries become objects, and booleans and numbers
 retain their types. Integers outside JavaScript's safe range remain decimal
 strings. Low-level prim, attribute and relationship bindings expose the same
@@ -364,10 +355,13 @@ coordinates, so the same data can be inspected, edited and passed to physics.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/engine": "6.0.0-canary.1783788842.warm-melon.3e41745a8",
-    "@needle-tools/usd": "1.2.1",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
+    "@needle-tools/engine": "6.0.0-canary.1794268261.merry-flower.29c0102",
+    "@needle-tools/usd": "2.0.0",
+    "three": "npm:@needle-tools/three@0.186.2-alpha.0",
     "vite": "^8.1.0"
+  },
+  "overrides": {
+    "three": "$three"
   }
 }
 ```
@@ -450,9 +444,12 @@ property so USD references can resolve.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/usd": "1.2.1",
-    "three": "npm:@needle-tools/three@0.185.2-alpha.8",
+    "@needle-tools/usd": "2.0.0",
+    "three": "npm:@needle-tools/three@0.186.2-alpha.0",
     "vite": "^8.1.0"
+  },
+  "overrides": {
+    "three": "$three"
   }
 }
 ```
@@ -671,7 +668,8 @@ Legacy WebGLRenderer and Needle Engine integrations continue to use Spark.
 Install Spark alongside Three.js 0.180 or newer and pass the host renderer:
 
 ```sh
-npm install @sparkjsdev/spark@2.2.0 three@npm:@needle-tools/three@0.185.2-alpha.8
+npm pkg set 'dependencies.three=npm:@needle-tools/three@0.186.2-alpha.0' 'overrides.three=$three'
+npm install @sparkjsdev/spark@2.2.0
 ```
 
 Spark is an optional peer dependency; scenes without `particleField` prims do
@@ -749,7 +747,7 @@ composites against the renderer’s opaque color/depth pass; a CSS background
 behind a transparent canvas is not available to that pass.
 
 Volume support is an explicit opt-in entry point and requires the recent
-three.js node APIs (validated with `@needle-tools/three@0.185.2-alpha.8`).
+three.js node APIs (validated with `@needle-tools/three@0.186.2-alpha.0`).
 The base entry points retain support for legacy three.js consumers without
 importing those APIs. Missing volume configuration or a legacy `WebGLRenderer`
 reports unsupported volume shading. The MaterialX factory does not load
@@ -811,9 +809,7 @@ Usd.FS_createDataFile("", "test.usdz", new Uint8Array(arrayBuffer), true, true, 
 ### Load file into USD
 
 ```js
-const driver = await (Usd.CreateHdWebSyncDriver
-  ? Usd.CreateHdWebSyncDriver(delegate, "test.usdz")
-  : new Usd.HdWebSyncDriver(delegate, "test.usdz"));
+const driver = await Usd.CreateHydraDriver(delegate, "test.usdz");
 
 // Synchronize the stage through the render delegate.
 await driver.Draw();
@@ -866,12 +862,11 @@ const assembly = await createUsdPhysics({handle, world, id: 'assembly'});
 assembly.play();
 ```
 
-This requires an Engine version exposing `RapierPhysics.registerExternalPhysics`.
-The adapter initializes or reuses the Engine's Rapier world. Engine registers
-the imported bodies and colliders for ordinary collision callbacks, queries and
-Rigidbody access; SimReady supplies raw physics objects and their visual mappings.
-Engine owns their component identities and lifecycle; external packages do not
-construct or maintain Engine components.
+This needs a Needle Engine version with `physics.createAsset`. The adapter starts or
+reuses Engine's physics world. SimReady describes the asset's bodies, colliders and
+joints, and Engine creates them together with their Rigidbody and Collider components,
+so collision callbacks, raycasts and Rigidbody access work as usual. Engine also
+removes them when the asset or the world goes away.
 Engine advances physics and synchronizes the visuals, so do not call
 `world.step()` or `assembly.update()` here. At unload, dispose the assembly and
 then its adapter; the Engine world and other assets remain alive. The
@@ -958,14 +953,21 @@ bundle is 64 KB raw / 20 KB gzip, compared with 4.3 MB / 1.65 MB gzip for the
 standalone Rapier wrapper with embedded WASM.
 
 Choose **Simulate** for contact dynamics and gravity. That action loads Rapier
-on demand. The app rejects incomplete simulations, including unsupported PhysX
-SDF colliders, before starting. SDK callers can use `allowPartial: false` with
+on demand. The app rejects incomplete simulations before starting. SDK callers
+can use `allowPartial: false` with
 `createUsdPhysics` for the same strict check; `getUsdPhysicsLimitations(snapshot)`
 reports known descriptor limitations before loading a physics runtime.
 Collision approximations come from the active composed USD variant: authored
-`convexHull` meshes are supported, whereas PhysX `sdf` meshes are not. A package
-can supply different approximations in different runtime variants; the viewer
-does not silently switch variants or replace SDFs with solid hulls.
+`convexHull` meshes use a hull, while PhysX `sdf` meshes use a concave compound
+of convex parts. Larger SDF-source meshes use a finer cooking grid to retain
+mechanical clearances. The adaptation is reported in `physics.backend.adaptations`.
+The viewer keeps the selected runtime variant and authored mass properties.
+
+The viewer's **Hold assembly bases** option keeps floating mechanism bases and
+isolated assets in place for inspection. This is a preview policy: an articulation
+root alone does not make a body kinematic or fix it to the world. With gravity,
+other unconstrained bodies need an authored support or ground collider, following
+the [USD rigid-body and joint rules](https://openusd.org/release/api/usd_physics_page_front.html).
 
 SimReady catalog access is not a claim of complete SimReady runtime support.
 Rendering and bounded joint interaction are available, but simulator-specific
@@ -1019,12 +1021,10 @@ await handle.ready();
 const modes = await createRenderModes({
   renderer, scene, camera, controls,
   settings: { maxSamples: 512, bounces: 8, denoiser: 'jnlm' },
-  // Optional dependency: npm install @meimu/mutracer@0.2.0
+  // Optional dependency: npm install @meimu/mutracer@0.3.0
   loadPathTracer: () => import('@meimu/mutracer'),
-  // npm install three-gpu-pathtracer@0.0.27 three-mesh-bvh@0.9.16 xatlas-web@0.1.0
-  loadGkPathTracer: () => import('three-gpu-pathtracer/webgpu'),
 });
-await modes.setMode('beauty'); // 'basic' | 'beauty' | 'pathtraced' | 'pathtraced-gk'
+await modes.setMode('beauty'); // 'basic' | 'beauty' | 'pathtraced'
 // In the host animation loop, after handle.update(delta):
 modes.render(camera);
 // After renderer.setSize(...): modes.resize();
@@ -1045,7 +1045,7 @@ WebGPU support translates MaterialX surfaces through the bundled TSL loader, inc
 
 For scenes whose rectangular lights come from USD, `createWebGpuSupport({ lazyAreaLights: true })` loads area-light lookup tables when an authored area light needs them. Hydra readiness waits for those tables before rendering. The default eagerly prepares them for host-created Three.js area lights; with the lazy option, call `await support.prepareAreaLights()` before rendering host-created area lights. EXR, HDR and TGA texture decoders also load only when a corresponding texture is encountered.
 
-`pathtraced-gk` uses gkjohnson's WebGPU tracer on the host renderer and canvas, with 512 samples and eight bounces. It requires the WebGPU backend and ordinary MeshStandard/Physical materials; its library is also loaded only when selected. Private geometry copies isolate BVH index reordering and generated attributes from the application. Camera, transforms, material, geometry, visibility, lights and environment edits reset accumulation. It supports rectangular lights and uses Three.js PBR material properties directly. Arbitrary node graphs, volumes and Gaussian splats require the Basic/Beauty modes. MuTracer retains its separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model. MuTracer filters progressively. For gkjohnson, supply `loadDenoiser: () => import('oidn-webgpu')` and `denoiserWeightsBaseUrl` pointing at self-hosted MuTracer-compatible OIDN weights, then set `gkDenoiser` to `'oidn-fast'`, `'oidn'` or `null`. Its OIDN pass runs after the sample budget completes. Without a denoiser loader, gkjohnson defaults to unfiltered output. The host owns installation/hosting of the optional OIDN runtime and weights.
+MuTracer uses a separate output canvas. `denoiser` accepts `'jnlm'`, `'oidn-fast'`, `'oidn'` or `null`; OIDN selects the small or standard model and filters progressively. Set `denoiserWeightsBaseUrl` to host the package's OIDN weights on your own server.
 
 `configureNeedleAgxDisplay(engine, () => renderer.toneMapping)` follows changes to the host's AgX (Needle), ACES Filmic, Khronos PBR Neutral, Linear, Reinhard or NoToneMapping choice. Needle AgX remains the default when no callback is supplied. NoToneMapping ignores exposure, matching Three's presentation.
 
@@ -1204,13 +1204,23 @@ For commercial use, contact [hi@needle.tools](mailto:hi@needle.tools).
 
 `@needle-tools/usd/gltf` exports ordinary stages as standard GLB files. Assets
 with authored SimReady or USD physics data also retain Khronos physics,
-`NEEDLE_simready` runtime bindings and structured USD schema metadata, using the
+`NEEDLE_simready` runtime bindings and defined semantic labels, using the
 optional SimReady package. USD Viewer's GLB export uses this path. Downstream glTF consumers opt in
 to the shared mechanism and physics runtime with `registerSimreadyLoader` from
 `@needle-tools/simready/gltf`.
 Mesh Baker can optimize these GLBs while retaining that contract. See [the export/runtime guide](https://github.com/needle-tools/simready/blob/main/docs/usd-export.md)
 for usage, units, preservation guarantees and runtime
 limitations. Loading never starts a simulator automatically.
+
+Exports use a closed runtime contract. Geometry and appearance use standard glTF;
+converted physical values and semantic labels use their defined runtime fields.
+Source USD property bags, unconsumed primvars, authoring arrays, shader inspection
+data and vendor property archives are excluded. Source evidence and unsupported
+feature inventories belong outside the GLB.
+
+Triangle islands in UDIM atlases that exceed browser canvas limits export with
+individual tile materials and compact vertex sets, retaining the original tile
+resolution. Smaller atlases keep their existing layout.
 
 The download menu defaults to **Full-resolution textures** for every format.
 Turn it off to export the loaded preview textures. This selection is independent
