@@ -726,6 +726,54 @@ let renderModes;
 let renderModesUi;
 let startRenderMode;
 let suiteControls;
+let reloadView;
+try {
+  const saved = JSON.parse(sessionStorage.getItem('usd-viewer-reload-view'));
+  sessionStorage.removeItem('usd-viewer-reload-view');
+  if (saved?.href === location.href) reloadView = saved.view;
+} catch {}
+
+function engineOrbit(context) {
+  let orbit;
+  context?.scene.traverse(object => {
+    for (const component of object.userData.components || []) {
+      if (component.controls?.object?.isCamera && (!orbit || component.controls.object === context.mainCamera)) orbit = component;
+    }
+  });
+  return orbit;
+}
+
+function captureView() {
+  const controls = engineOrbit(window.needleEngineContext)?.controls || window._controls;
+  if ((!currentHydraHandle && !nativeGltfRoot) || !controls?.target) return;
+  const camera = controls.object;
+  return {position:camera.position.toArray(), target:controls.target.toArray(), zoom:camera.zoom, fov:camera.fov,
+    near:camera.near, far:camera.far, authored:window.usdRenderCamera?.userData.usdPath};
+}
+
+function restoreOrbit(view, context) {
+  const orbit = engineOrbit(context);
+  const controls = orbit?.controls || window._controls;
+  if (!view || !controls) return;
+  const camera = controls.object;
+  camera.position.fromArray(view.position);
+  controls.target.fromArray(view.target);
+  if (orbit) {
+    // Register the restored target before Engine picks one on its first frame.
+    orbit.stopCameraLerp();
+    orbit.stopLookTargetLerp();
+    orbit.setLookTargetPosition(controls.target,true);
+  }
+  Object.assign(camera,{zoom:view.zoom, near:view.near, far:view.far});
+  if (Number.isFinite(view.fov)) camera.fov = view.fov;
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+function navigateWithView(url) {
+  try { sessionStorage.setItem('usd-viewer-reload-view',JSON.stringify({href:url.href,view:captureView()})); } catch {}
+  window.location.href = url.href;
+}
 let activeCatalogAsset = catalogAssetForUrlPath(filename.split('?')[0]);
 let apiExampleAbort = null;
 let ensureViewerRepl;
@@ -1626,8 +1674,9 @@ async function showUsdVariants(stage, handle) {
   container.hidden = variants.length === 0;
 }
 
-async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = false } = {}) {
+async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = false, preserveView = false } = {}) {
   if (!preserveStartupPackage) {
+    reloadView = preserveView ? captureView() : undefined;
     startupPackageAbort.abort();
     startupPackagePromise = undefined;
   }
@@ -1674,7 +1723,7 @@ async function clearStage({ clearNeedleEngine = false, preserveStartupPackage = 
     if (clearNeedleEngine && needleEngineElement) {
       // Do not do this for normal file switches: changing <needle-engine src>
       // performs scene cleanup while keeping the renderer/context alive. Emptying
-      // src here is only for the explicit Clear action.
+      // src also lets a same-file settings change trigger a fresh Engine load.
       needleEngineElement.setAttribute("src", "");
     }
   } catch (error) {
@@ -1797,7 +1846,6 @@ async function ensureNeedleEngineLoader() {
     // disposes its Hydra handle and clears src through clearStage().
     needleEngineElement.setAttribute("keep-alive", "true");
     needleEngineElement.setAttribute("camera-controls", "true");
-    needleEngineElement.setAttribute("auto-fit", "true");
     needleEngineElement.setAttribute("auto-rotate", "false");
     if (diagnosticsMode()) needleEngineElement.setAttribute("no-telemetry", "true");
     needleEngineElement.setAttribute("autoplay", "");
@@ -1838,6 +1886,7 @@ async function ensureNeedleEngineLoader() {
     needleEngineElement.addEventListener("dragover", dragOverHandler);
     (window.usdWorkbench?.viewport || document.body).appendChild(needleEngineElement);
   }
+  needleEngineElement.setAttribute("auto-fit", reloadView ? "false" : "true");
   return needleEngineElement;
 }
 
@@ -1972,7 +2021,7 @@ async function loadNeedleEngineFile(filename, path, filesForHydra, generation) {
   }
   if (waitForMaterials) {
     await handle.materialsReady?.();
-  } else {
+  } else if (!reloadView) {
     // Needle Engine fits the camera when the file finishes loading. Meshes whose
     // materials are still compiling (MaterialX) are hidden then, so that fit can
     // find nothing. Fit again once they show, unless the view has changed since
@@ -2060,6 +2109,8 @@ async function loadNativeGltfFile(filename, path) {
   if (window.setViewerLoading) window.setViewerLoading(true);
 
   try {
+    await window.usdWorkbench?.prepareStage();
+    if (generation !== loadGeneration) return;
     if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
       const loaded = await loadNativeNeedleEngineGltf(filename, path, generation);
       if (!loaded || generation !== loadGeneration) return;
@@ -2067,6 +2118,7 @@ async function loadNativeGltfFile(filename, path) {
       nativeGltfRoot = asset.scene || asset;
       nativeGltfRootOwnedByNeedle = true;
       window.needleEngineContext = context;
+      if (reloadView) restoreOrbit(reloadView, context);
       window.usdHydra = undefined;
       window.driver = undefined;
       window.usdStage = undefined;
@@ -2088,7 +2140,8 @@ async function loadNativeGltfFile(filename, path) {
       for (const clip of gltf.animations || []) {
         nativeGltfMixers[0]?.clipAction(clip).play();
       }
-      fitCameraToSelection(window.camera, window._controls, [nativeGltfRoot]);
+      if (reloadView) restoreOrbit(reloadView);
+      else fitCameraToSelection(window.camera, window._controls, [nativeGltfRoot]);
       const environment = await loadHostEnvironment(window.renderer);
       if (generation !== loadGeneration) return;
       window.scene.environment = environment;
@@ -2157,8 +2210,6 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
   let handle = null;
   let needleContext = null;
   try {
-    await window.usdWorkbench?.prepareStage();
-    if (generation !== loadGeneration) return;
     if (viewerMode === VIEWER_MODE_NEEDLE_LOADER) {
       const result = await loadNeedleEngineFile(filename, path, filesForHydra, generation);
       if (!result) return;
@@ -2236,7 +2287,8 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       timeout = 1000 / metadata.timeCodesPerSecond;
     }
 
-    if (viewerMode === VIEWER_MODE_THREE) {
+    if (reloadView) restoreOrbit(reloadView, needleContext);
+    else if (viewerMode === VIEWER_MODE_THREE) {
       fitCameraToSelection(window.camera, window._controls, [window.usdRoot]);
     }
     if (!diagnosticsMode()) {
@@ -2275,6 +2327,13 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
       syncViewportHelpers(window.usdWorkbench?.containers.helpers);
     }, isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
     if (generation !== loadGeneration) { suiteControls?.dispose(); return; }
+    if (reloadView?.authored) {
+      const select = window.usdWorkbench?.containers.view.querySelector('select[aria-label="Camera"]');
+      if (select && [...select.options].some(option => option.value === reloadView.authored)) {
+        select.value=reloadView.authored;
+        select.dispatchEvent(new Event('change'));
+      }
+    }
     window.usdStagePanel = suiteControls;
     window.usdWorkbench?.setPhysics(viewerPhysics,suiteControls.selectedPath);
     window.usdWorkbench?.code.show({ stage, usd: USD, handle, edit:callback=>suiteControls.edit(callback), navigate:target=>{followingSource=true;try{return suiteControls.navigate(target);}finally{followingSource=false;}}, runExample:activeCatalogAsset?.executable?source=>runEditedApiExample(activeCatalogAsset,source):undefined, example: apiExampleSource(activeCatalogAsset), getFiles: createSourceFiles({files: filesForHydra, asset: activeCatalogAsset, handle, usd: USD}), isCurrent: () => generation === loadGeneration && currentHydraHandle === handle });
@@ -2634,10 +2693,7 @@ async function init() {
       scene: window.needleEngineContext?.scene || window.scene,
       camera: window.needleEngineContext?.mainCamera || window.usdRenderCamera || window.camera,
       useFreeCamera: () => suiteControls?.useFreeCamera(),
-      getControls: () => {
-        if(!window.needleEngineContext)return window._controls;
-        let controls;window.needleEngineContext.scene.traverse(object=>{for(const component of object.userData.components||[])if(component.controls?.object===window.needleEngineContext.mainCamera)controls=component.controls;});return controls;
-      },
+      getControls: () => engineOrbit(window.needleEngineContext)?.controls || window._controls,
     } : null,
     onSelect: (item, options) => window.usdStagePanel?.selectPrim(item || '', options),
   });
@@ -2708,7 +2764,7 @@ async function init() {
       const currentUrl = new URL(window.location.href);
       setViewerModeUrlParam(currentUrl);
       setWaitForMaterialsUrlParam(currentUrl);
-      window.location.href = currentUrl.href;
+      navigateWithView(currentUrl);
     });
   }
 
@@ -2721,7 +2777,7 @@ async function init() {
       const currentUrl = new URL(window.location.href);
       setViewerModeUrlParam(currentUrl);
       setWaitForMaterialsUrlParam(currentUrl);
-      window.location.href = currentUrl.href;
+      navigateWithView(currentUrl);
     });
   }
 
@@ -4450,6 +4506,7 @@ async function init() {
       const currentUrl = new URL(location.href); currentUrl.searchParams.delete('stageVariant');
       history.replaceState({}, '', currentUrl);
     }
+    const sameAsset = !!requestedFilename && requestedFilename === filename;
     filename = requestedFilename;
     activeCatalogAsset = catalogAssetForUrlPath((filename || '').split('?')[0]);
     if (window.scene) window.scene.environment = activeCatalogAsset?.environment === 'none' ? null : hostEnvironmentTexture;
@@ -4470,9 +4527,10 @@ async function init() {
       setLoadedConversionCard(null, '');
     }
 
-    if (params.get('cameraZ') !== undefined) camera.position.z = params.get('cameraZ');
-    if (params.get('cameraY') !== undefined) camera.position.y = params.get('cameraY');
-    if (params.get('cameraX') !== undefined) camera.position.x = params.get('cameraX');
+    for (const axis of ['x','y','z']) {
+      const value=params.get('camera'+axis.toUpperCase());
+      if (!sameAsset && value != null && Number.isFinite(Number(value))) camera.position[axis]=Number(value);
+    }
     window._controls.update(0);
 
     // Keep the current filename with its retained frame until the replacement
@@ -4482,13 +4540,13 @@ async function init() {
     const el = document.querySelector("#container");
     el.classList.toggle("have-custom-file", !!filename);
 
-    await clearStage({ clearNeedleEngine: !filename });
+    await clearStage({ clearNeedleEngine: !filename || sameAsset, preserveView:sameAsset });
 
     if (filename) {
       el.classList.add("have-custom-file");
       messageLog.textContent = "Downloading File " + filename + "...";
       if (window.setViewerLoading) window.setViewerLoading(true);
-      updateUrl();
+      updateUrl(sameAsset);
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
       if (catalogAsset?.executable || catalogAsset?.files?.length) {

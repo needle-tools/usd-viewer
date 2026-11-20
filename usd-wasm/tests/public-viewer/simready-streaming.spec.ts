@@ -87,7 +87,7 @@ test('an initial MuJoCo variant can replace materials before their textures fini
   }finally{release();}
 });
 
-test('Original texture resolution reloads the asset through source URLs and persists the choice',async({page})=>{
+for (const viewer of ['three','needle']) test(`${viewer}: Original texture resolution preserves the camera and requests source textures`,async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   const requests:string[]=[];
   await page.context().route('**/Textures/**',async route=>{
@@ -95,13 +95,28 @@ test('Original texture resolution reloads the asset through source URLs and pers
     // Exercise the original URL policy without transferring hundreds of MB.
     await route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jVuoAAAAASUVORK5CYII=','base64')});
   });
-  await page.goto(viewerUrl('accessory_eyeglasses_a01'));await stageReady(page);
+  await page.goto(viewerUrl('accessory_eyeglasses_a01').replace('viewer=three','viewer='+viewer));await stageReady(page);
   await page.evaluate(()=>(window as any).usdHydra.materialsReady());
   const previous=requests.length;
+  const orbit=(move=false)=>page.evaluate(move=>{
+    const w=window as any,context=w.needleEngineContext;
+    let controls=w._controls;
+    context?.scene.traverse((obj:any)=>{
+      for(const component of obj.userData.components || [])if(component.controls?.object===context.mainCamera)controls=component.controls;
+    });
+    const camera=controls.object;
+    if(move) {
+      camera.position.set(3,2,5);controls.target.set(.1,.2,.3);camera.zoom=1.5;
+      camera.updateProjectionMatrix();controls.update();
+    }
+    return [...camera.position.toArray(),...controls.target.toArray(),camera.zoom];
+  },move);
   await openAppMenu(page,'view');await page.locator('.usd-settings-section > summary').filter({hasText:'Scene'}).click();
+  const before=await orbit(true);
   await page.getByRole('combobox',{name:'Texture resolution'}).selectOption('original');await page.keyboard.press('Escape');
   await expect.poll(()=>requests.length).toBeGreaterThan(previous);await stageReady(page);
   await page.evaluate(()=>(window as any).usdHydra.materialsReady());
+  (await orbit()).forEach((value,index)=>expect(value).toBeCloseTo(before[index],6));
   expect(requests.slice(previous).every(url=>url.startsWith(base) && !url.includes('/.thumbs/'))).toBe(true);
   expect(new URL(page.url()).searchParams.get('textures')).toBe('original');
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('needle-usd-render-settings') || '{}').textures)).toBe('original');
