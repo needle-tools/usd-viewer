@@ -2773,6 +2773,7 @@ async function init() {
   const samplePickerPositions = new Map(Object.entries(savedSamplePicker.positions || {}));
   const expandedSampleFolders = new Set(Array.isArray(savedSamplePicker.expandedFolders) ? savedSamplePicker.expandedFolders : []);
   let renderedSampleGroup = '';
+  let galleryCardGroup = '';
   let galleryLoadVersion = 0;
   let pickerSaveTimer = 0;
   let pickerRestoreVersion = 0;
@@ -4130,9 +4131,11 @@ async function init() {
   }
 
   async function selectSampleGroup(groupId) {
-    if (renderedSampleGroup === groupId && galleryGrid?.children.length) return;
     // Corrupt or obsolete stored folder IDs should fall back to a usable library.
     try { decodeURIComponent(groupId); } catch { groupId = 'gltf'; }
+    const cardGroup = exampleSearch.value.trim() ? topLevelSampleGroup(groupId) : groupId;
+    if (selectedSampleGroup === groupId && galleryCardGroup === cardGroup && (!renderedSampleGroup || galleryGrid.childElementCount)) return;
+    galleryCardGroup = cardGroup;
     let group = sampleGroups.get(groupId);
     if (!group && String(groupId || '').startsWith('simready:')) {
       const category=decodeURIComponent(groupId.slice('simready:'.length));
@@ -4176,7 +4179,8 @@ async function init() {
     galleryGrid.setAttribute('aria-busy','true');
     const loadVersion = ++galleryLoadVersion;
     saveSamplePicker(false);
-    galleryGrid.setAttribute('aria-label', `${group.title} examples`);
+    const sourceGroup = sampleGroups.get(cardGroup) || group;
+    galleryGrid.setAttribute('aria-label', `${sourceGroup.title} examples`);
     const sourceLink=document.getElementById('examples-source');
     sourceLink.hidden=topLevelSampleGroup(groupId)!=='simready';
     if (!sourceLink.hidden) sourceLink.href='https://huggingface.co/datasets/nvidia/simready-assets';
@@ -4192,7 +4196,7 @@ async function init() {
     syncSampleTreeVisibility(groupId);
 
     setGalleryStatus(group.load ? 'Loading sample models…' : '');
-    const cards = group.load ? await group.load() : group.cards || [];
+    const cards = sourceGroup.load ? await sourceGroup.load() : sourceGroup.cards || [];
     if (selectedSampleGroup !== groupId || galleryLoadVersion !== loadVersion) return;
     buildGalleryCards(cards);
     if (!sourceLink.hidden) sourceLink.href=galleryGrid.querySelector('.gallery-card.active')?.dataset.source || 'https://huggingface.co/datasets/nvidia/simready-assets';
@@ -4257,7 +4261,8 @@ async function init() {
       saveSamplePicker(false);
     });
   }
-  document.getElementById('examples-search').disabled=false;
+  exampleSearch.disabled=false;
+  exampleSearch.addEventListener('input', () => void selectSampleGroup(selectedSampleGroup));
   const converterToggleActivation = new WeakMap();
 
   function converterButtonFromEvent(event) {

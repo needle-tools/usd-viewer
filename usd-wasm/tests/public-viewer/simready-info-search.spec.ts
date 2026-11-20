@@ -40,11 +40,16 @@ test('AGIBOT folder search and Info use shared controls and authored metadata',a
 
 test('search filters the selected NVIDIA collection without external search dependencies',async({page})=>{
  await page.goto('/?workspace=studio&viewer=three&render=basic');await openSamples(page);await selectExampleFolder(page,'simready');
+ await page.locator('[data-sample-group="simready:Kitchenware"]').click();
+ const grid=page.locator('#gallery-grid');
+ await expect(grid).toHaveAttribute('data-example-group','simready:Kitchenware');
+ const kitchenware=await grid.locator('.gallery-card').count();
  await page.getByRole('searchbox',{name:'Search examples'}).fill('fixture_cabinet_b01');
  await expect(page.getByRole('searchbox',{name:'Search examples'})).not.toHaveAttribute('aria-busy','true');
  await expect(page.locator('.gallery-card:visible')).toHaveCount(1);
  const file=new URL((await page.locator('.gallery-card:visible').getAttribute('href'))!,page.url()).searchParams.get('file')!;
  expect(file).toContain('/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/');
  await page.getByRole('searchbox',{name:'Search examples'}).fill('');
- await expect(page.locator('.gallery-card')).toHaveCount(2677);
+ await expect(grid.locator('.gallery-card')).toHaveCount(kitchenware);
+ await expect(grid.locator('.gallery-card:visible')).toHaveCount(kitchenware);
 });
