@@ -58,7 +58,7 @@ test('compressor renders its instanced material subsets using bounded texture pr
   await openAppMenu(page,'view');
   await page.locator('.usd-settings-section > summary').filter({hasText:'Scene'}).click();
   await expect(page.getByRole('combobox',{name:'Texture resolution'})).toHaveValue('preview');
-  await expect(page.getByRole('combobox',{name:'Texture resolution'}).locator('option[value=original]')).toContainText('880 MB');
+  await expect(page.getByRole('combobox',{name:'Texture resolution'}).locator('option[value=original]')).toHaveAttribute('title','Original texture files: 880.0 MB');
   expect(errors).toEqual([]);
 });
 

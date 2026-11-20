@@ -39,6 +39,7 @@ import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/t
 import { fixtureNavigation } from './viewer-fixture-routing.js';
 import { runApiExample } from './viewer-api-examples.js';
 import { createSourceFiles } from './viewer-source-files.js';
+import {formatBytes} from './viewer-transfer-tracker.js';
 import {fetchAsset} from './usd/assetFetch.js';
 import { replExamples, apiExampleAssets } from '/test-fixtures/api/examples.js';
 import { viewerIcon } from './usd/viewer/icons.js';
@@ -1110,7 +1111,9 @@ function showTextureResolution() {
   if(!host)return;host.hidden=!simreadyResources?.textureBytes;if(host.hidden)return;
   const label=document.createElement('label');label.className='usd-settings-row';label.textContent='Textures';
   const select=document.createElement('select');select.setAttribute('aria-label','Texture resolution');
-  for(const [value,text] of [['preview','Preview (512 px)'],['original',`Original (${Math.round(simreadyResources.textureBytes/1e6)} MB)`]]){const option=new Option(text,value);select.append(option);}
+  const original = new Option('Original resolution','original');
+  original.title = `Original texture files: ${formatBytes(simreadyResources.textureBytes)}`;
+  select.append(new Option('Preview (up to 512 px)','preview'),original);
   select.value=textureResolution;
   select.onchange=()=>{
     textureResolution=select.value;saveRenderSettings({textures:textureResolution});
