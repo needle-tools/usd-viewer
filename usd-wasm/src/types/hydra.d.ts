@@ -15,6 +15,8 @@ export type MaterialXVolumeFactory = (xml: string, target: string | number, opti
 /** Optional support from @needle-tools/usd/renderers; keeps modern Three modules out of the base loader. */
 export interface WebGpuSupport {
     SurfaceMaterial: new () => Material;
+    /** Adapt an initialized renderer (createThreeHydra calls this with its renderer). */
+    prepareRenderer?(renderer: unknown): void;
     /** Prepare dynamic instance-buffer tracking before a node material compiles. */
     prepareMaterial?(material: Material): void;
     /** Initialize area-light lookup tables before a scene containing rect/disk emitters is rendered. */

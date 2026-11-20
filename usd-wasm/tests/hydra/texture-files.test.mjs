@@ -62,13 +62,20 @@ test('HTTP textures use resolver-owned URLs before any native byte read', async 
       USD: { ReadFile: path => { reads.push(path); return null; } },
     });
     const texture = new Texture();
-    delegate.registry.loader = { load: (url, resolve) => { urls.push(url); resolve(texture); } };
+    const loaded = [];
+    delegate.registry.loader = { load: (url, resolve) => { loaded.push(url); resolve(texture); } };
+    // The registry reads the bytes itself (color space rules need the file header, and image
+    // color metadata is removed before decoding), then decodes them from a blob URL.
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async url => { urls.push(String(url)); return new Response(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])); };
     try {
       assert.equal(await delegate.registry.getTexture(fixture.path), texture);
       assert.deepEqual(urls, [fixture.mapped]);
+      assert.equal(loaded.length, 1);
+      assert.match(loaded[0], /^blob:/);
       assert.deepEqual(reads, [], 'HTTP resources must not enter Asyncify-capable ReadFile');
       if (fixture.nativeQuery) assert.deepEqual(queries, [fixture.path]);
-    } finally { delegate.dispose(); }
+    } finally { globalThis.fetch = originalFetch; delegate.dispose(); }
   }
 });
 

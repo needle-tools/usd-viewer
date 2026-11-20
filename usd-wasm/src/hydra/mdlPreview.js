@@ -61,7 +61,7 @@ export function mdlToPreview(document) {
     // OmniGlass has no diffuse lobe. PreviewSurface cannot encode it; retain
     // transmission, IOR, roughness and fractional cutout coverage explicitly.
     main.diffuseColor = vector(inputs.glass_color, [1, 1, 1]);
-    texture('diffuseColor', 'glass_color_texture');
+    texture('diffuseColor', 'glass_color_texture', 'rgb', [1, 1, 1]);
     main.roughness = unit(inputs.frosting_roughness, 0);
     main.ior = Math.max(1, scalar(inputs.glass_ior, 1.491));
     main.opacity = 1;

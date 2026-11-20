@@ -6,7 +6,7 @@ const RGBFormat = 1022;
 
 // Channel conversion operates on encoded samples. Color-space decoding belongs
 // to the renderer and must never be applied to alpha, normal, or scalar data here.
-function readTextureSamples(image, options) {
+export function readTextureSamples(image, options) {
   let pixels = image?.data;
   let canvas;
   let context;
@@ -88,4 +88,42 @@ export function remapNormalTextureSamples(image, scale, bias, options = {}) {
     return { image: canvas, type: options.type };
   }
   return { image: { ...image, data: output }, type: options.type };
+}
+
+/**
+ * Surrounds an image with a transparent black border on the axes that need it, so
+ * clamp-to-edge sampling outside the original image returns black, as UsdUVTexture's
+ * "black" wrap mode (and GL clamp-to-border) does. Returns null for images that
+ * cannot be copied, such as compressed textures. The border is `border` texels wide
+ * so it stays black in the first mipmap levels.
+ * @param {any} image Texture image: an ImageBitmap, image, canvas or {data, width, height}
+ * @param {boolean} padS Pad left and right
+ * @param {boolean} padT Pad top and bottom
+ * @param {number} [border]
+ * @returns {{image: any, width: number, height: number, border: number} | null}
+ */
+export function padImageWithBlackBorder(image, padS, padT, border = 16) {
+  const width = image?.width, height = image?.height;
+  if (!width || !height) return null;
+  const outWidth = width + (padS ? 2 * border : 0), outHeight = height + (padT ? 2 * border : 0);
+  const x = padS ? border : 0, y = padT ? border : 0;
+  if (image.data && ArrayBuffer.isView(image.data)) {
+    const channels = image.data.length / (width * height);
+    if (!Number.isInteger(channels)) return null;
+    const data = new image.data.constructor(outWidth * outHeight * channels);
+    for (let row = 0; row < height; row++) {
+      data.set(image.data.subarray(row * width * channels, (row + 1) * width * channels), ((row + y) * outWidth + x) * channels);
+    }
+    return { image: { data, width: outWidth, height: outHeight }, width, height, border };
+  }
+  if (typeof OffscreenCanvas === 'undefined' && typeof document === 'undefined') return null;
+  const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(outWidth, outHeight) : Object.assign(document.createElement('canvas'), { width: outWidth, height: outHeight });
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  try {
+    context.drawImage(image, x, y);
+  } catch {
+    return null;
+  }
+  return { image: canvas, width, height, border };
 }

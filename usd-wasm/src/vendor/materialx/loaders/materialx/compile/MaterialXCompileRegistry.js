@@ -1,5 +1,5 @@
 import { mx_atan2 } from '../../../nodes/MaterialXNodes.js';
-import { element, float, int, mat3, mat4, mul, normalMap, texture, vec2, vec3, vec4, vertexColor, normalLocal, normalWorld, tangentLocal, tangentWorld, bitangentLocal, bitangentWorld, clamp, add, abs, min, sub, floor, mix, dot, div, max, normalize, pow, sqrt, sign } from 'three/tsl';
+import { element, float, int, mat3, mat4, mul, normalMap, texture, vec2, vec3, vec4, vertexColor, normalLocal, normalWorld, tangentLocal, tangentWorld, bitangentLocal, bitangentWorld, clamp, add, abs, min, sub, floor, mix, dot, div, max, normalize, pow, sqrt, sign, attribute, bool, Fn } from 'three/tsl';
 import {
 	materialXPositionLocal as positionLocal,
 	materialXPositionWorld as positionWorld,
@@ -80,13 +80,13 @@ const applyTextureAddressModeDefault = ( node, uvNode, addressModes, defaultNode
 
 };
 
-const sampleTexture = ( textureFile, uvNode, compileContext, fallback, addressModes = null, defaultNode = fallback ) => {
+// MaterialX coordinates start at the bottom-left; images are stored top-first unless the
+// texture says otherwise (see materialXBottomFirstNode).
+const toImageUv = ( textureFile, uvNode, compileContext ) => {
 
-	if ( ! textureFile ) return fallback;
-
-	const textureUvNode = compileContext.mxFromBottomLeftUvSpace( uvNode );
-	const sampled = texture( textureFile, textureUvNode );
-	return addressModes ? applyTextureAddressModeDefault( sampled, textureUvNode, addressModes, defaultNode ) : sampled;
+	const flipped = compileContext.mxToImageUv( uvNode );
+	const bottomFirst = textureFile ? textureFile.materialXBottomFirstNode : null;
+	return bottomFirst ? bottomFirst.select( uvNode, flipped ) : flipped;
 
 };
 
@@ -94,6 +94,20 @@ const applyTextureColorSpace = ( node, file ) => {
 
 	const colorSpaceNode = file ? file.getColorSpaceNode() : null;
 	return colorSpaceNode ? colorSpaceNode( node ) : node;
+
+};
+
+// The file's color space applies to the image's texels only. The default value has its own color
+// space (its own colorspace attribute or the enclosing scope's), so it is selected after the conversion.
+const sampleTexture = ( textureFile, uvNode, compileContext, fallback, addressModes = null, defaultNode = fallback, file = null ) => {
+
+	if ( ! textureFile ) return fallback;
+
+	const textureUvNode = toImageUv( textureFile, uvNode, compileContext );
+	let sampled = applyTextureColorSpace( texture( textureFile, textureUvNode ), file );
+	// An image that cannot be read returns the default.
+	if ( textureFile.materialXLoadedNode ) sampled = textureFile.materialXLoadedNode.select( sampled, defaultNode );
+	return addressModes ? applyTextureAddressModeDefault( sampled, textureUvNode, addressModes, defaultNode ) : sampled;
 
 };
 
@@ -293,6 +307,45 @@ const compileTexcoordNode = ( nodeX, compileContext ) => {
 
 };
 
+const GEOMPROP_ATTRIBUTE_TYPES = {
+	float: 'float',
+	integer: 'float',
+	boolean: 'float',
+	vector2: 'vec2',
+	vector3: 'vec3',
+	vector4: 'vec4',
+	color3: 'vec3',
+	color4: 'vec4',
+};
+
+// <geompropvalue> reads the named geometric property. Built-in names (UV0, Pworld, ...)
+// resolve like defaultgeomprop; other names read the geometry attribute of that name and
+// return the node's default when the rendered geometry does not have it.
+const compileGeomPropValueNode = ( nodeX, compileContext ) => {
+
+	const nameNode = nodeX.getChildByName( 'geomprop' );
+	const name = nameNode ? String( nameNode.value || '' ) : '';
+	const fallback = nodeX.getNodeByName( 'default' );
+	if ( name === '' ) return fallback;
+
+	const builtIn = compileContext.getGeomPropNode( name );
+	if ( builtIn ) return builtIn;
+
+	const attributeType = GEOMPROP_ATTRIBUTE_TYPES[ nodeX.type ];
+	if ( ! attributeType ) return fallback;
+
+	return Fn( ( builder ) => {
+
+		if ( builder.hasGeometryAttribute( name ) !== true ) return fallback;
+		const value = attribute( name, attributeType );
+		if ( nodeX.type === 'integer' ) return int( value );
+		if ( nodeX.type === 'boolean' ) return bool( value );
+		return value;
+
+	} )();
+
+};
+
 const compileGeomColorNode = ( nodeX ) => {
 
 	const indexNode = nodeX.getChildByName( 'index' );
@@ -305,8 +358,7 @@ const compileImageLikeNode = ( nodeX, compileContext ) => {
 
 	const { file, uvNode, textureFile, defaultNode, addressModes } = getTextureInputs( nodeX );
 	const textureDefault = toTextureDefaultNode( defaultNode, nodeX.type );
-	const node = sampleTexture( textureFile, uvNode, compileContext, textureDefault, addressModes, textureDefault );
-	return applyTextureColorSpace( node, file );
+	return sampleTexture( textureFile, uvNode, compileContext, textureDefault, addressModes, textureDefault, file );
 
 };
 
@@ -320,11 +372,13 @@ const compileTiledImageNode = ( nodeX, compileContext ) => {
 
 	}
 
+	// ( texcoord * uvtiling - uvoffset ) / realworldimagesize * realworldtilesize, as in NG_tiledimage.
 	const uvTiling = nodeX.getNodeByName( 'uvtiling' );
 	const uvOffset = nodeX.getNodeByName( 'uvoffset' );
-	const transformedUv = compileContext.mxTransformUv( uvTiling, uvOffset, uvNode );
-	const node = sampleTexture( textureFile, transformedUv, compileContext, textureDefault, addressModes, textureDefault );
-	return applyTextureColorSpace( node, file );
+	const realWorldImageSize = nodeX.getNodeByName( 'realworldimagesize' );
+	const realWorldTileSize = nodeX.getNodeByName( 'realworldtilesize' );
+	const transformedUv = mul( div( sub( mul( uvNode, uvTiling ), uvOffset ), realWorldImageSize ), realWorldTileSize );
+	return sampleTexture( textureFile, transformedUv, compileContext, textureDefault, addressModes, textureDefault, file );
 
 };
 
@@ -354,7 +408,7 @@ const compileTriplanarProjectionNode = ( nodeX, compileContext ) => {
 
 		const file = nodeX.getChildByName( fileInput );
 		const textureFile = file && file.getValue() !== '' ? file.getTexture() : null;
-		const sample = applyTextureColorSpace( sampleTexture( textureFile, texcoord, compileContext, textureDefault ), file );
+		const sample = sampleTexture( textureFile, texcoord, compileContext, textureDefault, null, textureDefault, file );
 		return fourChannels ? sample : toVec3Channels( sample );
 
 	} );
@@ -476,7 +530,7 @@ const compileHexTiledTextureNode = ( nodeX, compileContext, category ) => {
 	const offsetRange = nodeX.getNodeByName( 'offsetrange' );
 	const falloff = nodeX.getNodeByName( 'falloff' );
 
-	const transformedUv = compileContext.mxFromBottomLeftUvSpace( mul( uvNode, tiling ) );
+	const transformedUv = toImageUv( textureFile, mul( uvNode, tiling ), compileContext );
 	const tileData = compileContext.mxHextileCoord( transformedUv, rotation, rotationRange, scale, scaleRange, offset, offsetRange );
 
 	let sample0 = texture( textureFile, tileData.coords[ 0 ] ).grad(
@@ -586,7 +640,7 @@ const compileGltfTextureNode = ( nodeX, compileContext, category ) => {
 
 	}
 
-	const node = applyTextureColorSpace( sampleTexture( textureFile, transformedUv, compileContext, fallback, addressModes, fallback ), file );
+	const node = sampleTexture( textureFile, transformedUv, compileContext, fallback, addressModes, fallback, file );
 
 	if ( category === 'gltf_normalmap' ) {
 
@@ -640,8 +694,7 @@ const compileGltfColorImageNode = ( nodeX, out, compileContext ) => {
 
 	const defaultInput = nodeX.getNodeByName( 'default' );
 	const fallback = vec4( defaultInput );
-	const sampled = sampleTexture( textureFile, transformedUv, compileContext, fallback, addressModes, fallback );
-	const converted = applyTextureColorSpace( sampled, file );
+	const converted = sampleTexture( textureFile, transformedUv, compileContext, fallback, addressModes, fallback, file );
 	const color = nodeX.getNodeByName( 'color' );
 	const geomcolor = nodeX.getNodeByName( 'geomcolor' );
 	const modulated = mul( mul( converted, color ), geomcolor );
@@ -907,6 +960,7 @@ function createMaterialXCompileRegistry() {
 	register( registry, [ 'bitangent' ], ( nodeX ) => compileNormalizedSpaceInputNode( nodeX, bitangentLocal, bitangentWorld ) );
 	register( registry, [ 'texcoord' ], ( nodeX, out, compileContext ) => compileTexcoordNode( nodeX, compileContext ) );
 	register( registry, [ 'geomcolor' ], ( nodeX ) => compileGeomColorNode( nodeX ) );
+	register( registry, [ 'geompropvalue' ], ( nodeX, out, compileContext ) => compileGeomPropValueNode( nodeX, compileContext ) );
 	register( registry, [ 'tiledimage' ], ( nodeX, out, compileContext ) => compileTiledImageNode( nodeX, compileContext ) );
 	register( registry, [ 'image' ], ( nodeX, out, compileContext ) => compileImageLikeNode( nodeX, compileContext ) );
 	register( registry, [ 'triplanarprojection' ], ( nodeX, out, compileContext ) => compileTriplanarProjectionNode( nodeX, compileContext ) );

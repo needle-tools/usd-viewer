@@ -54,10 +54,24 @@ export function installPreviewPrimvarShader(material) {
     };
 }
 
+// The mesh's primary texture coordinates live in its uv attribute, others as primvars.
+function namedPrimvar(mesh, name) {
+    return mesh.geometry.getAttribute(`primvars:${name}`)
+        || (name === mesh.userData.usdUvSource ? mesh.geometry.getAttribute('uv') : undefined);
+}
+
+// Points a texture's UV channel (uv1-uv3) at the UV set its material reads on this mesh.
+export function prepareUvSets(material, mesh) {
+    for (const [name, channel] of Object.entries(material?.userData?.usdUvSets || {})) {
+        const attribute = namedPrimvar(mesh, name) || mesh.geometry.getAttribute('uv');
+        if (attribute?.itemSize >= 2) mesh.geometry.setAttribute(`uv${channel}`, attribute);
+    }
+}
+
 function primvarAttribute(mesh, name, size, fallback) {
     const count = mesh.geometry.getAttribute('position')?.count;
     if (!count) return null;
-    const source = mesh.geometry.getAttribute(`primvars:${name}`);
+    const source = namedPrimvar(mesh, name);
     const constant = mesh.userData.usdPrimvars?.[name];
     const validSource = source?.itemSize === size && source.count === count;
     const validConstant = constant?.length === size;
@@ -108,6 +122,7 @@ export function prepareMaterialXPrimvars(material, mesh) {
     // are handled by MaterialXMaterial; custom geomprops need Hydra data aliases.
     const declarations = material.vertexShader?.matchAll(/(?:^|\n)\s*in\s+(float|vec[234])\s+(i_geomprop_(\w+))\s*;/g) || [];
     const names = new Set([
+        ...(mesh.userData.usdUvSource ? [mesh.userData.usdUvSource] : []),
         ...Object.keys(mesh.userData.usdPrimvars || {}),
         ...Object.keys(mesh.geometry.attributes).filter(name => name.startsWith('primvars:')).map(name => name.slice(9)),
     ]);

@@ -3,6 +3,22 @@ import { test } from 'node:test';
 import { ClampToEdgeWrapping, DataTexture, DataUtils, FloatType, Group, HalfFloatType,
   LinearSRGBColorSpace, MirroredRepeatWrapping, RepeatWrapping, RGBFormat, RGBAFormat, SRGBColorSpace, UnsignedShortType, Vector2 } from 'three';
 import { ThreeRenderDelegateInterface } from '../../src/hydra/ThreeJsRenderDelegate.js';
+import { Matrix3 } from 'three';
+
+// Rendering samples through the exact UsdTransform2d (rotation after scale, counter-clockwise,
+// no pivot). The exported KHR_texture_transform (offset/repeat/rotation, which GLTFExporter
+// reads) must reproduce it: glTF also scales first, and only unflipped images change V.
+function assertUvTransform(map, { scale = [1, 1], translation = [0, 0], rotation = 0 }) {
+  const c = Math.cos(rotation), s = Math.sin(rotation);
+  const expected = new Matrix3().set(c * scale[0], -s * scale[1], translation[0], s * scale[0], c * scale[1], translation[1], 0, 0, 1);
+  const close = (a, b, label) => a.elements.forEach((value, i) => assert.ok(Math.abs(value - b.elements[i]) < 1e-9, `${label}: ${a.elements} vs ${b.elements}`));
+  close(map.matrix, expected, 'sampling matrix');
+  const r = map.rotation, gltf = new Matrix3().set(1, 0, map.offset.x, 0, 1, map.offset.y, 0, 0, 1)
+    .multiply(new Matrix3().set(Math.cos(r), Math.sin(r), 0, -Math.sin(r), Math.cos(r), 0, 0, 0, 1))
+    .multiply(new Matrix3().set(map.repeat.x, 0, 0, 0, map.repeat.y, 0, 0, 0, 1));
+  const flip = new Matrix3().set(1, 0, 0, 0, -1, 1, 0, 0, 1);
+  close(gltf, map.flipY ? expected : expected.clone().premultiply(flip).multiply(flip), 'export transform');
+}
 
 const omni = (inputs = {}, extra = {}) => ({ sourceAsset: 'materials/OmniPBR.mdl', subIdentifier: 'OmniPBR', inputs, ...extra });
 const gltf = (inputs = {}) => ({ sourceAsset: 'nvidia/sdk_examples/gltf_support.mdl', subIdentifier: 'gltf_material', inputs });
@@ -71,9 +87,7 @@ test('OmniPBR keeps resolved assets, color spaces, UV transforms, map influences
     assert.equal(material.metalness, 1);
     assert.equal(material.aoMapIntensity, 0.75);
     for (const map of [material.map, material.roughnessMap, material.metalnessMap, material.normalMap]) {
-      assert.deepEqual(map.repeat.toArray(), [2, 3]);
-      assert.deepEqual(map.offset.toArray(), [0.1, 0.2]);
-      assert.equal(map.rotation, Math.PI / 2);
+      assertUvTransform(map, { scale: [2, 3], translation: [0.1, 0.2], rotation: Math.PI / 2 });
     }
     assert.deepEqual(material.normalScale.toArray(), [0.2, 0.2]);
   } finally { context.delegate.dispose(); }
@@ -254,7 +268,7 @@ test('PreviewSurface preserves repeated and independent scalar-map sampling', as
       await context.delegate.waitForMaterialsReady();
       for (const map of [context.material._material.roughnessMap, context.material._material.metalnessMap]) {
         assert.ok(map);
-        assert.deepEqual(map.repeat.toArray(), [scale, scale]);
+        assertUvTransform(map, { scale: [scale, scale] });
         assert.equal(map.wrapS, RepeatWrapping);
         assert.equal(map.wrapT, RepeatWrapping);
         assert.deepEqual([...map.image.data], [40, 80, 160, 200]);
@@ -270,11 +284,9 @@ test('PreviewSurface preserves repeated and independent scalar-map sampling', as
     await context.delegate.waitForMaterialsReady();
     const { roughnessMap, metalnessMap, aoMap } = context.material._material;
     assert.notEqual(roughnessMap, metalnessMap);
-    assert.deepEqual(roughnessMap.repeat.toArray(), [2, 3]);
-    assert.deepEqual(roughnessMap.offset.toArray(), [0.25, 0.5]);
+    assertUvTransform(roughnessMap, { scale: [2, 3], translation: [0.25, 0.5] });
     assert.deepEqual([roughnessMap.wrapS, roughnessMap.wrapT], [RepeatWrapping, ClampToEdgeWrapping]);
-    assert.deepEqual(metalnessMap.repeat.toArray(), [4, 5]);
-    assert.deepEqual(metalnessMap.offset.toArray(), [0.75, 0.125]);
+    assertUvTransform(metalnessMap, { scale: [4, 5], translation: [0.75, 0.125] });
     assert.deepEqual([metalnessMap.wrapS, metalnessMap.wrapT], [MirroredRepeatWrapping, RepeatWrapping]);
     assert.deepEqual([...roughnessMap.image.data], [40, 40, 160, 200]);
     assert.deepEqual([...metalnessMap.image.data], [40, 80, 200, 200]);
@@ -307,8 +319,7 @@ test('Preview normal maps honor noncanonical scale/bias and identity defaults wi
         const decoded = map.image.data[i] / 255 * 2 - 1;
         assert.ok(Math.abs(decoded - desired) <= 1 / 255 + 1e-7, `${decoded} should decode to ${desired}`);
       }
-      assert.deepEqual(map.repeat.toArray(), [8, 9]);
-      assert.deepEqual(map.offset.toArray(), [0.25, 0.5]);
+      assertUvTransform(map, { scale: [8, 9], translation: [0.25, 0.5] });
       assert.deepEqual([map.wrapS, map.wrapT], [RepeatWrapping, MirroredRepeatWrapping]);
       assert.deepEqual([...context.texture.image.data], [40, 80, 160, 200]);
       assert.equal(map.image.data[3], 200);
@@ -477,6 +488,20 @@ test('OmniGlass retains transmission, IOR, roughness and explicitly enabled cuto
   }finally{context.delegate.dispose();}
 });
 
+test('textured OmniGlass retains a color multiplier after the texture loads', async () => {
+  const context = setup();
+  try {
+    const material = await update(context, {sourceAsset: 'materials/OmniGlass.mdl', subIdentifier: 'OmniGlass',
+      inputs: {glass_color: [.8, .9, 1], glass_color_texture: 'glass.png'}});
+    assert.equal(material.color.isColor, true);
+    assert.deepEqual(material.color.toArray(), [1, 1, 1]);
+    assert.ok(material.map);
+    assert.equal(material.transmission, 1);
+    assert.equal(material.opacity, 1);
+    assert.equal(material.transparent, false);
+  } finally { context.delegate.dispose(); }
+});
+
 test('original texture scope reapplies scalar channels and UV transforms and rejects use after cancellation',async()=>{
  const context=setup();
  try{
@@ -497,4 +522,54 @@ test('original texture scope reapplies scalar channels and UV transforms and rej
   assert.equal(await scope.getTexture(preview),original);
   controller.abort();await assert.rejects(scope.getTexture(preview),{name:'AbortError'});scope.dispose();
  }finally{context.delegate.dispose();}
+});
+
+test('UDIM tile export replays channel conversions and UV transforms in separate owned registries',async()=>{
+	const context=setup(),pattern='orm.<UDIM>.png',registries=[],requests=[];
+	try{
+		context.delegate.registry.udimTiles.set(pattern,Promise.resolve([{tile:1001,path:'orm.1001.png'},{tile:1002,path:'orm.1002.png'}]));
+		const material=await update(context,omni({enable_ORM_texture:true,ORM_texture:pattern,reflection_roughness_texture_influence:1,metallic_texture_influence:1,ao_to_diffuse:1,texture_scale:[2,3],texture_translate:[.1,.2]}));
+		const preview=material.roughnessMap,recipe=context.delegate.registry.exportRecipes.get(preview);
+		context.delegate.registry.exportRecipes.set(preview,async registry=>{
+			registries.push(registry);const udim=registry.getUdimTexture.bind(registry);
+			registry.getTexture=async(path,readable)=>{
+				if(path===pattern)return udim(path,readable);
+				requests.push(path);return new DataTexture(new Uint8Array([10,path.includes('1001')?50:90,30,255]),1,1);
+			};
+			return recipe(registry);
+		});
+		const scope=context.delegate.registry.createExportScope();
+		const first=await scope.getUdimTile(preview,1001),second=await scope.getUdimTile(preview,1002);
+		assert.equal(await scope.getUdimTile(preview,1001),first);
+		assert.deepEqual(requests,['orm.1001.png','orm.1002.png']);assert.equal(registries.length,2);
+		assert.equal(first.image.data[1],50);assert.equal(second.image.data[1],90);
+		assert.equal(first.userData.usdUdim,undefined);assert.equal(first.userData.usdUdimTile,1001);
+		assertUvTransform(first,{scale:[2,3],translation:[.1,.2]});assert.equal(first.wrapS,ClampToEdgeWrapping);
+		assert.equal(material.roughnessMap,preview);assert.equal(preview.image.data[1],80);
+		await assert.rejects(scope.getUdimTile(preview,1000),RangeError);
+		scope.dispose();assert.ok(registries.every(registry=>registry.disposed));
+		await assert.rejects(scope.getUdimTile(preview,1001),{name:'AbortError'});
+	}finally{context.delegate.dispose();}
+});
+
+test('empty UDIM cells export black through the authored channel recipe without fetching a missing file',async()=>{
+	const context=setup(),pattern='orm.<UDIM>.png';
+	try{
+		context.delegate.registry.udimTiles.set(pattern,Promise.resolve([{tile:1001,path:'orm.1001.png'}]));
+		const material=await update(context,omni({enable_ORM_texture:true,ORM_texture:pattern,reflection_roughness_texture_influence:1}));
+		const preview=material.roughnessMap,recipe=context.delegate.registry.exportRecipes.get(preview);
+		context.delegate.registry.exportRecipes.set(preview,registry=>{
+			const udim=registry.getUdimTexture.bind(registry);
+			registry.getTexture=async path=>{
+				assert.equal(path,pattern,'empty cells do not request an image file');return udim(path,true);
+			};
+			return recipe(registry);
+		});
+		const scope=context.delegate.registry.createExportScope();
+		try{
+			const empty=await scope.getUdimTile(preview,1021);
+			assert.equal(empty.image.width,1);assert.equal(empty.image.height,1);assert.equal(empty.image.data[1],0);
+			assert.equal(empty.userData.usdUdimTile,1021);assert.equal(material.roughnessMap,preview);
+		}finally{scope.dispose();}
+	}finally{context.delegate.dispose();}
 });

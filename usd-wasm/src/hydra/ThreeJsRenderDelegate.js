@@ -4,15 +4,20 @@ import { packSparkSphericalHarmonics } from './sparkSphericalHarmonics.js';
 import { HydraStroke } from './HydraStroke.js';
 import { HydraNurbsPatch } from './HydraNurbsPatch.js';
 import { mdlToPreview } from './mdlPreview.js';
-import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPrimvars, configureMaterialXPrimvars, prepareMaterialXPrimvars } from './materialPrimvars.js';
-import { remapNormalTextureSamples, remapTextureSamples } from './textureChannels.js';
-import { textureFileType } from './textureFileType.js';
+import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPrimvars, configureMaterialXPrimvars, prepareMaterialXPrimvars, prepareUvSets } from './materialPrimvars.js';
+import { remapNormalTextureSamples, remapTextureSamples, padImageWithBlackBorder } from './textureChannels.js';
+import { textureFileType, imageEncoding, stripImageColorMetadata, flipRows } from './textureFileType.js';
+import { resolveColorSpace, colorToLinearRec709, convertTextureColorSpace } from './colorSpaces.js';
 import { Ktx2Textures } from './ktx2Textures.js';
 import { prepareWebGlAreaLights } from './areaLightSupport.js';
 import { createDomeTexture, updateDomeEnvironment, removeDomeEnvironment } from './domeEnvironment.js';
 import { VdbVolumeRprim } from './vdbVolumeRprim.js';
 import { hasMaterialXVolume } from './materialxVolumeSupport.js';
 import { materialXDefinitionsFor } from './materialxDefinitions.js';
+import { portableMaterialXNames } from './materialxNames.js';
+import {isUdimPath, udimPath, matchUdimTiles, udimLayout, udimAtlas} from './udim.js';
+import {adobeSurface} from './adobeSurface.js';
+import { readPreviewNetwork } from './previewNetwork.js';
 import { lightIntensity } from './lightIntensity.js';
 import { helperKinds, viewportHelpers, scenePrimitiveHelper, disposeHelper } from './primitiveHelpers.js';
 
@@ -38,6 +43,7 @@ const {
   SRGBColorSpace,
   RGBAFormat,
   RepeatWrapping,
+  ClampToEdgeWrapping,
   LinearSRGBColorSpace,
   Vector2,
   DirectionalLight,
@@ -52,6 +58,11 @@ const {
 
 const debugTextures = false;
 const debugMaterials = false;
+const warnedMessages = new Set();
+const materialXCacheScopes = new WeakMap();
+let nextMaterialXCacheScope = 1;
+const materialXCacheScope = owner => { if (!materialXCacheScopes.has(owner)) materialXCacheScopes.set(owner, nextMaterialXCacheScope++); return materialXCacheScopes.get(owner); };
+const warnOnce = message => { if (!warnedMessages.has(message)) { warnedMessages.add(message); console.warn(message); } };
 const debugMeshes = false;
 const debugPrims = false;
 const disableTextures = false;
@@ -158,6 +169,123 @@ async function getMikkTSpaceTangents() {
   return mikkTSpaceTangentsPromise;
 }
 
+/**
+ * Sets a geometry attribute from new values. An attribute with the same layout is updated in
+ * place: the renderer frees only the attributes a geometry holds when it is disposed, so a
+ * replaced attribute would keep its GPU buffer for the session, and aliases of it (such as
+ * `uv1` for `uv`) would keep the old data. `copy` copies the values into a Float32Array (as
+ * Float32BufferAttribute does); otherwise the typed array is used as given.
+ */
+function setGeometryAttribute(geometry, name, values, itemSize, copy = true) {
+  const existing = geometry.getAttribute(name);
+  if (existing && !existing.isInterleavedBufferAttribute && existing.itemSize === itemSize
+    && existing.array.length === values.length
+    && (copy ? existing.array instanceof Float32Array : existing.array.constructor === values.constructor)) {
+    if (copy) existing.array.set(values);
+    else existing.array = values;
+    existing.needsUpdate = true;
+    return existing;
+  }
+  const attribute = copy ? new Float32BufferAttribute(values, itemSize) : new BufferAttribute(values, itemSize);
+  geometry.setAttribute(name, attribute);
+  return attribute;
+}
+
+/**
+ * Rendering samples through `texture.matrix` (UsdTransform2d rotates after scaling, which
+ * three's offset/repeat/rotation cannot express). GLTFExporter writes KHR_texture_transform
+ * from offset/repeat/rotation instead, so set those to the glTF transform with the same
+ * result. glTF also scales before rotating; its UVs start at the top, and the exporter flips
+ * a flipY texture's image, which keeps three's UVs, so only unflipped images need the V flip.
+ */
+function setGltfTextureTransform(texture, matrix) {
+  const m = matrix.clone();
+  if (!texture.flipY && !texture.isCompressedTexture) {
+    const flip = new THREE.Matrix3().set(1, 0, 0, 0, -1, 1, 0, 0, 1);
+    m.premultiply(flip).multiply(flip);
+  }
+  const [a, c, , b, d, , tx, ty] = m.elements;
+  const rotation = Math.atan2(-c, a);
+  const sin = Math.sin(rotation), cos = Math.cos(rotation);
+  texture.offset.set(tx, ty);
+  texture.repeat.set(Math.hypot(a, c), b * sin + d * cos);
+  texture.rotation = rotation;
+  texture.center.set(0, 0);
+}
+
+function orthogonalTangent(normal, index, values) {
+  const x = normal.getX(index), y = normal.getY(index), z = normal.getZ(index);
+  const useY = Math.abs(y) < 0.9 * Math.hypot(x, y, z);
+  const tx = useY ? z : 0, ty = useY ? 0 : -z, tz = useY ? -x : y;
+  const length = Math.hypot(tx, ty, tz);
+  const valid = length > 0 && Number.isFinite(length);
+  values[index * 4] = valid ? tx / length : 1;
+  values[index * 4 + 1] = valid ? ty / length : 0;
+  values[index * 4 + 2] = valid ? tz / length : 0;
+  values[index * 4 + 3] = 1;
+}
+
+/**
+ * MikkTSpace tangents for non-indexed geometry, as `computeMikkTSpaceTangents` with glTF's sign.
+ * MikkTSpace sets aside triangles with two identical corners (position, normal and uv) and
+ * welds identical corners, which is quadratic in the number of identical corners. Refined
+ * subdivision surfaces collapse many such triangles onto single points (thousands of
+ * identical corners on OpenChessSet at refine level 2, minutes of main-thread time), so they
+ * are removed before the call. The remaining triangles get the same tangents; the removed
+ * ones have no area and receive a tangent orthogonal to their normal.
+ */
+function computeTangentsSkippingDegenerate(geometry, computeMikkTSpaceTangents, MikkTSpace) {
+  const position = geometry.getAttribute('position'), normal = geometry.getAttribute('normal'), uv = geometry.getAttribute('uv');
+  if (geometry.index || position.count % 3) {
+    computeMikkTSpaceTangents(geometry, MikkTSpace);
+    return;
+  }
+  const read = attribute => {
+    if (!attribute.normalized && !attribute.isInterleavedBufferAttribute && attribute.array instanceof Float32Array) return attribute.array;
+    const values = new Float32Array(attribute.count * attribute.itemSize);
+    for (let i = 0, j = 0; i < attribute.count; i++) {
+      values[j++] = attribute.getX(i); values[j++] = attribute.getY(i);
+      if (attribute.itemSize > 2) values[j++] = attribute.getZ(i);
+    }
+    return values;
+  };
+  const p = read(position), n = read(normal), t = read(uv);
+  const same = (a, b) => p[a * 3] === p[b * 3] && p[a * 3 + 1] === p[b * 3 + 1] && p[a * 3 + 2] === p[b * 3 + 2]
+    && n[a * 3] === n[b * 3] && n[a * 3 + 1] === n[b * 3 + 1] && n[a * 3 + 2] === n[b * 3 + 2]
+    && t[a * 2] === t[b * 2] && t[a * 2 + 1] === t[b * 2 + 1];
+  const triangles = position.count / 3;
+  const kept = new Uint8Array(triangles);
+  let keptCount = 0;
+  for (let i = 0; i < triangles; i++) {
+    const a = i * 3;
+    if (!same(a, a + 1) && !same(a, a + 2) && !same(a + 1, a + 2)) { kept[i] = 1; keptCount++; }
+  }
+  const values = new Float32Array(position.count * 4);
+  if (keptCount) {
+    const all = keptCount === triangles;
+    const pick = (source, size) => {
+      if (all) return source;
+      const out = new Float32Array(keptCount * 3 * size);
+      for (let i = 0, o = 0; i < triangles; i++) {
+        if (!kept[i]) continue;
+        out.set(source.subarray(i * 3 * size, (i + 1) * 3 * size), o); o += 3 * size;
+      }
+      return out;
+    };
+    const generated = MikkTSpace.generateTangents(pick(p, 3), pick(n, 3), pick(t, 2));
+    for (let i = 0, o = 0; i < triangles; i++) {
+      if (!kept[i]) continue;
+      values.set(generated.subarray(o, o + 12), i * 12); o += 12;
+    }
+    // glTF's texture coordinate convention flips MikkTSpace's sign (as computeMikkTSpaceTangents does).
+    for (let i = 3; i < values.length; i += 4) values[i] *= -1;
+  }
+  for (let i = 0; i < triangles; i++) {
+    if (!kept[i]) for (let c = i * 3; c < i * 3 + 3; c++) orthogonalTangent(normal, c, values);
+  }
+  geometry.setAttribute('tangent', new Float32BufferAttribute(values, 4));
+}
+
 function ensureMaterialXGeometryTangents(geometry) {
   let state = generatedTangentStates.get(geometry);
   if (!state) {
@@ -186,24 +314,14 @@ function ensureMaterialXGeometryTangents(geometry) {
 
       if (uv) {
         if (uv.count !== position.count) continue;
-        computeMikkTSpaceTangents(geometry, MikkTSpace);
+        computeTangentsSkippingDegenerate(geometry, computeMikkTSpaceTangents, MikkTSpace);
       } else {
         // MaterialX standard_surface consumes a basis even without textures.
         // With no UV parameterization, choose a deterministic orthogonal tangent
         // instead of letting the missing attribute produce a zero/NaN basis.
         // UV-bearing geometry still uses MikkTSpace; authored tangents win above.
         const values = new Float32Array(position.count * 4);
-        for (let i = 0; i < position.count; i++) {
-          const x = normal.getX(i), y = normal.getY(i), z = normal.getZ(i);
-          const useY = Math.abs(y) < 0.9 * Math.hypot(x, y, z);
-          const tx = useY ? z : 0, ty = useY ? 0 : -z, tz = useY ? -x : y;
-          const length = Math.hypot(tx, ty, tz);
-          const valid = length > 0 && Number.isFinite(length);
-          values[i * 4] = valid ? tx / length : 1;
-          values[i * 4 + 1] = valid ? ty / length : 0;
-          values[i * 4 + 2] = valid ? tz / length : 0;
-          values[i * 4 + 3] = 1;
-        }
+        for (let i = 0; i < position.count; i++) orthogonalTangent(normal, i, values);
         geometry.setAttribute('tangent', new Float32BufferAttribute(values, 4));
       }
       const generatedTangents = geometry.getAttribute('tangent');
@@ -327,6 +445,8 @@ class TextureRegistry {
     this.httpAbort = new AbortController();
     this.driverFileQueue = Promise.resolve();
     this.ktx2Textures = null;
+    this.udimTiles = new Map();
+    this.derivedTextureImages = new WeakMap();
 
   }
 
@@ -551,6 +671,7 @@ class TextureRegistry {
 
   getTexture(resourcePath, readable = false) {
     resourcePath = this.resolveResourcePath(resourcePath);
+    if (isUdimPath(resourcePath)) return this.getUdimTexture(resourcePath, readable);
     // Known uploaded files can be stored as MEMFS paths without a leading slash.
     // Texture identities must be absolute so a host can relativize them against
     // the stage root, rather than anchoring the mount path a second time.
@@ -565,9 +686,11 @@ class TextureRegistry {
       return this.textures[cacheKey];
     }
 
-    let textureResolve, textureReject;
+    let textureResolve, textureReject, sourceEncoding = null;
     this.textures[cacheKey] = new Promise((resolve, reject) => {
       textureResolve = texture => {
+        if (sourceEncoding) texture.userData.usdImageEncoding ??= sourceEncoding;
+        if (sourceEncoding?.ktx2) normalizeKtx2Orientation(texture, sourceEncoding.topFirst);
         this.exportRecipes.set(texture.source, async registry => {
           const original = await registry.getTexture(resourcePath, readable);
           const copy = texture.clone(); copy.source = original.source; return copy;
@@ -641,6 +764,8 @@ class TextureRegistry {
       // decoders require ordinary, owned memory; copy before native work resumes.
       if (!(_loadedFile.buffer instanceof ArrayBuffer)) _loadedFile = new Uint8Array(_loadedFile);
       filetype = textureFileType(extension, _loadedFile);
+      sourceEncoding = imageEncoding(filetype, _loadedFile);
+      _loadedFile = stripImageColorMetadata(filetype, _loadedFile);
       const limit=this.config.maxTextureSize;
       if(filetype==='image/png' && limit>0 && typeof document!=='undefined' && typeof Worker!=='undefined' && _loadedFile.byteLength>=33){
         const header=new DataView(_loadedFile.buffer,_loadedFile.byteOffset,_loadedFile.byteLength);
@@ -668,7 +793,8 @@ class TextureRegistry {
 
     const loadHttp = url => {
       const progress = this.config.onAssetFetchProgress || this.config.USD?.onAssetFetchProgress;
-      if (!progress && !this.config.resolveTextureUrl && !(this.config.maxTextureSize>0)) { loadFromUrl(url); return; }
+      // Always read the bytes: the color space rules need the file header, and image
+      // color metadata must be removed before the browser decodes the image.
       Promise.resolve().then(() => this.config.resolveTextureUrl?.(url) || url)
         .then(target => fetchAsset(target || url, progress, {signal:this.httpAbort.signal}))
         .then(bytes => { if (this.disposed) throw new Error('Texture registry disposed'); loadFromFile(bytes); })
@@ -719,34 +845,92 @@ class TextureRegistry {
     return this.textures[cacheKey];
   }
 
+  getUdimTexture(pattern, readable) {
+    const key=pattern+(readable?'#usd-readable':'');
+    if(this.textures[key])return this.textures[key];
+    if(!this.udimTiles.has(pattern))this.udimTiles.set(pattern,(async()=>{
+      const supplied=await this.config.resolveUdimTiles?.(pattern);
+      let tiles=matchUdimTiles(pattern,supplied||this.allPaths||[]);
+      if(!tiles.length){
+        // Match OpenUSD's tile range. HEAD discovers sparse sets without
+        // downloading missing tiles or guessing where a contiguous run ends.
+        const url=/^https?:/.test(pattern)?pattern:this.resolveHttpResourceUrl(pattern);
+        if(url){
+          const queue=Array.from({length:100},(_,i)=>i+1001);
+          await Promise.all(Array.from({length:8},async()=>{for(let tile;tile=queue.shift();){
+            const path=udimPath(url,tile),response=await fetch(path,{method:'HEAD',headers:{Accept:'application/x-usd-udim-probe'},signal:this.httpAbort.signal});
+            if(response.ok)tiles.push({tile,path});
+            else if(response.status!==404)throw new Error(`UDIM tile discovery failed (${response.status}): ${path}`);
+          }}));
+        }else{
+          const usd=this.config.USD,readdir=usd?.FS_readdir||usd?.FS?.readdir,slash=pattern.lastIndexOf('/');
+          if(readdir)tiles=matchUdimTiles(pattern,readdir(pattern.slice(0,slash)||'/').map(name=>pattern.slice(0,slash+1)+name));
+        }
+      }
+      if(!tiles.length)throw new Error('No UDIM tiles found: '+pattern);
+      return tiles.sort((a,b)=>a.tile-b.tile);
+    })());
+    return this.textures[key]=(async()=>{
+      const tiles=await this.udimTiles.get(pattern);
+      if(this.config.udimTile!==undefined){
+        const entry=tiles.find(entry=>entry.tile===this.config.udimTile);
+        // An absent UDIM cell samples black, including cells outside the
+        // occupied atlas rectangle. It is not a missing file dependency.
+        const source=entry?await this.getTexture(entry.path,readable):null;
+        const texture=source?source.clone():new THREE.DataTexture(new Uint8Array(4),1,1);
+        texture.name=source?.name||pattern+' ['+this.config.udimTile+']';
+        texture.userData={...source?.userData,usdUdimTile:this.config.udimTile};this.loadedTextures.add(texture);
+        return texture;
+      }
+      const loaded=await Promise.all(tiles.map(async tile=>({...tile,texture:await this.getTexture(tile.path,readable)})));
+      const texture=udimAtlas(loaded,{maxTextureSize:this.config.maxTextureSize});texture.name=pattern;this.loadedTextures.add(texture);
+      this.exportRecipes.set(texture.source,async registry=>registry.getTexture(pattern,readable));
+      if(this.disposed){texture.dispose();throw new Error('Texture registry disposed');}
+      return texture;
+    })();
+  }
+
   // Originals use a separate registry: no preview URL rewrite, size cap, or
   // replacement of textures in the live scene. The caller owns this scope.
   createExportScope({signal,resolution='original'} = {}) {
     if(!['original','preview'].includes(resolution))throw new RangeError('Invalid export texture resolution.');
     const preview=resolution==='preview',limit=this.config.maxTextureSize||512;
     const registry = new TextureRegistry({...this.config, resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
-    const pending = new Map(), converted = new Set();
+    registry.udimTiles = this.udimTiles;
+    const pending = new Map(), converted = new Set(), tileRegistries = new Map();
     let disposed = false;
     const dispose = () => {
       if (disposed) return;
       disposed = true; signal?.removeEventListener('abort', dispose);
-      registry.dispose(); for (const texture of converted) texture.dispose();
+      registry.dispose(); for(const state of tileRegistries.values())state.registry.dispose();
+      for (const texture of converted) texture.dispose();
     };
     signal?.addEventListener('abort', dispose, {once:true});
     if (signal?.aborted) dispose();
-    return {
-      maxTextureSize:preview?limit:Infinity,
-      getTexture: async texture => {
+    const getTexture = async (texture,tile) => {
         if (disposed) throw new DOMException('Texture export cancelled', 'AbortError');
-        if(preview&&Math.max(texture.image?.width||0,texture.image?.height||0)<=limit)return texture;
+        if(tile===undefined&&preview&&Math.max(texture.image?.width||0,texture.image?.height||0)<=limit)return texture;
+        let targetRegistry=registry,targetPending=pending;
+        if(tile!==undefined){
+          if(!Number.isInteger(tile)||tile<1001||tile>1100)throw new RangeError('Invalid UDIM export tile.');
+          if(!tileRegistries.has(tile)){
+            const tileRegistry=new TextureRegistry({...registry.config,udimTile:tile});tileRegistry.udimTiles=this.udimTiles;
+            tileRegistries.set(tile,{registry:tileRegistry,pending:new Map()});
+          }
+          const state=tileRegistries.get(tile);targetRegistry=state.registry;targetPending=state.pending;
+        }
         const recipe = this.exportRecipes.get(texture) || this.exportRecipes.get(texture.source);
         if (!recipe) return texture; // Native glTF and host-owned textures are already the source.
-        if (!pending.has(texture)) pending.set(texture, recipe(registry).then(value => {
+        if (!targetPending.has(texture)) targetPending.set(texture, recipe(targetRegistry).then(value => {
           if (disposed) {value.dispose(); throw new DOMException('Texture export cancelled', 'AbortError');}
           converted.add(value); return value;
         }));
-        return pending.get(texture);
-      },
+        return targetPending.get(texture);
+    };
+    return {
+      maxTextureSize:preview?limit:Infinity,
+      getTexture,
+      getUdimTile:(texture,tile)=>getTexture(texture,tile),
       dispose,
     };
   }
@@ -760,6 +944,7 @@ class TextureRegistry {
     }
     this.objectUrls.clear();
     this.materialXDefinitionCache.clear();
+    this.derivedTextureImages = new WeakMap();
     this.ktx2Textures?.dispose();
 
     for (const texture of this.loadedTextures) {
@@ -1194,7 +1379,84 @@ class HydraParticleField {
   }
 }
 
+const TEXTURE_SLOTS = ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'alphaMap',
+  'clearcoatMap', 'clearcoatRoughnessMap', 'specularColorMap'];
+
+/**
+ * UsdUVTexture "black" wrapping (also the useMetadata fallback) returns transparent black
+ * outside 0-1. The texture clamps to its edge until a mesh using it samples outside 0-1
+ * on a black axis; then it gets a transparent black border, once. Textures whose UVs stay
+ * inside keep their image unchanged.
+ */
+const blackWrapStates = new WeakMap();
+
+function prepareBlackWrap(material, mesh) {
+  for (const slot of TEXTURE_SLOTS) {
+    const texture = material?.[slot];
+    const black = texture?.userData?.usdBlackWrap;
+    if (!black) continue;
+    let state = blackWrapStates.get(texture);
+    if (!state) blackWrapStates.set(texture, state = { checked: new WeakSet(), padded: false });
+    if (state.padded) continue;
+    const uv = mesh.geometry?.getAttribute(texture.channel ? `uv${texture.channel}` : 'uv');
+    if (!uv || state.checked.has(uv)) continue;
+    state.checked.add(uv);
+    const e = texture.matrix.elements, epsilon = 1e-5;
+    let outside = false;
+    for (let i = 0; i < uv.count && !outside; i++) {
+      const u = uv.getX(i), v = uv.getY(i);
+      const s = e[0] * u + e[3] * v + e[6], t = e[1] * u + e[4] * v + e[7];
+      outside = (black.s && (s < -epsilon || s > 1 + epsilon)) || (black.t && (t < -epsilon || t > 1 + epsilon));
+    }
+    if (!outside) continue;
+    const padded = padImageWithBlackBorder(texture.image, black.s, black.t);
+    if (!padded || (padded.image.data && !texture.isDataTexture)) {
+      state.padded = true;
+      warnOnce('A texture with wrap mode "black" is sampled outside 0-1, but its image cannot be bordered; its edge repeats instead.');
+      continue;
+    }
+    const { width, height, border } = padded;
+    const outWidth = width + (black.s ? 2 * border : 0), outHeight = height + (black.t ? 2 * border : 0);
+    // The GPU texture was allocated at the original size; release it so the renderer
+    // creates one at the bordered size on next use.
+    texture.dispose();
+    texture.source = new THREE.Source(padded.image);
+    texture.matrix.premultiply(new THREE.Matrix3().set(width / outWidth, 0, black.s ? border / outWidth : 0,
+      0, height / outHeight, black.t ? border / outHeight : 0, 0, 0, 1));
+    texture.userData.usdSourceSize ??= [width, height];
+    texture.needsUpdate = true;
+    state.padded = true;
+  }
+}
+
+/**
+ * Every texture path treats uncompressed texel data with flipY = false as bottom row first
+ * (as EXRLoader stores it). KTX2 keeps the file's row order, which is top row first unless
+ * KTXorientation says "ru". Uncompressed top-first KTX2 data is reversed once here;
+ * compressed blocks cannot be, so their orientation is recorded as usdTopFirst.
+ */
+function normalizeKtx2Orientation(texture, topFirst) {
+  if (texture.isCompressedTexture) {
+    texture.userData.usdTopFirst = topFirst;
+    return;
+  }
+  if (topFirst) {
+    const flipped = new Set();
+    const flip = level => {
+      if (!level?.data || flipped.has(level.data)) return;
+      flipped.add(level.data);
+      flipRows(level.data, level.width, level.height);
+    };
+    flip(texture.image);
+    for (const level of texture.mipmaps || []) flip(level);
+    texture.needsUpdate = true;
+  }
+  texture.userData.usdTopFirst = false;
+}
+
 class HydraMesh {
+  static PRIMARY_UV_NAMES = new Set(['uv', 'UVMap', 'uvmap', 'uv0', 'UVW', 'uvw', 'map1']);
+
   /**
    * @param {string} id
    * @param {ThreeRenderDelegateInterface} hydraInterface
@@ -1395,7 +1657,7 @@ class HydraMesh {
           values[targetOffset + j] = value;
         }
       }
-      this._geometry.setAttribute(attributeName, new Float32BufferAttribute(values, dimension));
+      setGeometryAttribute(this._geometry, attributeName, values, dimension);
       if (attributeName === 'normal') {
         this._markMaterialsNeedUpdate();
       }
@@ -1423,7 +1685,7 @@ class HydraMesh {
         values[targetOffset + j] = attribute[sourceOffset + j];
       }
     }
-    this._geometry.setAttribute(attributeName, new BufferAttribute(values, dimension));
+    setGeometryAttribute(this._geometry, attributeName, values, dimension, false);
   }
 
   updateIndices(indices, coarseFaceParams) {
@@ -1554,6 +1816,8 @@ class HydraMesh {
     mesh.userData.usdHydraMaterialSide = this._side;
     mesh.userData.usdHydraFallbackMaterial = () => this._ownedMaterial;
     mesh.userData.usdHydraApplyMaterialSide = (material, hydraMaterial) => this._applyMaterialSide(material, hydraMaterial);
+    // MaterialX can complete after native commit created the visible batch.
+    mesh.userData.usdHydraMaterialChanged = () => this.commit();
     mesh.userData.usdHydraSetMaterialPending = (materialId, pending) => this._setMaterialPending(materialId, pending);
   }
 
@@ -1652,6 +1916,7 @@ class HydraMesh {
     // Sidedness copies must retain the authored cutout, just like WebGL copies.
     clone.alphaTest = material.alphaTest;
     clone.alphaClip = material.alphaClip;
+    if (material.userData.usdGltfMaterial) clone.userData.usdGltfMaterial = material.userData.usdGltfMaterial;
     installPreviewPrimvarShader(clone);
     clone.side = this._side;
     clone.needsUpdate = true;
@@ -1725,7 +1990,7 @@ class HydraMesh {
       this._indexedNormals = undefined;
       this._constantNormal = undefined;
       this._orderedNormals = Float32Array.from(normals);
-      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+      setGeometryAttribute(this._geometry, 'normal', this._orderedNormals, 3);
       this._markMaterialsNeedUpdate();
     });
   }
@@ -1744,7 +2009,7 @@ class HydraMesh {
     if (this._orderedNormals) {
       const position = this._geometry.getAttribute('position');
       if (position?.count && this._orderedNormals.length === position.count * 3) {
-        this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+        setGeometryAttribute(this._geometry, 'normal', this._orderedNormals, 3);
         this._markMaterialsNeedUpdate();
       } else {
         this._geometry.deleteAttribute('normal');
@@ -1764,7 +2029,7 @@ class HydraMesh {
       values[i * 3 + 1] = this._constantNormal[1];
       values[i * 3 + 2] = this._constantNormal[2];
     }
-    this._geometry.setAttribute('normal', new Float32BufferAttribute(values, 3));
+    setGeometryAttribute(this._geometry, 'normal', values, 3);
     this._markMaterialsNeedUpdate();
   }
 
@@ -1777,7 +2042,7 @@ class HydraMesh {
       // The UV buffer has already been prepared on the C++ side, so we just set it
       this._indexedNormals = undefined;
       this._orderedNormals = Float32Array.from(data);
-      this._geometry.setAttribute('normal', new Float32BufferAttribute(this._orderedNormals, 3));
+      setGeometryAttribute(this._geometry, 'normal', this._orderedNormals, 3);
       this._markMaterialsNeedUpdate();
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
@@ -1800,7 +2065,7 @@ class HydraMesh {
     if (!count || !this._constantTangent) return;
     const values = new Float32Array(count * this._tangentDimension);
     for (let i = 0; i < count; i++) values.set(this._constantTangent, i * this._tangentDimension);
-    this._geometry.setAttribute('tangent', new Float32BufferAttribute(values, this._tangentDimension));
+    setGeometryAttribute(this._geometry, 'tangent', values, this._tangentDimension);
   }
 
   setTangents(data, dimension, interpolation) {
@@ -1817,7 +2082,7 @@ class HydraMesh {
       }
     } else if (interpolation === 'facevarying') {
       this._tangents = undefined;
-      this._geometry.setAttribute('tangent', new Float32BufferAttribute(data, this._tangentDimension));
+      setGeometryAttribute(this._geometry, 'tangent', data, this._tangentDimension);
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       this._tangents = Float32Array.from(data);
       this.updateOrder(this._tangents, 'tangent', this._tangentDimension);
@@ -1868,14 +2133,16 @@ class HydraMesh {
     this._mesh.material = this._materials;
     this._applyCullSideToMeshes();
     this._applyHydraReprMaterialState();
-    for (let i = 0; i < sections.length; i++) {
-      const hydraMaterial = this._interface.materials[sections[i].materialId];
-      if (hydraMaterial) {
-        hydraMaterial.assignToMesh(this._mesh, i + 1);
-      } else {
-        this._interface.rememberPendingMaterialAssignment(sections[i].materialId, this._mesh, i + 1);
+    this._interface.batchMaterialAssignments(this._mesh, () => {
+      for (let i = 0; i < sections.length; i++) {
+        const hydraMaterial = this._interface.materials[sections[i].materialId];
+        if (hydraMaterial) {
+          hydraMaterial.assignToMesh(this._mesh, i + 1);
+        } else {
+          this._interface.rememberPendingMaterialAssignment(sections[i].materialId, this._mesh, i + 1);
+        }
       }
-    }
+    });
     this._applyVisibilityState();
   }
 
@@ -1909,7 +2176,7 @@ class HydraMesh {
     } else if (interpolation === 'vertex' || interpolation === 'varying' || interpolation === 'facevarying') {
       if (interpolation === 'facevarying') {
         // Hydra already expanded face-varying and uniform colors to triangle order.
-        this._geometry.setAttribute('color', new Float32BufferAttribute(data, 3));
+        setGeometryAttribute(this._geometry, 'color', data, 3);
       } else {
         this._colors = Float32Array.from(data);
         this.updateOrder(this._colors, 'color');
@@ -1937,7 +2204,7 @@ class HydraMesh {
 
     if (interpolation === 'facevarying') {
       // The UV buffer has already been prepared on the C++ side, so we just set it
-      this._geometry.setAttribute('uv', new Float32BufferAttribute(data, dimension));
+      setGeometryAttribute(this._geometry, 'uv', data, dimension);
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       // Per-point data is sorted into the expanded triangle order.
       this._uvs = Float32Array.from(data);
@@ -1961,7 +2228,7 @@ class HydraMesh {
       this._mesh.userData.usdPrimvars[name] = Array.from(values);
       this._geometry.deleteAttribute(attributeName);
     } else if (interpolation === 'facevarying') {
-      this._geometry.setAttribute(attributeName, new BufferAttribute(values, itemSize));
+      setGeometryAttribute(this._geometry, attributeName, values, itemSize, false);
     } else if (interpolation === 'vertex' || interpolation === 'varying') {
       this.updateTypedOrder(values, attributeName, itemSize);
     }
@@ -1979,9 +2246,16 @@ class HydraMesh {
 
       // console.log('Setting PrimVar: ' + name + ", interpolation: " + interpolation);
 
-      // TODO: Support multiple UVs. For now, we simply set uv = uv2, which is required when a material has an aoMap.
-      if (name.startsWith('st')) {
-        name = 'uv';
+      // Texture coordinates: "st" (else the first set seen) becomes the mesh's uv attribute.
+      // Every other set is kept by name, so materials can read it by its primvar name.
+      if (name.startsWith('st') || HydraMesh.PRIMARY_UV_NAMES.has(name)) {
+        if (name !== 'st') this.setGenericPrimvar(name, data, dimension, interpolation);
+        const source = this._mesh.userData.usdUvSource;
+        if (name === 'st' || !source || source === name || (source !== 'st' && !source.startsWith('st') && HydraMesh.PRIMARY_UV_NAMES.has(name))) {
+          this._mesh.userData.usdUvSource = name;
+          this.setUV(data, dimension, interpolation);
+        }
+        return;
       }
 
       switch (name) {
@@ -2074,12 +2348,15 @@ class HydraMaterial {
     'roughness': 'roughnessMap',
     'metallic': 'metalnessMap',
     'normal': 'normalMap',
-    'opacity': 'alphaMap'
+    'opacity': 'alphaMap',
+    'specularColor': 'specularColorMap',
+    transmission:'transmissionMap',thickness:'thicknessMap',
   };
 
   static usdPreviewToColorSpaceMap = {
     'diffuseColor': SRGBColorSpace,
     'emissiveColor': SRGBColorSpace,
+    'specularColor': SRGBColorSpace,
     'opacity': LinearSRGBColorSpace,
   };
 
@@ -2094,9 +2371,10 @@ class HydraMaterial {
     'opacity': 'opacity',
     'roughness': 'roughness',
     'opacityThreshold': 'alphaTest',
+    transmission:'transmission',thickness:'thickness',attenuationColor:'attenuationColor',attenuationDistance:'attenuationDistance',emissiveIntensity:'emissiveIntensity',
   };
 
-  constructor(id, hydraInterface) {
+  constructor(id, hydraInterface, {counted = true} = {}) {
     this._id = id;
     this._syncRevision = 0;
     this._disposed = false;
@@ -2123,27 +2401,36 @@ class HydraMaterial {
     /** @type {MeshPhysicalMaterial} */
     this._material = defaultMaterial;
     this._assignments = [];
+    this._meshAssignments = new Map();
+    this._assignmentRevision = 0;
     this._ready = id === "";
     this._hasResolvedMaterial = id === "";
-    this._interface.diagnostics.materialSPrims++;
+    if (counted) this._interface.diagnostics.materialSPrims++;
 
     if (debugMaterials) console.log("Hydra Material", this)
   }
 
   assignToMesh(mesh, materialIndex = null) {
     this._interface.diagnostics.materialAssignments++;
-    const existing = this._assignments.find(assignment => assignment.mesh === mesh && assignment.materialIndex === materialIndex);
-    if (!existing) {
+    let indices = this._meshAssignments.get(mesh);
+    const newMesh = !indices;
+    if (!indices) this._meshAssignments.set(mesh, indices = new Set());
+    if (!indices.has(materialIndex)) {
+      indices.add(materialIndex);
       this._assignments.push({ mesh, materialIndex });
     }
     if (!this._ready && !this._hasResolvedMaterial) {
       this._setMeshMaterialPending(mesh, true);
       return;
     }
-    this._applyMaterialToAssignedMeshes();
+    // A new mesh can introduce a different culling side. Additional slots on
+    // the same mesh do not change any existing assignment's material.
+    if (newMesh) this._applyMaterialToAssignedMeshes();
+    else this._applyMaterialToMesh(mesh, materialIndex);
   }
 
   unassignMesh(mesh) {
+    this._meshAssignments.delete(mesh);
     const previousLength = this._assignments.length;
     this._assignments = this._assignments.filter(assignment => assignment.mesh !== mesh);
     if (this._assignments.length !== previousLength) {
@@ -2159,11 +2446,12 @@ class HydraMaterial {
     // USD variant resync can retire a material before its replacement is ready.
     // Detach its textures from live/retired meshes before freeing GPU resources.
     this._useMeshFallback = true;
+    this._applyMaterialToAssignedMeshes();
     for (const { mesh, materialIndex } of this._assignments) {
-      this._applyMaterialToMesh(mesh, materialIndex);
       this._interface.rememberPendingMaterialAssignment(this._id, mesh, materialIndex);
     }
     this._assignments = [];
+    this._meshAssignments.clear();
     disposeMaterialResources(previous);
     this._material = null;
   }
@@ -2178,49 +2466,51 @@ class HydraMaterial {
     // Reapplying its assignments must retain each mesh's displayColor material.
     const sourceMaterial = this._id === '' || this._useMeshFallback
       ? mesh.userData.usdHydraFallbackMaterial?.() || defaultMaterial : this._material;
-    const material = typeof applyMaterialSide === 'function'
-      ? applyMaterialSide(sourceMaterial, this)
-      : sourceMaterial;
+    const material = this._interface.materialAssignmentVariant(mesh, this, () =>
+      typeof applyMaterialSide === 'function' ? applyMaterialSide(sourceMaterial, this) : sourceMaterial);
 
     if (materialIndex === null || materialIndex === undefined) {
       mesh.material = material;
       this._setMeshMaterialPending(mesh, false);
-      this._interface.prepareMeshMaterialGeometry(mesh);
+      this._interface.refreshMaterialGeometry(mesh);
       return;
     }
 
     if (Array.isArray(mesh.material)) {
       mesh.material[materialIndex] = material;
       this._setMeshMaterialPending(mesh, false);
-      this._interface.prepareMeshMaterialGeometry(mesh);
+      this._interface.refreshMaterialGeometry(mesh);
       return;
     }
 
     mesh.material = material;
     this._setMeshMaterialPending(mesh, false);
-    this._interface.prepareMeshMaterialGeometry(mesh);
+    this._interface.refreshMaterialGeometry(mesh);
   }
 
   _applyMaterialToAssignedMeshes() {
+    this._assignmentRevision++;
     if (!this._ready && !this._hasResolvedMaterial) {
-      for (const assignment of this._assignments) {
-        this._setMeshMaterialPending(assignment.mesh, true);
+      for (const mesh of this._meshAssignments.keys()) {
+        this._setMeshMaterialPending(mesh, true);
       }
       return;
     }
-    for (const assignment of this._assignments) {
-      this._applyMaterialToMesh(assignment.mesh, assignment.materialIndex);
+    for (const [mesh, indices] of this._meshAssignments) {
+      this._interface.batchMaterialAssignments(mesh, () => {
+        for (const index of indices) this._applyMaterialToMesh(mesh, index);
+      });
     }
   }
 
   hasMeshAssignment(mesh) {
-    return this._assignments.some(assignment => assignment.mesh === mesh);
+    return this._meshAssignments.has(mesh);
   }
 
   requiresMaterialSideVariants() {
     const sides = new Set();
-    for (const assignment of this._assignments) {
-      const side = assignment.mesh?.userData?.usdHydraMaterialSide;
+    for (const mesh of this._meshAssignments.keys()) {
+      const side = mesh?.userData?.usdHydraMaterialSide;
       if (typeof side === 'number') {
         sides.add(side);
       }
@@ -2384,7 +2674,41 @@ class HydraMaterial {
     }
   }
 
-  convertWrap(usdWrapMode) {
+  /**
+   * The color space of a UsdUVTexture's file: an authored sourceColorSpace of sRGB or raw,
+   * else the asset's colorSpace metadata, else the "auto" rule: the image's own gamma or
+   * color space metadata, else sRGB for 8-bit images with three or four channels, raw for
+   * other 8-bit and float images. 16-bit images and images
+   * without a readable header keep the input's default (readers disagree on 16-bit).
+   * @returns {string | null} A color space name, or null for the input's default.
+   */
+  static textureColorSpace(node, texture) {
+    const source = String(node.sourceColorSpace || '').split('::').pop().toLowerCase();
+    if (source === 'srgb') return 'srgb_texture';
+    if (source === 'raw') return 'raw';
+    // OpenUSD's "unknown" (and its legacy alias "identity") states that the color space
+    // is not known, so the image's own metadata and the auto rule decide.
+    const authored = node['colorSpace:file'];
+    if (authored && !['unknown', 'identity'].includes(String(authored).split('::').pop().toLowerCase())) return String(authored);
+    if (texture.userData?.usdKtx2) return null;
+    const encoding = texture.userData?.usdImageEncoding;
+    if (!encoding) return null;
+    if (encoding.srgb !== undefined) return encoding.srgb ? 'srgb_texture' : 'raw';
+    if (encoding.float) return 'raw';
+    if (encoding.bitDepth === 8) return encoding.channels >= 3 ? 'srgb_texture' : 'raw';
+    return null;
+  }
+
+  // UsdUVTexture "black": transparent black outside 0-1. Returned by convertWrap.
+  static BLACK_WRAP = 'black';
+
+  convertWrap(usdWrapMode, node = null) {
+    // UsdUVTexture's default "useMetadata" uses the file's own wrap opinion, and black
+    // without one (Storm reads none from PNG or JPEG either).
+    const usdUVTexture = node?.identifier === 'UsdUVTexture';
+    const mode = String(usdWrapMode ?? '').split('::').pop();
+    if (usdUVTexture && (usdWrapMode === undefined || mode === 'useMetadata' || mode === 'black'))
+      return HydraMaterial.BLACK_WRAP;
     if (usdWrapMode === undefined)
       return RepeatWrapping;
 
@@ -2417,11 +2741,15 @@ class HydraMaterial {
     const connection = mainMaterial[parameterName];
     const node = connection?.nodeIn;
     if (!slot || !node) return;
+    // specularColor only applies in the specular workflow; metallic is ignored there.
+    const specularWorkflow = !!HydraMaterial.parameterValue(mainMaterial.useSpecularWorkflow);
+    if (slot === 'specularColorMap' && !specularWorkflow) return;
+    if (slot === 'metalnessMap' && specularWorkflow) return;
     const file = this._resolveMaterialTexturePath(node.resolvedPath || node.resolvedUrl || node.file);
     if (!file) return;
     try {
       const channel = node.ignoreAlpha ? 'one' : connection.inputName;
-      const targetChannel = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
+      const targetChannel = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1, transmissionMap:0, thicknessMap:1 }[slot];
       const remapScalar = targetChannel !== undefined && (channel !== ['r', 'g', 'b', 'a'][targetChannel] || node.sampleTransform);
       const normalScale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
       const normalBias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
@@ -2429,6 +2757,13 @@ class HydraMaterial {
         && (normalScale.some(value => value !== 2) || normalBias.some(value => value !== -1));
       const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal));
       if (!texture || this._disposed || revision !== this._syncRevision || !this._material) return;
+      // UsdUVTexture applies scale after decoding its color space. With no
+      // bias, material factors preserve it exactly without baking the image.
+      if(node.identifier==='UsdUVTexture'&&!node.sampleTransform){
+        const scale=Array.isArray(node.scale)?node.scale:[1,1,1,1],bias=Array.isArray(node.bias)?node.bias:[0,0,0,0],index={r:0,g:1,b:2,a:3}[channel];
+        if(['map','emissiveMap','specularColorMap'].includes(slot)&&channel==='rgb'&&bias.slice(0,3).every(v=>v===0))connection.factor=scale.slice(0,3);
+        else if(index!==undefined&&bias[index]===0)connection.factor=scale[index];
+      }
       // The base-color map already contributes its alpha; adding an alphaMap
       // here would square it. Resolve by authored source, independent of load order.
       if (slot === 'alphaMap' && channel === 'a' && !mainMaterial.diffuseColor?.nodeIn?.ignoreAlpha && node.file === mainMaterial.diffuseColor?.nodeIn?.file) {
@@ -2436,66 +2771,122 @@ class HydraMaterial {
         connection.loaded = true;
         return;
       }
-      const convert = texture => {
+      const convert = (texture, forExport = false) => {
         let cloned = texture.clone();
-        const target = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1 }[slot];
-        if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || (!texture.isCompressedTexture && texture.format !== RGBAFormat))) {
-          // A clone initially shares its Source with the cached texture. Replacing
-          // source avoids corrupting other maps that use a different channel.
-          cloned.source = new THREE.Source(remapTextureSamples(texture.image, channel, target, node.sampleTransform,
-            { type: texture.type, format: texture.format }));
-        }
-        if (slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)) {
-          // UsdUVTexture defaults to identity, while common normal maps explicitly
-          // author scale=2 and bias=-1. MDL lookup nodes use their own normal contract.
-          const scale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
-          const bias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
-          if (scale.some(value => value !== 2) || bias.some(value => value !== -1)) {
-            const converted = remapNormalTextureSamples(texture.image, scale, bias, { type: texture.type, format: texture.format });
-            if (converted.image.data && !texture.isDataTexture) cloned = new THREE.DataTexture().copy(texture);
-            cloned.source = new THREE.Source(converted.image);
-            cloned.type = converted.type;
-            cloned.format = RGBAFormat;
+        const colorSpaceName = HydraMaterial.textureColorSpace(node, texture);
+        let variants=this._interface.registry.derivedTextureImages.get(texture.source);
+        if(!variants)this._interface.registry.derivedTextureImages.set(texture.source,variants=new Map());
+        let imageKey;
+        try{imageKey=JSON.stringify([parameterName,channel,node.identifier,node.scale,node.bias,node.sampleTransform,node.ignoreAlpha,colorSpaceName,texture.type,texture.format,texture.isDataTexture]);}catch{}
+        const cached=imageKey&&variants.get(imageKey);
+        if(cached){
+          if(cached.data&&!cloned.isDataTexture)cloned=new THREE.DataTexture().copy(cloned);
+          cloned.source=cached.source;cloned.type=cached.type;cloned.format=cached.format;cloned.colorSpace=cached.colorSpace;
+        }else{
+          const target = node.ignoreAlpha ? 3 : { roughnessMap: 1, metalnessMap: 2, aoMap: 0, alphaMap: 1, clearcoatMap: 0, clearcoatRoughnessMap: 1, transmissionMap:0, thicknessMap:1 }[slot];
+          if (target !== undefined && (channel !== ['r', 'g', 'b', 'a'][target] || node.sampleTransform || (!texture.isCompressedTexture && texture.format !== RGBAFormat))) {
+            // A clone initially shares its Source with the cached texture. Replacing
+            // source avoids corrupting other maps that use a different channel.
+            cloned.source = new THREE.Source(remapTextureSamples(texture.image, channel, target, node.sampleTransform,
+              { type: texture.type, format: texture.format }));
           }
+          if (slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)) {
+            // UsdUVTexture defaults to identity, while common normal maps explicitly
+            // author scale=2 and bias=-1. MDL lookup nodes use their own normal contract.
+            const scale = [0, 1, 2].map(i => Number.isFinite(node.scale?.[i]) ? node.scale[i] : 1);
+            const bias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
+            if (scale.some(value => value !== 2) || bias.some(value => value !== -1)) {
+              const converted = remapNormalTextureSamples(texture.image, scale, bias, { type: texture.type, format: texture.format });
+              if (converted.image.data && !texture.isDataTexture) cloned = new THREE.DataTexture().copy(texture);
+              cloned.source = new THREE.Source(converted.image);
+              cloned.type = converted.type;
+              cloned.format = RGBAFormat;
+            }
+          }
+          const space = resolveColorSpace(colorSpaceName);
+          if (colorSpaceName && !space) warnOnce(`Unknown texture color space "${colorSpaceName}"; using it without conversion.`);
+          if (!colorSpaceName || (!space && texture.userData?.usdKtx2)) {
+            cloned.colorSpace = texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
+              : HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
+          } else if (!space || (space.transfer === 'linear' && !space.matrix)) {
+            cloned.colorSpace = LinearSRGBColorSpace;
+          } else if (space.transfer === 'srgb' && !space.matrix) {
+            cloned.colorSpace = SRGBColorSpace;
+          } else {
+            // Other transfer functions and gamuts are converted on the CPU. A gamut only
+            // applies to color inputs; scalar and normal inputs take the transfer function.
+            const colorInput = ['map', 'emissiveMap', 'specularColorMap'].includes(slot);
+            const converted = cloned.isCompressedTexture ? null
+              : convertTextureColorSpace(cloned.image, colorInput ? space : { ...space, matrix: null }, { type: cloned.type, format: cloned.format });
+            if (converted) {
+              if (converted.image.data && !cloned.isDataTexture) cloned = new THREE.DataTexture().copy(cloned);
+              cloned.source = new THREE.Source(converted.image);
+              cloned.colorSpace = converted.encoding === 'srgb' ? SRGBColorSpace : LinearSRGBColorSpace;
+            } else {
+              warnOnce(`Cannot convert texture color space "${colorSpaceName}" for this image; using the closest transfer function.`);
+              cloned.colorSpace = space.transfer === 'linear' ? LinearSRGBColorSpace : SRGBColorSpace;
+            }
+          }
+          if (target !== undefined && !cloned.isCompressedTexture) cloned.format = RGBAFormat;
+          if(imageKey)variants.set(imageKey,{source:cloned.source,type:cloned.type,format:cloned.format,colorSpace:cloned.colorSpace,data:cloned.isDataTexture});
         }
-        const authoredColorSpace = String(node.sourceColorSpace || '').toLowerCase();
-        cloned.colorSpace = authoredColorSpace === 'srgb' ? SRGBColorSpace
-          : ['raw', 'linear', 'lin_rec709'].includes(authoredColorSpace) ? LinearSRGBColorSpace
-          : texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
-          : HydraMaterial.usdPreviewToColorSpaceMap[parameterName] || LinearSRGBColorSpace;
-        if (target !== undefined && !cloned.isCompressedTexture) cloned.format = RGBAFormat;
         const uv = node.mdlUV || node.st?.nodeIn;
+        // A texture that reads a UV set other than "st" samples its own UV channel;
+        // prepareMeshMaterialGeometry points that channel at the set on each mesh.
+        const reader = uv?.identifier === 'UsdTransform2d' ? uv.in?.nodeIn : uv;
+        const varname = !node.mdlUV && typeof reader?.varname === 'string' ? reader.varname : null;
+        if (varname && varname !== 'st' && !forExport) {
+          const sets = this._material.userData.usdUvSets ??= {};
+          sets[varname] ??= Math.min(3, Object.keys(sets).length + 1);
+          cloned.channel = sets[varname];
+        }
+        const uvMatrix = new THREE.Matrix3();
+        // Compressed KTX2 rows keep the file's order; flip lookups for top-first files.
+        const flipV = cloned.isCompressedTexture && texture.userData?.usdTopFirst === true;
         if (uv) {
           const rotation = node.mdlUV ? uv.rotation : (uv.rotation || 0) / 180 * Math.PI;
-          cloned.repeat.fromArray(uv.scale || [1, 1]);
-          cloned.offset.fromArray(uv.translation || [0, 0]);
-          cloned.rotation = rotation || 0;
-          if (!node.mdlUV) {
-            cloned.offset.y -= (1 - Math.cos(rotation)) * cloned.repeat.y;
-            cloned.offset.x -= Math.sin(rotation) * cloned.repeat.x;
-          }
-          if (node.mdlUV) {
-            const [sx, sy] = uv.scale;
-            const [tx, ty] = uv.translation;
-            const c = Math.cos(rotation), s = Math.sin(rotation);
-            cloned.matrixAutoUpdate = false;
-            // Conjugate glTF transforms with the MDL bottom-left UV origin.
-            cloned.matrix.set(c * sx, -s * sy, uv.gltf ? tx + s * sy : tx,
-              s * sx, c * sy, uv.gltf ? 1 - ty - c * sy : ty, 0, 0, 1);
-          }
+          const [sx, sy] = uv.scale || [1, 1];
+          const [tx, ty] = uv.translation || [0, 0];
+          const c = Math.cos(rotation || 0), s = Math.sin(rotation || 0);
+          // UsdTransform2d: R(rotation, counter-clockwise) * (scale * st) + translation, no pivot.
+          // MDL lookups share it; glTF transforms are conjugated with the bottom-left UV origin.
+          uvMatrix.set(c * sx, -s * sy, uv.gltf ? tx + s * sy : tx,
+            s * sx, c * sy, uv.gltf ? 1 - ty - c * sy : ty, 0, 0, 1);
         }
-        cloned.wrapS = this.convertWrap(node.wrapS);
-        cloned.wrapT = this.convertWrap(node.wrapT);
+        const udim=cloned.userData.usdUdim;
+        if(udim){
+          // Preview-only black borders can later change the sampling matrix.
+          // Tile export needs the authored transform before atlas packing.
+          cloned.userData={...cloned.userData,usdUdimTransform:uvMatrix.toArray()};
+          uvMatrix.premultiply(udimLayout(udim.tiles.map(tile=>({tile}))).matrix);
+        }
+        const wrapS = this.convertWrap(node.wrapS, node), wrapT = this.convertWrap(node.wrapT, node);
+        const blackS = !!udim || !!cloned.userData.usdUdimTile || wrapS === HydraMaterial.BLACK_WRAP, blackT = !!udim || !!cloned.userData.usdUdimTile || wrapT === HydraMaterial.BLACK_WRAP;
+        // three.js has no clamp-to-border. Black wrapping clamps to the edge, and
+        // prepareBlackWrap() adds a black border once a mesh samples outside 0-1.
+        if ((blackS || blackT) && !forExport && !cloned.isCompressedTexture) {
+          cloned.userData = { ...cloned.userData, usdBlackWrap: { s: blackS, t: blackT } };
+        }
+        if (flipV) uvMatrix.premultiply(new THREE.Matrix3().set(1, 0, 0, 0, -1, 1, 0, 0, 1));
+        if (uv || blackS || blackT || flipV) {
+          cloned.matrixAutoUpdate = false;
+          cloned.matrix.copy(uvMatrix);
+        }
+        if (uv || udim) setGltfTextureTransform(cloned, uvMatrix);
+        cloned.wrapS = blackS ? ClampToEdgeWrapping : wrapS;
+        cloned.wrapT = blackT ? ClampToEdgeWrapping : wrapT;
         cloned.needsUpdate = true;
         return cloned;
       };
       const cloned = convert(texture);
       this._interface.registry.exportRecipes.set(cloned, async registry =>
-        convert(await registry.getTexture(file, !!(remapScalar || remapNormal))));
+        convert(await registry.getTexture(file, !!(remapScalar || remapNormal)), true));
       this._material[slot] = cloned;
       if (slot === 'metalnessMap') this._material.metalness = 1;
       if (slot === 'roughnessMap') this._material.roughness = 1;
       if (slot === 'emissiveMap') this._material.emissive.setRGB(1, 1, 1);
+      if (slot === 'transmissionMap') this._material.transmission = 1;
+      if (slot === 'thicknessMap') this._material.thickness = 1;
       if (slot === 'alphaMap' && !this._material.alphaClip) this._material.transparent = true;
       connection.loaded = true;
       this._material.needsUpdate = true;
@@ -2504,12 +2895,47 @@ class HydraMaterial {
     }
   }
 
+  static parameterValue(parameter) {
+    return parameter?.nodeIn ? (parameter.loaded ? parameter.factor : parameter.fallback) : parameter;
+  }
+
+  /**
+   * UsdPreviewSurface specular workflow: specularColor is the reflectance at normal
+   * incidence (F0), the reflectance at grazing angles is 1, and metallic is ignored.
+   * three.js computes F0 = ((ior - 1) / (ior + 1))^2 * specularColor * specularIntensity.
+   */
+  applySpecularWorkflow(mainMaterial) {
+    if (!HydraMaterial.parameterValue(mainMaterial.useSpecularWorkflow)) return;
+    const material = this._material;
+    if (!material?.isMeshPhysicalMaterial && !material?.specularColor) return;
+    let ior = Number(HydraMaterial.parameterValue(mainMaterial.ior) ?? 1.5);
+    if (!(Math.abs(ior - 1) > 1e-3)) {
+      // The IOR then only sets F0 in three.js, which specularColor replaces.
+      ior = 1.5;
+      material.ior = ior;
+    }
+    const f0 = ((ior - 1) / (ior + 1)) ** 2;
+    const connected = !!mainMaterial.specularColor?.nodeIn && !!material.specularColorMap;
+    let authored = connected ? [1, 1, 1] : (HydraMaterial.parameterValue(mainMaterial.specularColor) ?? [0, 0, 0]);
+    if (!connected && mainMaterial['colorSpace:specularColor']) authored = colorToLinearRec709(authored, mainMaterial['colorSpace:specularColor']);
+    material.metalness = 0;
+    material.metalnessMap = null;
+    material.specularIntensity = 1;
+    material.specularColor.setRGB(authored[0] / f0, authored[1] / f0, authored[2] / f0, LinearSRGBColorSpace);
+  }
+
   assignProperty(mainMaterial, parameterName) {
     const name = HydraMaterial.usdPreviewToMeshPhysicalMap[parameterName];
     const parameter = mainMaterial[parameterName];
-    const value = parameter?.nodeIn ? (parameter.loaded ? parameter.factor : parameter.fallback) : parameter;
+    const value = HydraMaterial.parameterValue(parameter);
     if (!name || value === undefined) return;
-    if (Array.isArray(value)) this._material[name] = new Color().fromArray(value);
+    // Color values may carry their own color space (colorSpace metadata on the input).
+    const colorSpace = !parameter?.nodeIn && mainMaterial[`colorSpace:${parameterName}`];
+    if (Array.isArray(value) && colorSpace) {
+      if (!resolveColorSpace(colorSpace)) warnOnce(`Unknown color space "${colorSpace}" on ${parameterName}; using the value without conversion.`);
+      this._material[name] = new Color().fromArray(colorToLinearRec709(value, colorSpace));
+    }
+    else if (Array.isArray(value)) this._material[name] = new Color().fromArray(value);
     else {
       this._material[name] = value;
       if (name === 'opacity' && value < 1) this._material.transparent = true;
@@ -2562,6 +2988,7 @@ class HydraMaterial {
     }
 
     const previewSurfaceNode = Object.values(this._nodes).find(node => node.identifier === 'UsdPreviewSurface');
+    const adobeNode = Object.values(this._nodes).find(node => node.identifier === 'AdobeStandardMaterial_4_0');
     const mdlPreview = this._mdlDocument ? mdlToPreview(this._mdlDocument) : null;
     if (this._mdlDocument && !mdlPreview && !previewSurfaceNode) {
       this._useMeshFallback = true;
@@ -2580,7 +3007,7 @@ class HydraMaterial {
 
     // A universal PreviewSurface cannot encode OmniGlass transmission. Other
     // supported authored surfaces retain priority over MDL approximations.
-    const mainMaterialNode = previewSurfaceNode && mdlPreview?.family !== 'OmniGlass'
+    const mainMaterialNode = adobeNode ? adobeSurface(adobeNode,HydraMaterial.usdPreviewDefaults) : previewSurfaceNode && mdlPreview?.family !== 'OmniGlass'
       ? { ...HydraMaterial.usdPreviewDefaults, ...previewSurfaceNode }
       : mdlPreview?.main;
     const usingMdl = mainMaterialNode === mdlPreview?.main;
@@ -2623,6 +3050,7 @@ class HydraMaterial {
     for (let key in HydraMaterial.usdPreviewToMeshPhysicalMap) {
       this.assignProperty(mainMaterialNode, key);
     }
+    if (!usingMdl) this.applySpecularWorkflow(mainMaterialNode);
 
     if (!usingMdl) {
       configurePreviewPrimvars(this._material, mainMaterialNode);
@@ -2660,6 +3088,7 @@ class HydraMaterial {
     for (const key in HydraMaterial.usdPreviewToMeshPhysicalMap) {
       this.assignProperty(mainMaterialNode, key);
     }
+    if (!usingMdl) this.applySpecularWorkflow(mainMaterialNode);
     if (!usingMdl) {
       configurePreviewPrimvars(this._material, mainMaterialNode);
       this._interface.config.webGpuSupport?.configurePreviewPrimvars?.(this._material);
@@ -2685,8 +3114,28 @@ class HydraMaterial {
 
     try {
       const materialName = this._id.split('/').pop() || this._id;
-      const materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
+      const portable = material => {
+        material.userData.usdGltfMaterial = async ({stage, time}) => {
+          const network = await readPreviewNetwork(stage, this._id, time);
+          if (!network) return null;
+          const projection = new HydraMaterial(this._id, {
+            ...this._interface, config: {...this._interface.config, webGpuSupport: undefined},
+          }, {counted: false});
+          projection._nodes = network.nodes;
+          for (const parameters of Object.values(network.nodes)) for (const key of Object.keys(parameters)) {
+            if (key.endsWith(':resolvedPath')) projection._rememberResolvedAssetPath(parameters[key.slice(0, -13)], parameters[key]);
+          }
+          await projection._updateFinished('surface', network.relationships);
+          const target = projection._material;
+          target.side = material.side;
+          target.userData.usdGltfProjection = 'Authored USD Preview Surface selected for MaterialX interchange.';
+          return target;
+        };
+        return material;
+      };
+      let materialNodeNameOrIndex = materialXDocument.materialName || materialName || 0;
       xml = await this._withAuthoredMaterialXDefinitions(xml);
+      ({xml, target: materialNodeNameOrIndex} = portableMaterialXNames(xml, materialNodeNameOrIndex));
       if (hasMaterialXVolume(xml)) {
         const volumeFactory = this._interface.config.materialXVolumeFactory;
         if (typeof volumeFactory !== 'function') {
@@ -2708,19 +3157,34 @@ class HydraMaterial {
           renderer: this._interface.config.renderer,
           getTexture: async url => {
             const path = this._resolveMaterialTexturePath(url);
-            return path ? this._interface.registry.getTexture(path) : null;
+            const texture = path ? await this._interface.registry.getTexture(path) : null;
+            if (!texture?.isCompressedTexture) return texture;
+            // MaterialXLoader reads flipY on a compressed texture as "stored bottom-first".
+            const clone = texture.clone();
+            clone.flipY = texture.userData?.usdTopFirst === false;
+            return clone;
           },
         });
         material.name = materialName;
         this._interface.diagnostics.materialXCreateSuccess++;
-        return material;
+        return portable(material);
       }
       const { MaterialX, MaterialXMaterial, MaterialXEnvironment } = await getMaterialXModule();
       const material = await MaterialX.createMaterialXMaterial(xml, materialNodeNameOrIndex, {
-        cacheKey: `${this._id}:${materialXDocument.terminal}`,
+        // The MaterialX module caches textures by this key and the document-relative path.
+        // Prim paths repeat across stages, so the key also names this render delegate.
+        cacheKey: `${materialXCacheScope(this._interface)}:${this._id}:${materialXDocument.terminal}`,
         getTexture: async (url) => {
           const texturePath = this._resolveMaterialTexturePath(url);
-          return texturePath ? this._interface.registry.getTexture(texturePath) : null;
+          const texture = texturePath ? await this._interface.registry.getTexture(texturePath) : null;
+          // The MaterialX module sets each image's address modes on the texture it receives.
+          // A clone shares the image but keeps this material's sampling out of the cache.
+          if (!texture) return null;
+          const clone = texture.clone();
+          // Compressed KTX2 keeps the file's row order. flipY = true marks a compressed texture
+          // as stored bottom-first, which MaterialX lookups expect; top-first ones get flipped.
+          if (clone.isCompressedTexture) clone.flipY = texture.userData?.usdTopFirst === false;
+          return clone;
         },
       }, {
         parameters: {
@@ -2746,7 +3210,7 @@ class HydraMaterial {
       material.side = DoubleSide;
       material.needsUpdate = true;
       this._interface.diagnostics.materialXCreateSuccess++;
-      return material;
+      return portable(material);
     }
     catch (error) {
       this._interface.diagnostics.materialXCreateFailures++;
@@ -2785,6 +3249,7 @@ export class ThreeRenderDelegateInterface {
     this.pendingMaterialUpdates = new Set();
     this.pendingRprimUpdates = new Set();
     this.pendingMaterialAssignments = new Map();
+    this.materialAssignmentBatches = new WeakMap();
     this.missingMaterialWarnings = new Set();
     this.sparkRenderer = null;
     this.sparkRendererRecord = null;
@@ -2869,7 +3334,9 @@ export class ThreeRenderDelegateInterface {
   prepareMeshMaterialGeometry(mesh) {
     if (!mesh?.geometry) return;
     prepareVolumeProxyShadows(mesh);
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    // Keep the last-occurrence order of shared materials, without repeating
+    // UV and primvar preparation for every fragmented draw section.
+    const materials = [...new Set((Array.isArray(mesh.material) ? [...mesh.material] : [mesh.material]).reverse())].reverse();
     const primvarAttributes = new Set(materials.flatMap(material =>
       material?.userData?.usdPreviewPrimvars?.map(binding => binding.attribute) || []));
     for (const name of Object.keys(mesh.geometry.attributes)) {
@@ -2879,6 +3346,8 @@ export class ThreeRenderDelegateInterface {
     }
     for (const material of materials) {
       this.config.webGpuSupport?.prepareMaterial?.(material);
+      prepareUvSets(material, mesh);
+      prepareBlackWrap(material, mesh);
       preparePreviewPrimvars(material, mesh);
       prepareMaterialXPrimvars(material, mesh);
       const promise = prepareMaterialXMaterialForGeometry(material, mesh.geometry);
@@ -3209,12 +3678,47 @@ export class ThreeRenderDelegateInterface {
     indices.add(materialIndex);
   }
 
+  refreshMaterialGeometry(mesh) {
+    const batch = this.materialAssignmentBatches.get(mesh);
+    if (batch?.depth) { batch.dirty = true; return; }
+    this.prepareMeshMaterialGeometry(mesh);
+    mesh.userData.usdHydraMaterialChanged?.();
+  }
+
+  batchMaterialAssignments(mesh, callback) {
+    let batch = this.materialAssignmentBatches.get(mesh);
+    if (!batch) this.materialAssignmentBatches.set(mesh, batch = {depth: 0, dirty: false, materials: new Map()});
+    batch.depth++;
+    try { return callback(); }
+    finally {
+      if (--batch.depth === 0) {
+        batch.materials.clear();
+        if (batch.dirty) {
+          batch.dirty = false;
+          this.refreshMaterialGeometry(mesh);
+        }
+      }
+    }
+  }
+
+  materialAssignmentVariant(mesh, material, create) {
+    const batch = this.materialAssignmentBatches.get(mesh);
+    if (!batch?.depth) return create();
+    const cached = batch.materials.get(material);
+    if (cached?.revision === material._assignmentRevision) return cached.value;
+    const value = create();
+    batch.materials.set(material, {revision: material._assignmentRevision, value});
+    return value;
+  }
+
   applyPendingMaterialAssignments(materialId) {
     const material = this.materials[materialId];
     const assignments = this.pendingMaterialAssignments.get(materialId);
     if (!material || !assignments) return;
     for (const [mesh, indices] of assignments) {
-      for (const index of indices) material.assignToMesh(mesh, index);
+      this.batchMaterialAssignments(mesh, () => {
+        for (const index of indices) material.assignToMesh(mesh, index);
+      });
     }
     this.pendingMaterialAssignments.delete(materialId);
   }

@@ -13,6 +13,7 @@ Each suite manifest lists root layers, dependencies and authored assertions.
 | [Curved surfaces](curved-surfaces/README.md) | Subdivision, animated creases and holes, splines and rational NURBS |
 | [Production](production/README.md) | Separate geometry, material, layout and lighting layers |
 | [Textures](textures/README.md) | KTX2, EXR, PNG, JPEG and TGA |
+| [Texture conventions](texture-conventions/README.md) | Orientation, UV transforms, image formats, packaging and color spaces, with specification-derived expected values |
 
 The remote comparison assets are separate under **Examples → Hugging
 Face test set**. Executable JavaScript lessons have their own category.
@@ -29,6 +30,7 @@ python3 scripts/generate-lighting-mdl-fixtures.py
 python3 scripts/generate-materialx-gallery-fixtures.py
 python3 scripts/generate-curved-surfaces-fixtures.py
 python3 scripts/generate-production-texture-fixtures.py
+python3 scripts/generate-texture-convention-fixtures.py
 npm run fixtures:catalog
 ```
 

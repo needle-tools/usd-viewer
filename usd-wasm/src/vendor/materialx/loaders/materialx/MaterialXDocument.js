@@ -1,6 +1,7 @@
-import { mx_transform_uv } from '../../nodes/MaterialXNodes.js';
 import {
 	Color,
+	NoColorSpace,
+	SRGBColorSpace,
 	Texture,
 	ImageLoader,
 	ImageBitmapLoader,
@@ -14,11 +15,12 @@ import {
 	MeshPhysicalNodeMaterial,
 } from 'three/webgpu';
 
-import { float, texture, int, bool, sub, vec2, vec3, vec4, color, uv, mat3, mat4, element, uniform, mx_srgb_texture_to_lin_rec709, normalLocal, normalWorld, tangentLocal, tangentWorld, bitangentLocal, bitangentWorld } from 'three/tsl';
+import { float, texture, int, bool, sub, vec2, vec3, vec4, color, uv, mat3, mat4, element, uniform, normalLocal, normalWorld, tangentLocal, tangentWorld, bitangentLocal, bitangentWorld } from 'three/tsl';
 
 import BoundedVolumeNodeMaterial from '../../materials/BoundedVolumeNodeMaterial.js';
 import { configureVolumeMaterial } from './MaterialXVolume.js';
 import { MaterialXLogCodes } from './MaterialXLog.js';
+import { getColorSpaceTransform, isKnownColorSpace } from './MaterialXColorManagement.js';
 import { createMaterialXCompileRegistry, compileNodeFromRegistry } from './compile/MaterialXCompileRegistry.js';
 import { parseMaterialXNodeTree, parseMaterialXText } from './parse/MaterialXParser.js';
 import { getSurfaceMapper } from './MaterialXSurfaceMappings.js';
@@ -26,10 +28,6 @@ import { MtlXLibrary } from './MaterialXNodeLibrary.js';
 import { resolveNodeDef } from './MaterialXNodeDefs.js';
 import { mxHextileCoord, mxHextileComputeBlendWeights } from './MaterialXHextile.js';
 import { materialXPositionLocal as positionLocal, materialXPositionWorld as positionWorld, resolveTextureAddressMode, TEXTURE_ADDRESS_MODE_WRAPPING, toBooleanNode } from './MaterialXUtils.js';
-
-const colorSpaceLib = {
-	mx_srgb_texture_to_lin_rec709,
-};
 
 const DEFAULT_DOCUMENT_COLOR_SPACE = 'lin_rec709';
 const IDENTITY_MAT3_VALUES = [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ];
@@ -156,7 +154,6 @@ function getBottomLeftUvSpaceHelpers( uvSpace ) {
 	const helper = uvSpace === 'top-left' ? mxFlipUvY : mxIdentityUv;
 	return {
 		mxToBottomLeftUvSpace: helper,
-		mxFromBottomLeftUvSpace: helper,
 	};
 
 }
@@ -406,13 +403,29 @@ class MaterialXNode {
 
 	}
 
+	// A file's color space: its own colorspace attribute, else that of the nearest enclosing
+	// element (node, nodegraph or document) that declares one.
 	getColorSpaceNode() {
 
-		const csSource = this.getValueInput().getAttribute( 'colorspace' ) || this.getAttribute( 'colorspace' );
-		const csTarget = this.getRoot().getAttribute( 'colorspace' );
-		if ( ! csSource || ! csTarget ) return null;
-		const nodeName = `mx_${csSource}_to_${csTarget}`;
-		return colorSpaceLib[ nodeName ] || null;
+		return this.getColorSpaceTransform( this.getValueInput().getRecursiveAttribute( 'colorspace' ) );
+
+	}
+
+	// Converts from the named color space to lin_rec709, the working color space of three.js.
+	getColorSpaceTransform( name ) {
+
+		if ( name && ! isKnownColorSpace( name ) ) {
+
+			this.materialX.log.add(
+				MaterialXLogCodes.INVALID_VALUE,
+				`Unsupported MaterialX color space "${ name }"; its values are used without conversion.`,
+				this.name,
+			);
+			return null;
+
+		}
+
+		return getColorSpaceTransform( name );
 
 	}
 
@@ -504,7 +517,12 @@ class MaterialXNode {
 		}
 
 		const textureNode = texture( new Texture() );
+		// False until the image has loaded, so image nodes return their default for a missing file.
 		textureNode.materialXLoadedNode = uniform( false );
+		// Image lookups assume rows stored top-first. A compressed texture cannot be flipped on
+		// upload, so a handler marks bottom-first compressed data (such as KTX2 with
+		// KTXorientation "ru") with flipY = true, and lookups then skip the flip.
+		textureNode.materialXBottomFirstNode = uniform( false );
 		textureNode.value.wrapS = TEXTURE_ADDRESS_MODE_WRAPPING[ addressModes.u ];
 		textureNode.value.wrapT = TEXTURE_ADDRESS_MODE_WRAPPING[ addressModes.v ];
 		textureNode.value.flipY = false;
@@ -529,6 +547,10 @@ class MaterialXNode {
 					// flipY has no meaning for compressed textures.
 					if ( imageData.isCompressedTexture !== true ) textureNode.value.flipY = ! imageData.flipY;
 
+					// The file's colorspace is applied in the shader. A texture the handler marked
+					// sRGB (such as one from KTX2Loader) must not also be decoded on the GPU.
+					if ( textureNode.value.colorSpace === SRGBColorSpace ) textureNode.value.colorSpace = NoColorSpace;
+
 				} else {
 
 					textureNode.value.image = imageData;
@@ -537,6 +559,7 @@ class MaterialXNode {
 
 				textureNode.value.needsUpdate = true;
 				textureNode.materialXLoadedNode.value = true;
+				textureNode.materialXBottomFirstNode.value = imageData.isCompressedTexture === true && imageData.flipY === true;
 				resolveLoad();
 
 			}, undefined, () => {
@@ -600,6 +623,14 @@ class MaterialXNode {
 			} else {
 
 				node = createValueNode( type, this.getValue() );
+
+			}
+
+			// Color values are in their own color space, else the nearest enclosing one.
+			if ( type === 'color3' || type === 'color4' ) {
+
+				const transform = this.getColorSpaceTransform( this.getRecursiveAttribute( 'colorspace' ) );
+				if ( transform ) node = transform( node );
 
 			}
 
@@ -1062,6 +1093,9 @@ class MaterialXDocument {
 			compileRegistry: COMPILE_REGISTRY,
 			nodeLibrary: MtlXLibrary,
 			...bottomLeftUvSpaceHelpers,
+			// Texture coordinates inside a graph start at the bottom-left, as in MaterialX.
+			// The loader stores images top-first, so image lookups always flip V.
+			mxToImageUv: ( uvNode ) => uvNode.flipY(),
 			getTexcoordNode: ( index = 0 ) => bottomLeftUvSpaceHelpers.mxToBottomLeftUvSpace( uv( index ) ),
 			getGeomPropNode: ( name ) => {
 
@@ -1070,7 +1104,6 @@ class MaterialXDocument {
 				return GEOMPROP_NODES[ name ];
 
 			},
-			mxTransformUv: mx_transform_uv,
 			mxHextileCoord,
 			mxHextileComputeBlendWeights,
 			invertConstantMatrixValues,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Group } from 'three';
+import { DataTexture, Group, Matrix4, MeshPhysicalMaterial } from 'three';
 import { ThreeRenderDelegateInterface } from '../../src/hydra/ThreeJsRenderDelegate.js';
 
 function setup() {
@@ -20,6 +20,84 @@ async function preview(delegate, id, color) {
     await delegate.waitForMaterialsReady();
     return material;
 }
+
+test('UsdUVTexture factors remain linear material multipliers for color and packed scalar maps',async()=>{
+ const delegate=new ThreeRenderDelegateInterface({usdRoot:new Group()});
+ const texture=new DataTexture(new Uint8Array([255,128,64,255]),1,1);
+ delegate.registry.getTexture=async()=>texture;
+ const material=delegate.createSPrim('material','/Scaled');material.beginMaterialSync();
+ material.updateNode('surface','/Scaled/PBR',{identifier:'UsdPreviewSurface'});
+ material.updateNode('surface','/Scaled/Texture',{identifier:'UsdUVTexture',file:'color.png',sourceColorSpace:'sRGB',scale:[.2,.3,.4,1],bias:[0,0,0,0]});
+ material.updateFinished('surface',[
+  {inputId:'/Scaled/Texture',inputName:'rgb',outputId:'/Scaled/PBR',outputName:'diffuseColor'},
+  {inputId:'/Scaled/Texture',inputName:'g',outputId:'/Scaled/PBR',outputName:'roughness'},
+  {inputId:'/Scaled/Texture',inputName:'b',outputId:'/Scaled/PBR',outputName:'metallic'},
+ ]);
+ await delegate.waitForMaterialsReady();
+ assert.deepEqual(material._material.color.toArray(),[.2,.3,.4]);assert.equal(material._material.roughness,.3);assert.equal(material._material.metalness,.4);
+ assert.deepEqual([...texture.image.data],[255,128,64,255]);delegate.dispose();
+});
+
+test('repeated image derivations share pixels while keeping their UV transforms and channel mappings separate',async()=>{
+ const delegate=new ThreeRenderDelegateInterface({usdRoot:new Group()});
+ const texture=new DataTexture(new Uint8Array([10,20,30,255]),1,1);delegate.registry.getTexture=async()=>texture;
+ const make=async(id,scale)=>{
+  const material=delegate.createSPrim('material',id);material.beginMaterialSync();
+  material.updateNode('surface',id+'/PBR',{identifier:'UsdPreviewSurface'});
+  material.updateNode('surface',id+'/Texture',{identifier:'UsdUVTexture',file:'channels.png',sourceColorSpace:'raw'});
+  material.updateNode('surface',id+'/UV',{identifier:'UsdTransform2d',scale:[scale,scale]});
+  material.updateFinished('surface',[
+   {inputId:id+'/Texture',inputName:'r',outputId:id+'/PBR',outputName:'roughness'},
+   {inputId:id+'/Texture',inputName:'r',outputId:id+'/PBR',outputName:'metallic'},
+   {inputId:id+'/UV',inputName:'result',outputId:id+'/Texture',outputName:'st'},
+  ]);await delegate.waitForMaterialsReady();return material._material;
+ };
+ const first=await make('/First',1),second=await make('/Second',3);
+ assert.notEqual(first.roughnessMap,second.roughnessMap);assert.equal(first.roughnessMap.source,second.roughnessMap.source);
+ assert.notEqual(first.roughnessMap.source,first.metalnessMap.source);
+ assert.deepEqual([...first.roughnessMap.image.data],[10,10,30,255]);assert.deepEqual([...first.metalnessMap.image.data],[10,20,10,255]);
+ assert.deepEqual(first.roughnessMap.repeat.toArray(),[1,1]);assert.deepEqual(second.roughnessMap.repeat.toArray(),[3,3]);
+ assert.deepEqual([...texture.image.data],[10,20,30,255]);delegate.dispose();
+});
+
+test('fragmented material sections bind and refresh without preparing every slot after every assignment',async()=>{
+ const delegate=new ThreeRenderDelegateInterface({usdRoot:new Group()}),mesh=delegate.createRPrim('mesh','/Fragmented');
+ const count=4000,positions=Float32Array.from({length:count*9},(_,i)=>i%3===0?Math.floor(i/9):i%3===1?(i%9===4?1:0):0);
+ mesh.updatePoints(positions);mesh.updateIndices(Uint32Array.from({length:count*3},(_,i)=>i));mesh.setVisibilityState(true);
+ const materials=await Promise.all([0,1,2,3].map(i=>preview(delegate,'/Material'+i,[i/4,.5,.2])));
+ const prepare=delegate.prepareMeshMaterialGeometry.bind(delegate);let preparations=0;
+ delegate.prepareMeshMaterialGeometry=(...args)=>{assert.ok(++preparations<=64,'preparation must scale with material changes, not pairs of face sections');return prepare(...args);};
+ mesh.setGeomSubsetMaterial(Array.from({length:count},(_,i)=>({start:i*3,length:3,materialId:'/Material'+i%4})));
+ assert.equal(mesh._geometry.groups.length,count);assert.equal(mesh._mesh.material.length,count+1);
+ for(let i=0;i<count;i++){assert.equal(mesh._geometry.groups[i].materialIndex,i+1);assert.equal(mesh._mesh.material[i+1],materials[i%4]._material);}
+ materials[0].clearMaterial();
+ for(let i=0;i<count;i+=4)assert.equal(mesh._mesh.material[i+1],mesh._ownedMaterial);
+ delegate.dispose();
+});
+
+test('asynchronously resolved surfaces replace the fallback on existing instance batches', async () => {
+	const {delegate, mesh} = setup();
+	const material = delegate.createSPrim('material', '/Authored');
+	let resolveMaterial;
+	material.createMaterialXMaterial = () => new Promise(resolve => {resolveMaterial = resolve;});
+	material.beginMaterialSync();
+	material.updateMaterialXDocument({terminal: 'surface', xml: '<materialx/>'});
+	mesh.setMaterial('/Authored');
+	material.updateFinished('surface', []);
+	mesh.setInstanceTransforms(new Matrix4().elements, 1, true);
+	mesh.commit();
+	const instance = mesh._instancedMesh, original = instance.material;
+	const resolved = new MeshPhysicalMaterial({color: 0xff7700});
+	resolveMaterial(resolved);
+	await delegate.waitForMaterialsReady();
+	assert.equal(mesh._instancedMesh, instance, 'material completion must retain the instance batch');
+	assert.equal(mesh._mesh.material, resolved);
+	assert.notEqual(resolved, original);
+	assert.equal(instance.material, resolved, 'visible instances must receive the completed surface');
+	material.clearMaterial();
+	assert.equal(instance.material, mesh._ownedMaterial, 'clearing a surface also reaches its instances');
+	delegate.dispose();
+});
 
 test('unsupported material bindings show geometry after draw and can resolve on a later draw', async () => {
     const { delegate, mesh } = setup();

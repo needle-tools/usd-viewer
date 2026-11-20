@@ -50,13 +50,28 @@ export async function createMaterialXNodeMaterial(xml, target, { renderer, getTe
       references.add(prefix + value);
     }
     for (const reference of references) {
-      const texture = await getTexture(reference);
-      if (!texture) continue;
+      // A file that cannot be read fails only its image node, which then returns its
+      // `default`; the rest of the material still renders.
+      let texture = null, failure = null;
+      try { texture = await getTexture(reference); } catch (error) { failure = error; }
+      if (!texture && !failure) continue;
       const pattern = new RegExp(`^${reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
-      manager.addHandler(pattern, { load(_url, onLoad) { onLoad(texture); return texture; } });
+      manager.addHandler(pattern, { load(_url, onLoad, _onProgress, onError) {
+        if (failure) { onError?.(failure); return null; }
+        onLoad(texture); return texture;
+      } });
     }
   }
-  const result = new MaterialXLoader(manager).parse(xml, { throwOnErrors: true });
+  // parse() returns before textures load; the parsed document reports their failures later.
+  const loader = new MaterialXLoader(manager);
+  const parsed = loader._parse(xml, { throwOnErrors: true });
+  loader._throwOnErrors(parsed.log, { throwOnErrors: true });
+  const result = parsed.result;
+  parsed.document.waitForResources().then(() => {
+    for (const entry of parsed.log.entries) {
+      if (entry.code === 'texture-load-failed') console.error(`[MaterialX] ${entry.message}`);
+    }
+  });
   const entries = Object.values(result.materials);
   const material = typeof target === 'number' ? entries[target] : result.materials[target] || entries[0];
   for (const other of entries) if (other !== material) other.dispose();

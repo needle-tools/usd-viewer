@@ -1,6 +1,6 @@
 {
   "sourceRepository": "https://github.com/needle-tools/three.js",
-  "sourceRevision": "6c236842315497d50dce95ff10418b1c92889b4e",
+  "sourceRevision": "c493364dc151230578999ff037a2966993d49643",
   "files": [
     {
       "path": "LICENSE",
@@ -24,6 +24,13 @@
       "bytes": 2226
     },
     {
+      "path": "loaders/materialx/MaterialXColorManagement.js",
+      "sourcePath": "examples/jsm/loaders/materialx/MaterialXColorManagement.js",
+      "sourceSha256": "27d2a2223a10679ed402ee00ba905d2c5e636df2b2af9461e7ecca9653a3a207",
+      "sha256": "27d2a2223a10679ed402ee00ba905d2c5e636df2b2af9461e7ecca9653a3a207",
+      "bytes": 3856
+    },
+    {
       "path": "loaders/materialx/MaterialXDisney.js",
       "sourcePath": "examples/jsm/loaders/materialx/MaterialXDisney.js",
       "sourceSha256": "e727ce8f69db78e98478a960c14af7d76797d544eb5551fedfa7861365c0ef7f",
@@ -33,9 +40,9 @@
     {
       "path": "loaders/materialx/MaterialXDocument.js",
       "sourcePath": "examples/jsm/loaders/materialx/MaterialXDocument.js",
-      "sourceSha256": "2176f010a14bed4cf2f306388fff00d0420eaee6e7adf964610e736f9d7724a1",
-      "sha256": "7e748b6da9d52851990be6ef660be7876af5daa11e1e6d003e45c8237104bddd",
-      "bytes": 35827
+      "sourceSha256": "c49cb99397ac7c719397502c0c9316b850ec6ec72e927027437e9b5f4e7f9c66",
+      "sha256": "4aa0c5dbb21eb6266ccd8fb7a2f7e1397da2de39b0051d8fb129c13d3cedcc33",
+      "bytes": 37362
     },
     {
       "path": "loaders/materialx/MaterialXHextile.js",
@@ -89,9 +96,9 @@
     {
       "path": "loaders/materialx/MaterialXUsd.js",
       "sourcePath": "examples/jsm/loaders/materialx/MaterialXUsd.js",
-      "sourceSha256": "b1ef03ae0a8501e8da2853164562792d812fce074d552444389661c12dcd9a34",
-      "sha256": "b1ef03ae0a8501e8da2853164562792d812fce074d552444389661c12dcd9a34",
-      "bytes": 4966
+      "sourceSha256": "97523e17e5269d5c6363b18c198d21eb6464bf22018519b2bde1dbf1681e3acd",
+      "sha256": "97523e17e5269d5c6363b18c198d21eb6464bf22018519b2bde1dbf1681e3acd",
+      "bytes": 5252
     },
     {
       "path": "loaders/materialx/MaterialXUtils.js",
@@ -110,9 +117,9 @@
     {
       "path": "loaders/materialx/compile/MaterialXCompileRegistry.js",
       "sourcePath": "examples/jsm/loaders/materialx/compile/MaterialXCompileRegistry.js",
-      "sourceSha256": "9e8d296bf16ce55a3178f0d343decb9f1ee1c79b5efcdb0ff920992c47ba4f38",
-      "sha256": "85f9295ba3d1119203c9518fc87b6ac2f2980f585576726771b9ebf794a4dcf7",
-      "bytes": 33091
+      "sourceSha256": "c33f1b994097346e78e6ec9d997fdde3cc02512bccb987d6f90192c3f5f02c10",
+      "sha256": "a837b46b4021f1b94ca8c47c41b188bc3c45ac1a8f5d266088823a7365061bcf",
+      "bytes": 35380
     },
     {
       "path": "loaders/materialx/parse/MaterialXParser.js",
@@ -124,7 +131,7 @@
     {
       "path": "materials/BoundedVolumeNodeMaterial.js",
       "sourcePath": "examples/jsm/materials/BoundedVolumeNodeMaterial.js",
-      "sourceSha256": "8c64f9e7523351a710e8336f795beccfea0d8fc38c49e8530f963c29e7307484",
+      "sourceSha256": "2c631c6cc4868e194cb05260b764963a5159d63cf0b9223ce2c15ac16510c52c",
       "sha256": "168ebd3cccd2edbe520d600c73447c0eb1d3844ed47f6d1f31ff67c67286b7a1",
       "bytes": 9653
     },

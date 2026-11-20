@@ -377,6 +377,7 @@ async function createScopedThreeHydra(config, lifetime) {
     /**
      * @type {import(".").threeJsRenderDelegateConfig}
      */
+    config.webGpuSupport?.prepareRenderer?.(config.renderer);
     const delegateConfig = {
         usdRoot: config.scene,
         includedPurposes: config.includedPurposes,

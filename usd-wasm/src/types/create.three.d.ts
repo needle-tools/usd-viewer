@@ -71,6 +71,8 @@ export declare type createThreeHydraConfig = {
     onAssetFetchProgress?: (progress: {url:string, state:string, loaded:number, total:number, error?:string}) => void,
     /** Choose a texture URL before downloading it, e.g. a catalog's published resolution variants. */
     resolveTextureUrl?: (url:string) => string | Promise<string>,
+    /** Optional tile inventory for a UDIM pattern. HTTP sources otherwise discover OpenUSD's tile range with HEAD requests. */
+    resolveUdimTiles?: (pattern:string) => string[] | Promise<string[]>,
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
 
@@ -217,6 +219,8 @@ export declare type NeedleThreeHydraHandle = {
     createTextureExport(options?: {signal?: AbortSignal; resolution?: 'original' | 'preview'}): {
       readonly maxTextureSize: number;
       getTexture(texture: import('three').Texture): Promise<import('three').Texture>;
+      /** Reapply authored conversions to one original UDIM tile without building an atlas. */
+      getUdimTile?(texture: import('three').Texture, tile: number): Promise<import('three').Texture>;
       dispose(): void;
     };
     /** Resolves when asynchronous material generation and texture assignment have settled. */

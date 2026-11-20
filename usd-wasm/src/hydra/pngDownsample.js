@@ -15,8 +15,16 @@ export function downsamplePng(bytes, limit, Unzlib) {
   const depth=bytes[24],type=bytes[25],interlace=bytes[28],channels={0:1,2:3,3:1,4:2,6:4}[type];
   if(!width||!height||width>0x7fffffff||height>0x7fffffff||!channels||![1,2,4,8,16].includes(depth)||([2,4,6].includes(type)&&depth<8)||(type===3&&depth===16)||bytes[26]||bytes[27]||interlace>1)throw new Error('Unsupported PNG header');
   const scale=Math.min(1,limit/Math.max(width,height)),w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale));
-  const output=new Uint8ClampedArray(w*h*4),accum=new Float32Array(output.length),xs=[],ys=new Map();
-  function taps(count,extent,emit){for(let out=0;out<count;out++){const p=Math.max(0,Math.min(extent-1,(out+.5)*extent/count-.5)),lo=Math.floor(p),fraction=p-lo;emit(lo,out,1-fraction);if(fraction)emit(lo+1,out,fraction);}}
+  const output=new Uint8ClampedArray(w*h*4),accum=new Float64Array(output.length),xs=[],ys=new Map();
+  // Integrate each output pixel's full footprint. Integer overlap weights avoid
+  // phase aliasing and keep Adam7 accumulation independent of scanline order.
+  function taps(count,extent,emit){
+    for(let out=0;out<count;out++){
+      const left=out*extent,right=(out+1)*extent;
+      for(let source=Math.floor(left/count);source<Math.ceil(right/count);source++)
+        emit(source,out,Math.min(right,(source+1)*count)-Math.max(left,source*count));
+    }
+  }
   taps(w,width,(x,out,weight)=>xs.push({x,out,weight}));
   taps(h,height,(y,out,weight)=>{if(!ys.has(y))ys.set(y,[]);ys.get(y).push({out,weight});});
   const passes=interlace?[[0,0,8,8],[4,0,8,8],[0,4,4,8],[2,0,4,4],[0,2,2,4],[1,0,2,2],[0,1,1,2]]:[[0,0,1,1]];
@@ -42,7 +50,7 @@ export function downsamplePng(bytes, limit, Unzlib) {
       if(type===3){if(!palette||a*3+2>=palette.length)throw new Error('Invalid PNG palette');r=palette[a*3];g=palette[a*3+1];bl=palette[a*3+2];opacity=alpha?.[a]??255;}
       else if(type===0||type===4){r=g=bl=u8(a);if(type===4)opacity=u8(b);else if(alpha&&a===((alpha[0]<<8)|alpha[1]))opacity=0;}
       else{r=u8(a);g=u8(b);bl=u8(c);if(type===6)opacity=u8(sample(i+3));else if(alpha&&a===((alpha[0]<<8)|alpha[1])&&b===((alpha[2]<<8)|alpha[3])&&c===((alpha[4]<<8)|alpha[5]))opacity=0;}
-      for(const target of rows){const dst=(target.out*w+out)*4,k=weight*target.weight;accum[dst]+=r*opacity/255*k;accum[dst+1]+=g*opacity/255*k;accum[dst+2]+=bl*opacity/255*k;accum[dst+3]+=opacity*k;}
+      for(const target of rows){const dst=(target.out*w+out)*4,k=weight*target.weight;accum[dst]+=r*opacity*k;accum[dst+1]+=g*opacity*k;accum[dst+2]+=bl*opacity*k;accum[dst+3]+=opacity*k;}
     }
     const old=previous;previous=row;row=old;at=0;rowY++;if(rowY===ph)nextPass();
   }
@@ -73,6 +81,6 @@ export function downsamplePng(bytes, limit, Unzlib) {
     offset=end+4;
   }
   if(!ended||row)throw new Error('Incomplete PNG image');
-  for(let i=0;i<output.length;i+=4){const a=accum[i+3];output[i]=a?accum[i]*255/a:0;output[i+1]=a?accum[i+1]*255/a:0;output[i+2]=a?accum[i+2]*255/a:0;output[i+3]=a;}
+  for(let i=0;i<output.length;i+=4){const a=accum[i+3];output[i]=a?accum[i]/a:0;output[i+1]=a?accum[i+1]/a:0;output[i+2]=a?accum[i+2]/a:0;output[i+3]=a/(width*height);}
   return {data:output,width:w,height:h,sourceWidth:width,sourceHeight:height};
 }

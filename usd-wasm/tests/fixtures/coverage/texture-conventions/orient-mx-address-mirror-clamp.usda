@@ -1,0 +1,92 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    doc = "MaterialX mirror and clamp. ND_image_color3, uaddressmode mirror, vaddressmode clamp."
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Mesh "Quad" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-1, -1, 0), (1, 1, 0)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        rel material:binding = </World/Looks/Feature>
+        normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+            interpolation = "vertex"
+        )
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Scope "Looks"
+    {
+        def Material "Feature"
+        {
+            token outputs:mtlx:surface.connect = </World/Looks/Feature/Surface.outputs:out>
+
+            def Shader "Surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </World/Looks/Feature/Image.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "TexCoord"
+            {
+                uniform token info:id = "ND_texcoord_vector2"
+                int inputs:index = 0
+                float2 outputs:out
+            }
+
+            def Shader "Scale"
+            {
+                uniform token info:id = "ND_multiply_vector2"
+                float2 inputs:in1.connect = </World/Looks/Feature/TexCoord.outputs:out>
+                float2 inputs:in2 = (2, 2)
+                float2 outputs:out
+            }
+
+            def Shader "Shift"
+            {
+                uniform token info:id = "ND_subtract_vector2"
+                float2 inputs:in1.connect = </World/Looks/Feature/Scale.outputs:out>
+                float2 inputs:in2 = (0.5, 0.5)
+                float2 outputs:out
+            }
+
+            def Shader "Image"
+            {
+                uniform token info:id = "ND_image_color3"
+                color3f inputs:default = (0.5, 0, 0.5)
+                asset inputs:file = @textures/chart.png@ (
+                    colorSpace = "srgb_texture"
+                )
+                float2 inputs:texcoord.connect = </World/Looks/Feature/Shift.outputs:out>
+                string inputs:uaddressmode = "mirror"
+                string inputs:vaddressmode = "clamp"
+                color3f outputs:out
+            }
+        }
+    }
+
+    def Camera "Camera"
+    {
+        float2 clippingRange = (0.1, 100)
+        float horizontalAperture = 20
+        token projection = "orthographic"
+        float verticalAperture = 20
+        double3 xformOp:translate = (0, 0, 5)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+

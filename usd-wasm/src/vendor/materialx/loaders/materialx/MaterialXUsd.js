@@ -58,16 +58,21 @@ function compileUsdUVTexture( nodeX, out, context ) {
 	const fallback = nodeX.getNodeByName( 'fallback' );
 	const file = nodeX.getChildByName( 'file' );
 	const source = file && file.getValue() !== '' ? file.getTexture() : null;
-	// USD st coordinates start at the bottom; the loader stores image rows top-first.
-	let value = source ? source.materialXLoadedNode.select( source.sample( context.mxFromBottomLeftUvSpace( nodeX.getNodeByName( 'st' ) ).flipY() ), fallback ) : fallback;
+	// sourceColorSpace describes the texture's data, so the fallback is not converted.
+	const colorTransform = source ? file.getColorSpaceNode() : null;
+	const st = nodeX.getNodeByName( 'st' );
+	const flipped = context.mxToImageUv( st );
+	// Bottom-first compressed textures are sampled without the flip, as in image nodes.
+	const lookup = source && source.materialXBottomFirstNode ? source.materialXBottomFirstNode.select( st, flipped ) : flipped;
+	let sample = source ? source.sample( lookup ) : null;
+	if ( sample && colorTransform ) sample = vec4( colorTransform( sample.rgb ), sample.a );
+	let value = source ? source.materialXLoadedNode.select( sample, fallback ) : fallback;
 	const modes = nodeX.getTextureAddressModes();
 	const coordinates = nodeX.getNodeByName( 'st' );
 	const outsideU = coordinates.x.lessThan( 0 ).or( coordinates.x.greaterThan( 1 ) );
 	const outsideV = coordinates.y.lessThan( 0 ).or( coordinates.y.greaterThan( 1 ) );
 	const outside = ( modes.u === 'constant' ? outsideU : float( 0 ).equal( 1 ) ).or( modes.v === 'constant' ? outsideV : float( 0 ).equal( 1 ) );
 	value = outside.select( fallback, value );
-	const colorTransform = file ? file.getColorSpaceNode() : null;
-	if ( colorTransform ) value = vec4( colorTransform( value.rgb ), value.a );
 	value = value.mul( nodeX.getNodeByName( 'scale' ) ).add( nodeX.getNodeByName( 'bias' ) );
 	return out === 'r' ? value.r : out === 'g' ? value.g : out === 'b' ? value.b : out === 'a' ? value.a : out === 'rgba' ? value : value.rgb;
 
