@@ -260,3 +260,31 @@ test('viewer refuses a second simulation world when the active Engine lacks phys
  expect(await page.evaluate(()=>(window as any).oldHostProbe.stats())).toEqual({loads:0,simulation:undefined,shared:true,hostValid:true,colliders:1,bodies:0});
  await page.evaluate(()=>(window as any).oldHostProbe.cleanup());
 });
+
+for (const mode of ['Interact','Simulate']) test(`${mode} continues on the next asset until switched off`,async({page})=>{
+  const file = (name:string) => '/test-fixtures/coverage/advanced/physics-'+name+'.usda';
+  await page.goto('/?workspace=studio&viewer=three&render=basic&file='+file('revolute-joint'));
+  await stageReady(page);
+  await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
+  const panel=page.locator('#usd-physics-controls');
+  await panel.getByRole('button',{name:mode,exact:true}).click();
+  const playing=()=>page.evaluate(()=>(window as any).usdPhysics?.simulation?.isPlaying() || false);
+  await expect.poll(playing).toBe(true);
+  async function openFile(name:string) {
+    const path=file(name);
+    await page.evaluate(path=>{
+      const link=document.createElement('a');link.className='file';
+      const url=new URL(location.href);url.searchParams.set('file',path);link.href=url.href;
+      document.body.append(link);link.click();link.remove();
+    },path);
+    await page.waitForFunction(path=>(window as any).__usdViewerLoaded?.file===path,path);
+  }
+  await openFile('prismatic-joint');
+  await expect.poll(playing).toBe(true);
+  const active=panel.getByRole('button',{name:mode==='Interact'?'Interact':'Pause',exact:true});
+  if(mode==='Interact')await expect(active).toHaveAttribute('aria-pressed','true');
+  await active.click();
+  await expect.poll(playing).toBe(false);
+  await openFile('revolute-joint');
+  expect(await playing()).toBe(false);
+});

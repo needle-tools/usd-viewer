@@ -6,6 +6,16 @@ import {viewerIcon} from './usd/viewer/icons.js';
 import {saveRenderSettings} from './viewer-preferences.js';
 
 const runtimePromises = new Map();
+const modeKey = 'usd-viewer-physics-mode';
+let preferredMode;
+try { preferredMode = sessionStorage.getItem(modeKey); } catch {}
+function rememberMode(mode) {
+  preferredMode = mode;
+  try {
+    if (mode) sessionStorage.setItem(modeKey,mode);
+    else sessionStorage.removeItem(modeKey);
+  } catch {}
+}
 
 function loadRapier(context, options) {
   const key = options.loadRapier || options.moduleUrl || (context ? 'needle' : 'standalone');
@@ -148,7 +158,12 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     play.textContent = 'Simulate'; reset.disabled = true;
     void refreshColliders();
   }
+  function stopPlayback() {
+    rememberMode(null);
+    stop();
+  }
   async function start(mode) {
+    rememberMode(simulation?.isPlaying() && simulationMode === mode ? null : mode);
     if(simulation&&mode!==simulationMode)stop();
     const currentOperation=operation;
     play.disabled=interact.disabled=true;clearStatus();status.textContent=mode==='interaction'?'Preparing joints…':'Preparing physics…';
@@ -223,11 +238,11 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     }catch(error){if(disposed||currentOperation!==operation||!isCurrent())return;status.textContent=error.message;console.error('USD physics failed:',error);}
     finally{play.disabled=false;interact.disabled=!hasJoints;}
   }
-  play.addEventListener('click',()=>{if(usesHostWorld&&simulationMode==='simulation'&&simulation?.isPlaying())stop();else void start('simulation');});
+  play.addEventListener('click',()=>{if(usesHostWorld&&simulationMode==='simulation'&&simulation?.isPlaying())stopPlayback();else void start('simulation');});
   interact.addEventListener('click',()=>void start('interaction'));
-  reset.addEventListener('click', stop);
-  sceneSelect.addEventListener('change', stop);
-  holdBases.addEventListener('change', stop);
+  reset.addEventListener('click', stopPlayback);
+  sceneSelect.addEventListener('change', stopPlayback);
+  holdBases.addEventListener('change', stopPlayback);
   colliders.addEventListener('change', () => void refreshColliders());
   joints.addEventListener('change',()=>{
     handle.setHelpers({joints:joints.checked});
@@ -269,8 +284,9 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
       canvas.style.cursor = active ? 'grabbing' : simulationMode === 'interaction' && simulation?.isPlaying() ? 'grab' : '';
     },
   });
+  if (preferredMode === 'simulation' || preferredMode === 'interaction' && hasJoints) void start(preferredMode);
   return {
-    reset() { if (!disposed) stop(); },
+    reset() { if (!disposed) stopPlayback(); },
     update(dt) { simulation?.update(dt);jointHelpers?.update();jointControls?.update();colliderOverlay?.update(); const visible=handle.helpers?.joints!==false;if(joints.checked!==visible)joints.checked=visible; },
     canInteract(path) { return !disposed && hasJoints && !!path && (overview.joints.includes(path) || overview.bodies.some(body=>path===body||path.startsWith(body+'/'))); },
     async interact() { if (!disposed && !interact.disabled && !(simulationMode==='interaction'&&simulation?.isPlaying())) await start('interaction'); },
