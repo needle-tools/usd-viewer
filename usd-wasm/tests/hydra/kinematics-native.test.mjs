@@ -39,7 +39,7 @@ test('native USD relationships and typed mimic attributes drive the optional kin
  const USD=await getUsdModule({print(){},printErr(){}}),handle=await createThreeHydra({USD,scene:new Group(),buffer:new TextEncoder().encode(source),url:'mimic.usda'});let model;
  try{const snapshot=await readUsdPhysics(handle),dependent=snapshot.joints.find(j=>j.path.endsWith('RightJoint'));
   assert.deepEqual(dependent.mimic,{joint:'/World/LeftJoint',multiplier:-2,offset:-0});
-  assert.ok(getUsdPhysicsLimitations(snapshot).some(issue=>issue.reason.includes('Mimic')));
+  assert.ok(!getUsdPhysicsLimitations(snapshot).some(issue=>issue.reason.includes('Mimic')),'simulation couples mimic joints');
   model=await createUsdMechanism({handle,snapshot});assert.deepEqual(model.unsupported,[]);assert.ok(model.setJointValue('/World/LeftJoint',1));
   assert.ok(Math.abs(model.getJointValue('/World/LeftJoint')-.1)<1e-5);assert.ok(Math.abs(model.getJointValue('/World/RightJoint')+.2)<1e-5);
  }finally{model?.dispose();await handle.dispose();}

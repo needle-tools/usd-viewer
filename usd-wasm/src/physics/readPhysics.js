@@ -1,4 +1,5 @@
 import {readJointMetadata} from './jointMetadata.js';
+import {readBodyMetadata} from './bodyMetadata.js';
 
 // Loading a scene only needs body flags and scene names. Extracting the full
 // collider snapshot here also copies every collision mesh into JSON.
@@ -52,6 +53,7 @@ export async function readUsdPhysics(handle, {meshGeometry = true} = {}) {
         return result;
     });
     await readJointMetadata(handle,snapshot);
+    await readBodyMetadata(handle,snapshot);
     return snapshot;
 }
 

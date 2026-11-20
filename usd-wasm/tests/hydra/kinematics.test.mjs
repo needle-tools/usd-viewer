@@ -49,9 +49,22 @@ test('a closed four-bar linkage remains closed while changing its input hinge',a
  }finally{sim.dispose();}
 });
 
-test('inconsistent authored frames cannot snap rendered parts apart; helpers are display-only and disposable',async()=>{
+test('default frame policy preserves an offset hinge at rest and after reset',async()=>{
+ const sim=await create([body('/Base'),body('/Door',[1,0,0])],[joint('/Hinge','revolute','/Base','/Door')]);
+ try{
+  assert.deepEqual(sim.unsupported,[]);
+  assert.ok(sim.adaptations.some(issue=>issue.path==='/Hinge'));
+  const door=sim.bodies.get('/Door').body;
+  close(door.translation().x,1);
+  assert.ok(sim.setJointValue('/Hinge',90));
+  close(door.translation().x,0);close(door.translation().y,1);
+  sim.reset();close(door.translation().x,1);close(door.translation().y,0);
+ }finally{sim.dispose();}
+});
+
+test('strict frame policy rejects inconsistent frames and keeps rendered parts and helpers intact',async()=>{
  const root=new Group(),mesh=new Mesh(new BoxGeometry(),new MeshBasicMaterial());mesh.userData.usdPath='/Door/Mesh';root.add(mesh);const original=mesh.matrix.clone();
- const sim=await create([body('/Base'),body('/Door',[1,0,0])],[joint('/Broken','revolute','/Base','/Door')],{root});
+ const sim=await create([body('/Base'),body('/Door',[1,0,0])],[joint('/Broken','revolute','/Base','/Door')],{root,framePolicy:'strict'});
  try{assert.ok(sim.unsupported.some(issue=>issue.reason.includes('frames')));sim.play();assert.equal(sim.beginDrag('/Door',new Vector3(1,0,0)),false);assert.equal(sim.setJointValue('/Broken',45),false);assert.deepEqual(mesh.matrix.elements,original.elements);
   const helpers=createJointHelpers(sim);assert.equal(helpers.objects.length,1);const helper=helpers.objects[0];assert.equal(helper.userData.usdExcludeFromBounds,true);assert.equal(helper.userData.usdJointPath,'/Broken');helpers.update();helpers.dispose();assert.equal(helper.parent,null);
  }finally{sim.dispose();mesh.geometry.dispose();mesh.material.dispose();}

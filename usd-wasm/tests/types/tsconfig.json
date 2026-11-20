@@ -5,8 +5,11 @@
         "moduleResolution": "Bundler",
         "lib": ["ES2022", "DOM"],
         "strict": true,
+        "paths": {
+            "three": ["../../node_modules/@types/three/index.d.ts"]
+        },
         "skipLibCheck": false,
         "noEmit": true
     },
-    "files": ["consumer.ts"]
+    "files": ["consumer.ts", "physics-host-consumer.ts"]
 }

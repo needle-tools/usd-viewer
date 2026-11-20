@@ -107,7 +107,7 @@ test('destroying a borrowed world cancels pending USD instance binding before bo
     assert.equal(data.root.matrixAutoUpdate,true);
 });
 
-test('fixed joint anchors remain coincident and unsupported joint frames are explicit', async () => {
+test('fixed joint anchors remain coincident and rotated joint frames are kept or reported', async () => {
     const data = stage();
     data.snapshot.joints = [{ path: '/Joint', type: 'fixed', body0: '', body1: '/Body',
         position0: [0, 3, 0], position1: [0, 0, 0], rotation0: identity, rotation1: identity }];
@@ -116,9 +116,11 @@ test('fixed joint anchors remain coincident and unsupported joint frames are exp
     assert.ok(Math.abs(simulation.bodies.get('/Body').body.translation().y - 3) < .01);
     simulation.dispose();
     data.snapshot.joints[0] = { ...data.snapshot.joints[0], type: 'prismatic', rotation1: [0, 0, Math.SQRT1_2, Math.SQRT1_2] };
-    const unsupported = await createUsdPhysics({ ...data, rapier: R });
-    assert.ok(unsupported.unsupported.some(item => item.path === '/Joint' && item.reason.includes('frame rotations')));
-    unsupported.dispose();
+    const rotated = await createUsdPhysics({ ...data, rapier: R });
+    const reported = rotated.unsupported.some(item => item.path === '/Joint' && item.reason.includes('frame rotations'));
+    // Rapier versions with local joint frames keep the authored rotation; older ones report the joint.
+    assert.equal(reported, !R.ImpulseJoint.prototype.setLocalFrame1);
+    rotated.dispose();
 });
 
 test('multiple authored scenes require selection and retain independent gravity', async () => {

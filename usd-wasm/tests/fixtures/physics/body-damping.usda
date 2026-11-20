@@ -1,0 +1,33 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+def Xform "World"
+{
+    def PhysicsScene "Physics"
+    {
+        float physics:gravityMagnitude = 0
+    }
+    def Cube "Default" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"])
+    {
+        double size = 0.5
+    }
+    def Cube "Zero" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"])
+    {
+        double size = 0.5
+        double3 xformOp:translate = (2, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        float physxRigidBody:linearDamping = 0
+        float physxRigidBody:angularDamping = 0
+    }
+    def Cube "Damped" (prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI"])
+    {
+        double size = 0.5
+        double3 xformOp:translate = (4, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        float physxRigidBody:linearDamping = 0.5
+        float physxRigidBody:angularDamping = 2
+    }
+}

@@ -8,7 +8,7 @@ export interface DownloadSource {
   formats?: readonly DownloadFormat[];
   isCurrent?: () => boolean;
   /** Host-owned glTF export; enables glTF in the format menu. */
-  exportGltf?: (options: {onProgress: (progress: DownloadProgress) => void; signal: AbortSignal; textureResolution: 'original' | 'preview'}) => Promise<ArrayBuffer | Uint8Array>;
+  exportGltf?: (options: {onProgress: (progress: DownloadProgress) => void; signal: AbortSignal; textureResolution: 'original' | 'preview'}) => Promise<ArrayBuffer | Uint8Array | Blob>;
   /** Enables the Cloud destination. It runs only when Share is clicked. */
   share?: (options: {format: DownloadFormat; textureResolution: 'original' | 'preview'; signal: AbortSignal; onProgress: (progress: DownloadProgress) => void}) => Promise<void>;
 }

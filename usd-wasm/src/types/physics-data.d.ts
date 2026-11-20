@@ -23,6 +23,10 @@ export type PhysicsBody = PhysicsMass & {
     startsAsleep?: boolean;
     linearVelocity?: PhysicsVector;
     angularVelocity?: PhysicsVector;
+    gravityScale?: number;
+    continuousCollision?: boolean;
+    linearDamping?: number;
+    angularDamping?: number;
     filteredCollisions?: string[];
     simulationOwners?: string[];
 };

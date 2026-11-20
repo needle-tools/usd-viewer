@@ -56,3 +56,23 @@ export type UsdPhysicsOptions = {
 );
 
 export function createUsdPhysics(options:UsdPhysicsOptions):Promise<UsdDynamicsSimulation>;
+
+/** Common simulation contract returned by a host-owned world. */
+export type UsdPhysicsHostSimulation = Omit<UsdDynamicsSimulation, 'root' | 'world' | 'bodyForObject'> & {
+    bodyForObject(object: unknown, instanceIndex?: number): unknown;
+};
+/** The shared adapter protocol keeps Engine optional for physics consumers. */
+export type UsdPhysicsHostWorld<A extends UsdPhysicsHostSimulation = UsdPhysicsHostSimulation> =
+    import('@needle-tools/simready/rapier').SimulationHost<A> & {
+        readonly kilogramsPerUnit: number;
+    };
+export type UsdPhysicsHostOptions<A extends UsdPhysicsHostSimulation = UsdPhysicsHostSimulation> =
+    Omit<UsdPhysicsOptions, 'world' | 'rapier' | 'mode'> & {
+        world: UsdPhysicsHostWorld<A>;
+        rapier?: object;
+        mode?: 'simulation';
+    };
+/** Preserve the adapter's handle while adding the USD root and bound picking. */
+export type UsdPhysicsHostResult<A extends UsdPhysicsHostSimulation> =
+    Omit<A, 'root' | 'bodyForObject'> & UsdPhysicsSimulation;
+export function createUsdPhysics<A extends UsdPhysicsHostSimulation>(options: UsdPhysicsHostOptions<A>): Promise<UsdPhysicsHostResult<A>>;
