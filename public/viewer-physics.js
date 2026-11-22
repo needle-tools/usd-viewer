@@ -154,7 +154,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   function stop() {
     operation++;
     pointerDrag.cancel();jointHelpers?.dispose();jointHelpers=null;jointControls?.dispose();jointControls=null;simulation?.dispose(); simulation = null;
-    clearStatus();simulationMode='';usesHostWorld=false;interact.setAttribute('aria-pressed','false');canvas.style.removeProperty('cursor');
+    clearStatus();simulationMode='';usesHostWorld=false;interact.setAttribute('aria-pressed','false');hoveredPart=null;draggingPart=false;canvas.style.removeProperty('cursor');
     play.textContent = 'Simulate'; reset.disabled = true;
     void refreshColliders();
   }
@@ -231,7 +231,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
       else simulation.play();
       jointControls?.update();
       interact.setAttribute('aria-pressed',String(mode==='interaction'&&simulation.isPlaying()));
-      canvas.style.cursor=mode==='interaction'&&simulation.isPlaying()?'grab':'';
+      updateCursor();
       play.textContent=mode==='simulation'&&simulation.isPlaying()?(usesHostWorld?'Stop':'Pause'):'Simulate';reset.disabled=false;
       showWarnings(simulation.unsupported);
       void refreshColliders();
@@ -249,6 +249,13 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     saveRenderSettings({helpers:{...handle.helpers,guides:handle.includedPurposes.includes('guide')}});
     jointHelpers?.update();
   });
+  // The pointer binding reports what is under the pointer and whether a drag is active; the viewer picks the cursor.
+  let hoveredPart=null,draggingPart=false;
+  function updateCursor(){
+    if(draggingPart)canvas.style.cursor='grabbing';
+    else if(hoveredPart&&simulation?.isPlaying())canvas.style.cursor='grab';
+    else canvas.style.removeProperty('cursor');
+  }
   const pointerDrag = bindPointerDrag({
     element:canvas, camera:activeCamera,
     controller:() => simulation?.isPlaying() ? simulation : null,
@@ -281,8 +288,10 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
         for (const [control, enabled] of previousControls) control.enabled = enabled;
         previousControls = [];
       }
-      canvas.style.cursor = active ? 'grabbing' : simulationMode === 'interaction' && simulation?.isPlaying() ? 'grab' : '';
+      draggingPart = active;
+      updateCursor();
     },
+    onHoverChange(path) { hoveredPart = path; updateCursor(); },
   });
   if (preferredMode === 'simulation' || preferredMode === 'interaction' && hasJoints) void start(preferredMode);
   return {
