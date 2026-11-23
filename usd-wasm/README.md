@@ -170,7 +170,7 @@ both owned target handles. Complete examples are in
 
 ```sh
 npm pkg set 'dependencies.three=npm:@needle-tools/three@0.186.2-alpha.0' 'overrides.three=$three'
-npm install @needle-tools/usd@2.0.0
+npm install @needle-tools/usd@2.1.0
 ```
 
 The override keeps the application and its plugins on one Three.js instance.
@@ -179,7 +179,7 @@ the prerelease against stable peer ranges or installs another Three.js copy.
 Applications using a supported stable upstream Three.js version can install that
 version normally without this override.
 
-Version 2.0.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
+Version 2.1.0 uses OpenUSD 26.11.1 and ships a Hydra imaging bridge for
 three.js. The wasm bundle includes Adobe `usdGltf` with Draco-compressed
 glTF/GLB import, native `usdDraco` mesh payloads, MaterialX, and OpenSubdiv
 support.
@@ -356,7 +356,7 @@ coordinates, so the same data can be inspected, edited and passed to physics.
   },
   "dependencies": {
     "@needle-tools/engine": "6.0.0-canary.1794268261.merry-flower.29c0102",
-    "@needle-tools/usd": "2.0.0",
+    "@needle-tools/usd": "2.1.0",
     "three": "npm:@needle-tools/three@0.186.2-alpha.0",
     "vite": "^8.1.0"
   },
@@ -444,7 +444,7 @@ property so USD references can resolve.
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {
-    "@needle-tools/usd": "2.0.0",
+    "@needle-tools/usd": "2.1.0",
     "three": "npm:@needle-tools/three@0.186.2-alpha.0",
     "vite": "^8.1.0"
   },

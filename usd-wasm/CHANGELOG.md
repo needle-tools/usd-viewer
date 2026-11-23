@@ -2,6 +2,19 @@
 
 See the [viewer changelog](https://github.com/needle-tools/usd-viewer/blob/main/CHANGELOG.md) for application changes.
 
+## [2.1.0] - 2026-11-23
+
+### Added
+
+- `exportSimreadyGltf` accepts `capturePose` and `exportChangedPose` to export either the authored SimReady pose (default) or the current simulated or dragged pose. Meshes, instances and physics bodies are captured in the same frame.
+- USD export options accept `creator`, written to the exported root layer's `customLayerData`, and `bodyTransforms`, applied only to the exported copy.
+- The download control accepts `exportUsdz` and `canExportChangedPose`; export and share callbacks receive `exportChangedPose`.
+
+### Fixed
+
+- glTF export reads material textures by their Three.js slot names. Hosts that wrap material properties, such as Needle Engine, now export correct colors, keep texture orientation and share textures across materials.
+- Textures that are re-encoded for their glTF slot keep their orientation.
+
 ## [2.0.0] - 2026-11-10
 
 ### Breaking changes

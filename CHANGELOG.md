@@ -2,6 +2,24 @@
 
 See the [USD SDK changelog](usd-wasm/CHANGELOG.md) for SDK changes.
 
+## [2.1.0] - 2026-11-23
+
+### Improved
+
+- Downloads export the authored SimReady pose by default. Turn on “Export with changed SimReady pose” to keep a pose you dragged or simulated.
+- In Interact, a dragged or typed pose becomes the joint's drive target and holds; joints you did not move return to their authored targets. Drags are weighted by the mass each joint carries, and the cursor shows which parts can be dragged.
+- Interact and Simulate stay active when you open another compatible asset, and changing scene settings keeps the current camera.
+- Studio's default layouts include Simulation.
+- Texture quality distinguishes original resolution from preview (up to 512 px) and shows the size of the original texture files.
+- OpenUSD startup and file transfers appear together in one progress panel.
+- Searching examples covers the whole top-level category from any subfolder.
+- GLB and USD exports record the viewer version that created them.
+
+### Fixed
+
+- glTF exports keep texture orientation and colors in the Needle Engine viewer mode, and textures shared by several materials are stored once.
+- Viewer files served at stable URLs are revalidated, so updates load without stale cached code.
+
 ## [2.0.0] - 2026-11-10
 
 ### Improved
