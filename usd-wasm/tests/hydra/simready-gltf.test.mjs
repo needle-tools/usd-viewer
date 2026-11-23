@@ -21,6 +21,31 @@ globalThis.FileReader ||= class {
 };
 globalThis.ProgressEvent ||= class {};
 await R.init();
+
+const snapshotSchema = JSON.parse(await readFile(new URL('../../../modules/simready/extensions/NEEDLE_simready/schema/runtime-snapshot.schema.json', import.meta.url), 'utf8'));
+const schemaDefaults = properties => Object.fromEntries(Object.entries(properties)
+ .filter(([, property]) => Object.hasOwn(property, 'default'))
+ .map(([name, property]) => [name, property.default]));
+const bodyDefaults = schemaDefaults(snapshotSchema.$defs.body.properties);
+const shapeDefaults = schemaDefaults(snapshotSchema.$defs.shape.properties);
+const jointDefaults = schemaDefaults(snapshotSchema.$defs.joint.properties);
+const driveDefaults = schemaDefaults(snapshotSchema.$defs.drive.properties);
+const groupDefaults = schemaDefaults(snapshotSchema.properties.groups.items.properties);
+
+function withSnapshotDefaults(snapshot) {
+ return {...snapshot,
+  bodies: snapshot.bodies.map(body => ({...bodyDefaults, ...body})),
+  shapes: snapshot.shapes.map(shape => ({...shapeDefaults, ...shape})),
+  joints: snapshot.joints.map(joint => ({...jointDefaults, ...joint,
+   ...(joint.drive && {drive: {...driveDefaults, ...joint.drive}})})),
+  groups: snapshot.groups.map(group => ({...groupDefaults, ...group})),
+ };
+}
+
+function assertExportedSnapshot(actual, source) {
+ assert.deepEqual(withSnapshotDefaults(actual), withSnapshotDefaults(toGltfPhysicsSnapshot(source)));
+}
+
 export function fixture(){
  const root=new Group();
  for(const [path,position] of [['/Base',[0,0,0]],['/Door',[0,0,0]],['/Knob',[1,0,0]]]){
@@ -41,7 +66,7 @@ test('exports standard constraints and semantic labels',async()=>{
  const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
  assertPhysicsSchemas(result.parser.json);
  const data=result.userData.simready;
- assert.equal(data.handle,undefined,'glTF runtime has no USD/Hydra handle');assert.deepEqual(data.snapshot,toGltfPhysicsSnapshot(f.snapshot));assert.deepEqual(data.semantics,[]);
+ assert.equal(data.handle,undefined,'glTF runtime has no USD/Hydra handle');assertExportedSnapshot(data.snapshot,f.snapshot);assert.deepEqual(data.semantics,[]);
  assert.equal(result.parser.json.extensions.NEEDLE_simready.source,undefined);
  assert.equal(result.parser.json.extensions.KHR_physics_rigid_bodies.physicsJoints.length,2);
  for(const name of ['NEEDLE_simready','KHR_physics_rigid_bodies','KHR_implicit_shapes']){
@@ -254,7 +279,7 @@ test('native USD extraction, GLB, contacts/drives and joint manipulation agree i
   const snapshot=await readUsdPhysics(handle);
   const bytes=await exportSimreadyGltf({handle,snapshot,exporter:new GLTFExporter()});
   const result=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,''),runtime=result.userData.simready;
-  assert.deepEqual(runtime.snapshot,toGltfPhysicsSnapshot(snapshot));
+  assertExportedSnapshot(runtime.snapshot,snapshot);
   original=await createUsdPhysics({handle,snapshot,world:nativeWorld,allowPartial:false});converted=await runtime.createSimulation({world:convertedWorld});
   for(let i=0;i<240;i++){nativeWorld.step();convertedWorld.step();}
   for(const [path,{body}]of original.bodies){
@@ -271,6 +296,8 @@ test('native USD extraction, GLB, contacts/drives and joint manipulation agree i
 
   const payload=result.parser.json.extensions.NEEDLE_simready;
   assert.equal(payload.version,1);
+  assert.ok(payload.snapshot.bodies.every(body => !Object.hasOwn(body, 'scale')));
+  assert.ok(!Object.hasOwn(payload.snapshot.joints.find(joint => joint.path === '/Assembly/Hinge'), 'rotation1'));
   assert.ok(!JSON.stringify(payload).includes('physxJoint:armature'));
   assert.ok(!JSON.stringify(payload).includes('mjc:frictionloss'));
   assert.ok(!JSON.stringify(payload).includes('simready:sampledValue'));
@@ -356,7 +383,7 @@ test('SDF and disabled colliders use ordinary non-rendering meshes; portable col
  f.snapshot.shapes=['none','convexHull','sdf','convexDecomposition'].map((approximation,index)=>({path:'/Knob/Collider'+index,body:'/Knob',type:'mesh',approximation,points,indices,meshScale:[2,3,4],position:[0,0,0],rotation:[0,0,0,1]}));
  f.snapshot.shapes.push({...f.snapshot.shapes[2],path:'/Knob/Disabled',collisionEnabled:false});
  const gltf=await registerSimreadyLoader(new GLTFLoader()).parseAsync(await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),'');
- assert.deepEqual(gltf.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
+ assertExportedSnapshot(gltf.userData.simready.snapshot,f.snapshot);
  let rendered=0;gltf.scene.traverse(object=>{if(object.isMesh)rendered++;});assert.equal(rendered,3);
  const data=gltf.parser.json.extensions.NEEDLE_simready;
  for(const shape of data.snapshot.shapes){
@@ -425,7 +452,7 @@ test('analytic colliders use KHR_implicit_shapes instead of tessellated meshes',
   assert.ok(direction.distanceTo(new Vector3(1,0,0))<1e-5,'an omitted collider axis projects onto source X');
  }
  assert.ok(json.extensions.NEEDLE_simready.snapshot.shapes.every(shape=>shape.mesh===undefined));
- assert.deepEqual(gltf.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
+ assertExportedSnapshot(gltf.userData.simready.snapshot,f.snapshot);
 });
 test('runtime uses GLTFLoader triangulation for ordinary strips and fans',async()=>{
  const f=fixture(),points=[0,0,0,1,0,0,0,1,0,1,1,0];
@@ -475,7 +502,7 @@ test('authored body gravity and CCD survive export and gravity reaches standard 
  f.snapshot.bodies[1].gravityScale=.5; f.snapshot.bodies[1].continuousCollision=true;
  const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,semantics:f.semantics,exporter:new GLTFExporter()});
  const imported=await registerSimreadyLoader(new GLTFLoader()).parseAsync(bytes,'');
- assert.deepEqual(imported.userData.simready.snapshot,toGltfPhysicsSnapshot(f.snapshot));
+ assertExportedSnapshot(imported.userData.simready.snapshot,f.snapshot);
  const nodes=imported.parser.json.nodes;
  for(const [path,gravity] of [['/Base',0],['/Door',.5]]){
   const node=nodes.find(n=>n.name===path);
