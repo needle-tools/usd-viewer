@@ -264,17 +264,15 @@ fastify.route({
   handler: proxyToAnalytics,
 });
 
-// A CDN can assign a browser TTL to public JS despite no-cache.
-const exportCode = /^\/(?:simready\/.*|usd\/gltf\/.*|usd\/viewer\/downloadButton|viewer-app|viewer-physics)\.m?js$/;
 const build = viewerBuild(__dirname);
 fastify.get('/viewer-build.json', async () => build);
 
-// @fastify/static applies Cache-Control after setHeaders, so set it here.
+// Source assets use stable URLs. Revalidate them with their ETag on reuse.
+// @fastify/static sets Cache-Control after setHeaders, so apply it on send.
 const revalidated = /\.(?:m?js|css|wasm|json|html)$/;
 fastify.addHook('onSend', async (request, reply, payload) => {
   const pathname = request.url.split('?')[0];
-  if (pathname === '/viewer-build.json' || exportCode.test(pathname)) reply.header('Cache-Control', 'private, no-store');
-  else if (pathname === '/' || revalidated.test(pathname)) reply.header('Cache-Control', 'no-cache');
+  if (pathname === '/' || revalidated.test(pathname)) reply.header('Cache-Control', 'private, no-cache');
   return payload;
 });
 

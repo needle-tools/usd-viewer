@@ -1,7 +1,13 @@
-import {test, expect} from './test';
+import {test, expect, type Page} from './test';
 import {readFile} from 'node:fs/promises';
 import {unzipSync} from 'three/addons/libs/fflate.module.js';
 import {stageReady, clearStage} from './workbench-menus';
+
+async function expectedCreator(page: Page) {
+  const build = await (await page.request.get('/viewer-build.json')).json();
+  const revision = build.revision ? ` (${build.revision.slice(0,12)})` : '';
+  return `USD Viewer ${build.viewerVersion}${revision} / @needle-tools/usd ${build.sdkVersion}`;
+}
 
 for (const viewer of ['three', 'needle']) test(`${viewer}: Download packages dependencies and live edits; format choice persists and closing disables it`, async ({page}, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -83,6 +89,7 @@ def Xform "World" {
     finally { root.delete(); }
   }));
   expect(originalCreator).toBe('Fixture author');
+  const creator = await expectedCreator(page);
   await page.context().setOffline(true);
   const exported = await page.evaluate(async data => {
     const path = '/tmp/offline-download.usdz', modulePath = '/usd/bindings/index.js';
@@ -99,7 +106,7 @@ def Xform "World" {
   }, [...bytes]);
   expect(exported.composed).toBe(true);
   expect(exported.provenance).toEqual({
-    creator: expect.stringMatching(/^USD Viewer \d+\.\d+\.\d+ \/ @needle-tools\/usd \d+\.\d+\.\d+$/),
+    creator,
     needleSourceCreator: 'Fixture author',
     fixtureKey: 42,
   });
@@ -130,19 +137,13 @@ test('closing a stage during a dependency fetch safely cancels its download', as
 
 
 test('USDZ and GLB export the authored pose by default and the live SimReady pose on request', async ({page}) => {
-  const revision = '1'.repeat(40);
-  await page.route('**/viewer-build.json', async route => {
-    const response = await route.fetch();
-    await route.fulfill({response, json: {...await response.json(), revision}});
-  });
-  const serializer = page.waitForRequest(request => new URL(request.url()).pathname === '/simready/index.js');
+  const creator = await expectedCreator(page);
   await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
   await stageReady(page);
   await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
   await page.getByRole('button', {name:'Interact', exact:true}).click();
   await expect(page.getByRole('button', {name:'Interact', exact:true})).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => (window as any).usdPhysics.simulation.setJointValue('/Assembly/Hinge', 45));
-  expect(new URL((await serializer).url()).searchParams.get('rev')).toBe(revision);
   const knob = '/Assembly/Knob';
   const live = await page.evaluate(path => {
     const sim = (window as any).usdPhysics.simulation;
@@ -170,7 +171,7 @@ test('USDZ and GLB export the authored pose by default and the live SimReady pos
   const changedUsdz = await exportFile('USDZ', true);
   const readGlb = (bytes: Buffer) => {
     const json = JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
-    expect(json.asset.generator).toMatch(/^USD Viewer \d+\.\d+\.\d+ \(111111111111\) \/ @needle-tools\/usd \d+\.\d+\.\d+ \/ THREE\.GLTFExporter /);
+    expect(json.asset.generator.startsWith(creator + ' / THREE.GLTFExporter ')).toBe(true);
     const payload = json.extensions.NEEDLE_simready;
     expect(payload.version).toBe(1);
     const body = payload.snapshot.bodies.find(body => body.path === knob);

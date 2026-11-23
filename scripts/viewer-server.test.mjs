@@ -32,7 +32,7 @@ test('the Node viewer serves its browser dependencies with an empty public direc
   assert.ok(origin, 'server did not start');
   const build = await fetch(origin + '/viewer-build.json');
   assert.equal(build.status, 200);
-  assert.equal(build.headers.get('cache-control'), 'private, no-store');
+  assert.equal(build.headers.get('cache-control'), 'private, no-cache');
   const metadata = await build.json();
   assert.match(metadata.viewerVersion, /^\d+\.\d+\.\d+/);
   assert.match(metadata.sdkVersion, /^\d+\.\d+\.\d+/);
@@ -47,13 +47,23 @@ test('the Node viewer serves its browser dependencies with an empty public direc
     '/mutracer/lib/main.js': /javascript/,
     '/oidn-webgpu/dist/oidn.js': /javascript/,
     '/simready/gltf.js': /javascript/,
-    ['/simready/index.js?rev=' + revision]: /javascript/,
+    '/simready/index.js': /javascript/,
+    '/simready/gltf/runtimeContract.js': /javascript/,
+    '/usd/gltf/simready.js': /javascript/,
+    '/three/build/three.module.js': /javascript/,
   };
   for (const [path, mime] of Object.entries(assets)) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type') ?? '', mime, path);
-    if (path.startsWith('/simready/')) assert.equal(response.headers.get('cache-control'), 'private, no-store', path);
+    if (/\.(?:m?js|css)$/.test(path)) assert.equal(response.headers.get('cache-control'), 'private, no-cache', path);
+    if (path.startsWith('/simready/') || path.startsWith('/usd/') || path.startsWith('/three/')) {
+      const etag = response.headers.get('etag');
+      assert.ok(etag, path);
+      const cached = await fetch(origin + path, { cache: 'no-cache', headers: {'If-None-Match': etag} });
+      assert.equal(cached.status, 304, path);
+      assert.equal(cached.headers.get('cache-control'), 'private, no-cache', path);
+    }
     assert.ok((await response.arrayBuffer()).byteLength > 0, path);
   }
 });
