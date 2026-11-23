@@ -3,6 +3,7 @@ import {constants} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
+import { viewerBuild } from './viewer-build.cjs';
 import {stampBuild} from '../usd-wasm/scripts/corpus/stamp.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -36,8 +37,10 @@ for (const [target, source] of Object.entries(copies)) {
 }
 await cp(join(root, 'usd-wasm/scripts/corpus'), join(output, 'corpus'), {recursive: true, mode: constants.COPYFILE_FICLONE});
 const git = args => execFileSync('git', args, {cwd: root, encoding: 'utf8'}).trim();
+const revision = git(['rev-parse', 'HEAD']);
+await writeFile(join(output, 'public', 'viewer-build.json'), JSON.stringify(viewerBuild(root, revision)) + '\n');
 await writeFile(join(output, 'build.json'), JSON.stringify({
-	viewer: git(['rev-parse', 'HEAD']), simready: git(['-C', 'modules/simready', 'rev-parse', 'HEAD']),
+	viewer: revision, simready: git(['-C', 'modules/simready', 'rev-parse', 'HEAD']),
 	dirty: git(['status', '--porcelain']).split('\n').filter(Boolean), createdAt: new Date().toISOString(),
 	wasm: JSON.parse(await readFile(join(root, 'usd-wasm/src/bindings/openusd-build-info.json'), 'utf8')),
 }, null, 2));

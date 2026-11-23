@@ -13,12 +13,14 @@ test('the Node viewer serves its browser dependencies with an empty public direc
   t.after(() => rm(dir, { recursive: true, force: true }));
   await mkdir(join(dir, 'public'));
   await copyFile(new URL('../server.js', import.meta.url), join(dir, 'server.js'));
+  await copyFile(new URL('../package.json', import.meta.url), join(dir, 'package.json'));
   for (const name of ['scripts', 'node_modules', 'usd-wasm']) {
     await symlink(fileURLToPath(new URL('../' + name, import.meta.url)), join(dir, name), 'junction');
   }
 
+  const revision = '1'.repeat(40);
   const server = spawn(process.execPath, ['server.js'], {
-    cwd: dir, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'inherit'],
+    cwd: dir, env: { ...process.env, PORT: '0', SOURCE_COMMIT: revision }, stdio: ['ignore', 'pipe', 'inherit'],
   });
   const closed = once(server, 'close');
   t.after(async () => { server.kill(); await closed; });
@@ -28,6 +30,13 @@ test('the Node viewer serves its browser dependencies with an empty public direc
     if (match) { origin = match[1]; break; }
   }
   assert.ok(origin, 'server did not start');
+  const build = await fetch(origin + '/viewer-build.json');
+  assert.equal(build.status, 200);
+  assert.equal(build.headers.get('cache-control'), 'private, no-store');
+  const metadata = await build.json();
+  assert.match(metadata.viewerVersion, /^\d+\.\d+\.\d+/);
+  assert.match(metadata.sdkVersion, /^\d+\.\d+\.\d+/);
+  assert.equal(metadata.revision, revision);
   const assets = {
     '/dockview/package/main.esm.mjs': /javascript/,
     '/dockview/styles/dockview.css': /css/,
@@ -38,11 +47,13 @@ test('the Node viewer serves its browser dependencies with an empty public direc
     '/mutracer/lib/main.js': /javascript/,
     '/oidn-webgpu/dist/oidn.js': /javascript/,
     '/simready/gltf.js': /javascript/,
+    ['/simready/index.js?rev=' + revision]: /javascript/,
   };
   for (const [path, mime] of Object.entries(assets)) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type') ?? '', mime, path);
+    if (path.startsWith('/simready/')) assert.equal(response.headers.get('cache-control'), 'private, no-store', path);
     assert.ok((await response.arrayBuffer()).byteLength > 0, path);
   }
 });

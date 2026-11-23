@@ -1354,15 +1354,23 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
   track('export_gltf_started',{textures:textureResolution,simready:!!currentHydraHandle});
   try {
     const GLTFExporter=await loadGltfExporter();
+    const exporter = new GLTFExporter();
+    const build = window.__usdViewerBuild;
+    const viewer = build?.viewerVersion ? `USD Viewer ${build.viewerVersion}` : 'USD Viewer';
+    const revision = build?.revision ? ` (${build.revision.slice(0, 12)})` : '';
+    const sdk = build?.sdkVersion ? ` / @needle-tools/usd ${build.sdkVersion}` : '';
+    exporter.register(writer => ({
+      afterParse() { writer.json.asset.generator = viewer + revision + sdk + ' / ' + writer.json.asset.generator; },
+    }));
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     const handle=currentHydraHandle;
     const root=nativeGltfRoot||window.usdRoot;
     const nativeSource=handle?null:createGltfPhysicsSource(root);
     const bytes=handle||nativeSource?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({
       handle:handle||nativeSource.handle,snapshot:nativeSource?await nativeSource.source.readSnapshot():undefined,
-      semantics:nativeSource?.semantics,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal,
+      semantics:nativeSource?.semantics,exporter,onProgress,textureResolution,output,signal,
       capturePose:viewerPhysics?.captureExportPose,exportChangedPose})
-      :await new GLTFExporter().parseAsync(root,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
+      :await exporter.parseAsync(root,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes instanceof Blob?bytes.size:bytes.byteLength),simready:!!handle});
     return bytes;

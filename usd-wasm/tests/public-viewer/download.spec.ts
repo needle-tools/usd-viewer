@@ -107,12 +107,19 @@ test('closing a stage during a dependency fetch safely cancels its download', as
 
 
 test('USDZ and GLB export the authored pose by default and the live SimReady pose on request', async ({page}) => {
+  const revision = '1'.repeat(40);
+  await page.route('**/viewer-build.json', async route => {
+    const response = await route.fetch();
+    await route.fulfill({response, json: {...await response.json(), revision}});
+  });
+  const serializer = page.waitForRequest(request => new URL(request.url()).pathname === '/simready/index.js');
   await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
   await stageReady(page);
   await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
   await page.getByRole('button', {name:'Interact', exact:true}).click();
   await expect(page.getByRole('button', {name:'Interact', exact:true})).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => (window as any).usdPhysics.simulation.setJointValue('/Assembly/Hinge', 45));
+  expect(new URL((await serializer).url()).searchParams.get('rev')).toBe(revision);
   const knob = '/Assembly/Knob';
   const live = await page.evaluate(path => {
     const sim = (window as any).usdPhysics.simulation;
@@ -140,6 +147,7 @@ test('USDZ and GLB export the authored pose by default and the live SimReady pos
   const changedUsdz = await exportFile('USDZ', true);
   const readGlb = (bytes: Buffer) => {
     const json = JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
+    expect(json.asset.generator).toMatch(/^USD Viewer \d+\.\d+\.\d+ \(111111111111\) \/ @needle-tools\/usd \d+\.\d+\.\d+ \/ THREE\.GLTFExporter /);
     const payload = json.extensions.NEEDLE_simready;
     expect(payload.version).toBe(1);
     const body = payload.snapshot.bodies.find(body => body.path === knob);

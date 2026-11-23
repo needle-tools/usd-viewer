@@ -1,5 +1,6 @@
 const fastify = require('fastify')()
 const path = require('path')
+const { viewerBuild } = require('./scripts/viewer-build.cjs');
 const {runtimeCompressionGuard} = require('./scripts/precompressed-runtime')
 const { injectClientIpIntoAnalyticsTrackBody } = require('./scripts/analytics-proxy')
 
@@ -263,13 +264,17 @@ fastify.route({
   handler: proxyToAnalytics,
 });
 
-// Revalidate app and SDK code on every load (ETag/Last-Modified make unchanged
-// files a 304), so a reload never mixes cached modules with newer ones.
-// @fastify/static applies its own Cache-Control after setHeaders, so set it here.
+// A CDN can assign a browser TTL to public JS despite no-cache.
+const exportCode = /^\/(?:simready\/.*|usd\/gltf\/.*|usd\/viewer\/downloadButton|viewer-app|viewer-physics)\.m?js$/;
+const build = viewerBuild(__dirname);
+fastify.get('/viewer-build.json', async () => build);
+
+// @fastify/static applies Cache-Control after setHeaders, so set it here.
 const revalidated = /\.(?:m?js|css|wasm|json|html)$/;
 fastify.addHook('onSend', async (request, reply, payload) => {
   const pathname = request.url.split('?')[0];
-  if (pathname === '/' || revalidated.test(pathname)) reply.header('Cache-Control', 'no-cache');
+  if (pathname === '/viewer-build.json' || exportCode.test(pathname)) reply.header('Cache-Control', 'private, no-store');
+  else if (pathname === '/' || revalidated.test(pathname)) reply.header('Cache-Control', 'no-cache');
   return payload;
 });
 

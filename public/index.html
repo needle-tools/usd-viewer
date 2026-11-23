@@ -129,9 +129,12 @@
 <body class="usd-product">
   <script type="text/javascript" async src="modules/es-module-shims@1.8.0.js"></script>
   <script>
-    // The server sends modules with Cache-Control: no-cache, so reloads revalidate
-    // every module and never mix cached code with a newer UI.
     window.__usdViewerImportsReady = (async () => {
+      const build = await fetch("/viewer-build.json", { cache: "no-store" })
+        .then(response => response.ok ? response.json() : null)
+        .catch(() => null);
+      window.__usdViewerBuild = build;
+      const releaseUrl = path => build?.revision ? `${path}?rev=${encodeURIComponent(build.revision)}` : path;
       const params = new URLSearchParams(location.search);
       const viewerMode = params.get("viewer") === "needle" || params.get("viewer") === "needle-loader" ? "needle" : "three";
       const useNeedleLoader = viewerMode === "needle";
@@ -165,8 +168,16 @@
       imports["oidn-webgpu"] = "/oidn-webgpu/dist/oidn.js";
       window.__usdViewerEntry = useNeedleLoader ? "/index.needle-loader.js" : "/index.three.js";
       const importMap = document.createElement("script");
-      for (const entry of ["rapier", "kinematics", "three", "gltf", "needle"]) imports["@needle-tools/simready/" + entry] = "/simready/" + entry + ".js";
-      imports["@needle-tools/simready"] = "/simready/index.js";
+      const exportModules = ["/viewer-app.js", "/viewer-physics.js", "/usd/gltf/simready.js", "/usd/viewer/downloadButton.js"];
+      for (const entry of ["index", "rapier", "kinematics", "three", "gltf", "needle"]) {
+        const path = "/simready/" + entry + ".js";
+        const name = entry === "index" ? "@needle-tools/simready" : "@needle-tools/simready/" + entry;
+        imports[name] = releaseUrl(path);
+        exportModules.push(path);
+      }
+      // Keep the bare and relative imports on the same revision, even when a
+      // browser still has the old, unversioned URL in its cache.
+      if (build?.revision) for (const path of exportModules) imports[path] = releaseUrl(path);
       imports["closed-chain-ik/core"] = "/modules/kinematics.js";
       importMap.type = "importmap";
       importMap.textContent = JSON.stringify({ imports });

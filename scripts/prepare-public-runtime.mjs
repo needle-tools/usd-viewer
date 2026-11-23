@@ -1,10 +1,13 @@
-import { cpSync, existsSync, rmSync } from "node:fs";
+import { cpSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import './prepare-static-assets.mjs';
 import './prepare-kinematics.mjs';
+import { viewerBuild } from './viewer-build.cjs';
 
 const root = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
+
+writeFileSync(join(root, 'public', 'viewer-build.json'), JSON.stringify(viewerBuild(root)) + '\n');
 
 const copies = [
   { from: join(root, 'node_modules', '@needle-tools', 'simready', 'src'), to: join(root, 'public', 'simready'), label: '/simready' },
