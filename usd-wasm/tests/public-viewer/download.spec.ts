@@ -56,7 +56,13 @@ test('URL texture dependencies are localized and the resulting USDZ opens offlin
     const path = new URL(route.request().url()).pathname;
     if (!path.startsWith('/download-test/')) { await route.fallback(); return; }
     const source = path.endsWith('root.usda') ? `#usda 1.0
-(subLayers=[@child.usda@])
+(
+    subLayers = [@child.usda@]
+    customLayerData = {
+        string creator = "Fixture author"
+        int fixtureKey = 42
+    }
+)
 def Xform "World" {
  custom asset data=@palette.bin@
 }` : path.endsWith('child.usda') ? '#usda 1.0\ndef Xform "World" {\n def Sphere "Ball" {}\n}\n' : new Uint8Array([7, 12, 23]);
@@ -71,15 +77,32 @@ def Xform "World" {
   expect(Object.keys(entries).some(name => name.endsWith('child.usda'))).toBe(true);
   expect(Object.keys(entries).some(name => name.endsWith('palette.bin'))).toBe(true);
   expect(Object.values(entries).some(data => data.length === 3 && data[0] === 7)).toBe(true);
+  const originalCreator = await page.evaluate(() => (window as any).usdHydra.readStage(stage => {
+    const root = stage.GetPseudoRoot();
+    try { return root.GetMetadataByDictKey('customLayerData', 'creator'); }
+    finally { root.delete(); }
+  }));
+  expect(originalCreator).toBe('Fixture author');
   await page.context().setOffline(true);
-  expect(await page.evaluate(async data => {
+  const exported = await page.evaluate(async data => {
     const path = '/tmp/offline-download.usdz', modulePath = '/usd/bindings/index.js';
     const USD = await (await import(modulePath)).getUsdModule();
     USD.FS_createDataFile('/tmp', 'offline-download.usdz', new Uint8Array(data), true, true, true);
     const stage = await USD.OpenStage(path);
-    try { return stage.GetPrimAtPath('/World/Ball').IsValid() && stage.GetPrimAtPath('/World/HttpEdit').IsValid(); }
-    finally { USD.ReleaseStage(stage); USD.FS_unlink(path); }
-  }, [...bytes])).toBe(true);
+    const root = stage.GetPseudoRoot();
+    try {
+      return {
+        composed: stage.GetPrimAtPath('/World/Ball').IsValid() && stage.GetPrimAtPath('/World/HttpEdit').IsValid(),
+        provenance: root.GetMetadata('customLayerData'),
+      };
+    } finally { root.delete(); USD.ReleaseStage(stage); USD.FS_unlink(path); }
+  }, [...bytes]);
+  expect(exported.composed).toBe(true);
+  expect(exported.provenance).toEqual({
+    creator: expect.stringMatching(/^USD Viewer \d+\.\d+\.\d+ \/ @needle-tools\/usd \d+\.\d+\.\d+$/),
+    needleSourceCreator: 'Fixture author',
+    fixtureKey: 42,
+  });
 });
 
 test('closing a stage during a dependency fetch safely cancels its download', async ({page}) => {

@@ -21,6 +21,8 @@ export type UsdExportOptions = {
     onProgress?: (progress: UsdExportProgress) => void;
     signal?: AbortSignal;
     textureResolution?: 'original' | 'preview';
+    /** Optional creator string for customLayerData in the exported root layer. */
+    creator?: string;
     /** Optional stage-space body transforms to apply only to the exported copy. */
     bodyTransforms?: ReadonlyMap<string, UsdExportBodyTransform>;
 };

@@ -1347,6 +1347,14 @@ catch (error) {
   }
 }
 
+function viewerExportCreator() {
+  const build = window.__usdViewerBuild;
+  const viewer = build?.viewerVersion ? `USD Viewer ${build.viewerVersion}` : 'USD Viewer';
+  const revision = build?.revision ? ` (${build.revision.slice(0, 12)})` : '';
+  const sdk = build?.sdkVersion ? ` / @needle-tools/usd ${build.sdkVersion}` : '';
+  return viewer + revision + sdk;
+}
+
 // The header owns format selection, progress and saving; every glTF download
 // goes through the same exporter regardless of the current viewer mode.
 async function exportCurrentGltf({onProgress,signal,textureResolution='original',output='blob',exportChangedPose=false}={}) {
@@ -1355,12 +1363,9 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
   try {
     const GLTFExporter=await loadGltfExporter();
     const exporter = new GLTFExporter();
-    const build = window.__usdViewerBuild;
-    const viewer = build?.viewerVersion ? `USD Viewer ${build.viewerVersion}` : 'USD Viewer';
-    const revision = build?.revision ? ` (${build.revision.slice(0, 12)})` : '';
-    const sdk = build?.sdkVersion ? ` / @needle-tools/usd ${build.sdkVersion}` : '';
+    const creator = viewerExportCreator();
     exporter.register(writer => ({
-      afterParse() { writer.json.asset.generator = viewer + revision + sdk + ' / ' + writer.json.asset.generator; },
+      afterParse() { writer.json.asset.generator = creator + ' / ' + writer.json.asset.generator; },
     }));
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     const handle=currentHydraHandle;
@@ -1380,7 +1385,7 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
 function exportCurrentUsdz({exportChangedPose=false, ...options}={}) {
   const handle=currentHydraHandle;
   if(!handle)throw new Error('USD archive export requires an open USD stage.');
-  return handle.exportUsdz({...options,bodyTransforms:exportChangedPose?viewerPhysics?.captureExportPose(true):undefined});
+  return handle.exportUsdz({...options,creator:viewerExportCreator(),bodyTransforms:exportChangedPose?viewerPhysics?.captureExportPose(true):undefined});
 }
 
 async function shareCurrentAsset({format='gltf',textureResolution='original',signal,onProgress,exportChangedPose=false}={}) {

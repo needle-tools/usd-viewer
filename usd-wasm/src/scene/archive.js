@@ -1,5 +1,5 @@
-// OpenUSD packaging runs on a pthread; only bounded copies and callbacks run
-// on the caller. Older native modules retain their existing synchronous fallback.
+// OpenUSD localizes the stage and its dependencies on a pthread when available.
+// Creator and pose edits apply to the packaged root layer.
 export async function packageStage(USD, stage, directory, driver, options = {}) {
   const report = (phase, completed = 0, total = 0) => {
     try { options.onProgress?.({phase, completed, total}); }
@@ -14,63 +14,82 @@ export async function packageStage(USD, stage, directory, driver, options = {}) 
           error => reject(new Error('Could not package USD and its dependencies: ' + error)), report);
         if (!started) reject(new Error('USD export could not start while another operation is running'));
       });
-      bytes = await readArchive(USD, `${directory}/stage.usdz`, report);
     } else {
       await yieldToUI();
-      bytes = await legacyPackageStage(USD, stage, directory);
+      await legacyPackageStage(USD, stage, directory);
+    }
+    bytes = await readArchive(USD, `${directory}/stage.usdz`, report);
+    options.signal?.throwIfAborted();
+    if (options.creator || options.bodyTransforms?.size) {
+      bytes = await editPackagedRoot(USD, bytes, directory, options);
     }
   } finally { await removeDirectory(USD, directory); }
   report('complete', 1, 1);
   return bytes;
 }
 
-/** Author the current body transforms into a private copy of the packaged root. */
-export async function poseUsdArchive(USD, bytes, directory, bodyTransforms, signal) {
-  const [{unzipSync}, {writeAlignedUsdz}, {Matrix4, Quaternion, Vector3}] = await Promise.all([
-    import('../vendor/fflate/fflate.js'), import('./alignedUsdz.js'), import('three'),
+/** Update the generated root layer while keeping the localized dependency files. */
+async function editPackagedRoot(USD, bytes, directory, {bodyTransforms, creator, signal}) {
+  const [{unzipSync}, {writeAlignedUsdz}] = await Promise.all([
+    import('../vendor/fflate/fflate.js'), import('./alignedUsdz.js'),
   ]);
   const entries = unzipSync(bytes);
   const rootName = Object.keys(entries).find(name => !name.endsWith('/'));
-  if (!rootName) throw new Error('USD export produced an empty package.');
+  const extension = rootName?.match(/\.usd[ac]?$/i)?.[0];
+  if (!extension) throw new Error('USD export produced no root layer.');
+
+  const stage = await USD.OpenStage(`${directory}/stage.usdz`);
+  if (!stage) throw new Error('Could not open the USD export copy.');
   try {
-    for (const [name, data] of Object.entries(entries)) {
-      if (name.endsWith('/')) continue;
-      if (name.startsWith('/') || name.split('/').includes('..') || name.includes('\\')) throw new Error('Unsafe package path.');
-      const path = `${directory}/${name}`;
-      USD.FS_createPath('', path.slice(0, path.lastIndexOf('/')), true, true);
-      USD.FS_createDataFile('', path, data, true, true, true);
-    }
-    const rootPath = `${directory}/${rootName}`;
+    if (creator) await stampCreator(stage, creator);
+    if (bodyTransforms?.size) await applyBodyTransforms(stage, bodyTransforms);
     signal?.throwIfAborted();
-    const stage = await USD.OpenStage(rootPath);
-    if (!stage) throw new Error('Could not open the USD export copy.');
+    const layer = stage.GetRootLayer();
+    const rootPath = `${directory}/export-root${extension}`;
     try {
-      for (const [path, {position, rotation, scale}] of bodyTransforms) {
-        const prim = stage.GetPrimAtPath(path);
-        let transform, order;
-        try {
-          if (!prim.IsValid()) throw new Error(`Could not find rigid body ${path} in the USD export.`);
-          const name = 'xformOp:transform:needleExportPose';
-          transform = prim.CreateAttribute(name, 'matrix4d', false);
-          order = prim.CreateAttribute('xformOpOrder', 'token[]', false);
-          const matrix = new Matrix4().compose(new Vector3(...position), new Quaternion(...rotation), new Vector3(...scale));
-          // USD uses row vectors. Three's column-major storage is the transposed pose in row order.
-          if (!transform.SetMatrix4d(...matrix.elements, NaN) || !order.Set(['!resetXformStack!', name], NaN)) {
-            throw new Error(`Could not export the current pose of ${path}.`);
-          }
-        } finally {
-          order?.delete(); transform?.delete(); prim.delete();
-        }
+      if (!await layer.ExportAsync(rootPath)) throw new Error('Could not write the USD export root layer.');
+    } finally { layer.delete(); }
+    entries[rootName] = USD.ReadFile(rootPath).slice();
+  } finally { USD.ReleaseStage(stage); }
+  signal?.throwIfAborted();
+  return writeAlignedUsdz(entries);
+}
+
+async function stampCreator(stage, creator) {
+  const root = stage.GetPseudoRoot();
+  try {
+    const data = root.GetMetadata('customLayerData');
+    const previous = data?.creator;
+    if (typeof previous === 'string' && previous && previous !== creator && data.needleSourceCreator === undefined) {
+      if (!await root.SetMetadataByDictKey('customLayerData', 'needleSourceCreator', previous, 'string')) {
+        throw new Error('Could not preserve the original USD layer creator.');
       }
-      const root = stage.GetRootLayer();
-      try {
-        if (!root.Save()) throw new Error('Could not save the posed USD export copy.');
-      } finally { root.delete(); }
-      entries[rootName] = USD.ReadFile(rootPath).slice();
-    } finally { USD.ReleaseStage(stage); }
-    signal?.throwIfAborted();
-    return writeAlignedUsdz(entries);
-  } finally { await removeDirectory(USD, directory); }
+    }
+    if (!await root.SetMetadataByDictKey('customLayerData', 'creator', creator, 'string')) {
+      throw new Error('Could not stamp the USD layer creator.');
+    }
+  } finally { root.delete(); }
+}
+
+async function applyBodyTransforms(stage, bodyTransforms) {
+  const {Matrix4, Quaternion, Vector3} = await import('three');
+  for (const [path, {position, rotation, scale}] of bodyTransforms) {
+    const prim = stage.GetPrimAtPath(path);
+    let transform, order;
+    try {
+      if (!prim.IsValid()) throw new Error(`Could not find rigid body ${path} in the USD export.`);
+      const name = 'xformOp:transform:needleExportPose';
+      transform = prim.CreateAttribute(name, 'matrix4d', false);
+      order = prim.CreateAttribute('xformOpOrder', 'token[]', false);
+      const matrix = new Matrix4().compose(new Vector3(...position), new Quaternion(...rotation), new Vector3(...scale));
+      // USD uses row vectors. Three's column-major storage is the transposed pose in row order.
+      if (!transform.SetMatrix4d(...matrix.elements, NaN) || !order.Set(['!resetXformStack!', name], NaN)) {
+        throw new Error(`Could not export the current pose of ${path}.`);
+      }
+    } finally {
+      order?.delete(); transform?.delete(); prim.delete();
+    }
+  }
 }
 
 async function readArchive(USD, path, report) {
@@ -149,6 +168,4 @@ async function legacyPackageStage(USD, stage, directory) {
     if (!root.Export(source)) throw new Error('Could not export package root');
   }
   if (!await USD.CreateUsdzPackage(source, output)) throw new Error('Could not package USD and its dependencies');
-  // Copy out of MEMFS before cleanup or the handle's eventual disposal.
-  return USD.ReadFile(output).slice();
 }
