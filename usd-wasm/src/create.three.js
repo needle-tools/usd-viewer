@@ -782,13 +782,14 @@ async function createScopedThreeHydra(config, lifetime) {
                 await waitForDrawCompletion();
                 editInFlight = true;
                 try {
-                    const { packageStage } = await import("./scene/archive.js");
+                    const { packageStage, poseUsdArchive } = await import("./scene/archive.js");
                     let directory;
                     do { directory = "/" + directoryForFiles + `.needle-export-${++exportSequence}`; }
                     while (USD.FS_analyzePath(directory).exists);
                     if(options.textureResolution!==undefined&&!['original','preview'].includes(options.textureResolution))throw new RangeError('Invalid export texture resolution.');
                     if(options.signal?.aborted)throw new DOMException('Export cancelled','AbortError');
-                    const bytes=await packageStage(USD, stage, directory, driver, options);
+                    let bytes=await packageStage(USD, stage, directory, driver, options);
+                    if(options.bodyTransforms?.size)bytes=await poseUsdArchive(USD, bytes, directory, options.bodyTransforms, options.signal);
                     if(options.signal?.aborted)throw new DOMException('Export cancelled','AbortError');
                     if(options.textureResolution!=='preview')return bytes;
                     const {previewArchive}=await import('./scene/previewArchive.js');

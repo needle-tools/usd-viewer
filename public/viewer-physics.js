@@ -69,6 +69,16 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   const activeCamera = () => window.usdRenderCamera || context?.mainCamera || fallbackCamera;
   const canvas = context?.renderer?.domElement || fallbackControls?.domElement;
   const rootScale = new Vector3();
+  let initialPose;
+  function bodyPose(controller) {
+    handle.scene.updateWorldMatrix(true, false);
+    const worldToStage = usesHostWorld ? handle.scene.matrixWorld.clone().invert() : new Matrix4();
+    const stageRotation = new Quaternion().setFromRotationMatrix(new Matrix4().extractRotation(worldToStage));
+    return new Map([...controller.bodies].map(([path, {body}]) => [path, {
+      position: new Vector3().copy(body.translation()).applyMatrix4(worldToStage),
+      rotation: new Quaternion().copy(body.rotation()).premultiply(stageRotation),
+    }]));
+  }
   const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Simulate';
   const interact = document.createElement('button');interact.type='button';interact.textContent='Interact';interact.setAttribute('aria-pressed','false');interact.title='Drag movable parts within their joint limits';
   const hasJoints=overview.joints.length>0;interact.disabled=!hasJoints;
@@ -153,7 +163,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   })() : [fallbackControls];
   function stop() {
     operation++;
-    pointerDrag.cancel();jointHelpers?.dispose();jointHelpers=null;jointControls?.dispose();jointControls=null;simulation?.dispose(); simulation = null;
+    pointerDrag.cancel();jointHelpers?.dispose();jointHelpers=null;jointControls?.dispose();jointControls=null;simulation?.dispose(); simulation = null; initialPose = null;
     clearStatus();simulationMode='';usesHostWorld=false;interact.setAttribute('aria-pressed','false');hoveredPart=null;draggingPart=false;canvas.style.removeProperty('cursor');
     play.textContent = 'Simulate'; reset.disabled = true;
     void refreshColliders();
@@ -218,6 +228,7 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
         }
         if(disposed||currentOperation!==operation||!isCurrent()){created.dispose();return;}
         simulation=created;simulationMode=mode;usesHostWorld=createdInHost;
+        initialPose=bodyPose(created);
         if(helpers && created.joints && created.bodies){
           const visibility={visible:()=>handle.helpers?.joints!==false,selected:(path,body)=>handle.isHelperSelected?.(path)||handle.isHelperSelected?.(body)};
           jointHelpers=mode==='interaction'?helpers.createJointHelpers(created,visibility)
@@ -296,6 +307,25 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
   if (preferredMode === 'simulation' || preferredMode === 'interaction' && hasJoints) void start(preferredMode);
   return {
     reset() { if (!disposed) stopPlayback(); },
+    captureExportPose(changed) {
+      const result = new Map();
+      if (!simulation || !initialPose) return result;
+      const authoredBodies = new Map(snapshot.bodies.map(body => [body.path, body]));
+      const unit = new Vector3(1,1,1);
+      for (const [path, actual] of bodyPose(simulation)) {
+        const initial = initialPose.get(path), authored = authoredBodies.get(path);
+        if (!initial || !authored || (initial.position.distanceToSquared(actual.position)<1e-14
+            && 1-Math.abs(initial.rotation.dot(actual.rotation))<1e-14)) continue;
+        if (changed) {
+          result.set(path, {position:actual.position.toArray(), rotation:actual.rotation.toArray(), scale:authored.scale ?? [1,1,1]});
+        } else {
+          const rest = new Matrix4().compose(initial.position, initial.rotation, unit);
+          const current = new Matrix4().compose(actual.position, actual.rotation, unit);
+          result.set(path, rest.multiply(current.invert()));
+        }
+      }
+      return result;
+    },
     update(dt) { simulation?.update(dt);jointHelpers?.update();jointControls?.update();colliderOverlay?.update(); const visible=handle.helpers?.joints!==false;if(joints.checked!==visible)joints.checked=visible; },
     canInteract(path) { return !disposed && hasJoints && !!path && (overview.joints.includes(path) || overview.bodies.some(body=>path===body||path.startsWith(body+'/'))); },
     async interact() { if (!disposed && !interact.disabled && !(simulationMode==='interaction'&&simulation?.isPlaying())) await start('interaction'); },

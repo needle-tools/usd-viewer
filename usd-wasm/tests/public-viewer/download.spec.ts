@@ -104,3 +104,73 @@ test('closing a stage during a dependency fetch safely cancels its download', as
   await expect(button).toHaveAttribute('aria-busy','false');
   expect(downloads).toEqual([]); expect(errors).toEqual([]);
 });
+
+
+test('USDZ and GLB export the authored pose by default and the live SimReady pose on request', async ({page}) => {
+  await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
+  await stageReady(page);
+  await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
+  await page.getByRole('button', {name:'Interact', exact:true}).click();
+  await expect(page.getByRole('button', {name:'Interact', exact:true})).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => (window as any).usdPhysics.simulation.setJointValue('/Assembly/Hinge', 45));
+  const knob = '/Assembly/Knob';
+  const live = await page.evaluate(path => {
+    const sim = (window as any).usdPhysics.simulation;
+    return sim.bodies.get(path).body.translation().toArray();
+  }, knob);
+
+  const trigger = page.getByLabel('Download format', {exact:true});
+  const pose = page.getByRole('menuitemcheckbox', {name:'Export with changed SimReady pose'});
+  const exportFile = async (format: 'glTF'|'USDZ', changed: boolean) => {
+    await trigger.click();
+    if (await pose.getAttribute('aria-checked') !== String(changed)) await pose.click();
+    await page.getByRole('menuitemradio', {name:format, exact:true}).click();
+    const pending = page.waitForEvent('download');
+    await page.getByRole('button', {name:'Download', exact:true}).click();
+    const file = await pending;
+    expect(await file.failure()).toBeNull();
+    return readFile((await file.path())!);
+  };
+  await trigger.click();
+  await expect(pose).toHaveAttribute('aria-checked', 'false');
+  await page.keyboard.press('Escape');
+  const authoredGlb = await exportFile('glTF', false);
+  const changedGlb = await exportFile('glTF', true);
+  const authoredUsdz = await exportFile('USDZ', false);
+  const changedUsdz = await exportFile('USDZ', true);
+  const readGlb = (bytes: Buffer) => {
+    const json = JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
+    const payload = json.extensions.NEEDLE_simready;
+    expect(payload.version).toBe(1);
+    const body = payload.snapshot.bodies.find(body => body.path === knob);
+    const visual = payload.bindings.find(binding => binding.path === knob + '/Visual');
+    return {position:body.position, visual:json.nodes[visual.node].matrix};
+  };
+  const original = readGlb(authoredGlb), posed = readGlb(changedGlb);
+  expect(original.position).toEqual([1,0,0]);
+  const [x,y,z] = live;
+  expect(posed.position).toEqual([x,z,-y].map(value=>expect.closeTo(value*.01,5)));
+  expect(original.visual).toEqual(posed.visual.map(value=>expect.closeTo(value,5)));
+  const usdTransform = async (data: Buffer) => page.evaluate(async ({data,knob}) => {
+    const filename = 'export-pose-check.usdz', path = '/tmp/' + filename;
+    const modulePath = '/usd/bindings/index.js';
+    const USD = await (await import(modulePath)).getUsdModule();
+    USD.FS_createDataFile('/tmp',filename,new Uint8Array(data),true,true,true);
+    const stage = await USD.OpenStage(path);
+    try{
+      const body = stage.GetPrimAtPath(knob);
+      try {
+        const order = body.GetAttribute('xformOpOrder');
+        const transform = body.GetAttribute('xformOp:transform:needleExportPose');
+        try {
+          return {order: await order.Get(0), matrix: transform.IsValid() ? (await transform.Get(0)).flat() : null};
+        } finally { transform.delete(); order.delete(); }
+      } finally { body.delete(); }
+    }finally{USD.ReleaseStage(stage);USD.FS_unlink(path);}
+  },{data:[...data],knob});
+  expect(await usdTransform(authoredUsdz)).toEqual({order:['xformOp:translate'],matrix:null});
+  const changedTransform = await usdTransform(changedUsdz);
+  expect(changedTransform.order).toEqual(['!resetXformStack!', 'xformOp:transform:needleExportPose']);
+  expect(changedTransform.matrix?.slice(12,15)).toEqual(live.map(value=>expect.closeTo(value,4)));
+  expect(await page.evaluate(path => (window as any).usdPhysics.simulation.bodies.get(path).body.translation().toArray(), knob)).toEqual(live);
+});

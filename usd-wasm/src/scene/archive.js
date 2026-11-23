@@ -24,6 +24,55 @@ export async function packageStage(USD, stage, directory, driver, options = {}) 
   return bytes;
 }
 
+/** Author the current body transforms into a private copy of the packaged root. */
+export async function poseUsdArchive(USD, bytes, directory, bodyTransforms, signal) {
+  const [{unzipSync}, {writeAlignedUsdz}, {Matrix4, Quaternion, Vector3}] = await Promise.all([
+    import('../vendor/fflate/fflate.js'), import('./alignedUsdz.js'), import('three'),
+  ]);
+  const entries = unzipSync(bytes);
+  const rootName = Object.keys(entries).find(name => !name.endsWith('/'));
+  if (!rootName) throw new Error('USD export produced an empty package.');
+  try {
+    for (const [name, data] of Object.entries(entries)) {
+      if (name.endsWith('/')) continue;
+      if (name.startsWith('/') || name.split('/').includes('..') || name.includes('\\')) throw new Error('Unsafe package path.');
+      const path = `${directory}/${name}`;
+      USD.FS_createPath('', path.slice(0, path.lastIndexOf('/')), true, true);
+      USD.FS_createDataFile('', path, data, true, true, true);
+    }
+    const rootPath = `${directory}/${rootName}`;
+    signal?.throwIfAborted();
+    const stage = await USD.OpenStage(rootPath);
+    if (!stage) throw new Error('Could not open the USD export copy.');
+    try {
+      for (const [path, {position, rotation, scale}] of bodyTransforms) {
+        const prim = stage.GetPrimAtPath(path);
+        let transform, order;
+        try {
+          if (!prim.IsValid()) throw new Error(`Could not find rigid body ${path} in the USD export.`);
+          const name = 'xformOp:transform:needleExportPose';
+          transform = prim.CreateAttribute(name, 'matrix4d', false);
+          order = prim.CreateAttribute('xformOpOrder', 'token[]', false);
+          const matrix = new Matrix4().compose(new Vector3(...position), new Quaternion(...rotation), new Vector3(...scale));
+          // USD uses row vectors. Three's column-major storage is the transposed pose in row order.
+          if (!transform.SetMatrix4d(...matrix.elements, NaN) || !order.Set(['!resetXformStack!', name], NaN)) {
+            throw new Error(`Could not export the current pose of ${path}.`);
+          }
+        } finally {
+          order?.delete(); transform?.delete(); prim.delete();
+        }
+      }
+      const root = stage.GetRootLayer();
+      try {
+        if (!root.Save()) throw new Error('Could not save the posed USD export copy.');
+      } finally { root.delete(); }
+      entries[rootName] = USD.ReadFile(rootPath).slice();
+    } finally { USD.ReleaseStage(stage); }
+    signal?.throwIfAborted();
+    return writeAlignedUsdz(entries);
+  } finally { await removeDirectory(USD, directory); }
+}
+
 async function readArchive(USD, path, report) {
   const file = USD.FS_analyzePath(path).object;
   if (!ArrayBuffer.isView(file?.contents) || !Number.isFinite(file.usedBytes)) return USD.ReadFile(path).slice();

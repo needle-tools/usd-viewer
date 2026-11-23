@@ -28,4 +28,4 @@
 
 .usd-download-menu > .usd-download-textures {border-top:1px solid var(--usd-border, #8885);margin-top:4px;padding-top:10px;gap:6px;}
 .usd-download-checkbox {width:14px;height:14px;box-sizing:border-box;border:1px solid currentColor;border-radius:3px;display:grid;place-items:center;}
-.usd-download-textures[aria-checked=true] > .usd-download-checkbox::after {content:'';width:6px;height:3px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-1px) rotate(-45deg);}
+.usd-download-menu > [role=menuitemcheckbox][aria-checked=true] > .usd-download-checkbox::after {content:'';width:6px;height:3px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-1px) rotate(-45deg);}

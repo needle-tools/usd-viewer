@@ -1349,19 +1349,19 @@ catch (error) {
 
 // The header owns format selection, progress and saving; every glTF download
 // goes through the same exporter regardless of the current viewer mode.
-async function exportCurrentGltf({onProgress,signal,textureResolution='original',output='blob'}={}) {
+async function exportCurrentGltf({onProgress,signal,textureResolution='original',output='blob',exportChangedPose=false}={}) {
   const generation=loadGeneration;
   track('export_gltf_started',{textures:textureResolution,simready:!!currentHydraHandle});
   try {
     const GLTFExporter=await loadGltfExporter();
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
-    viewerPhysics?.reset?.();
     const handle=currentHydraHandle;
     const root=nativeGltfRoot||window.usdRoot;
     const nativeSource=handle?null:createGltfPhysicsSource(root);
     const bytes=handle||nativeSource?await (await import('/usd/gltf/simready.js')).exportSimreadyGltf({
       handle:handle||nativeSource.handle,snapshot:nativeSource?await nativeSource.source.readSnapshot():undefined,
-      semantics:nativeSource?.semantics,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal})
+      semantics:nativeSource?.semantics,exporter:new GLTFExporter(),onProgress,textureResolution,output,signal,
+      capturePose:viewerPhysics?.captureExportPose,exportChangedPose})
       :await new GLTFExporter().parseAsync(root,{binary:true,maxTextureSize:textureResolution==='preview'?512:Infinity});
     if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Export cancelled','AbortError');
     track('export_gltf',{textures:textureResolution,size:bucketBytes(bytes instanceof Blob?bytes.size:bytes.byteLength),simready:!!handle});
@@ -1369,15 +1369,20 @@ async function exportCurrentGltf({onProgress,signal,textureResolution='original'
   } catch(error) {if(error.name!=='AbortError')trackError('export_gltf',error);throw error;}
 }
 
-async function shareCurrentAsset({format='gltf',textureResolution='original',signal,onProgress}={}) {
+function exportCurrentUsdz({exportChangedPose=false, ...options}={}) {
+  const handle=currentHydraHandle;
+  if(!handle)throw new Error('USD archive export requires an open USD stage.');
+  return handle.exportUsdz({...options,bodyTransforms:exportChangedPose?viewerPhysics?.captureExportPose(true):undefined});
+}
+
+async function shareCurrentAsset({format='gltf',textureResolution='original',signal,onProgress,exportChangedPose=false}={}) {
   track('export_cloud_cta',{mode:hasUploadableAsset()?'upload':'open',format,textures:textureResolution});
   if(!hasUploadableAsset()){window.open(needleCloudBase(),'_blank','noopener');return;}
   const generation=loadGeneration;
   let bytes;
-  if(format==='gltf')bytes=await exportCurrentGltf({textureResolution,signal,onProgress});
+  if(format==='gltf')bytes=await exportCurrentGltf({textureResolution,signal,onProgress,exportChangedPose});
   else {
-    if(!currentHydraHandle)throw new Error('USD archive export requires an open USD stage.');
-    bytes=await currentHydraHandle.exportUsdz({textureResolution,signal,onProgress});
+    bytes=await exportCurrentUsdz({textureResolution,signal,onProgress,exportChangedPose});
     if(format==='zip')bytes=await(await import('/usd/scene/compressArchive.js')).compressArchive(bytes,{signal,onProgress});
   }
   if(signal?.aborted||generation!==loadGeneration)throw new DOMException('Share cancelled','AbortError');
@@ -1392,7 +1397,8 @@ async function shareCurrentAsset({format='gltf',textureResolution='original',sig
 
 function setAssetDownload(handle,generation,formats=['zip','usdz','gltf']) {
   window.usdWorkbench?.setDownload(()=>({handle,filename:currentDisplayFilename||loadedSourceFilename,
-    formats,exportGltf:exportCurrentGltf,share:shareCurrentAsset,isCurrent:()=>generation===loadGeneration}));
+    formats,exportGltf:exportCurrentGltf,exportUsdz:formats.includes('usdz')?exportCurrentUsdz:undefined,
+    canExportChangedPose:viewerPhysics?()=>!!viewerPhysics?.simulation:undefined,share:shareCurrentAsset,isCurrent:()=>generation===loadGeneration}));
 }
 
 // File → Share USD keeps the Cloud introduction; both actions use the same

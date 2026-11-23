@@ -15,7 +15,7 @@ const axes=[0,1,2],axisIndex=name=>({X:0,Y:1,Z:2})[name||'X'];
 
 /** Export rigid visuals, physics and composed schema semantics. Supplying the
  * exporter keeps renderer/texture setup with the host. */
-export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onProgress,textureResolution='original',output='arraybuffer',signal}){
+export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onProgress,textureResolution='original',output='arraybuffer',signal,capturePose,exportChangedPose=false}){
  const report=(phase,completed=0,total=0)=>onProgress?.({phase,completed,total});
  if(!['preview','original'].includes(textureResolution))throw new RangeError('Invalid export texture resolution.');
  if(!['arraybuffer','blob'].includes(output))throw new RangeError('Invalid glTF export output.');
@@ -41,6 +41,21 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
  }
  report('metadata');
  semantics=semantics??await readRuntimeSemanticLabels(handle);
+ const bodyTransforms=capturePose?.(exportChangedPose);
+ handle.scene.updateWorldMatrix(true,true);
+ const inverseRoot=handle.scene.matrixWorld.clone().invert();
+ // Capture visible Hydra meshes and instances in the same frame as the physics bodies.
+ const objects=[];
+ handle.scene.traverseVisible(object=>{
+  if(!(object.isMesh||object.isPoints||object.isLine||object.isCamera||object.isLight)||object.userData.usdHelperFor)return;
+  const matrix=inverseRoot.clone().multiply(object.matrixWorld);
+  const instances=object.isInstancedMesh?object.instanceMatrix?.array.slice(0,object.count*16):null;
+  objects.push({object,matrix,instances});
+ });
+ if(exportChangedPose&&bodyTransforms?.size)for(const body of snapshot.bodies){
+  const transform=bodyTransforms.get(body.path);
+  if(transform)Object.assign(body,transform);
+ }
  const sourceSnapshot=snapshot,m=sourceSnapshot.metersPerUnit;
  const up=sourceSnapshot.upAxis==='Z'?new Vector3(0,0,1):sourceSnapshot.upAxis==='X'?new Vector3(1,0,0):new Vector3(0,1,0);
  const conversion=new Matrix4().compose(new Vector3(),new Quaternion().setFromUnitVectors(up,new Vector3(0,1,0)),new Vector3(m,m,m));
@@ -77,13 +92,9 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
   bindings.push({object:node,path:body.path});
  }
  const owners=[...bodies.keys()].sort((a,b)=>b.length-a.length);
- handle.scene.updateWorldMatrix(true,true);const inverseRoot=handle.scene.matrixWorld.clone().invert();
- // Hydra keeps hidden source meshes beside their visible instance batches.
- // Only the rendered representation belongs in the exported scene.
- const objects=[];handle.scene.traverseVisible(object=>{if((object.isMesh||object.isPoints||object.isLine||object.isCamera||object.isLight)&&!object.userData.usdHelperFor)objects.push(object);});
- for(const object of objects){
+ for(const {object,matrix,instances} of objects){
   if(object.isSkinnedMesh||object.morphTargetInfluences?.length)throw new Error('SimReady export currently requires rigid visuals.');
-  for(let i=0;i<(object.isInstancedMesh?object.count:1);i++){
+  for(let i=0;i<(instances?instances.length/16:object.isInstancedMesh?object.count:1);i++){
    const identity=object.isInstancedMesh?await handle.resolvePick?.(object.userData.usdPath,i):object.userData.usdInstanceIdentity;
    const path=identity?.path||(!object.isInstancedMesh?(object.userData.usdSourcePath||object.userData.usdPath):null);
    const owner=object.userData.usdBodyPath||owners.find(key=>contains(key,path))||identity?.instances?.map(item=>owners.find(key=>contains(key,item.path))).find(Boolean);
@@ -228,8 +239,11 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
     const mesh=object.isMesh?new Mesh(geometry,materials):object.clone(false);
     if(geometry)mesh.geometry=geometry;if(materials)mesh.material=materials;
     mesh.name=path;mesh.userData={};mesh.matrixAutoUpdate=false;
-    mesh.matrix.copy(conversion).multiply(inverseRoot).multiply(object.matrixWorld);
-    if(object.isInstancedMesh){const instance=new Matrix4();object.getMatrixAt(i,instance);mesh.matrix.multiply(instance);}
+    mesh.matrix.copy(conversion);
+    const correction=!exportChangedPose&&bodyTransforms?.get(owner);
+    if(correction)mesh.matrix.multiply(correction);
+    mesh.matrix.multiply(matrix);
+    if(instances)mesh.matrix.multiply(new Matrix4().fromArray(instances,i*16));
     if(object.isCamera||object.isLight){
      mesh.matrix.scale(new Vector3(1/m,1/m,1/m));
      if(object.isCamera)for(const key of ['near','far','left','right','top','bottom'])if(Number.isFinite(mesh[key]))mesh[key]*=m;

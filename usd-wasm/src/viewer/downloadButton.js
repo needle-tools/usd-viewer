@@ -30,6 +30,7 @@ export function mountDownloadButton(options) {
   let format = options.format || 'zip', sharing = false, busy = false, disposed = false, progress = null, activeSource = null, compressionAbort = null;
   let announcedPhase = '', announcedPercent = -1;
   let exportingFormat = format;
+  let exportChangedPose = false, poseHandle;
   let textureResolution = options.textureResolution || 'original';
   try { if(options.stateKey) textureResolution=JSON.parse(localStorage.getItem(options.stateKey+':textures'))||textureResolution; } catch {}
   if(!['original','preview'].includes(textureResolution))textureResolution='original';
@@ -50,6 +51,11 @@ export function mountDownloadButton(options) {
   const textureCheck=document.createElement('span');textureCheck.setAttribute('aria-hidden','true');textureCheck.className='usd-download-checkbox';
   textureItem.append(textureCheck,'Full-resolution textures');
   textureItem.addEventListener('click',()=>setTextureResolution(textureResolution==='original'?'preview':'original'));menu.append(textureItem);
+  const poseItem=document.createElement('button');poseItem.type='button';
+  poseItem.setAttribute('role','menuitemcheckbox');
+  const poseCheck=document.createElement('span');poseCheck.setAttribute('aria-hidden','true');poseCheck.className='usd-download-checkbox';
+  poseItem.append(poseCheck,'Export with changed SimReady pose');
+  poseItem.addEventListener('click',()=>{exportChangedPose=!exportChangedPose;refresh();});menu.append(poseItem);
   menuElement.append(menuTrigger, menu); element.append(button, menuElement, status); container.append(element);
 
   function reportProgress(value) {
@@ -68,6 +74,10 @@ export function mountDownloadButton(options) {
   function refresh() {
     if (disposed) return;
     const source = options.getSource(), allowed = source?.formats || (!source||source.exportGltf ? formats : ['zip','usdz']);
+    if (poseHandle !== source?.handle) {
+      poseHandle = source?.handle;
+      exportChangedPose = false;
+    }
     if (busy && (!source || source.handle !== activeSource?.handle || activeSource?.isCurrent?.() === false)) compressionAbort?.abort();
     if (!allowed.includes(format)) format = allowed[0] || 'zip';
     if(sharing&&!source?.share)sharing=false;
@@ -88,6 +98,9 @@ export function mountDownloadButton(options) {
     textureItem.disabled=button.disabled;
     textureItem.setAttribute('aria-checked',String(textureResolution==='original'));
     textureItem.title=textureResolution==='original'?'Export source textures at full resolution':'Export the currently loaded preview textures';
+    poseItem.hidden=!source?.canExportChangedPose;
+    poseItem.disabled=button.disabled||!source?.canExportChangedPose?.();
+    poseItem.setAttribute('aria-checked',String(exportChangedPose));
     if (button.disabled) closeMenu();
   }
   function setFormat(value) {
@@ -130,6 +143,7 @@ export function mountDownloadButton(options) {
     const selectedFormat = format;
     const selectedShare = sharing;
     const selectedTextures = textureResolution;
+    const changedPose = !poseItem.disabled && !poseItem.hidden && exportChangedPose;
     exportingFormat = selectedFormat;
     closeMenu(); busy = true; activeSource = source; compressionAbort = new AbortController(); refresh();
     announcedPhase = ''; announcedPercent = -1; reportProgress({phase:'preparing',completed:0,total:0});
@@ -139,8 +153,9 @@ export function mountDownloadButton(options) {
       // uses a pthread; compression uses a separate module worker below.
       await (globalThis.scheduler?.yield?.() || new Promise(resolve => setTimeout(resolve, 0)));
       if (!current()) return;
-      if(selectedShare){reportProgress({phase:'sharing',completed:0,total:0});await source.share({format:selectedFormat,textureResolution:selectedTextures,signal:compressionAbort.signal,onProgress:reportProgress});return;}
-      let bytes = selectedFormat==='gltf' ? await source.exportGltf({onProgress:reportProgress,signal:compressionAbort.signal,textureResolution:selectedTextures}) : await source.handle.exportUsdz({textureResolution:selectedTextures,signal:compressionAbort.signal,onProgress:value => {
+      if(selectedShare){reportProgress({phase:'sharing',completed:0,total:0});await source.share({format:selectedFormat,textureResolution:selectedTextures,exportChangedPose:changedPose,signal:compressionAbort.signal,onProgress:reportProgress});return;}
+      const exportUsdz = source.exportUsdz || (options => source.handle.exportUsdz(options));
+      let bytes = selectedFormat==='gltf' ? await source.exportGltf({onProgress:reportProgress,signal:compressionAbort.signal,textureResolution:selectedTextures,exportChangedPose:changedPose}) : await exportUsdz({textureResolution:selectedTextures,exportChangedPose:changedPose,signal:compressionAbort.signal,onProgress:value => {
         if (current() && value.phase !== 'complete') reportProgress(value);
       }});
       if (!current()) return;
@@ -166,12 +181,12 @@ export function mountDownloadButton(options) {
     if (button.disabled) return;
     if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault(); openMenu();
-      const enabled = [...items,shareItem,textureItem].filter(item => !item.disabled&&!item.hidden);
+      const enabled = [...items,shareItem,textureItem,poseItem].filter(item => !item.disabled&&!item.hidden);
       (event.key === 'ArrowUp' ? enabled.at(-1) : enabled[0])?.focus();
     }
   });
   menu.addEventListener('keydown', event => {
-    const enabled = [...items,shareItem,textureItem].filter(item => !item.disabled&&!item.hidden), index = enabled.indexOf(document.activeElement);
+    const enabled = [...items,shareItem,textureItem,poseItem].filter(item => !item.disabled&&!item.hidden), index = enabled.indexOf(document.activeElement);
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Tab'].includes(event.key)) return;
     if (event.key === 'Tab') { closeMenu(); (event.shiftKey ? button : menuTrigger).focus(); return; }
     event.preventDefault();

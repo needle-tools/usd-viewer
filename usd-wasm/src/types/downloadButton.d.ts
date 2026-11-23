@@ -2,15 +2,23 @@ import type {NeedleThreeHydraHandle} from './create.three.js';
 
 export type DownloadFormat = 'zip' | 'usdz' | 'gltf';
 export interface DownloadProgress {phase: string; completed: number; total: number}
+export interface DownloadOptions {
+  onProgress: (progress: DownloadProgress) => void;
+  signal: AbortSignal;
+  textureResolution: 'original' | 'preview';
+  exportChangedPose: boolean;
+}
 export interface DownloadSource {
   handle: Partial<Pick<NeedleThreeHydraHandle, 'exportUsdz'>>;
   filename: string;
   formats?: readonly DownloadFormat[];
   isCurrent?: () => boolean;
   /** Host-owned glTF export; enables glTF in the format menu. */
-  exportGltf?: (options: {onProgress: (progress: DownloadProgress) => void; signal: AbortSignal; textureResolution: 'original' | 'preview'}) => Promise<ArrayBuffer | Uint8Array | Blob>;
+  exportGltf?: (options: DownloadOptions) => Promise<ArrayBuffer | Uint8Array | Blob>;
+  exportUsdz?: (options: DownloadOptions) => Promise<Uint8Array>;
+  canExportChangedPose?: () => boolean;
   /** Enables the Cloud destination. It runs only when Share is clicked. */
-  share?: (options: {format: DownloadFormat; textureResolution: 'original' | 'preview'; signal: AbortSignal; onProgress: (progress: DownloadProgress) => void}) => Promise<void>;
+  share?: (options: DownloadOptions & {format: DownloadFormat}) => Promise<void>;
 }
 /** Split button for ZIP/USDZ, optional host glTF export and Cloud sharing. */
 export function mountDownloadButton(options: {

@@ -12,7 +12,18 @@ export type UsdExportProgress = {
     completed: number;
     total: number;
 };
-export type UsdExportOptions = { onProgress?: (progress: UsdExportProgress) => void; signal?: AbortSignal; textureResolution?: 'original' | 'preview' };
+export interface UsdExportBodyTransform {
+    position: readonly [number, number, number];
+    rotation: readonly [number, number, number, number];
+    scale: readonly [number, number, number];
+}
+export type UsdExportOptions = {
+    onProgress?: (progress: UsdExportProgress) => void;
+    signal?: AbortSignal;
+    textureResolution?: 'original' | 'preview';
+    /** Optional stage-space body transforms to apply only to the exported copy. */
+    bodyTransforms?: ReadonlyMap<string, UsdExportBodyTransform>;
+};
 
 export declare type NeedleThreeHydraStageMetadata = {
     upAxis: string,
