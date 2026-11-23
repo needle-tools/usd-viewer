@@ -2,7 +2,7 @@ import {BufferAttribute,BufferGeometry,Color,Group,Matrix4,Mesh,MeshPhysicalMate
 import {readUsdPhysics} from '../physics/readPhysics.js';
 import {readRuntimeSemanticLabels,bindRuntimeSemanticLabels} from './semantics.js';
 import {parseGltfBlob} from './blob.js';
-import {portableTexture,textureCanonicalizer,cachePackedTextures,useGltfTextureTransforms} from './textures.js';
+import {materialTextures,portableTexture,textureCanonicalizer,cachePackedTextures,useGltfTextureTransforms} from './textures.js';
 import {coalesceGroups} from './groups.js';
 import {needsUdimTiles,partitionUdimGeometry,selectGeometryRanges,udimSamplingMatrix} from './udim.js';
 
@@ -137,7 +137,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
       copy=material.clone();ownedMaterials.add(copy);
       copy.emissive.multiplyScalar(1/emission);copy.emissiveIntensity=(material.emissiveIntensity??1)*emission;
      }
-     for(const key of Object.keys(material))if(material[key]?.isTexture){
+     for(const [key] of materialTextures(material)){
       const tiled=tile!==undefined&&material[key].userData?.usdUdim;
       let original=textureExport?(tiled?await textureExport.getUdimTile(material[key],tile):await textureExport.getTexture(material[key])):material[key];assertCurrent();
       if(tiled){
@@ -157,7 +157,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
    const sourceMaterials=object.material?[object.material].flat():[];
    const resolvedMaterials=await Promise.all(sourceMaterials.map(resolveMaterial));
    const plans=resolvedMaterials.map(material=>{
-    const textures=Object.values(material).filter(value=>value?.isTexture),udims=textures.filter(texture=>texture.userData?.usdUdim);
+    const textures=materialTextures(material).map(([,texture])=>texture),udims=textures.filter(texture=>texture.userData?.usdUdim);
     if(textureResolution!=='original'||!udims.some(needsUdimTiles))return null;
     if(!textureExport?.getUdimTile)throw new Error('Oversized UDIM export requires a texture scope with individual source tiles.');
     const channel=udims[0].channel||0,matrix=udimSamplingMatrix(udims[0]);
@@ -349,7 +349,7 @@ function projectGeometry(source){
 }
 function projectTextureCoordinates(source,materials,cache){
  const uvs=['uv','uv1','uv2','uv3'];
- const required=new Set(materials.filter(Boolean).flatMap(material=>Object.entries(material).filter(([key,value])=>key!=='envMap'&&value?.isTexture).map(([,texture])=>texture.channel||0)));
+ const required=new Set(materials.filter(Boolean).flatMap(material=>materialTextures(material).map(([,texture])=>texture.channel||0)));
  if([...required].some(channel=>!Number.isInteger(channel)||channel<0||channel>=uvs.length))throw new Error('glTF export supports texture coordinate channels 0 through 3.');
  const missing=[...required].filter(channel=>!source.attributes[uvs[channel]]).sort();
  const last=Math.max(uvs.findLastIndex(name=>source.attributes[name]),...required);

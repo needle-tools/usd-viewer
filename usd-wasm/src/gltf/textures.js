@@ -50,6 +50,23 @@ export function cachePackedTextures(writer) {
  };
 }
 
+// three.js material texture properties. Read through these names, not Object.keys:
+// hosts such as Needle Engine keep the values in renamed backing fields behind
+// accessors, and the slot name decides how each texture is encoded.
+const textureSlots = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap',
+ 'bumpMap', 'displacementMap', 'lightMap', 'specularMap', 'specularColorMap', 'specularIntensityMap',
+ 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap', 'sheenColorMap', 'sheenRoughnessMap',
+ 'transmissionMap', 'thicknessMap', 'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap', 'gradientMap', 'matcap'];
+
+/** A material's textures as [slot, texture] pairs, keyed by three.js slot name.
+ * @param {object} material
+ * @param {{includeEnvironment?: boolean}} [options]
+ * @returns {Array<[string, import('three').Texture]>} */
+export function materialTextures(material, {includeEnvironment = false} = {}) {
+ const slots = includeEnvironment ? [...textureSlots, 'envMap'] : textureSlots;
+ return slots.map(slot => [slot, material[slot]]).filter(([, texture]) => texture?.isTexture);
+}
+
 /** Share identical sampled images, including ORM maps cloned into separate
  * roughness/metalness slots. This lets Three retain their existing packing. */
 export function textureCanonicalizer() {

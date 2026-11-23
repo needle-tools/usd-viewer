@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DataTexture,DataUtils,FloatType,HalfFloatType,NoColorSpace,RGBAFormat,SRGBColorSpace,UnsignedShortType} from 'three';
-import {portableTexture,textureCanonicalizer} from '../../src/gltf/textures.js';
+import {MeshPhysicalMaterial,Texture,DataTexture,DataUtils,FloatType,HalfFloatType,NoColorSpace,RGBAFormat,SRGBColorSpace,UnsignedShortType} from 'three';
+import {materialTextures,portableTexture,textureCanonicalizer} from '../../src/gltf/textures.js';
 
 test('raw color maps become sRGB without changing alpha, source pixels or UV settings',()=>{
  const source=new DataTexture(new Uint8Array([128,64,16,96]),1,1);source.channel=2;source.offset.set(.2,.3);
@@ -44,4 +44,17 @@ for(const [type,data] of [[FloatType,new Float32Array([.5,.25,0,1])],[HalfFloatT
  assert.deepEqual([...portableTexture(source,'map').image.data],[188,137,0,255]);
  assert.deepEqual([...portableTexture(source,'normalMap').image.data],[128,64,0,255]);
  assert.equal(source.image.data,data);
+});
+
+// Needle Engine stores material properties in enumerable `<slot>___needle` backing
+// fields behind accessors. Slots must be read by their three.js names: an unknown
+// key is not a color slot, so an sRGB base color would be re-encoded as linear.
+test('material textures are listed by their three.js slot names, including wrapped properties',()=>{
+ const material=new MeshPhysicalMaterial(),map=new Texture(),normal=new Texture(),env=new Texture();
+ for(const [slot,value] of [['map',map],['normalMap',normal],['envMap',env]]){
+  delete material[slot];material[slot+'___needle']=value;
+  Object.defineProperty(material,slot,{get(){return this[slot+'___needle'];},set(v){this[slot+'___needle']=v;},enumerable:false,configurable:true});
+ }
+ assert.deepEqual(materialTextures(material),[['map',map],['normalMap',normal]]);
+ assert.deepEqual(materialTextures(material,{includeEnvironment:true}).map(([slot])=>slot),['map','normalMap','envMap']);
 });
