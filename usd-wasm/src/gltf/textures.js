@@ -81,8 +81,20 @@ export function portableTexture(texture, slot) {
   const value = component < components ? decode(pixels[pixel * components + component]) : component === 3 ? 1 : 0;
   data[pixel * 4 + component] = Math.round(Math.max(0, Math.min(1, component === 3 ? value : transfer(value))) * 255);
  }
+ // GLTFExporter writes DataTexture pixels with putImageData, which ignores its flipY
+ // transform. Store a flipped texture bottom row first instead: it renders the same
+ // and exports in the orientation an unbaked flipY texture would.
+ if (texture.flipY) {
+  const row = image.width * 4, swap = new Uint8Array(row);
+  for (let top = 0, bottom = image.height - 1; top < bottom; top++, bottom--) {
+   swap.set(data.subarray(top * row, top * row + row));
+   data.copyWithin(top * row, bottom * row, bottom * row + row);
+   data.set(swap, bottom * row);
+  }
+ }
  const copy = new DataTexture(); copy.copy(texture);
  copy.source = new Source({data, width: image.width, height: image.height});
+ copy.flipY = false;
  copy.format = RGBAFormat; copy.type = UnsignedByteType; copy.colorSpace = color ? SRGBColorSpace : NoColorSpace;
  copy.needsUpdate = true;
  return copy;

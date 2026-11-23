@@ -4,12 +4,23 @@ import {DataTexture,DataUtils,FloatType,HalfFloatType,NoColorSpace,RGBAFormat,SR
 import {portableTexture,textureCanonicalizer} from '../../src/gltf/textures.js';
 
 test('raw color maps become sRGB without changing alpha, source pixels or UV settings',()=>{
- const source=new DataTexture(new Uint8Array([128,64,16,96]),1,1);source.channel=2;source.offset.set(.2,.3);source.flipY=true;
+ const source=new DataTexture(new Uint8Array([128,64,16,96]),1,1);source.channel=2;source.offset.set(.2,.3);
  const copy=portableTexture(source,'map');
  assert.deepEqual([...copy.image.data],[188,137,71,96]);assert.equal(copy.colorSpace,SRGBColorSpace);
  assert.deepEqual([...source.image.data],[128,64,16,96]);assert.equal(source.colorSpace,NoColorSpace);
- assert.equal(copy.channel,2);assert.equal(copy.flipY,true);assert.deepEqual(copy.offset.toArray(),[.2,.3]);
+ assert.equal(copy.channel,2);assert.equal(copy.flipY,false);assert.deepEqual(copy.offset.toArray(),[.2,.3]);
  assert.notEqual(copy.source,source.source);
+});
+
+// GLTFExporter writes DataTexture pixels with putImageData, which ignores its flipY
+// canvas transform. A baked copy must therefore store flipped textures bottom row
+// first with flipY off: it renders identically and exports in glTF orientation.
+test('baked copies of flipY textures store bottom-first rows instead of relying on flipY',()=>{
+ const source=new DataTexture(new Uint8Array([0,0,0,255, 255,255,255,255]),1,2);source.flipY=true;
+ const copy=portableTexture(source,'map');
+ assert.notEqual(copy,source);assert.equal(copy.flipY,false);
+ assert.deepEqual([...copy.image.data],[255,255,255,255, 0,0,0,255]);
+ assert.equal(source.flipY,true);assert.deepEqual([...source.image.data],[0,0,0,255, 255,255,255,255]);
 });
 
 test('packed ORM clones share an export texture only when sampling and channel settings agree',()=>{
