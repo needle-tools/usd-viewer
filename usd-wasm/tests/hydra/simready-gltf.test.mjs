@@ -409,7 +409,7 @@ test('disabled mesh geometry is extracted for export and convex point clouds rem
  const shape=gltf.parser.json.extensions.NEEDLE_simready.snapshot.shapes[0],primitive=gltf.parser.json.meshes[shape.mesh].primitives[0];
  assert.equal(primitive.mode,0);assert.equal(shape.collisionEnabled,false);assert.deepEqual(gltf.userData.simready.snapshot.shapes[0].points,points);
 });
-test('runtime resolves ordinary multi-primitive collision meshes through GLTFLoader',async()=>{
+test('GLTFLoader resolves multi-primitive colliders and skips invalid optional SimReady metadata', async t => {
  const f=fixture(),points=[0,0,0,1,0,0,0,1,0];
  f.snapshot.shapes=[{path:'/Knob/Collision',body:'/Knob',type:'mesh',approximation:'sdf',points,indices:[0,1,2]}];
  const bytes=await exportSimreadyGltf({handle:f.handle,snapshot:f.snapshot,exporter:new GLTFExporter()}),view=new DataView(bytes),jsonLength=view.getUint32(12,true);
@@ -419,8 +419,16 @@ test('runtime resolves ordinary multi-primitive collision meshes through GLTFLoa
  const loaded=await registerSimreadyLoader(new GLTFLoader()).parseAsync(JSON.stringify(json),'');
  assert.deepEqual(loaded.userData.simready.snapshot.shapes[0].points,[...points,...points]);
  assert.deepEqual(loaded.userData.simready.snapshot.shapes[0].indices,[0,1,2,3,4,5]);
- json.extensions.NEEDLE_simready.snapshot.shapes[0].mesh=999;
- await assert.rejects(registerSimreadyLoader(new GLTFLoader()).parseAsync(JSON.stringify(json),''),/collision mesh reference/);
+ json.extensions.NEEDLE_simready.snapshot.shapes[0].mesh = json.meshes.length;
+ t.mock.method(console, 'warn', () => {});
+ const optional = await registerSimreadyLoader(new GLTFLoader()).parseAsync(JSON.stringify(json), '');
+ assert.equal(optional.userData.simready, undefined);
+ let renderedMeshes = 0;
+ optional.scene.traverse(object => { if (object.isMesh) renderedMeshes++; });
+ assert.equal(renderedMeshes, f.root.children.length);
+
+ json.extensionsRequired = ['NEEDLE_simready'];
+ await assert.rejects(registerSimreadyLoader(new GLTFLoader()).parseAsync(JSON.stringify(json), ''), /collision mesh reference/);
 });
 test('projects only representable analytic dimensions and principal inertia into Khronos physics',async()=>{
  const f=fixture();
