@@ -1253,6 +1253,7 @@ function updateUrl(replaceHistory = false) {
   }
   setViewerModeUrlParam(currentUrl);
   setWaitForMaterialsUrlParam(currentUrl);
+  if (!replaceHistory) currentUrl.searchParams.delete('download');
   if (replaceHistory) window.history.replaceState({}, filename, currentUrl);
   else window.history.pushState({}, filename, currentUrl);
 }
@@ -1260,6 +1261,7 @@ function updateUrl(replaceHistory = false) {
 if (messageLog) messageLog.textContent = "Initializing...";
 if (window.setViewerLoading) window.setViewerLoading(true, { lockClear: true });
 const startupFilename = filename, startupGeneration = loadGeneration;
+const downloadStartupZip = params.get('download') === 'zip';
 const initPromise = init();
 let startupPackagePromise;
 
@@ -1299,7 +1301,13 @@ try {
         track('load_url', { method: 'url', type: extOf(filename), host });
       }
 
-      await clearStage({ preserveStartupPackage: true });
+      const startupClear = clearStage({ preserveStartupPackage: true });
+      const generation = loadGeneration;
+      await startupClear;
+      if (generation !== loadGeneration) {
+        window.usdWorkbench?.setReady();
+        return;
+      }
       const urlPath = (new URL(document.location)).searchParams.get("file").split('?')[0];
       const catalogAsset = catalogAssetForUrlPath(urlPath);
       if (catalogAsset?.executable || catalogAsset?.files?.length) {
@@ -1314,6 +1322,9 @@ try {
           startupPackagePromise = undefined;
           await loadUsdFile(undefined, displayFilename, urlPath, true, undefined, packagePromise);
         }
+      }
+      if (downloadStartupZip && generation === loadGeneration && ready) {
+        void window.usdWorkbench?.downloadZip().catch(error => console.error('ZIP download failed:', error));
       }
     }
     window.usdWorkbench?.setReady();
@@ -4586,6 +4597,7 @@ async function init() {
       // Clear the URL when no file is selected (Clear button clicked)
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete("file");
+      currentUrl.searchParams.delete('download');
       setViewerModeUrlParam(currentUrl);
       window.history.pushState({}, "USD Viewer", currentUrl);
     }

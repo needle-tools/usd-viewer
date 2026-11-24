@@ -206,6 +206,7 @@ The main options are `viewer=three|needle`,
 `render=basic|beauty|pathtraced`,
 `complexity=adaptive|low|medium|high|very-high` and `background=light|dark`.
 Use `file=` for a USD URL; relative dependencies resolve from its source.
+Add `&download=zip` to a direct USD link to start a ZIP export when the asset is ready.
 
 The viewer environment can be selected with `?environment=` or `?env=`.
 Supported values include:

@@ -3,6 +3,17 @@ import {readFile} from 'node:fs/promises';
 import {unzipSync} from 'three/addons/libs/fflate.module.js';
 import {stageReady, clearStage} from './workbench-menus';
 
+test('a direct USD link with download=zip exports without a click', async ({page,context,baseURL}) => {
+  await context.route(url => url.origin !== new URL(baseURL!).origin, route => route.abort());
+  await page.addInitScript(() => localStorage.setItem('needle-usd-download-format', JSON.stringify('usdz')));
+  const pending = page.waitForEvent('download');
+  await page.goto('/?viewer=three&render=basic&file=/test-fixtures/api/examples.js%23department-layers&download=zip');
+  const zip = await pending;
+  expect(zip.suggestedFilename()).toMatch(/\.zip$/);
+  expect(Object.keys(unzipSync(new Uint8Array(await readFile((await zip.path())!)))).length).toBeGreaterThan(1);
+  expect(await page.evaluate(() => localStorage.getItem('needle-usd-download-format'))).toBe(JSON.stringify('usdz'));
+});
+
 async function expectedCreator(page: Page) {
   const build = await (await page.request.get('/viewer-build.json')).json();
   const revision = build.revision ? ` (${build.revision.slice(0,12)})` : '';

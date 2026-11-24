@@ -3,6 +3,7 @@ import {installViewerStyle} from './style.js';
 import {compressArchive} from '../scene/compressArchive.js';
 
 const formats = ['zip', 'usdz', 'gltf'];
+const sourceFormats = source => source?.formats || (!source || source.exportGltf ? formats : ['zip','usdz']);
 let nextId = 0;
 
 /** A standalone stage download control; the host owns the current Hydra handle. */
@@ -43,7 +44,7 @@ export function mountDownloadButton(options) {
   if (topLayer) menu.setAttribute('popover', 'manual');
   let format = options.format || 'zip', sharing = false, busy = false, disposed = false, progress = null, activeSource = null, compressionAbort = null;
   let announcedPhase = '', announcedPercent = -1;
-  let exportingFormat = format;
+  let exportingFormat = format, exportingShare = false;
   let exportChangedPose = false, poseHandle;
   let textureResolution = options.textureResolution || 'original';
   try { if(options.stateKey) textureResolution=JSON.parse(localStorage.getItem(options.stateKey+':textures'))||textureResolution; } catch {}
@@ -79,7 +80,7 @@ export function mountDownloadButton(options) {
   function reportProgress(value) {
     if (disposed || compressionAbort?.signal.aborted) return;
     progress = value;
-    const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',textures:'Preparing preview textures',compressing:'Compressing ZIP',physics:'Physics',metadata:'Metadata',geometry:'Geometry',writing:'Writing glTF',sharing:'Sharing',complete:sharing?'Share ready':'Download ready'};
+    const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',textures:'Preparing preview textures',compressing:'Compressing ZIP',physics:'Physics',metadata:'Metadata',geometry:'Geometry',writing:'Writing glTF',sharing:'Sharing',complete:exportingShare?'Share ready':'Download ready'};
     const percent = value.total > 0 ? Math.min(100, Math.floor(value.completed / value.total * 100)) : -1;
     const text = names[value.phase] + (percent >= 0 && value.phase !== 'complete' ? ` ${percent}%` : '');
     button.title = value.phase === 'complete' ? text : `Exporting ${exportingFormat.toUpperCase()} · ${text}`;
@@ -91,7 +92,7 @@ export function mountDownloadButton(options) {
 
   function refresh() {
     if (disposed) return;
-    const source = options.getSource(), allowed = source?.formats || (!source||source.exportGltf ? formats : ['zip','usdz']);
+    const source = options.getSource(), allowed = sourceFormats(source);
     if (poseHandle !== source?.handle) {
       poseHandle = source?.handle;
       exportChangedPose = false;
@@ -164,15 +165,17 @@ export function mountDownloadButton(options) {
     menuElement.open = false; menuTrigger.setAttribute('aria-expanded', 'false');
     if (wasOpen) options.onOpenChange?.(false);
   }
-  async function download() {
+  async function download(requestedFormat) {
     if (disposed || busy) return;
     const source = options.getSource(); if (!source) return;
     refresh(); if (button.disabled) return;
-    const selectedFormat = format;
-    const selectedShare = sharing;
+    if (requestedFormat && !sourceFormats(source).includes(requestedFormat)) return;
+    const selectedFormat = requestedFormat || format;
+    const selectedShare = !requestedFormat && sharing;
     const selectedTextures = textureResolution;
     const changedPose = !poseItem.disabled && !poseItem.hidden && exportChangedPose;
     exportingFormat = selectedFormat;
+    exportingShare = selectedShare;
     closeMenu(); busy = true; activeSource = source; compressionAbort = new AbortController(); refresh();
     announcedPhase = ''; announcedPercent = -1; reportProgress({phase:'preparing',completed:0,total:0});
     const current = () => !disposed && !compressionAbort.signal.aborted && options.getSource()?.handle === source.handle && source.isCurrent?.() !== false;

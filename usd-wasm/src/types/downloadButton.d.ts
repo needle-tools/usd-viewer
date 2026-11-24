@@ -56,7 +56,7 @@ export function mountDownloadButton(options: {
   setFormat(format: DownloadFormat): void;
   setTextureResolution(resolution: 'original' | 'preview'): void;
   /** Resolves on completion/cancellation; rejects on failure. Click failures use onError. */
-  download(): Promise<void>;
+  download(format?: DownloadFormat): Promise<void>;
   /** Share through the host callback, using the selected format and texture quality. */
   share(): Promise<void>;
   openMenu(): void;

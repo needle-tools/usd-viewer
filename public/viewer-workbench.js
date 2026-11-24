@@ -575,6 +575,7 @@ export async function mountWorkbench() {
     onDispose(callback) { if (disposed) { callback(); return () => {}; } disposeListeners.add(callback); return () => disposeListeners.delete(callback); },
     setDownload(getSource) { downloadSource = getSource; downloadControl.refresh(); },
     downloadGltf() { downloadControl.setFormat('gltf'); return downloadControl.download(); },
+    downloadZip() { return downloadControl.download('zip'); },
     share() { return downloadControl.share(); },
     containers: { helpers: helperSettings, settings: rendererSettings, view: cameraSettings, stage: hosts.stage, properties: hosts.properties, layers: hosts.layers, timeline: hosts.timeline, console: replHost },
     openPanel, isPanelVisible, exampleChosen() { if (productMode === 'viewer') examplesDialog.close(); else if(isCompact)showCompact('viewport'); }, reset: defaults, setReady() { open.disabled = input.disabled = samples.disabled = false; },
