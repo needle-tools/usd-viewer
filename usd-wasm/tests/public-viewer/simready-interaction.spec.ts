@@ -160,3 +160,28 @@ test('cabinet chrome handle pixels move with the drawer in Beauty',async({page},
  expect(movedBounds.min[0]-restBounds.min[0]).toBeCloseTo(.25,5);
  expect(movedBounds.max[0]-restBounds.max[0]).toBeCloseTo(.25,5);
 });
+
+// Interact mode lets movable parts be dragged. A click without a drag must still
+// select the clicked part, as it does with Interact off.
+test('SimReady glasses arm can be selected by clicking it while Interact is on',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(url('accessory_eyeglasses_a01'));await stageReady(page);await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+ await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics?.simulation)).toBe(true);
+ const point=await page.evaluate(async()=>{
+  const w=window as any,sim=w.usdPhysics.simulation,{Vector2,Raycaster}=await import('three');
+  const camera=w.usdRenderCamera||w.camera,canvas=w.renderer.domElement,rect=canvas.getBoundingClientRect(),ray=new Raycaster();
+  const candidates:any[]=[];sim.root.updateWorldMatrix(true,true);sim.root.traverseVisible((o:any)=>{if(o.isMesh&&!o.userData.usdHelperFor)candidates.push(o);});
+  // Scan the viewport for a pixel whose nearest visible surface belongs to the arm.
+  for(let y=-.9;y<=.9;y+=.02)for(let x=-.9;x<=.9;x+=.02){
+   ray.setFromCamera(new Vector2(x,y),camera);const hit=ray.intersectObjects(candidates,false)[0];
+   if(hit&&sim.bodyForObject(hit.object,hit.instanceId)?.data.path.endsWith('/arm_01_obj_00'))return {x:rect.left+(x+1)*rect.width/2,y:rect.top+(1-y)*rect.height/2};
+  }
+  return null;
+ });
+ expect(point).not.toBeNull();
+ await page.mouse.move(point!.x,point!.y);await page.mouse.down();await page.mouse.up();
+ await expect.poll(()=>page.evaluate(()=>(window as any).usdViewportInteraction.selectedPath)).toContain('arm_01');
+ expect(errors).toEqual([]);
+});
