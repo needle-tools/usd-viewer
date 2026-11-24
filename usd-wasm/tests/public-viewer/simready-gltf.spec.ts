@@ -64,8 +64,8 @@ test('USD interaction drags a fixed attachment through its ancestor hinge',async
  await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
  await stageReady(page);
  await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
- await page.getByRole('button',{name:'Interact',exact:true}).click();
- await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+ await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
  await dragAssemblyKnob(page);
 });
 
@@ -87,8 +87,8 @@ for(const viewer of ['three','needle'])test(`${viewer}: direct exported GLB link
   await page.goto(`/?viewer=${viewer}&workspace=studio&file=`+encodeURIComponent(`http://127.0.0.1:${address.port}/assembly.glb`));
   await expect.poll(()=>page.evaluate(()=>!!(window as any).usdPhysics)).toBe(true);
   await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
-  await page.getByRole('button',{name:'Interact',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+  await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
   await dragAssemblyKnob(page);
   await page.getByLabel('Joint /Assembly/Hinge',{exact:true}).evaluate((input:HTMLInputElement)=>{
    input.value='45';input.dispatchEvent(new Event('input',{bubbles:true}));

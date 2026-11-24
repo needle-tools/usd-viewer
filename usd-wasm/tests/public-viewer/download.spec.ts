@@ -146,8 +146,8 @@ test('USDZ and GLB export the authored pose by default and the live SimReady pos
   await page.goto('/?viewer=three&workspace=studio&file=/test-fixtures/simready/assembly.usda');
   await stageReady(page);
   await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
-  await page.getByRole('button', {name:'Interact', exact:true}).click();
-  await expect(page.getByRole('button', {name:'Interact', exact:true})).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#usd-physics-controls').getByRole('button', {name:'Interact', exact:true}).click();
+  await expect(page.locator('#usd-physics-controls').getByRole('button', {name:'Interact', exact:true})).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => (window as any).usdPhysics.simulation.setJointValue('/Assembly/Hinge', 45));
   const knob = '/Assembly/Knob';
   const live = await page.evaluate(path => {

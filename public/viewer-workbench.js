@@ -188,7 +188,13 @@ export async function mountWorkbench() {
   // ?debug shows the asset test runner button. It shares the file name's header cell.
   const headerStatus = element('div', 'usd-header-status'), debugTest = document.getElementById('debug-test-button');
   headerStatus.append(fileContext); if (debugTest) headerStatus.append(debugTest);
-  header.replaceChildren(identity, menuToggle, actions, headerStatus, downloadGroup, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
+  const headerTools = element('div', 'usd-header-tools');
+  const headerInteract = button('Interact', () => physicsController?.toggleInteraction(), 'Drag movable parts within their joint limits', 'interact');
+  headerInteract.id = 'usd-interact';
+  headerInteract.setAttribute('aria-label', 'Interact');
+  headerInteract.hidden = true;
+  headerTools.append(headerInteract, downloadGroup);
+  header.replaceChildren(identity, menuToggle, actions, headerStatus, headerTools, input); header.className = 'header-tool usd-app-header'; header.setAttribute('role', 'banner');
   root.append(header);
   const workspace = element('main', 'usd-workspace'); workspace.setAttribute('aria-label', 'USD workspace'); root.append(workspace);
   const dockHost = element('div', 'usd-dock'); workspace.append(dockHost);
@@ -236,9 +242,15 @@ export async function mountWorkbench() {
   const interactSelection=button('Interact',async()=>{openPanel('simulation');await physicsController?.interact();},'Drag movable parts within their joint limits','play_arrow');
   physicsShortcut.append(interactSelection);hosts.properties.append(physicsShortcut);
   function updatePhysicsShortcut(){physicsShortcut.hidden=!physicsController?.canInteract(selectedPrim);hosts.properties.insertBefore(physicsShortcut,hosts.properties.querySelector('.usd-asset-info'));}
-  const updateSimulation = () => { simulationEmpty.hidden = !!simulationControls && !simulationControls.hidden; };
+  const updateSimulation = () => {
+    simulationEmpty.hidden = !!simulationControls && !simulationControls.hidden;
+    const state = physicsController?.interactionState;
+    headerInteract.hidden = !state;
+    headerInteract.disabled = !!state?.busy;
+    headerInteract.setAttribute('aria-pressed', String(!!state?.active));
+  };
   const simulationObserver = new MutationObserver(updateSimulation);
-  if (simulationControls) simulationObserver.observe(simulationControls, {attributes:true,attributeFilter:['hidden']}); updateSimulation();
+  if (simulationControls) simulationObserver.observe(simulationControls, {attributes:true,subtree:true,attributeFilter:['hidden','disabled','aria-pressed']}); updateSimulation();
   parking.append(fileBar);
   const viewport = element('div', 'usd-viewport'); viewport.id = 'usd-viewport';
   hosts.viewport.append(viewport);
@@ -268,7 +280,7 @@ export async function mountWorkbench() {
       const slot=element('div','usd-examples-search-slot'); slot.hidden=true;
       return {element:slot, init() { searchSlots.set(group.id,slot); }, dispose() {
         if (examplesSearch.parentElement===slot) parking.append(examplesSearch);
-        searchSlots.delete(group.id);
+        if (searchSlots.get(group.id) === slot) searchSlots.delete(group.id);
       }};
     },
     createComponent({ name }) {
@@ -462,7 +474,7 @@ export async function mountWorkbench() {
       });
     });
   }
-  const subscriptions = [dock.onDidActivePanelChange(()=>{notifyExamples();notifyVisibility();revealStageAfterLayout();persist();}), dock.onDidLayoutChange(() => { if (hideViewportHeader()) scheduleLayout(); notifyVisibility(); persist(); }), dock.onDidRemovePanel(() => { scheduleLayout(); notifyVisibility(); persist(); })];
+  const subscriptions = [dock.onDidActivePanelChange(()=>{notifyExamples();notifyVisibility();revealStageAfterLayout();persist();}), dock.onDidLayoutChange(() => { if (hideViewportHeader()) scheduleLayout(); notifyExamples(); notifyVisibility(); persist(); }), dock.onDidRemovePanel(() => { scheduleLayout(); notifyVisibility(); persist(); })];
   const presets = element('select'); presets.setAttribute('aria-label', 'Workspace layout');
   function refreshPresets() {
     presets.replaceChildren();
@@ -581,7 +593,7 @@ export async function mountWorkbench() {
       // belong to the saved workspace, including when the stage has no animation.
       placeholders.get('timeline').hidden = !!info?.time;
     },
-    setPhysics(controller,path=selectedPrim) { physicsController=controller;selectedPrim=path;updatePhysicsShortcut(); },
+    setPhysics(controller,path=selectedPrim) { physicsController=controller;selectedPrim=path;updatePhysicsShortcut();updateSimulation(); },
     selectPrim(path) { selectedPrim=path;updatePhysicsShortcut();codePane.follow(path); if(productMode === 'studio' && path && !isCompact && !isPanelVisible('code')) openPanel('properties'); },
     dispose() { if (disposed) return; disposed = true; examplesDialog.close(); for (const callback of disposeListeners) callback(); disposeListeners.clear(); visibilityListeners.clear(); downloadControl.dispose(); document.removeEventListener('pointerdown', onOutsideMenu); document.removeEventListener('keydown', onMenuKey); media.removeEventListener('change', applyTheme); cancelAnimationFrame(layoutFrame); cancelAnimationFrame(resizeFrame); cancelAnimationFrame(stageRevealFrame); clearTimeout(persistTimer); observer.disconnect(); viewportObserver.disconnect(); loadedObserver.disconnect(); examplesBrowser.dispose(); codePane.dispose(); simulationObserver.disconnect(); subscriptions.forEach(s => s.dispose()); dock.dispose(); },
   };

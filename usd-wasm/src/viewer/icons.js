@@ -96,6 +96,10 @@ Object.assign(ICONS, {
     "label": "Download", "group": "menu",
     "svg": "<path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8 2V10M5 7L8 10L11 7M2 11V14H14V11\"/>"
   },
+  "interact": {
+    "label": "Interact", "group": "menu",
+    "svg": '<path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="M6.5 8V3a1 1 0 0 1 2 0v3l3.3.7A2 2 0 0 1 13.4 9l-.6 3.4a2 2 0 0 1-2 1.6H8a2 2 0 0 1-1.5-.7L3.4 9.7a1.2 1.2 0 0 1 1.8-1.6l1.3 1.2"/>'
+  },
   "share": {
     "label": "Share USD",
     "group": "menu",

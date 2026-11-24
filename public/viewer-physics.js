@@ -250,7 +250,10 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     finally{play.disabled=false;interact.disabled=!hasJoints;}
   }
   play.addEventListener('click',()=>{if(usesHostWorld&&simulationMode==='simulation'&&simulation?.isPlaying())stopPlayback();else void start('simulation');});
-  interact.addEventListener('click',()=>void start('interaction'));
+  function toggleInteraction() {
+    if (!disposed && !interact.disabled) return start('interaction');
+  }
+  interact.addEventListener('click', toggleInteraction);
   reset.addEventListener('click', stopPlayback);
   sceneSelect.addEventListener('change', stopPlayback);
   holdBases.addEventListener('change', stopPlayback);
@@ -328,6 +331,11 @@ export async function setupViewerPhysics(handle, context, fallbackCamera, fallba
     },
     update(dt) { simulation?.update(dt);jointHelpers?.update();jointControls?.update();colliderOverlay?.update(); const visible=handle.helpers?.joints!==false;if(joints.checked!==visible)joints.checked=visible; },
     canInteract(path) { return !disposed && hasJoints && !!path && (overview.joints.includes(path) || overview.bodies.some(body=>path===body||path.startsWith(body+'/'))); },
+    get interactionState() {
+      if (disposed || !hasJoints) return null;
+      return { active: interact.getAttribute('aria-pressed') === 'true', busy: interact.disabled };
+    },
+    toggleInteraction,
     async interact() { if (!disposed && !interact.disabled && !(simulationMode==='interaction'&&simulation?.isPlaying())) await start('interaction'); },
     get simulation() { return simulation; },
     dispose() {

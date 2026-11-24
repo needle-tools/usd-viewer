@@ -24,7 +24,7 @@ for(const dynamic of [false,true])test(`collider extraction waits for simulation
   });
   expect(await page.evaluate(()=>(window as any).physicsExtractions)).toBe(0);
   if(dynamic){
-    await expect(page.getByRole('button',{name:'Interact',exact:true})).toBeDisabled();
+    await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toBeDisabled();
     await page.getByRole('button',{name:'Simulate',exact:true}).click();
     await expect.poll(()=>page.evaluate(()=>(window as any).physicsExtractions)).toBe(1);
     await expect.poll(()=>page.evaluate(()=>(window as any).physicsShapes)).toBeGreaterThan(0);
@@ -267,7 +267,8 @@ for (const mode of ['Interact','Simulate']) test(`${mode} continues on the next 
   await stageReady(page);
   await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();
   const panel=page.locator('#usd-physics-controls');
-  await panel.getByRole('button',{name:mode,exact:true}).click();
+  const headerInteract=page.locator('#usd-interact');
+  await (mode==='Interact' ? headerInteract : panel.getByRole('button',{name:mode,exact:true})).click();
   const playing=()=>page.evaluate(()=>(window as any).usdPhysics?.simulation?.isPlaying() || false);
   await expect.poll(playing).toBe(true);
   async function openFile(name:string) {
@@ -282,9 +283,13 @@ for (const mode of ['Interact','Simulate']) test(`${mode} continues on the next 
   await openFile('prismatic-joint');
   await expect.poll(playing).toBe(true);
   const active=panel.getByRole('button',{name:mode==='Interact'?'Interact':'Pause',exact:true});
-  if(mode==='Interact')await expect(active).toHaveAttribute('aria-pressed','true');
+  if(mode==='Interact'){
+    await expect(active).toHaveAttribute('aria-pressed','true');
+    await expect(headerInteract).toHaveAttribute('aria-pressed','true');
+  }
   await active.click();
   await expect.poll(playing).toBe(false);
+  if(mode==='Interact')await expect(headerInteract).toHaveAttribute('aria-pressed','false');
   await openFile('revolute-joint');
   expect(await playing()).toBe(false);
 });

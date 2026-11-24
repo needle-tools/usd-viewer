@@ -23,7 +23,7 @@ for (const viewer of ['three', 'needle']) {
 			});
 			observer.observe(button, {attributes: true, attributeFilter: ['aria-pressed']});
 		});
-		await page.getByRole('button', {name: 'Interact', exact: true}).click();
+		await page.locator('#usd-physics-controls').getByRole('button', {name: 'Interact', exact: true}).click();
 		await expect.poll(() => page.evaluate(() => (window as any).glassesControlReadiness)).toEqual([false, false]);
 	});
 

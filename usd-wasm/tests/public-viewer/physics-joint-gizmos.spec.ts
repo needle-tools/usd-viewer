@@ -12,8 +12,8 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: glasses with a misali
     await stageReady(page);
     await page.evaluate(() => (window as any).usdHydra.materialsReady());
     await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
-    await page.getByRole('button', {name: 'Interact', exact: true}).click();
-    await expect(page.getByRole('button', {name: 'Interact', exact: true})).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#usd-physics-controls').getByRole('button', {name: 'Interact', exact: true}).click();
+    await expect(page.locator('#usd-physics-controls').getByRole('button', {name: 'Interact', exact: true})).toHaveAttribute('aria-pressed', 'true');
     const warning = page.locator('#usd-physics-controls [data-warning]');
     await expect(warning).toHaveAttribute('title', /joint_lenses.*preserves its rest offset/);
     const slider = page.getByRole('slider', {name: `Joint ${hinge}`, exact: true});

@@ -18,8 +18,8 @@ test('SimReady glasses drag their rendered arm within its hinge limits and keep 
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  const rapierRequests:string[]=[];page.on('request',request=>{if(request.url().includes('/rapier/'))rapierRequests.push(request.url());});
  await page.goto(url('accessory_eyeglasses_a01'));await stageReady(page);await page.evaluate(()=>(window as any).usdWorkbench.openPanel('simulation'));
- await page.getByRole('button',{name:'Interact',exact:true}).click();
- await expect(page.getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true}).click();
+ await expect(page.locator('#usd-physics-controls').getByRole('button',{name:'Interact',exact:true})).toHaveAttribute('aria-pressed','true');
  const point=await page.evaluate(async()=>{
   const w=window as any,sim=w.usdPhysics.simulation,{Matrix4,Vector3,Vector2,Raycaster}=await import('three');
   const object=sim.root.children.find((o:any)=>o.visible&&o.isInstancedMesh&&sim.bodyForObject(o,0)?.data.path.endsWith('/arm_01_obj_00'));

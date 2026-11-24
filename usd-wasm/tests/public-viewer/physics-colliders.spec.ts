@@ -12,7 +12,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: isolated air filter s
 	await page.evaluate(() => (window as any).usdHydra.materialsReady());
 	await page.evaluate(() => (window as any).usdWorkbench.openPanel('simulation'));
 	await expect(page.getByText('Drag a movable part.', {exact: false})).toHaveCount(0);
-	await expect(page.getByRole('button', {name: 'Interact', exact: true})).toBeDisabled();
+	await expect(page.locator('#usd-physics-controls').getByRole('button', {name: 'Interact', exact: true})).toBeDisabled();
 	const hold = page.getByRole('checkbox', {name: 'Hold assembly bases'});
 	await expect(hold).toBeChecked();
 	const toggle = page.getByRole('checkbox', {name: 'Colliders', exact: true});
