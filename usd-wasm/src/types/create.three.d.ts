@@ -88,6 +88,8 @@ export declare type createThreeHydraConfig = {
     resolveUdimTiles?: (pattern:string) => string[] | Promise<string[]>,
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
+    /** Keep eligible original PNGs encoded for glTF export. Use on stages without a renderer or texture previews. */
+    textureMode?: 'export',
 
     /**
      * Files to be loaded into the virtual file system.

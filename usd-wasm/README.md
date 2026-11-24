@@ -1235,6 +1235,15 @@ materials intact and disposes temporary textures on completion or failure.
 Use `textureResolution: 'preview'` for the loaded images. A glTF input can only
 re-export the images it contains; it has no external USD originals to recover.
 
+In Node.js, `exportSimreadyGltfToFile({handle, exporter, signal}, destination)`
+from `@needle-tools/usd/gltf/node` writes binary data to temporary storage in
+the destination directory and replaces the destination after export succeeds.
+For a headless stage opened with `createThreeHydra({..., textureMode: 'export'})`,
+compatible original PNGs can pass through without a decode. The host still
+provides image and canvas support for textures that need pixel processing.
+An optional `transformPng` callback can perform normal-map row and channel
+flips with the host's image codec.
+
 `handle.exportUsdz({textureResolution: 'preview', signal})` resizes packaged
 PNG, JPEG and WebP images in an isolated browser worker, leaving authored layers,
 variants, asset paths, other dependencies and the live stage intact. Rewritten

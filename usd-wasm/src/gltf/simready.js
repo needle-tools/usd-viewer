@@ -2,7 +2,7 @@ import {BufferAttribute,BufferGeometry,Color,Group,Matrix4,Mesh,MeshPhysicalMate
 import {readUsdPhysics} from '../physics/readPhysics.js';
 import {readRuntimeSemanticLabels,bindRuntimeSemanticLabels} from './semantics.js';
 import {parseGltfBlob} from './blob.js';
-import {materialTextures,portableTexture,textureCanonicalizer,cachePackedTextures,useGltfTextureTransforms} from './textures.js';
+import {materialTextures,prepareGltfTexture,textureCanonicalizer,cachePackedTextures,useGltfTextureTransforms,useEncodedGltfImages} from './textures.js';
 import {coalesceGroups} from './groups.js';
 import {needsUdimTiles,partitionUdimGeometry,selectGeometryRanges,udimSamplingMatrix} from './udim.js';
 
@@ -15,7 +15,7 @@ const axes=[0,1,2],axisIndex=name=>({X:0,Y:1,Z:2})[name||'X'];
 
 /** Export rigid visuals, physics and composed schema semantics. Supplying the
  * exporter keeps renderer/texture setup with the host. */
-export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onProgress,textureResolution='original',output='arraybuffer',signal,capturePose,exportChangedPose=false}){
+export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onProgress,textureResolution='original',output='arraybuffer',signal,capturePose,exportChangedPose=false,transformPng,binarySpool}){
  const report=(phase,completed=0,total=0)=>onProgress?.({phase,completed,total});
  if(!['preview','original'].includes(textureResolution))throw new RangeError('Invalid export texture resolution.');
  if(!['arraybuffer','blob'].includes(output))throw new RangeError('Invalid glTF export output.');
@@ -31,7 +31,9 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
  textureExport=handle.createTextureExport?.({signal,resolution:textureResolution});
  const revision=handle.revision,time=handle.getTime?.();
  const assertCurrent=()=>{if(signal?.aborted)throw new DOMException('Export cancelled','AbortError');if(revision!==undefined&&revision!==handle.revision||time!==undefined&&time!==handle.getTime?.())throw new Error('USD stage changed during SimReady export; retry the export.');};
- snapshot=plain(snapshot||await readUsdPhysics(handle));
+ // The stage reader returns an owned snapshot. Keep its collision buffers typed
+ // instead of expanding them into JSON before the coordinate conversion.
+ snapshot=snapshot?plain(snapshot):await readUsdPhysics(handle);
  if(!Number.isFinite(snapshot.metersPerUnit)||snapshot.metersPerUnit<=0||!Number.isFinite(snapshot.kilogramsPerUnit)||snapshot.kilogramsPerUnit<=0||!['X','Y','Z'].includes(snapshot.upAxis))throw new Error('SimReady export requires valid USD coordinates and units.');
  // The interactive inspector avoids extracting disabled mesh colliders. An
  // interchange export must retain their geometry too, so they can be enabled.
@@ -71,7 +73,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
   snapshot=toGltfPhysicsSnapshot(sourceSnapshot);
   // Source precision is checked before conversion. FLOAT accessors store the
   // converted metre positions at their normal Float32 precision.
-  for(const shape of snapshot.shapes)if(shape.points)shape.points=Array.from(shape.points,Math.fround);
+  for(const shape of snapshot.shapes)if(shape.points)shape.points=Float32Array.from(shape.points);
  }
  report('geometry');
  const stage=new Group();stage.name='Asset';
@@ -146,8 +148,10 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
        original=channels.get(targetChannel);
       }
       let copies=textureCopies.get(original);if(!copies)textureCopies.set(original,copies=new Map());
-      if(!copies.has(key)){const portable=portableTexture(original,key);copies.set(key,portable);if(portable!==original)ownedTextures.add(portable);}
-      const texture=canonicalTexture(copies.get(key));
+      if(!copies.has(key))copies.set(key,prepareGltfTexture(original,key,textureResolution,transformPng).then(portable=>{
+       if(portable!==original)ownedTextures.add(portable);return portable;
+      }));
+      const texture=canonicalTexture(await copies.get(key));
       if(texture!==material[key]){copy??=material.clone();ownedMaterials.add(copy);copy[key]=texture;}
      }
      return copy||material;
@@ -294,6 +298,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
  const plugin=writer=>{
  cachePackedTextures(writer);
  useGltfTextureTransforms(writer);
+ useEncodedGltfImages(writer,transformPng);
  return {
   name:SIMREADY_EXTENSION,
   async writeMaterialAsync(material,definition){delete definition.extras;if(material.vertexColors)vertexColorMaterials.add(definition);},
@@ -308,12 +313,13 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
   },
   writeNode(object,definition){if(physics.has(object))(definition.extensions||={})[PHYSICS]=physics.get(object);},
   afterParse(){writer.pending.push((async()=>{
-   const storedSnapshot=plain(snapshot);
+   // Collision buffers have already been staged as glTF meshes.
+   const storedSnapshot={...snapshot,shapes:snapshot.shapes.map(({points,indices,...shape})=>shape)};
    for(const {index,node,mesh} of colliders){
     const meshIndex=await (writer.processMeshAsync?writer.processMeshAsync(mesh):writer.processMesh(mesh));
     if(node)physics.get(node).collider.geometry.node=writer.json.nodes.push({mesh:meshIndex})-1;
     for(const primitive of writer.json.meshes[meshIndex].primitives)delete primitive.material;
-    const shape=storedSnapshot.shapes[index];shape.mesh=meshIndex;delete shape.points;delete shape.indices;
+    storedSnapshot.shapes[index].mesh=meshIndex;
     mesh.geometry.dispose();
    }
    for(const [a,b]of jointFrames)physics.get(a).joint.connectedNode=writer.nodeMap.get(b);
@@ -335,7 +341,7 @@ export async function exportSimreadyGltf({handle,exporter,snapshot,semantics,onP
  };
  };
  exporter.register(plugin);
- try{assertCurrent();report('writing');const options={binary:true,onlyVisible:false,maxTextureSize:textureResolution==='preview'?(textureExport?.maxTextureSize||512):Infinity};const result=output==='blob'?await parseGltfBlob(exporter,stage,{...options,signal}):await exporter.parseAsync(stage,options);assertCurrent();report('complete',1,1);return result;}
+ try{assertCurrent();report('writing');const options={binary:true,onlyVisible:false,maxTextureSize:textureResolution==='preview'?(textureExport?.maxTextureSize||512):Infinity};const result=output==='blob'?await parseGltfBlob(exporter,stage,{...options,signal,binarySpool}):await exporter.parseAsync(stage,options);assertCurrent();report('complete',1,1);return result;}
   finally{exporter.unregister(plugin);}
  }finally{for(const material of ownedMaterials)material.dispose();for(const geometry of ownedGeometry)geometry.dispose();for(const texture of ownedTextures)texture.dispose();textureExport?.dispose();handle.setPlaying?.(wasPlaying);}
 }
@@ -385,7 +391,7 @@ function createCollisionMesh(shape,material){
  validateCollisionPositions(shape);
  if(indices?.length&&(!indices.every(value=>Number.isInteger(value)&&value>=0&&value<count)||indices.length%3))throw new Error(`Collider ${shape.path} has invalid triangle indices.`);
  if(!indices?.length&&shape.approximation!=='convexHull'&&count%3)throw new Error(`Collider ${shape.path} has incomplete non-indexed triangles.`);
- const geometry=new BufferGeometry();geometry.setAttribute('position',new BufferAttribute(Float32Array.from(points),3));
+ const geometry=new BufferGeometry();geometry.setAttribute('position',new BufferAttribute(points,3));
  if(indices?.length)geometry.setIndex(Array.from(indices));
  const mesh=!indices?.length&&shape.approximation==='convexHull'?new Points(geometry,material):new Mesh(geometry,material);
  mesh.name=shape.path+' collision geometry';return mesh;

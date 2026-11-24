@@ -9,13 +9,24 @@
 const UINT32_MAX = 0xffffffff;
 const align4 = size => Math.ceil(size / 4) * 4;
 
-/** Export a binary glTF as a Blob without reading the complete binary back
- * into JavaScript memory. Register this after other exporter plugins. */
+/** Finalize a binary glTF as a Blob or write it through a binary spool.
+ * Register this after other exporter plugins. */
 export async function parseGltfBlob(exporter, input, options = {}) {
- const {signal, ...exportOptions} = options;
+ const {signal, binarySpool, ...exportOptions} = options;
  const complete = {};
  let result;
  const plugin = writer => {
+  let spooledLength = 0;
+  if (binarySpool) writer.processBuffer = part => {
+   assertActive(signal);
+   (writer.json.buffers ||= [{byteLength: 0}]);
+   const size = part instanceof Blob ? part.size : part.byteLength;
+   if (spooledLength + size > UINT32_MAX) throw new RangeError('GLB export exceeds its 32-bit container size limit.');
+   const pending = binarySpool.append(part, spooledLength);
+   if (pending) writer.pending.push(pending);
+   spooledLength += size;
+   return 0;
+  };
   // Keep encoded images as Blob parts. Reading every image into an
   // ArrayBuffer first duplicates the largest part of texture-heavy exports.
   writer.processBufferViewImage = async blob => {
@@ -41,7 +52,8 @@ export async function parseGltfBlob(exporter, input, options = {}) {
      await waitForPending(pending, signal);
     }
     assertActive(signal);
-    result = assembleGlb(writer);
+    if (binarySpool && writer.buffers.length) throw new Error('A glTF plugin bypassed the binary spool.');
+    result = await assembleGlb(writer, binarySpool, spooledLength);
     assertActive(signal);
     // Rejecting pending work prevents Three from running its ArrayBuffer
     // finalizer. Only this invocation's private identity means success.
@@ -86,8 +98,8 @@ function waitForPending(pending, signal) {
  });
 }
 
-function assembleGlb(writer) {
- let binaryLength = 0;
+function assembleGlb(writer, binarySpool, spooledLength) {
+ let binaryLength = spooledLength;
  for (const part of writer.buffers) {
   const size = part instanceof Blob ? part.size : part.byteLength;
   if (!Number.isSafeInteger(size) || size < 0) throw new Error('GLTFExporter produced an invalid binary buffer.');
@@ -103,17 +115,17 @@ function assembleGlb(writer) {
  const jsonLength = align4(jsonBytes.byteLength), paddedBinaryLength = align4(binaryLength);
  const totalLength = 12 + 8 + jsonLength + 8 + paddedBinaryLength;
  if (totalLength > UINT32_MAX) throw new RangeError('GLB export exceeds its 32-bit container size limit.');
- const header = new ArrayBuffer(20), view = new DataView(header);
+ const header = new Uint8Array(20), view = new DataView(header.buffer);
  view.setUint32(0, 0x46546c67, true); // glTF
  view.setUint32(4, 2, true);
  view.setUint32(8, totalLength, true);
  view.setUint32(12, jsonLength, true);
  view.setUint32(16, 0x4e4f534a, true); // JSON
- const binaryHeader = new ArrayBuffer(8), binaryView = new DataView(binaryHeader);
+ const binaryHeader = new Uint8Array(8), binaryView = new DataView(binaryHeader.buffer);
  binaryView.setUint32(0, paddedBinaryLength, true);
  binaryView.setUint32(4, 0x004e4942, true); // BIN\0
- return new Blob([
-  header, jsonBytes, new Uint8Array(jsonLength - jsonBytes.byteLength).fill(0x20),
-  binaryHeader, ...writer.buffers, new Uint8Array(paddedBinaryLength - binaryLength),
- ], {type: 'model/gltf-binary'});
+ const prefix = [header, jsonBytes, new Uint8Array(jsonLength - jsonBytes.byteLength).fill(0x20), binaryHeader];
+ const padding = new Uint8Array(paddedBinaryLength - binaryLength);
+ if (binarySpool) return binarySpool.writeGlb(prefix, padding, binaryLength);
+ return new Blob([...prefix, ...writer.buffers, padding], {type: 'model/gltf-binary'});
 }

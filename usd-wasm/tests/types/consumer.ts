@@ -8,10 +8,12 @@ import { readUsdPhysics, createUsdPhysics } from '@needle-tools/usd/physics';
 import { inspectUsdPhysics, getUsdPhysicsLimitations } from '@needle-tools/usd/physics';
 import {createUsdMechanism,createJointHelpers,mountJointControls} from '@needle-tools/usd/kinematics';
 import { getUsdModule as loadRuntime } from '@needle-tools/usd/runtime';
+import { exportSimreadyGltfToFile } from '@needle-tools/usd/gltf/node';
 import { createArrayEdits, type ArrayEdits } from '@needle-tools/usd/editing';
 import { mountStagePanel as mountInspection, getSelectionBounds } from '@needle-tools/usd/viewer/inspect';
 import { mountRepl as mountOptionalConsole } from '@needle-tools/usd/viewer/repl';
 import { Scene } from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 const USD = await getUsdModule();
 void getUsdModule({asyncRuntime:'auto'});
@@ -25,6 +27,8 @@ const scene = new Scene();
 void [inspectUsdPhysics, getUsdPhysicsLimitations, createUsdMechanism, createJointHelpers, mountJointControls, loadRuntime, mountInspection, mountOptionalConsole];
 const stage = await createThreeHydra({ USD, scene, complexity: 'high',
     materialXVolumeFactory: createMaterialXVolumeMaterial, usdVolumeFactory: createVdbVolumeMesh });
+const nodeExport: Promise<void> = exportSimreadyGltfToFile({handle: stage, exporter: new GLTFExporter()}, 'asset.glb');
+void nodeExport;
 await stage.setComplexity('medium');
 await stage.setComplexity(1.2);
 // @ts-expect-error Invalid complexity must be rejected.

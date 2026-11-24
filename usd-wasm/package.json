@@ -73,6 +73,10 @@
     "./gltf": {
       "types": "./src/types/gltf.d.ts",
       "import": "./src/gltf/simready.js"
+    },
+    "./gltf/node": {
+      "types": "./src/types/gltf-node.d.ts",
+      "import": "./src/gltf/node.js"
     }
   },
   "files": [

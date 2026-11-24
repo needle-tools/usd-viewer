@@ -5,6 +5,7 @@ import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {NeedleSimreadyLoaderPlugin} from '@needle-tools/simready/gltf';
 import {exportSimreadyGltf} from '../../src/gltf/simready.js';
+import {createEncodedPng} from '../../src/hydra/encodedTexture.js';
 
 const close = (actual, expected) => actual.forEach((value, i) =>
 	assert.ok(Math.abs(value - expected[i]) < 1e-10, `${actual} != ${expected}`));
@@ -45,6 +46,34 @@ test('USD export serializes clockwise texture fields as glTF counter-clockwise r
 		close(sample(transform, uv), sample({offset: [.15, .3], scale: [.2, .5], rotation: .7}, uv));
 	}
 	assert.equal(texture.rotation, -.7, 'serialization preserves the source texture');
+});
+
+test('encoded PNG preserves bytes and reflects the existing glTF sampling transform', async () => {
+	const source = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aLo0AAAAASUVORK5CYII=', 'base64'));
+	const texture = createEncodedPng(source, {bitDepth: 8}, () => { throw new Error('PNG should stay encoded'); });
+	texture.colorSpace = SRGBColorSpace;
+	texture.offset.set(.2, .4);
+	texture.repeat.set(.3, .8);
+	texture.rotation = -.6;
+	const geometry = new BufferGeometry().setAttribute('position', new BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]), 3));
+	geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1]), 2));
+	const mesh = new Mesh(geometry, new MeshStandardMaterial({map: texture}));
+	mesh.userData.usdPath = '/Triangle';
+	const scene = new Group().add(mesh);
+	const snapshot = {metersPerUnit: 1, kilogramsPerUnit: 1, upAxis: 'Y', scenes: [], bodies: [], shapes: [], joints: [], materials: [], groups: [], unsupported: []};
+	const blob = await exportSimreadyGltf({handle: {scene, ready() {}}, exporter: new GLTFExporter(), snapshot, output: 'blob'});
+	const bytes = await blob.arrayBuffer(), header = new DataView(bytes), jsonLength = header.getUint32(12, true);
+	const json = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, jsonLength)));
+	const image = json.images[0], view = json.bufferViews[image.bufferView];
+	assert.equal(image.mimeType, 'image/png');
+	assert.deepEqual(new Uint8Array(bytes, 28 + jsonLength + view.byteOffset, source.length), source);
+	assert.deepEqual(json.extensionsRequired, ['KHR_texture_transform']);
+	const transform = json.materials[0].pbrMetallicRoughness.baseColorTexture.extensions.KHR_texture_transform;
+	for (const uv of [[0, 0], [.3, .8], [1, 1], [-1, 2]]) {
+		const [u, v] = sample({offset: [.2, .4], scale: [.3, .8], rotation: .6}, uv);
+		close(sample(transform, uv), [u, 1 - v]);
+	}
+	assert.equal(texture.flipY, true);
 });
 
 test('the SimReady loader samples rotated, nonuniform transforms by the glTF equation', async () => {

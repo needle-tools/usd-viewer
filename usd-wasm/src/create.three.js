@@ -225,6 +225,9 @@ export class USDLoadingManager {
  * @returns {Promise<import(".").NeedleThreeHydraHandle>}
  */
 export async function createThreeHydra(config) {
+    if (config.textureMode === 'export' && (config.renderer || config.resolveTextureUrl || config.maxTextureSize)) {
+        throw new Error('Export texture mode requires an unrendered stage with original texture sources.');
+    }
     const debug = config.debug || false;
 
     config.USD.debug = debug;
@@ -391,6 +394,7 @@ async function createScopedThreeHydra(config, lifetime) {
         onAssetFetchProgress: config.onAssetFetchProgress,
         resolveTextureUrl: config.resolveTextureUrl,
         maxTextureSize: config.maxTextureSize,
+        textureMode: config.textureMode,
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         ktx2TranscoderPath: config.ktx2TranscoderPath,
         helpers: config.helpers,

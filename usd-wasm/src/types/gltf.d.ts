@@ -15,6 +15,8 @@ export interface GltfExportOptions {
     snapshot?: UsdPhysicsSnapshot;
     semantics?: Array<{path:string;taxonomy:string;labels:string[]}>;
     textureResolution?: 'original' | 'preview';
+    /** Write an 8-bit PNG with the requested row and normal-channel reflections. Accepts 8- or 16-bit source PNGs. */
+    transformPng?: (image: Blob, transform: {flipRows: boolean; flipRed: boolean; flipGreen: boolean}) => Promise<Blob>;
     /** Blob output avoids allocating a contiguous GLB buffer for downloads. */
     output?: 'arraybuffer' | 'blob';
     signal?: AbortSignal;

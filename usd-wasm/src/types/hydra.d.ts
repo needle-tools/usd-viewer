@@ -84,6 +84,7 @@ export type threeJsRenderDelegateConfig = {
     resolveTextureUrl?: (url:string) => string | Promise<string>,
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
+    textureMode?: 'export',
     helpers?: UsdViewportHelpers,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,

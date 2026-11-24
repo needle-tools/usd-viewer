@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {resolve} from 'node:path';
+import {mkdtemp, readFile, readdir, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {validateBytes} from 'gltf-validator';
 import {parseGltfBlob} from '../../src/gltf/blob.js';
 import {exportSimreadyGltf} from '../../src/gltf/simready.js';
+import {exportSimreadyGltfToFile} from '@needle-tools/usd/gltf/node';
 
 // Run the same lifecycle and byte-equivalence checks against cached peer
 // versions without replacing or reinstalling the project's Three dependency.
@@ -103,6 +106,31 @@ test('SimReady Blob output includes asynchronous collision meshes and matches Ar
  assert.ok(Number.isInteger(shape.mesh));assert.equal(json.meshes[shape.mesh].primitives[0].material,undefined);
  assert.ok(json.extensionsUsed.includes('NEEDLE_simready'));assert.ok(!json.extensionsRequired?.includes('NEEDLE_simready'));
  const report=await validateBytes(new Uint8Array(bytes));assert.equal(report.issues.numErrors,0,JSON.stringify(report.issues));
+});
+
+test('Node file output spools asynchronous buffer parts and matches Blob output', async t => {
+ const directory = await mkdtemp(join(tmpdir(), 'usd-glb-test-'));
+ t.after(() => rm(directory, {recursive:true,force:true}));
+ const path = join(directory, 'output.glb');
+ const exportOptions = () => {
+  const exporter = new GLTFExporter();
+  exporter.register(writer => ({name: 'TEST_spooled_image', afterParse() {
+   writer.pending.push(writer.processBufferViewImage(new Blob([new Uint8Array([1, 3, 5])])).then(bufferView => {
+    writer.json.images = [{bufferView, mimeType: 'image/png'}];
+   }));
+  }}));
+  const scene = new Group().add(triangle());
+  const snapshot = {metersPerUnit: 1, kilogramsPerUnit: 1, upAxis: 'Y', scenes: [], bodies: [], joints: [], materials: [], groups: [], shapes: []};
+  return {exporter, handle: {scene, ready() {}}, snapshot};
+ };
+ const blob = await exportSimreadyGltf({...exportOptions(), output: 'blob'});
+ await exportSimreadyGltfToFile(exportOptions(), path);
+ const bytes = await readFile(path);
+ assert.deepEqual(bytes, Buffer.from(await blob.arrayBuffer()));
+ const signal = AbortSignal.abort(new Error('Stop export'));
+ await assert.rejects(exportSimreadyGltfToFile({...exportOptions(), signal}, path), {name: 'AbortError'});
+ assert.deepEqual(await readFile(path), bytes);
+ assert.deepEqual(await readdir(directory), ['output.glb']);
 });
 
 for(const phase of ['beforeParse','pending'])test(`Blob export propagates real ${phase} failures and unregisters its plugin`,async()=>{

@@ -1,5 +1,6 @@
 import {DataTexture, DataUtils, HalfFloatType, NoColorSpace, RGBAFormat, Source, SRGBColorSpace, Texture, UnsignedByteType} from 'three';
 import {readTextureSamples} from '../hydra/textureChannels.js';
+import {decodeEncodedTexture, getEncodedImage, transformEncodedNormal} from '../hydra/encodedTexture.js';
 
 const colorMaps = new Set(['map', 'emissiveMap', 'specularColorMap', 'sheenColorMap']);
 const toSrgb = c => c <= .0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - .055;
@@ -14,6 +15,54 @@ export function useGltfTextureTransforms(writer) {
 		// rotation; retain the render texture's fields and convert at serialization.
 		if (transform && texture.rotation !== 0) transform.rotation = -texture.rotation;
 	};
+}
+
+export function useEncodedGltfImages(writer, transformPng) {
+ const images = new WeakMap();
+ const budget = 256 * 1024 * 1024;
+ let queuedBytes = 0;
+ const running = new Set();
+ const encode = async (entry, bytes) => {
+  while (running.size && queuedBytes + bytes > budget) await Promise.race(running);
+  queuedBytes += bytes;
+  const task = Promise.resolve().then(() => transformPng(entry.blob, entry.transform));
+  running.add(task);
+  try { return await task; }
+  finally { queuedBytes -= bytes; running.delete(task); }
+ };
+ const processImage = writer.processImage;
+ writer.processImage = function (image, format, flipY, mimeType) {
+  const entry = getEncodedImage(image);
+  if (!entry) return processImage.call(this, image, format, flipY, mimeType);
+  if (images.has(image)) return images.get(image);
+  const definition = {mimeType: 'image/png'};
+  const index = (writer.json.images ||= []).push(definition) - 1;
+  images.set(image, index);
+  const transform = entry.transform;
+  const wideSamples = entry.original?.bitDepth === 16;
+  const encoded = transform && (wideSamples || transform.flipRows || transform.flipRed || transform.flipGreen)
+   ? encode(entry, image.width * image.height * (wideSamples ? 8 : 4)) : Promise.resolve(entry.blob);
+  writer.pending.push(encoded.then(blob => {
+   if (blob?.type !== 'image/png' || !blob.size) throw new TypeError('The PNG transform must return an encoded PNG Blob.');
+   return writer.processBufferViewImage(blob);
+  }).then(bufferView => { definition.bufferView = bufferView; }));
+  return index;
+ };
+ const apply = writer.applyTextureTransform;
+ writer.applyTextureTransform = function (definition, texture) {
+  apply.call(this, definition, texture);
+  const entry = getEncodedImage(texture.image);
+  if (!entry || entry.transform || !texture.flipY) return;
+  // Reflect the sampling transform to compensate for retaining the source rows.
+  const extensions = definition.extensions ||= {};
+  const transform = extensions.KHR_texture_transform ||= {};
+  const [x, y] = transform.offset ?? [0, 0], [u, v] = transform.scale ?? [1, 1];
+  transform.offset = [x, 1 - y];
+  transform.scale = [u, -v];
+  if (transform.rotation) transform.rotation = -transform.rotation;
+  writer.extensionsUsed.KHR_texture_transform = true;
+  writer.extensionsRequired.KHR_texture_transform = true;
+ };
 }
 
 export function cachePackedTextures(writer) {
@@ -36,7 +85,12 @@ export function cachePackedTextures(writer) {
  const normalMethod=['buildNormalMapTextureAsync','buildNormalMapTexture'].find(name=>typeof writer[name]==='function');
  if(normalMethod){
   const normal=writer[normalMethod];
-  writer[normalMethod]=(texture,...args)=>normal.call(writer,drawable(texture,true),...args);
+  writer[normalMethod]=(texture,flipRed,flipGreen,...args)=>{
+   const encoded = getEncodedImage(texture.image);
+   if (encoded?.transform) return transformEncodedNormal(texture, {flipRed, flipGreen});
+   if (encoded) return decodeEncodedTexture(texture).then(value=>normal.call(writer,drawable(value,true),flipRed,flipGreen,...args));
+   return normal.call(writer,drawable(texture,true),flipRed,flipGreen,...args);
+  };
  }
  if(!method)return;
  const build=writer[method],pairs=new Map();
@@ -45,7 +99,13 @@ export function cachePackedTextures(writer) {
   if(metalness===roughness)return build.apply(writer,args);
   if(!values)pairs.set(metalness,values=new Map());
   // Three's packing path uses drawImage, including for pixel-backed maps.
-  if(!values.has(roughness))values.set(roughness,build.call(writer,drawable(metalness),drawable(roughness),...args.slice(2)));
+  if(!values.has(roughness)){
+   const inputs=[metalness,roughness];
+   const packed=(a,b)=>build.call(writer,drawable(a),drawable(b),...args.slice(2));
+   values.set(roughness,inputs.some(texture=>getEncodedImage(texture?.image))
+    ? Promise.all(inputs.map(texture=>texture&&decodeEncodedTexture(texture))).then(([a,b])=>packed(a,b))
+    : packed(metalness,roughness));
+  }
   return values.get(roughness);
  };
 }
@@ -115,4 +175,15 @@ export function portableTexture(texture, slot) {
  copy.format = RGBAFormat; copy.type = UnsignedByteType; copy.colorSpace = color ? SRGBColorSpace : NoColorSpace;
  copy.needsUpdate = true;
  return copy;
+}
+
+export async function prepareGltfTexture(texture, slot, resolution, transformPng) {
+ const encoded = getEncodedImage(texture.image);
+ if (!encoded) return portableTexture(texture, slot);
+ const needsPixels = (texture.colorSpace === SRGBColorSpace) !== colorMaps.has(slot) || resolution === 'preview';
+ if (!needsPixels && slot === 'normalMap' && transformPng) return transformEncodedNormal(texture);
+ if (needsPixels || encoded.bitDepth === 16 || (slot === 'normalMap' && texture.flipY)) {
+  texture = await decodeEncodedTexture(texture);
+ }
+ return portableTexture(texture, slot);
 }

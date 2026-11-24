@@ -6,6 +6,7 @@ import { HydraNurbsPatch } from './HydraNurbsPatch.js';
 import { mdlToPreview } from './mdlPreview.js';
 import { configurePreviewPrimvars, installPreviewPrimvarShader, preparePreviewPrimvars, configureMaterialXPrimvars, prepareMaterialXPrimvars, prepareUvSets } from './materialPrimvars.js';
 import { remapNormalTextureSamples, remapTextureSamples, padImageWithBlackBorder } from './textureChannels.js';
+import { createEncodedPng, decodeEncodedTexture, getEncodedImage } from './encodedTexture.js';
 import { textureFileType, imageEncoding, stripImageColorMetadata, flipRows } from './textureFileType.js';
 import { resolveColorSpace, colorToLinearRec709, convertTextureColorSpace } from './colorSpaces.js';
 import { Ktx2Textures } from './ktx2Textures.js';
@@ -669,7 +670,7 @@ class TextureRegistry {
     return pending;
   }
 
-  getTexture(resourcePath, readable = false) {
+  getTexture(resourcePath, readable = false, allowEncoded = false) {
     resourcePath = this.resolveResourcePath(resourcePath);
     if (isUdimPath(resourcePath)) return this.getUdimTexture(resourcePath, readable);
     // Known uploaded files can be stored as MEMFS paths without a leading slash.
@@ -680,7 +681,8 @@ class TextureRegistry {
       const file = resourcePath.split('[')[0];
       if (this.config.USD?.FS_analyzePath?.(file)?.exists) sourceIdentity = '/' + resourcePath;
     }
-    const cacheKey = resourcePath + (readable ? "#usd-readable" : "");
+    const encoded = allowEncoded && !readable && this.config.textureMode === 'export';
+    const cacheKey = resourcePath + (readable ? '#usd-readable' : encoded ? '#usd-encoded' : '');
     if (debugTextures) console.log("get texture", resourcePath);
     if (this.textures[cacheKey]) {
       return this.textures[cacheKey];
@@ -692,7 +694,7 @@ class TextureRegistry {
         if (sourceEncoding) texture.userData.usdImageEncoding ??= sourceEncoding;
         if (sourceEncoding?.ktx2) normalizeKtx2Orientation(texture, sourceEncoding.topFirst);
         this.exportRecipes.set(texture.source, async registry => {
-          const original = await registry.getTexture(resourcePath, readable);
+          const original = await registry.getTexture(resourcePath, readable, allowEncoded);
           const copy = texture.clone(); copy.source = original.source; return copy;
         });
         resolve(texture);
@@ -766,6 +768,24 @@ class TextureRegistry {
       filetype = textureFileType(extension, _loadedFile);
       sourceEncoding = imageEncoding(filetype, _loadedFile);
       _loadedFile = stripImageColorMetadata(filetype, _loadedFile);
+      if (encoded && filetype === 'image/png') {
+        const texture = createEncodedPng(_loadedFile, sourceEncoding, async blob => {
+          const url = URL.createObjectURL(blob);
+          try {
+            const decoded = await this.loader.loadAsync(url);
+            const image = decoded.image;
+            decoded.dispose();
+            return image;
+          }
+          finally { URL.revokeObjectURL(url); }
+        });
+        if (texture) {
+          texture.name = sourceIdentity;
+          this.loadedTextures.add(texture);
+          textureResolve(texture);
+          return;
+        }
+      }
       const limit=this.config.maxTextureSize;
       if(filetype==='image/png' && limit>0 && typeof document!=='undefined' && typeof Worker!=='undefined' && _loadedFile.byteLength>=33){
         const header=new DataView(_loadedFile.buffer,_loadedFile.byteOffset,_loadedFile.byteLength);
@@ -895,14 +915,17 @@ class TextureRegistry {
   createExportScope({signal,resolution='original'} = {}) {
     if(!['original','preview'].includes(resolution))throw new RangeError('Invalid export texture resolution.');
     const preview=resolution==='preview',limit=this.config.maxTextureSize||512;
-    const registry = new TextureRegistry({...this.config, resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
+    const useStageTextures = this.config.textureMode === 'export' && !preview;
+    const registry = useStageTextures ? this : new TextureRegistry({...this.config, textureMode: undefined,
+      resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
     registry.udimTiles = this.udimTiles;
     const pending = new Map(), converted = new Set(), tileRegistries = new Map();
     let disposed = false;
     const dispose = () => {
       if (disposed) return;
       disposed = true; signal?.removeEventListener('abort', dispose);
-      registry.dispose(); for(const state of tileRegistries.values())state.registry.dispose();
+      if (!useStageTextures) registry.dispose();
+      for(const state of tileRegistries.values())state.registry.dispose();
       for (const texture of converted) texture.dispose();
     };
     signal?.addEventListener('abort', dispose, {once:true});
@@ -910,6 +933,7 @@ class TextureRegistry {
     const getTexture = async (texture,tile) => {
         if (disposed) throw new DOMException('Texture export cancelled', 'AbortError');
         if(tile===undefined&&preview&&Math.max(texture.image?.width||0,texture.image?.height||0)<=limit)return texture;
+        if (tile === undefined && !preview && getEncodedImage(texture.image)) return texture;
         let targetRegistry=registry,targetPending=pending;
         if(tile!==undefined){
           if(!Number.isInteger(tile)||tile<1001||tile>1100)throw new RangeError('Invalid UDIM export tile.');
@@ -2755,7 +2779,9 @@ class HydraMaterial {
       const normalBias = [0, 1, 2].map(i => Number.isFinite(node.bias?.[i]) ? node.bias[i] : 0);
       const remapNormal = slot === 'normalMap' && (node.identifier === 'UsdUVTexture' || node.scale || node.bias)
         && (normalScale.some(value => value !== 2) || normalBias.some(value => value !== -1));
-      const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal));
+      const wrapS = this.convertWrap(node.wrapS, node), wrapT = this.convertWrap(node.wrapT, node);
+      const allowEncoded = wrapS !== HydraMaterial.BLACK_WRAP && wrapT !== HydraMaterial.BLACK_WRAP;
+      const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal), allowEncoded);
       if (!texture || this._disposed || revision !== this._syncRevision || !this._material) return;
       // UsdUVTexture applies scale after decoding its color space. With no
       // bias, material factors preserve it exactly without baking the image.
@@ -2771,9 +2797,11 @@ class HydraMaterial {
         connection.loaded = true;
         return;
       }
-      const convert = (texture, forExport = false) => {
-        let cloned = texture.clone();
+      const convert = async (texture, forExport = false) => {
         const colorSpaceName = HydraMaterial.textureColorSpace(node, texture);
+        const space = resolveColorSpace(colorSpaceName);
+        if (space && (space.matrix || !['linear', 'srgb'].includes(space.transfer))) texture = await decodeEncodedTexture(texture);
+        let cloned = texture.clone();
         let variants=this._interface.registry.derivedTextureImages.get(texture.source);
         if(!variants)this._interface.registry.derivedTextureImages.set(texture.source,variants=new Map());
         let imageKey;
@@ -2803,7 +2831,6 @@ class HydraMaterial {
               cloned.format = RGBAFormat;
             }
           }
-          const space = resolveColorSpace(colorSpaceName);
           if (colorSpaceName && !space) warnOnce(`Unknown texture color space "${colorSpaceName}"; using it without conversion.`);
           if (!colorSpaceName || (!space && texture.userData?.usdKtx2)) {
             cloned.colorSpace = texture.userData?.usdKtx2 ? texture.colorSpace || LinearSRGBColorSpace
@@ -2860,7 +2887,6 @@ class HydraMaterial {
           cloned.userData={...cloned.userData,usdUdimTransform:uvMatrix.toArray()};
           uvMatrix.premultiply(udimLayout(udim.tiles.map(tile=>({tile}))).matrix);
         }
-        const wrapS = this.convertWrap(node.wrapS, node), wrapT = this.convertWrap(node.wrapT, node);
         const blackS = !!udim || !!cloned.userData.usdUdimTile || wrapS === HydraMaterial.BLACK_WRAP, blackT = !!udim || !!cloned.userData.usdUdimTile || wrapT === HydraMaterial.BLACK_WRAP;
         // three.js has no clamp-to-border. Black wrapping clamps to the edge, and
         // prepareBlackWrap() adds a black border once a mesh samples outside 0-1.
@@ -2878,9 +2904,10 @@ class HydraMaterial {
         cloned.needsUpdate = true;
         return cloned;
       };
-      const cloned = convert(texture);
+      const cloned = await convert(texture);
+      if (this._disposed || revision !== this._syncRevision || !this._material) return;
       this._interface.registry.exportRecipes.set(cloned, async registry =>
-        convert(await registry.getTexture(file, !!(remapScalar || remapNormal)), true));
+        convert(await registry.getTexture(file, !!(remapScalar || remapNormal), allowEncoded), true));
       this._material[slot] = cloned;
       if (slot === 'metalnessMap') this._material.metalness = 1;
       if (slot === 'roughnessMap') this._material.roughness = 1;
