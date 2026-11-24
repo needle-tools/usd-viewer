@@ -27,11 +27,37 @@ export function createBeauty({ renderer, scene, camera, settings, outputColorTra
   pass.setMRT(TSL.mrt({ output: TSL.output, diffuseColor: TSL.diffuseColor, normalVelocity: TSL.vec4(TSL.velocity.xy, encodeNormal(TSL.normalView)), emissive: TSL.emissive }));
   const color = pass.getTextureNode('output'), diffuse = pass.getTextureNode('diffuseColor'), normalVelocity = pass.getTextureNode('normalVelocity'), depth = pass.getTextureNode('depth');
   diffuse.value.type = UnsignedByteType;
-  const gi = ssgi(color, depth, TSL.sample(uv => decodeNormal(normalVelocity.sample(uv).zw)), camera);
+  const normal = uv => decodeNormal(normalVelocity.sample(uv).zw);
+  const gi = ssgi(color, depth, TSL.sample(normal), camera);
   gi.sliceCount.value = 2; gi.stepCount.value = 8;
+  const ao = gi.getAONode(), indirect = gi.getGINode();
+  const projectionInverse = TSL.uniform(camera.projectionMatrixInverse);
+  // Filter the noisy indirect signal before mixing it with sharp material and
+  // lighting detail. Stop the filter across surfaces and the background.
+  const filtered = TSL.Fn(() => {
+    const uv = TSL.uv();
+    const centerNormal = normal(uv).toVar();
+    const center = TSL.getViewPosition(uv, depth.sample(uv).r, projectionInverse).toVar();
+    const texel = TSL.vec2(1).div(depth.size());
+    const tolerance = center.z.abs().mul(texel.y).max(1e-5);
+    const signal = TSL.vec4(indirect.rgb, ao.r).toVar();
+    const total = TSL.float(1).toVar();
+    for (const [x, y] of [[-2,0], [2,0], [0,-2], [0,2]]) {
+      const sample = uv.add(texel.mul(TSL.vec2(x,y))).toVar();
+      const sampleDepth = depth.sample(sample).r.toVar();
+      const position = TSL.getViewPosition(sample, sampleDepth, projectionInverse);
+      const distance = center.sub(position).dot(centerNormal).abs();
+      const surface = TSL.float(sampleDepth.lessThan(0.999999))
+        .mul(centerNormal.dot(normal(sample)).max(0).pow(12));
+      const weight = surface.mul(TSL.smoothstep(tolerance, tolerance.mul(3), distance).oneMinus()).mul(0.75).toVar();
+      signal.addAssign(TSL.vec4(indirect.sample(sample).rgb, ao.sample(sample).r).mul(weight));
+      total.addAssign(weight);
+    }
+    return signal.div(total);
+  })().toVar();
   // Occlusion attenuates reflected light, never light emitted by the surface.
   const emission = pass.getTextureNode('emissive').rgb;
-  const shaded = color.rgb.sub(emission).mul(gi.getAONode().r).add(emission).add(diffuse.rgb.mul(gi.getGINode().rgb));
+  const shaded = color.rgb.sub(emission).mul(filtered.a).add(emission).add(diffuse.rgb.mul(filtered.rgb));
   // Avoid r185's shared texture-sample initialization inside conditional branches.
   const backdrop = TSL.float(depth.greaterThanEqual(0.999999));
   const flatBackdrop = TSL.uniform(false);
