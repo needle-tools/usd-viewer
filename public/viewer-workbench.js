@@ -76,6 +76,7 @@ export async function mountWorkbench() {
   const share = document.getElementById('export-gltf');
   const about = document.getElementById('about-link'); about.classList.add('header-tool-button');
   const feedback = document.querySelector('#feedback-link');
+  feedback?.classList.add('header-tool-button');
   commandIcon(share,'share'); commandIcon(about,'info'); if(feedback)commandIcon(feedback,'chat_bubble');
   const input = element('input'); input.type = 'file'; input.multiple = true; input.accept = '.usd,.usda,.usdc,.usdz,.gltf,.glb'; input.hidden = true;
   input.onchange = () => { if (!input.files.length) return; const data = new DataTransfer(); for (const file of input.files) data.items.add(file); window.dispatchEvent(new DragEvent('drop', { dataTransfer: data, cancelable: true })); input.value = ''; };
@@ -94,13 +95,15 @@ export async function mountWorkbench() {
     if (trigger.tagName === 'SUMMARY') openMenu(trigger.parentElement);
   }
   function positionMenus() {
-    const width = root.clientWidth, bottom = header.getBoundingClientRect().bottom;
+    const width = root.clientWidth;
+    const bottom = header.getBoundingClientRect().bottom;
     root.style.setProperty('--usd-header-bottom', `${bottom}px`);
-    const top = (menuToggle.getClientRects().length && root.dataset.menuOpen === 'true' ? actions.getBoundingClientRect().bottom : bottom) + 4;
-    root.style.setProperty('--usd-menu-top', `${top}px`);
+    const compact = menuToggle.getClientRects().length > 0;
+    const compactBottom = compact ? actions.getBoundingClientRect().bottom : 0;
     for (const disclosure of menus) {
       if (!disclosure.open) continue;
       const body = disclosure.lastElementChild, trigger = disclosure.firstElementChild.getBoundingClientRect();
+      body.style.setProperty('--usd-menu-top', `${(compact ? compactBottom : trigger.bottom) + 4}px`);
       body.style.left = `${Math.max(8, Math.min(trigger.left, width - body.offsetWidth - 8))}px`;
     }
   }
@@ -149,7 +152,7 @@ export async function mountWorkbench() {
   downloadControl = mountDownloadButton({
     container: header, getSource: () => downloadSource?.(),
     menuOnly: true,
-    stateKey: 'needle-usd-download-format', menuAnchor: header,
+    stateKey: 'needle-usd-download-format',
     onTextureResolutionChange:resolution=>track('export_texture_resolution_changed',{resolution}),
     onOpenChange(open) { if (open) for (const menu of menus) menu.open = false; },
     onMenuNavigate(direction) { nextMenu(downloadControl.menuTrigger, direction, downloadControl.menuOpen); },
@@ -516,6 +519,7 @@ export async function mountWorkbench() {
   function layoutResponsive() {
     const width = workspace.clientWidth, height = workspace.clientHeight;
     root.dataset.mode = workspace.dataset.mode = productMode; layoutMenu.hidden = productMode !== 'studio';
+    samples.hidden = productMode === 'studio';
     document.title = productMode === 'studio' ? 'USD Studio — Needle' : 'USD Viewer — Needle';
     dockHost.inert = productMode === 'viewer';
     if (productMode === 'viewer') { workspace.dataset.compact = 'false'; renderCompact(); positionMenus(); return; }

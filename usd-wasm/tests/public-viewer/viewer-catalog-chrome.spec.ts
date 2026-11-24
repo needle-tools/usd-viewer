@@ -9,7 +9,7 @@ for (const theme of ['light', 'dark']) {
 		await page.goto('/?viewer=three');
 		const mode = page.getByRole('group', {name: 'Workspace mode'});
 		await expect(mode.getByRole('button', {name: 'USD Viewer', exact: true})).toHaveAttribute('aria-pressed', 'true');
-		await expect(page.getByRole('button', {name: 'Examples', exact: true})).toBeEnabled();
+		await page.waitForFunction(() => (window as any).__usdViewerUiReady);
 		const appearance = await mode.evaluate(element => {
 			const track = getComputedStyle(element);
 			const buttons = [...element.querySelectorAll('button')];
@@ -58,7 +58,7 @@ test('a Khronos model without a USD conversion can be found and opened', async (
 		name: 'Triangle', label: 'Catalog triangle', tags: ['core'], variants: {'glTF': 'Triangle.gltf'},
 	}]}));
 	await page.goto('/?viewer=three');
-	await expect(page.getByRole('button', {name: 'Examples', exact: true})).toBeEnabled();
+	await page.waitForFunction(() => (window as any).__usdViewerUiReady);
 	await openSamples(page);
 	await expect(page.locator('[data-sample-group="gltf"]')).toContainText('glTF → USD conversions');
 	await expect(page.locator('[data-sample-group="gltf-samples"]')).toContainText('glTF Sample Assets');

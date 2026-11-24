@@ -60,9 +60,6 @@ export async function mountStagePanel({ handle, stage, usd, scene, camera, contr
   if (containers) layers.firstElementChild.hidden = true;
   const search = node('input', 'usd-prim-filter'); search.type = 'search'; search.placeholder = 'Filter prims'; search.setAttribute('aria-label', 'Filter prims'); search.value = typeof saved.search === 'string' ? saved.search : '';
   const columns = node('div', 'usd-tree-columns'); columns.append(node('span', '', 'Prim'), node('span', '', 'Type'));
-  for (const [name, title] of [['visibility','Visibility'],['power_settings_new','Activation']]) {
-    const column = node('span', 'usd-tree-column-icon'); column.append(viewerIcon(name)); column.title = title; column.setAttribute('aria-label', title); columns.append(column);
-  }
   const tree = node('div', 'usd-prim-tree'); tree.setAttribute('role', 'tree'); tree.setAttribute('aria-label', 'Stage hierarchy'); tree.setAttribute('aria-multiselectable', 'true');
   const treeTools=node('div','usd-tree-tools'),prototypeToggle=node('button','usd-tree-prototypes');
   prototypeToggle.type='button';prototypeToggle.append(viewerIcon('prototype'));
@@ -237,6 +234,7 @@ export async function mountStagePanel({ handle, stage, usd, scene, camera, contr
       icon.title = description; button.title = `${prim.path}\n${description}`;
       button.dataset.specifier = prim.specifier; button.setAttribute('aria-description', description);
       text(name,prim.name);text(type,prim.type);
+      type.title = prim.type;
       function toggleState(kind, on, off, checked, glyph, change) {
         let button=cached[kind];if(!button){button=node('button','usd-tree-action');button.type='button';cached[kind]=button;entry.append(button);}
         if(button.dataset.glyph!==glyph){button.replaceChildren(viewerIcon(glyph));button.dataset.glyph=glyph;}

@@ -1,5 +1,5 @@
 import {test,expect} from './test';
-import {stageReady,openAppMenu,openSettings} from './workbench-menus';
+import {stageReady,openAppMenu,openSamples,openSettings} from './workbench-menus';
 const file='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 for(const viewer of ['three','needle'])test(`${viewer}: F frames selection and all, preserves direction and ignores text input`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`/?viewer=${viewer}&file=${file}`);await stageReady(page);await page.evaluate(()=>(window as any).usdHydra.setPlaying(false));
@@ -19,15 +19,15 @@ test('open menubar follows pointer across menus; Examples opens a persistent pan
   await page.goto(`/?viewer=three&file=${file}`);await stageReady(page);
   await page.locator('[data-usd-menu=view]>summary').hover();await expect(page.locator('[data-usd-menu=view]')).not.toHaveAttribute('open','');
   await openAppMenu(page,'file');await page.locator('[data-usd-menu=view]>summary').hover();await expect(page.locator('[data-usd-menu=view]')).toHaveAttribute('open','');await expect(page.locator('[data-usd-menu=file]')).not.toHaveAttribute('open','');
-  await page.getByRole('button',{name:'Examples',exact:true}).click();await expect(page.locator('.usd-examples-browser')).toHaveAttribute('data-visible','true');
+  await openSamples(page);await expect(page.locator('.usd-examples-browser')).toHaveAttribute('data-visible','true');
   await openAppMenu(page,'view');
   await page.locator('[data-usd-menu=window]>summary').hover();await expect(page.locator('[data-usd-menu=window]')).toHaveAttribute('open','');await expect(page.locator('.usd-examples-browser')).toHaveAttribute('data-visible','true');
   await page.keyboard.press('Escape');await page.locator('[data-usd-menu=help]>summary').hover();await expect(page.locator('[data-usd-menu=help]')).not.toHaveAttribute('open','');
 });
-test('Stage fits full type names and Simulation has its own pane',async({page},info)=>{
+test('Stage uses a shared ellipsized Type column and Simulation has its own pane',async({page},info)=>{
   await page.goto(`/?viewer=three&file=${file}`);await stageReady(page);
-  const types=await page.locator('.usd-tree-row .usd-tree-type').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,clipped:node.scrollWidth>node.clientWidth,width:node.getBoundingClientRect().width})));
-  expect(types.some(t=>t.text==='RectLight')).toBe(true);expect(types.every(t=>!t.clipped)).toBe(true);expect(new Set(types.map(t=>t.width)).size).toBe(1);
+  const types=await page.locator('.usd-tree-row .usd-tree-type').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,title:node.getAttribute('title'),overflow:getComputedStyle(node).textOverflow,width:node.getBoundingClientRect().width})));
+  expect(types.some(t=>t.text==='RectLight')).toBe(true);expect(types.every(t=>t.title===t.text&&t.overflow==='ellipsis')).toBe(true);expect(new Set(types.map(t=>t.width)).size).toBe(1);
   await openAppMenu(page,'view');expect(await page.locator('[data-usd-menu=view] #usd-physics-controls').count()).toBe(0);await page.keyboard.press('Escape');
   await page.locator('.usd-dock-caption').filter({hasText:/^Simulation$/}).click();await expect(page.locator('[data-panel=simulation]')).toBeVisible();await expect(page.locator('[data-panel=simulation]')).toContainText('No simulation');
   await page.screenshot({path:info.outputPath('types-simulation.png')});

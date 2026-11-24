@@ -1,10 +1,10 @@
 import {expect,test} from './test';
-import {openAppMenu} from './workbench-menus';
+import {openAppMenu,openSamples} from './workbench-menus';
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const ready=(page:any)=>page.waitForFunction(()=>!!(window as any).usdStagePanel,null,{timeout:15000});
 for(const theme of ['light','dark'])test(`${theme} menus fit without scrollbars and Examples opens directly`,async({page},info)=>{
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);
-  await page.goto('/?viewer=three');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
+  await page.goto('/?viewer=three');await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   await expect(page.locator('.usd-status,.usd-viewport-toolbar')).toHaveCount(0);
   for(const width of [1280,390]){
     await page.setViewportSize({width,height:850});
@@ -15,7 +15,9 @@ for(const theme of ['light','dark'])test(`${theme} menus fit without scrollbars 
       expect(box.rect.left).toBeGreaterThanOrEqual(0);expect(box.rect.right).toBeLessThanOrEqual(width);
       await page.screenshot({path:info.outputPath(`${theme}-${name}-${width}.png`)});await page.keyboard.press('Escape');
     }
-    await openAppMenu(page,'file');await page.locator('[data-usd-menu=file] > summary').focus();await page.keyboard.press('ArrowRight');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeFocused();await page.keyboard.press('ArrowDown');await expect(page.locator('#sample-group-list')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('searchbox',{name:'Search examples'})).toBeFocused();
+    await expect(page.getByRole('button',{name:'Examples',exact:true})).toHaveCount(0);
+    await openAppMenu(page,'file');await page.locator('[data-usd-menu=file] > summary').focus();await page.keyboard.press('ArrowRight');await expect(page.locator('[data-usd-menu=view] > summary')).toBeFocused();
+    await openSamples(page);await expect(page.locator('#sample-group-list')).toBeVisible();
     const header=await page.locator('#container').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}));expect(header.scroll).toBeLessThanOrEqual(header.width);
   }
 });

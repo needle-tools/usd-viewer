@@ -146,7 +146,7 @@ export function mountDownloadButton(options) {
   }
   function positionMenu() {
     if (!menuElement.open || disposed) return;
-    const anchor = (options.menuAnchor || element).getBoundingClientRect();
+    const anchor = (options.menuAnchor || (menuOnly ? menuTrigger : element)).getBoundingClientRect();
     const bounds = menu.getBoundingClientRect();
     const top = anchor.bottom + 4 + bounds.height <= innerHeight - 8 ? anchor.bottom + 4 : Math.max(8, anchor.top - bounds.height - 4);
     menu.style.left = `${Math.max(8, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - 8))}px`;

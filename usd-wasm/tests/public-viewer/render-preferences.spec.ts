@@ -52,7 +52,7 @@ for(const blocked of [false,true])test(`${blocked?'blocked':'invalid'} storage l
 });
 
 test('a mode chosen before opening a file remains selected when it loads',async({page})=>{
-  await page.goto('/?viewer=three');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();await openSettings(page);
+  await page.goto('/?viewer=three');await page.waitForFunction(() => (window as any).__usdViewerUiReady);await openSettings(page);
   const mode=page.getByRole('combobox',{name:'Render mode',exact:true});await expect(mode).toHaveValue('beauty');await mode.selectOption('basic');
   await page.locator('input[type=file]').setInputFiles({name:'cube.usda',mimeType:'text/plain',buffer:Buffer.from('#usda 1.0\ndef Cube "Cube" {}\n')});await stageReady(page);
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.mode)).toBe('basic');

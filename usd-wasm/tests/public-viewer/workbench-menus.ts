@@ -13,6 +13,17 @@ export async function openAppMenu(page:Page,name:'file'|'view'|'window'|'help') 
 }
 export async function openSamples(page:Page) {
   await showMenubar(page);
+  if (await page.locator('#usd-workbench').getAttribute('data-mode') === 'studio') {
+    await openAppMenu(page,'window');
+    const checkbox = page.getByRole('checkbox',{name:'Show Examples',exact:true});
+    if (await checkbox.isChecked()) {
+      await page.keyboard.press('Escape');
+      if (!await page.locator('#sample-group-list').isVisible()) {
+        await page.locator('.dv-tab').filter({hasText:/^Examples$/}).click();
+      }
+    } else await checkbox.check();
+    return;
+  }
   await page.getByRole('button',{name:'Examples',exact:true}).click();
 }
 export async function selectExampleFolder(page:Page,library:string) {

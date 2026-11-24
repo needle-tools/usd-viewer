@@ -1,11 +1,11 @@
 import {expect,test} from './test';
-import {stageReady} from './workbench-menus';
+import {openSamples,stageReady} from './workbench-menus';
 
 for(const viewer of ['three','needle'])test(`${viewer}: viewport selection cannot scroll a dock containing a stale hidden Stage`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   await page.setViewportSize({width:1440,height:1100});
   await page.goto(`/?viewer=${viewer}&file=/test-fixtures/coverage/advanced/physics-collision-group.usda`);await stageReady(page);
-  await page.getByRole('button',{name:'Examples',exact:true}).click();
+  await openSamples(page);
   await page.setViewportSize({width:1440,height:400});
   await expect(page.locator('.usd-workspace')).toHaveCSS('height','355px');
   await expect(page.locator('.usd-viewport')).toHaveCSS('height','355px');
@@ -24,7 +24,7 @@ for(const viewer of ['three','needle'])test(`${viewer}: viewport selection canno
   expect(await page.locator('.usd-dock').evaluate(el=>el.scrollTop)).toBe(0);
   expect(await page.locator('.usd-viewport').boundingBox()).toEqual(before);
   await page.screenshot({path:info.outputPath('selected-layout.png')});
-  await page.getByRole('button',{name:'Examples',exact:true}).click();
+  await openSamples(page);
   await expect(page.locator('.usd-viewport')).toHaveCSS('height','355px');
   await page.locator('.dv-tab').filter({hasText:/^Stage/}).click();
   await expect(page.locator('[data-prim-path="/World/RackTop"]')).toBeInViewport();

@@ -34,7 +34,7 @@ for(const [viewer,backend] of [['three',''],['needle',''],['three','webgl']]){
   });
 }
 test('stage hierarchy scrolls independently while filter and headings stay fixed',async({page},info)=>{
-  await page.setViewportSize({width:1280,height:650});await page.goto('/?viewer=three');await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
+  await page.setViewportSize({width:1280,height:650});await page.goto('/?viewer=three');await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   const text='#usda 1.0\ndef Xform "World" {\n'+Array.from({length:160},(_,i)=>`def Cube "Cube${String(i).padStart(3,'0')}" {\n double size = 0.1\n }`).join('\n')+'\n}';
   await page.locator('input[type=file]').setInputFiles({name:'tree.usda',mimeType:'text/plain',buffer:Buffer.from(text)});await stageReady(page);
   await openAppMenu(page,'window');if(!await page.getByRole('checkbox',{name:'Show Stage',exact:true}).isChecked())await page.getByRole('checkbox',{name:'Show Stage',exact:true}).check();await page.keyboard.press('Escape');
@@ -47,7 +47,7 @@ test('stage hierarchy scrolls independently while filter and headings stay fixed
 });
 
 for(const viewer of ['three','needle'])test(`${viewer}: first-load framing uses the final docked viewport`,async({page})=>{
-  await page.setViewportSize({width:1440,height:900});await page.goto(`/?viewer=${viewer}`);await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
+  await page.setViewportSize({width:1440,height:900});await page.goto(`/?viewer=${viewer}`);await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   await page.locator('input[type=file]').setInputFiles({name:'wide.usda',mimeType:'text/plain',buffer:Buffer.from('#usda 1.0\ndef Cube "Wide" {\n double size = 2\n double3 xformOp:scale = (8, 1, 1)\n uniform token[] xformOpOrder = ["xformOp:scale"]\n}\n')});await stageReady(page);
   await expect.poll(()=>page.evaluate(async()=>{const w=window as any,T=await import('three'),scene=w.needleEngineContext?.scene||w.scene,camera=w.needleEngineContext?.mainCamera||w.camera,box=new T.Box3();scene.updateMatrixWorld(true);camera.updateMatrixWorld();scene.traverse((o:any)=>{if(o.isMesh&&o.userData.usdPath)box.expandByObject(o);});let extent=0;for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){const p=new T.Vector3(x,y,z).project(camera);extent=Math.max(extent,Math.abs(p.x),Math.abs(p.y));}return extent;})).toBeLessThan(1);
 });

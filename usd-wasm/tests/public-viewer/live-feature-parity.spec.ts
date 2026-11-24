@@ -10,7 +10,7 @@ for (const workspace of ['viewer', 'studio']) {
     await page.emulateMedia({colorScheme: 'dark'});
     await page.goto(`/?viewer=three&workspace=${workspace}&assetCache=0`);
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect(page.getByRole('button', {name: 'Examples', exact: true})).toBeEnabled();
+    await page.waitForFunction(() => (window as any).__usdViewerUiReady);
 
     await openAppMenu(page, 'help');
     await page.locator('#about-link').click();
@@ -90,7 +90,7 @@ for (const workspace of ['viewer', 'studio']) {
     await banner.getByRole('button', {name: 'Dismiss', exact: true}).click();
     await expect(banner).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('button', {name: 'Examples', exact: true})).toBeEnabled();
+    await page.waitForFunction(() => (window as any).__usdViewerUiReady);
     await expect(banner).toHaveCount(0);
     expect(feedRequests).toBe(1);
     expect(await page.evaluate(() => Number(localStorage.getItem('needle-whats-new-dismissed-at')))).toBeGreaterThan(0);

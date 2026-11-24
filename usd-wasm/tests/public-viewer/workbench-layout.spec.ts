@@ -12,7 +12,7 @@ test('first-run hierarchy, inspector columns and reopened panels stay coherent',
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({width:1440,height:960});
   await page.goto('/?viewer=three');
-  await expect(page.getByRole('button', {name:'Examples',exact:true})).toBeEnabled();
+  await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   expect(Object.keys(await layout(page))).toEqual(['viewport','examples']);
   await page.screenshot({path:info.outputPath('empty.png')});
   await page.goto(`/?viewer=three&file=${fixture}`); await stageReady(page);await page.evaluate(()=>(window as any).usdWorkbench.openPanel('stage'));
@@ -76,7 +76,7 @@ test('compact panels preserve desktop sizes, live inputs and saved presets throu
 
 for (const theme of ['light','dark']) test(`${theme}: Examples has bounded navigation and results at every size`, async ({page}, info) => {
   await page.addInitScript(theme=>localStorage.setItem('needle-usd-theme',JSON.stringify(theme)),theme);
-  await page.goto('/?viewer=three'); await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
+  await page.goto('/?viewer=three'); await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   for (const [width,height] of [[1440,960],[700,750],[390,700],[390,420],[320,568]]) {
     await page.setViewportSize({width,height}); await openSamples(page);
     await selectExampleFolder(page,'needle');

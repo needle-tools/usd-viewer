@@ -4,7 +4,7 @@ import {expect, test, type Page} from './test';
 test.use({storageState: {cookies: [], origins: []}});
 const fixture = '/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 const mode = (page: Page) => page.getByRole('group', {name: 'Workspace mode'});
-const ready = (page: Page) => expect(page.getByRole('button', {name: 'Examples', exact: true})).toBeEnabled();
+const ready = (page: Page) => page.waitForFunction(() => (window as any).__usdViewerUiReady);
 const layout = (page: Page) => page.evaluate(() => (window as any).usdWorkbench.dock.toJSON());
 function sameLayout(actual: any, expected: any) {
   // Dockview redistributes fractional CSS pixels when a group is laid out again.

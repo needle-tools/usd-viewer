@@ -1,4 +1,4 @@
-import {stageReady,openSettings,openAppMenu} from './workbench-menus';
+import {stageReady,openSettings,openAppMenu,openSamples} from './workbench-menus';
 import { expect, test } from './test';
 
 const stage = '/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
@@ -127,7 +127,7 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
   await expect(page.getByRole('combobox',{name:'Workspace layout'})).toBeFocused();
   await page.keyboard.press('Escape');
   await page.locator('[data-usd-menu=file]>summary').click();
-  await page.getByRole('button',{name:'Examples',exact:true}).click();
+  await openSamples(page);
   await expect(page.locator('.usd-examples-browser')).toBeVisible();
   await expect(page.locator('[data-usd-menu=file]')).not.toHaveAttribute('open');
   await page.keyboard.press('Escape');

@@ -10,7 +10,7 @@ async function sample(page: Page, viewer: string, file: string) {
 for(const backend of ['', 'webgl'])test(`growing point outlines resize their instance allocation (${backend||'webgpu'})`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(`/?viewer=three&render=basic&backend=${backend}`);
-  await expect(page.getByRole('button',{name:'Examples',exact:true})).toBeEnabled();
+  await page.waitForFunction(() => (window as any).__usdViewerUiReady);
   const source=`#usda 1.0
 (startTimeCode=1; endTimeCode=2)
 def Points "Cloud" {
