@@ -224,7 +224,7 @@ body.drag-active .dropzone-title {
     /* above the drop hint, still below the toolbar + its menu popover */
     z-index: 20;
     padding: 24px;
-    /* backdrop is click-through; only the pill captures clicks */
+    background-color: color-mix(in srgb, var(--color-page) 85%, transparent);
     pointer-events: none;
 }
 
@@ -233,16 +233,11 @@ body.drag-active .dropzone-title {
 }
 
 .loading-overlay-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, auto) auto;
     align-items: center;
-    gap: 10px;
+    gap: 4px 10px;
     max-width: min(90vw, 560px);
-    padding: 12px 12px 12px 18px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 999px;
-    background-color: var(--color-surface);
-    box-shadow: 0 8px 28px rgba(26, 26, 26, 0.18);
-    pointer-events: auto;
 }
 
 .spinner-md {
@@ -258,7 +253,6 @@ body.drag-active .dropzone-title {
     color: var(--color-text-secondary);
     font-weight: 700;
     white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .loading-overlay-filename {
@@ -272,22 +266,16 @@ body.drag-active .dropzone-title {
 }
 
 .loading-overlay-progress {
-    color: var(--color-green-dark);
-    font-weight: 800;
+    grid-column: 1 / -1;
+    color: var(--color-text-secondary);
+    font-size: 0.85em;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: 4ch;
-    text-align: right;
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .loading-overlay-progress[hidden] {
     display: none;
-}
-
-.loading-overlay-sep {
-    color: var(--color-text-muted);
-    flex-shrink: 0;
 }
 
 .loading-cancel-button {
@@ -298,12 +286,13 @@ body.drag-active .dropzone-title {
     height: 28px;
     padding: 0;
     flex-shrink: 0;
-    border: 1px solid var(--border-strong);
+    border: none;
     border-radius: 50%;
     background: transparent;
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    pointer-events: auto;
+    transition: background-color 0.15s, color 0.15s;
 }
 
 .loading-cancel-button:hover {
@@ -2136,13 +2125,11 @@ button:focus-visible {
 }
 
 /* "What's New" banner — small, subtle, bottom-right announcement card that
-   rotates through items from the Needle marketer feed. Sits above the footer
-   terminal bar (z-index 100) but is small enough not to crowd the canvas. */
+   rotates through items from the Needle marketer feed. */
 .whats-new {
     position: fixed;
     right: 14px;
-    /* clear the footer terminal bar (single-line height + breathing room) */
-    bottom: 58px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     z-index: 110;
     width: 300px;
     max-width: calc(100vw - 28px);
@@ -2152,9 +2139,28 @@ button:focus-visible {
     /* hidden state: nudged down + faded; .is-visible animates it in */
     opacity: 0;
     transform: translateY(12px);
-    /* transition every animatable property change (fade/slide in + out) */
-    transition: all 0.25s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    /* Restarts when the card returns from display: none. */
+    animation: whats-new-enter 0.35s ease-out 10s backwards;
     pointer-events: none;
+}
+
+@keyframes whats-new-enter {
+    from {
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+body:has(#usd-workbench[data-mode="studio"], .usd-asset-progress:not([hidden])) .whats-new {
+    display: none;
 }
 
 .whats-new.is-visible {
@@ -2270,6 +2276,7 @@ button:focus-visible {
     .whats-new {
         right: 10px;
         left: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
         width: auto;
     }
 }

@@ -8,7 +8,7 @@ export const assetDownloads = createDownloadProgress({
   getHost: () => window.usdWorkbench?.viewport,
   onUpdate(snapshot,runtime) {
     if (runtime) return;
-    window.updateLoadingOverlayProgress?.(snapshot.active ? {text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` · ${Math.floor(snapshot.ratio*100)}%`}`} : null);
+    window.updateLoadingOverlayProgress?.(snapshot.active ? {text:`Downloading ${snapshot.active} ${snapshot.active===1?'file':'files'}${snapshot.ratio==null?'':` ${Math.floor(snapshot.ratio*100)}%`}`} : null);
     window.usdStagePanel?.refreshInfoFiles?.();
   },
 });

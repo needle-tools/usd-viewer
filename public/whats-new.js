@@ -14,6 +14,7 @@
 import { track } from "./analytics.js";
 
 const FEED_ENDPOINT = "https://marketer.needle.tools/api/whats-new";
+const WHATS_NEW_LABEL = "What's new at Needle";
 
 function disabledForDiagnostics() {
   try {
@@ -219,7 +220,7 @@ async function fetchItems() {
 function buildDom() {
   const root = document.createElement("aside");
   root.className = "whats-new";
-  root.setAttribute("aria-label", "What's new at Needle");
+  root.setAttribute("aria-label", WHATS_NEW_LABEL);
   root.hidden = true;
 
   const link = document.createElement("a");
@@ -260,7 +261,7 @@ function buildDom() {
 
 const KICKER_BY_KIND = {
   promo: "Offer",
-  feature: "What's new",
+  feature: WHATS_NEW_LABEL,
   event: "Event",
   crosspromo: "From Needle",
 };
@@ -343,7 +344,7 @@ function start(initialItems, dom) {
     // Count the impression for the item now on screen.
     trackEngagement(item.id, "impression");
 
-    kicker.textContent = KICKER_BY_KIND[item.kind] || "What's new";
+    kicker.textContent = KICKER_BY_KIND[item.kind] || WHATS_NEW_LABEL;
     title.textContent = b.title || "";
     subtitle.textContent = b.subtitle || "";
     cta.textContent = (b.cta || "Learn more") + " →";
