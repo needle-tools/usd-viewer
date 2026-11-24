@@ -2,6 +2,20 @@
 
 See the [USD SDK changelog](usd-wasm/CHANGELOG.md) for SDK changes.
 
+## [2.2.0] - 2026-11-24
+
+### Improved
+
+- Spark texture compression is enabled by default in the Three.js viewer on WebGPU and WebGL. Downloads use the source textures.
+- PNG previews and GLB downloads use less memory, and ZIP downloads are labeled **USD (ZIP archive)**.
+- The flat viewport backdrop follows the panel theme, with Light and Dark overrides. Its displayed color is compensated for tone mapping while remaining visible through glass and volumes.
+- Beauty filters indirect lighting and ambient occlusion before temporal anti-aliasing to reduce flicker.
+
+### Fixed
+
+- Click to select parts in Interact mode and continue dragging smoothly along joint limits.
+- Tab close buttons appear consistently on hover.
+
 ## [2.1.0] - 2026-11-23
 
 ### Improved

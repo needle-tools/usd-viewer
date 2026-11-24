@@ -2,6 +2,18 @@
 
 See the [viewer changelog](https://github.com/needle-tools/usd-viewer/blob/main/CHANGELOG.md) for application changes.
 
+## [2.2.0] - 2026-11-24
+
+### Added
+
+- The Node.js entry point `@needle-tools/usd/gltf/node` writes GLB exports to a file. Hydra's `textureMode: 'export'` retains encoded source textures where possible without creating a browser canvas.
+- Hydra accepts a viewport texture compressor independently of the textures used for export.
+
+### Improved
+
+- PNG previews are resized off the main thread, and GLB export handles large textures and collider buffers with lower memory overhead.
+- Beauty filters noisy indirect lighting before temporal anti-aliasing and keeps refraction sampling the current framebuffer across camera changes.
+
 ## [2.1.0] - 2026-11-23
 
 ### Added
