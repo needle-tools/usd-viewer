@@ -5,6 +5,7 @@ import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSett
 import {createPathTracingTextureSources, createViewerTextureCompressor, supportsViewerTextureCompression} from './viewer-texture-compression.js';
 import {viewerUsdReady, startupSimreadyReady, assetDownloads, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
 import {viewerToneMapping,mountDisplayControl} from './viewer-display.js';
+import {counterToneMapBackdrop} from './viewer-backdrop.js';
 import {
   Vector3,
   AnimationMixer,
@@ -33,7 +34,6 @@ import {
   OrbitControls,
   runtimeViewerMode,
 } from 'viewer-runtime';
-import { DataTexture, FloatType, RGBAFormat, LinearSRGBColorSpace } from 'three';
 import { track, trackError, bucketBytes } from './analytics.js';
 import { stashHandoffPayload } from './cloud-handoff-store.js';
 import { testAssetLibrary, fixtureUrl as testFixtureUrl } from '/test-fixtures/test-asset-library.js';
@@ -789,7 +789,10 @@ let waitForMaterials = parseBooleanUrlParam(params.get("waitForMaterials"));
 let complexity = preferredDetail(params);
 // Limit-surface tessellation, bounded by the Very high triangle count.
 const DEFAULT_DETAIL = 'adaptive';
-let backgroundChoice = params.get('background') === 'dark' ? 'dark' : 'light';
+const requestedBackground = params.get('background');
+let backgroundChoice = ['dark', 'light'].includes(requestedBackground) ? requestedBackground : 'theme';
+const backdropColor = new Color();
+const backdropState = new WeakMap();
 const DEFAULT_CAMERA_FIT_OFFSET = 1.5;
 var currentRootFileName = undefined;
 var timeout = 40;
@@ -802,8 +805,6 @@ var lastAnimationTimeSeconds = performance.now() / 1000;
 let needleEngineElement = null;
 let viewportInteraction;
 let resizeRequested = false;
-let needleBackdrop = null;
-window.addEventListener('pagehide', () => needleBackdrop?.dispose(), {once:true});
 let removeNeedleEngineUsdPlugin = null;
 let needleEngineSimreadyPlugin;
 let needleLoaderFiles = [];
@@ -1608,23 +1609,23 @@ function arrayFromUsdVector(vector) {
   finally { vector.delete?.(); }
 }
 
+function updateBackdrop(renderer) {
+  if (!renderer) return;
+  const color = backdropColor.getHex();
+  const {toneMapping, toneMappingExposure} = renderer;
+  const state = backdropState.get(renderer);
+  if (state?.color === color && state.toneMapping === toneMapping && state.toneMappingExposure === toneMappingExposure) return;
+  backdropState.set(renderer, {color, toneMapping, toneMappingExposure});
+  // Classic WebGL already converts its clear color without tone mapping.
+  const clear = renderer.isWebGLRenderer ? backdropColor : counterToneMapBackdrop(backdropColor, toneMapping, toneMappingExposure);
+  renderer.setClearColor(clear, 1);
+}
+
 function applyViewerBackground(context = window.needleEngineContext) {
-  const color = new Color(backgroundChoice === 'dark' ? '#181818' : '#F0F4EF');
-  window.renderer?.setClearColor(color, 1);
-  if (context?.scene && (!context.scene.background || context.scene.background === needleBackdrop)) {
-    // WebGL clear colors bypass tone mapping; WebGPU clears go through AgX.
-    // A linear HDR texture follows the surface display transform in both renderers.
-    // It is a camera backdrop, separate from the scene's lighting environment.
-    if (!needleBackdrop) {
-      needleBackdrop = new DataTexture(new Float32Array(4), 1, 1, RGBAFormat, FloatType);
-      needleBackdrop.colorSpace = LinearSRGBColorSpace;
-      needleBackdrop.name = 'Viewer backdrop';
-    }
-    needleBackdrop.image.data.set([color.r, color.g, color.b, 1]);
-    needleBackdrop.needsUpdate = true;
-    context.scene.background = needleBackdrop;
-  }
-  document.body.classList.toggle('dark-scene-background', backgroundChoice === 'dark');
+  document.body.dataset.background = backgroundChoice;
+  backdropColor.setStyle(getComputedStyle(window.usdWorkbench?.viewport || document.body).backgroundColor);
+  updateBackdrop(window.renderer);
+  updateBackdrop(context?.renderer);
 }
 
 function showUsdBackground() {
@@ -1633,14 +1634,16 @@ function showUsdBackground() {
   container.replaceChildren(); container.hidden = false;
   const label = document.createElement('label'); label.className='usd-settings-row'; label.textContent = 'Background ';
   const select = document.createElement('select'); select.setAttribute('aria-label', 'Background');
-  for (const value of ['light', 'dark']) {
+  for (const [value, text] of [['theme', 'Theme'], ['light', 'Light'], ['dark', 'Dark']]) {
     const option = document.createElement('option'); option.value = value;
-    option.textContent = value === 'light' ? 'Light' : 'Dark';
+    option.textContent = text;
     option.selected = backgroundChoice === value; select.appendChild(option);
   }
   select.addEventListener('change', () => {
     backgroundChoice = select.value; applyViewerBackground();
-    const url = new URL(location.href); url.searchParams.set('background', backgroundChoice);
+    const url = new URL(location.href);
+    if (backgroundChoice === 'theme') url.searchParams.delete('background');
+    else url.searchParams.set('background', backgroundChoice);
     history.replaceState({}, '', url);
   });
   label.appendChild(select); container.appendChild(label);
@@ -2714,8 +2717,8 @@ async function init() {
   renderer.outputColorSpace = SRGBColorSpace;
   applyAgXToneMapping(renderer);
   renderer.shadowMap.enabled = true;
-  // Scene backdrop choices are independent of the workbench UI theme.
   applyViewerBackground();
+  document.addEventListener('usd-theme-change', () => applyViewerBackground());
 
 
   (window.usdWorkbench?.viewport || document.body).appendChild( renderer.domElement );
@@ -2731,7 +2734,10 @@ async function init() {
     renderModesUi = await mountRenderModes({ renderer, scene, camera, controls, preference: renderPreference, pathTracingTextureSources });
     ({ modes: renderModes, start: startRenderMode } = renderModesUi);
     window.usdRenderModes = renderModes;
-    window.renderUsdFrame = () => renderModes.render(window.usdRenderCamera || window.camera);
+    window.renderUsdFrame = () => {
+      updateBackdrop(renderer);
+      renderModes.render(window.usdRenderCamera || window.camera);
+    };
   } else if (window.usdWorkbench?.containers.settings) {
     const label = document.createElement('label'); label.className = 'usd-settings-row'; label.textContent = 'Exposure';
     const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.max = '32'; input.step = '0.1';

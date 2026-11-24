@@ -1,4 +1,4 @@
-import {expect, test, type Page} from './test';
+import {expect, screenshotPixel, test, type Page} from './test';
 import {openSettings, stageReady} from './workbench-menus';
 
 const source = `#usda 1.0
@@ -98,19 +98,40 @@ test('Beauty occlusion does not darken a purely emissive surface', async ({page}
   const canvas = page.locator('canvas.usd-viewer-three-canvas');
   async function sample() {
     await page.waitForTimeout(600);
-    const png = await canvas.screenshot();
-    return page.evaluate(async encoded => {
-      const bitmap = await createImageBitmap(await (await fetch('data:image/png;base64,'+encoded)).blob());
-      const canvas = document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
-      const ctx=canvas.getContext('2d')!;ctx.drawImage(bitmap,0,0);
-      return Array.from(ctx.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data).slice(0,3);
-    },png.toString('base64'));
+    return (await screenshotPixel(canvas, 'center')).slice(0, 3);
   }
   const before = await sample();
   await page.evaluate(async () => {await (window as any).usdRenderModes.setMode('beauty');});
   const after = await sample();
   expect(before[0]).toBeGreaterThan(80);
   for (let i=0;i<3;i++) expect(Math.abs(after[i]-before[i]), JSON.stringify({before,after})).toBeLessThan(4);
+});
+
+test('The flat white backdrop does not seed Beauty bloom', async ({page}) => {
+  await setup(page, 'beauty');
+  await page.evaluate(() => {
+    const w = window as any;
+    w.usdRoot.traverse((object: any) => {
+      if (object.userData.usdPath === '/World/Emitter') object.material.emissive.setRGB(0, 0, 0);
+    });
+  });
+  await openSettings(page);
+  const background = page.getByRole('combobox', {name:'Background', exact:true});
+  await background.selectOption('dark');
+  await background.selectOption('light');
+  await page.keyboard.press('Escape');
+  const canvas = page.locator('canvas.usd-viewer-three-canvas');
+  await expect.poll(async () => (await screenshotPixel(canvas, [2, 2]))[0]).toBe(255);
+  const surface = async () => (await screenshotPixel(canvas, 'center'))[0];
+  const off = await surface();
+  expect(off).toBeLessThan(25);
+  await openSettings(page);
+  await page.getByRole('combobox', {name:'Bloom', exact:true}).selectOption('on');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => {
+    for (let frame = 0; frame < 8; frame++) await new Promise(requestAnimationFrame);
+  });
+  expect(Math.abs(await surface() - off)).toBeLessThanOrEqual(2);
 });
 
 test('Beauty leaves the host camera aspect and authored view offset intact', async ({page}) => {

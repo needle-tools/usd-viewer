@@ -2013,15 +2013,14 @@ button:focus-visible {
     pointer-events: none;
 }
 
-.dark-scene-background .filename-bar,
-.dark-scene-background #dropzone {
+:is(body[data-background=dark], :root[data-theme=dark] body:not([data-background=light])) :is(.filename-bar, #dropzone) {
     --color-text: #f0f4ef;
     --color-text-secondary: #e2e8e1;
     --color-text-muted: #b9c3b8;
     color: var(--color-text);
 }
 
-.dark-scene-background .dropzone-inner {
+:is(body[data-background=dark], :root[data-theme=dark] body:not([data-background=light])) .dropzone-inner {
     background-color: rgba(16, 24, 32, 0.75);
 }
 

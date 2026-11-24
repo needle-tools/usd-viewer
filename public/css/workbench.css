@@ -202,7 +202,9 @@ body.usd-product { --radius-control: var(--usd-radius-control); overflow: hidden
 .usd-console-diagnostics > summary { padding: var(--usd-space-small) var(--usd-space-2); cursor: pointer; color: var(--text-secondary); font-size: var(--usd-text-small); }
 .usd-workbench .usd-console-diagnostics .footer { height: var(--usd-console-log-height); }
 .usd-panel-viewport { display: flex; flex-direction: column; overflow: hidden; }
-.usd-viewport { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface-page); isolation: isolate; }
+.usd-viewport { flex: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface-panel); isolation: isolate; }
+body[data-background=light] .usd-viewport { background: var(--surface-panel-light); }
+body[data-background=dark] .usd-viewport { background: var(--surface-panel-dark); }
 .usd-workbench .usd-viewport > canvas, .usd-workbench .usd-viewer-needle-engine { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; max-width: none; border-radius: 0; z-index: 0; }
 .usd-workbench .usd-viewport > canvas.usd-load-frame { z-index: 2; pointer-events: none; }
 .usd-workbench #dropzone,.usd-workbench #loading-overlay { position: absolute; inset: 0; width: auto; height: auto; z-index: 4; pointer-events: none; }

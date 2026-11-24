@@ -11,7 +11,7 @@
 // A worker keeps one viewer at a time in its own context; asking for another
 // query replaces it. (Two viewers in one context share storage and do not both
 // finish starting, and idle viewers compete for the GPU.)
-import {test as base, type BrowserContext, type Page} from '@playwright/test';
+import {test as base, type BrowserContext, type Locator, type Page} from '@playwright/test';
 import {createReadStream} from 'node:fs';
 import {appendFile, mkdir, readFile, stat, writeFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
@@ -19,6 +19,18 @@ import {dirname, extname, relative, resolve, sep} from 'node:path';
 import {localPath, assetList, remoteRoot} from './remote-assets.mjs';
 
 export * from '@playwright/test';
+
+export async function screenshotPixel(element: Locator, point: [number, number] | 'center') {
+  const png = (await element.screenshot()).toString('base64');
+  return element.page().evaluate(async ({png, point}) => {
+    const bitmap = await createImageBitmap(await (await fetch('data:image/png;base64,' + png)).blob());
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d')!;
+    context.drawImage(bitmap, 0, 0);
+    const [x, y] = point === 'center' ? [bitmap.width / 2, bitmap.height / 2] : point;
+    return Array.from(context.getImageData(x, y, 1, 1).data);
+  }, {png, point});
+}
 
 const record = process.env.RECORD_TEST_ASSETS === '1';
 const types: Record<string, string> = {'.json': 'application/json', '.js': 'application/javascript', '.css': 'text/css',

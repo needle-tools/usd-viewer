@@ -1800,7 +1800,9 @@ button.user-profile {
 :root {
   --surface-page: #F0F4EF;
   --surface-page-elevated: #EFF5EC;
-  --surface-panel: #FFFFFF;
+  --surface-panel-light: #FFFFFF;
+  --surface-panel-dark: #171A18;
+  --surface-panel: var(--surface-panel-light);
   --surface-panel-muted: #F7F9F4;
   --surface-panel-strong: #F3F6EE;
   --surface-callout-success: #DBEBE1;
@@ -2121,7 +2123,7 @@ button.user-profile {
 :root[data-theme="dark"] {
   --surface-page: #0F1110;
   --surface-page-elevated: #121413;
-  --surface-panel: #171A18;
+  --surface-panel: var(--surface-panel-dark);
   --surface-panel-muted: #1F2320;
   --surface-panel-strong: #2A2E2B;
   --surface-callout-success: #1D3529;

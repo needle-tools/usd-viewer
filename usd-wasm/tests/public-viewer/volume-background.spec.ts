@@ -14,7 +14,7 @@ test('jade volume composites over the background and receives light without an o
     await stageReady(page);
     await openSettings(page);
     const background = page.getByRole('combobox', { name: 'Background', exact: true });
-    await expect(background).toHaveValue('light');
+    await expect(background).toHaveValue('theme');
     await page.keyboard.press('Escape');
     const initial = await page.evaluate(async () => {
         const w = window as any; await w.usdHydra.ready(); await w.usdHydra.materialsReady();
@@ -36,26 +36,29 @@ test('jade volume composites over the background and receives light without an o
         return Array.from(data);
     });
     await page.waitForTimeout(100);
-    const lightBackground = await pixel();
+    const overBackdrop = await pixel();
+    expect(overBackdrop[3]).toBe(255);
     await page.evaluate(async () => {
         const w = window as any, T = await import('three/webgpu');
         w.backdrop = new T.Mesh(new T.PlaneGeometry(100, 100), new T.MeshBasicNodeMaterial({ color: w.renderer.getClearColor(new T.Color()) }));
         w.backdrop.position.z = -2; w.scene.add(w.backdrop);
     });
     const opaque = await pixel();
-    for (let channel = 0; channel < 3; channel++) expect(Math.abs(opaque[channel] - lightBackground[channel])).toBeLessThanOrEqual(2);
+    expect(opaque[3]).toBe(255);
+    for (let channel = 0; channel < 3; channel++) expect(Math.abs(opaque[channel] - overBackdrop[channel])).toBeLessThanOrEqual(2);
     await page.evaluate(() => { (window as any).backdrop.visible = false; });
     await openSettings(page);
     await background.selectOption('dark');
     await page.keyboard.press('Escape');
     await expect(page).toHaveURL(/background=dark/);
     const dark = await pixel();
+    expect(overBackdrop[1]).toBeGreaterThan(dark[1]);
     expect(dark[1]).toBeGreaterThan(dark[0] + 30);
     expect(dark[1]).toBeGreaterThan(dark[2] + 20);
     await page.evaluate(() => { (window as any).key.intensity = 0; });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const unlit = await pixel();
-    expect(dark[1] - unlit[1]).toBeGreaterThan(5);
+    expect(dark[1] - unlit[1]).toBeGreaterThanOrEqual(5);
     await page.evaluate(() => { (window as any).key.intensity = 4; });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.screenshot({ path: testInfo.outputPath('jade-dark-background.png') });

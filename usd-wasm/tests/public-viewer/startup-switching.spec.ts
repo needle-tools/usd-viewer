@@ -1,5 +1,5 @@
 import {clearStage,openSettings,stageReady} from './workbench-menus';
-import {expect,test,type Page} from './test';
+import {expect,screenshotPixel,test,type Page} from './test';
 import {openAppMenu} from './workbench-menus';
 
 const asset='/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
@@ -10,8 +10,8 @@ async function switchViewer(page:Page,viewer:'three'|'needle') {
 }
 async function capturePixel(page:Page,viewer:string) {
   await page.keyboard.press('Escape');
-  const png=await page.locator(viewer==='needle'?'needle-engine canvas':'canvas.usd-viewer-three-canvas').first().screenshot();
-  return page.evaluate(async data=>{const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob());const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const ctx=c.getContext('2d')!;ctx.drawImage(bitmap,0,0);return [...ctx.getImageData(2,2,1,1).data];},png.toString('base64'));
+  const canvas=page.locator(viewer==='needle'?'needle-engine canvas':'canvas.usd-viewer-three-canvas').first();
+  return screenshotPixel(canvas, [2, 2]);
 }
 
 test('cold startup never paints the old standalone UI while the workbench module loads',async({page},info)=>{

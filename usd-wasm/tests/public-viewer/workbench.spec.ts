@@ -2,7 +2,7 @@ import {stageReady,openSettings,openAppMenu,openSamples} from './workbench-menus
 import { expect, test } from './test';
 
 const stage = '/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
-test('Needle workspace resizes the viewport, restores layouts and keeps UI theme independent of scene background', async ({ page }, info) => {
+test('Needle workspace resizes the viewport, restores layouts and follows the panel theme', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto(stage);
@@ -20,7 +20,10 @@ test('Needle workspace resizes the viewport, restores layouts and keeps UI theme
   await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark');
   await page.keyboard.press('Escape');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await openSettings(page);await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveValue('light');await page.keyboard.press('Escape');
+  const panelBackground = () => page.locator('[data-panel=stage]').evaluate(el => getComputedStyle(el).backgroundColor);
+  const dark = await panelBackground();
+  await expect(page.locator('#usd-viewport')).toHaveCSS('background-color', dark);
+  await openSettings(page);await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveValue('theme');await page.keyboard.press('Escape');
   await page.locator('[data-prim-path="/World/Camera"]').click();
   await expect(page.locator('[data-panel=properties] table')).toContainText('focalLength');
   await page.evaluate(() => {
@@ -49,6 +52,8 @@ test('Needle workspace resizes the viewport, restores layouts and keeps UI theme
   await page.locator('[data-usd-menu=view] > summary').click();
   await page.getByRole('combobox',{name:'Color theme'}).selectOption('light');
   await page.keyboard.press('Escape');
+  const light = await panelBackground(); expect(light).not.toBe(dark);
+  await expect(page.locator('#usd-viewport')).toHaveCSS('background-color', light);
   await page.screenshot({path:info.outputPath('workbench-light.png')});
   expect(errors).toEqual([]);
 });

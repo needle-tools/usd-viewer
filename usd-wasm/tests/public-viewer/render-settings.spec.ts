@@ -1,5 +1,5 @@
 import {openSettings,stageReady} from './workbench-menus';
-import {expect,test} from './test';
+import {expect,screenshotPixel,test} from './test';
 const stage='/?viewer=three&file=/test-fixtures/coverage/lighting-mdl/studio-variants.usda';
 test.beforeEach(async({page})=>{await page.route(/https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\//,r=>r.fulfill({contentType:'text/css',body:''}));});
 
@@ -26,27 +26,35 @@ test('MuTracer resumes after a camera drag, rests without drift and persists ren
   await expect(page.getByRole('combobox',{name:'Denoiser',exact:true})).toHaveValue('none');expect(errors).toEqual([]);
 });
 
-test('Basic, Beauty and MuTracer share clear-color backgrounds and retain authored backgrounds',async({page},info)=>{
+test('Basic, Beauty and MuTracer keep flat backdrops independent of tone mapping and retain authored backgrounds',async({page},info)=>{
   await page.goto(stage);await stageReady(page);await openSettings(page);
   await page.evaluate(()=>{const w=window as any;w.usdHydra.setPlaying(false);w._controls.enableDamping=false;});
   const pixel=async(path=false)=>{
     const locator=path?page.locator('canvas').last():page.locator('canvas.usd-viewer-three-canvas');
-    const image=await locator.screenshot();return page.evaluate(async encoded=>{const b=await createImageBitmap(await(await fetch('data:image/png;base64,'+encoded)).blob());const c=document.createElement('canvas');c.width=b.width;c.height=b.height;const ctx=c.getContext('2d')!;ctx.drawImage(b,0,0);return Array.from(ctx.getImageData(2,2,1,1).data);},image.toString('base64'));
+    return screenshotPixel(locator, [2, 2]);
   };
   const colors:any[]=[];
-  for(const background of ['light','dark','light']) {
+  for(const [background,tone,exposure] of [
+    ['light','needle-agx','0.25'], ['dark','aces','4'], ['dark','needle-agx','0.5'],
+    ['light','neutral','4'], ['dark','linear','2'], ['light','reinhard','8'], ['light','none','1'],
+  ]) {
     await page.getByRole('combobox',{name:'Background',exact:true}).selectOption(background);const results:any={background};
+    await page.getByRole('combobox',{name:'Tone mapping',exact:true}).selectOption(tone);
+    const input = page.getByRole('spinbutton',{name:'Exposure',exact:true}); await input.fill(exposure); await input.press('Tab');
     for(const mode of ['basic','beauty','pathtraced']){await page.evaluate(mode=>(window as any).usdRenderModes.setMode(mode),mode);if(mode==='pathtraced')await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);else await page.waitForTimeout(250);results[mode]=await pixel(mode==='pathtraced');}
-    for(const mode of ['beauty','pathtraced'])for(let i=0;i<3;i++)expect(Math.abs(results.basic[i]-results[mode][i]),JSON.stringify(results)).toBeLessThanOrEqual(3);colors.push(results);
+    for(const mode of ['basic','beauty','pathtraced'])expect(results[mode],JSON.stringify(results)).toEqual(background==='light'?[255,255,255,255]:[23,26,24,255]);
+    colors.push(results);
   }
   await page.getByRole('combobox',{name:'Background',exact:true}).selectOption('dark');
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);
   const changed=await pixel(true);for(let i=0;i<3;i++)expect(Math.abs(changed[i]-colors[1].basic[i])).toBeLessThanOrEqual(3);
+  await page.getByRole('combobox',{name:'Tone mapping',exact:true}).selectOption('needle-agx');
   await page.evaluate(async()=>{const w=window as any,T=await import('three');w.scene.background=new T.Color(0x4c83ba);w.renderer.setClearColor(0xff0000);});
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);const path=await pixel(true);await page.evaluate(()=>(window as any).usdRenderModes.setMode('basic'));await page.waitForTimeout(150);const basic=await pixel();
   for(let i=0;i<3;i++)expect(Math.abs(path[i]-basic[i])).toBeLessThanOrEqual(3);
   await page.evaluate(async()=>{const w=window as any;w.renderer.toneMappingExposure=2;await w.usdRenderModes.setMode('pathtraced');});
   await expect.poll(()=>page.evaluate(()=>(window as any).usdRenderModes.samples)).toBeGreaterThan(3);const exposedPath=await pixel(true);
+  expect(exposedPath).not.toEqual(path);
   await page.evaluate(()=>(window as any).usdRenderModes.setMode('beauty'));await page.waitForTimeout(200);const exposedBeauty=await pixel();
   for(let i=0;i<3;i++)expect(Math.abs(exposedPath[i]-exposedBeauty[i])).toBeLessThanOrEqual(3);
   await info.attach('background-pixels' ,{body:JSON.stringify({colors,authored:{path,basic},exposure2:{path:exposedPath,beauty:exposedBeauty}},null,2),contentType:'application/json'});

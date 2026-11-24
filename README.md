@@ -187,8 +187,9 @@ Enable **Colliders** in Simulation to inspect collision geometry with green
 outlines and translucent faces. During simulation, this shows the solver's shapes.
 
 Fresh viewer settings select Beauty and Adaptive. Render mode, quality and detail
-choices are remembered; an explicit URL overrides them. Scene background and UI
-light/dark theme are separate settings. The Examples panel preserves selection,
+choices are remembered; an explicit URL overrides them. The viewport backdrop
+follows the UI theme by default. Choose Light or Dark in the Background control
+to override it. The Examples panel preserves selection,
 category and scroll position, and its divider/width can be adjusted.
 
 Adaptive uses camera-independent curvature rates with a bounded triangle budget.
