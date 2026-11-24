@@ -670,7 +670,7 @@ class TextureRegistry {
     return pending;
   }
 
-  getTexture(resourcePath, readable = false, allowEncoded = false) {
+  getTexture(resourcePath, readable = false, allowEncoded = false, compression) {
     resourcePath = this.resolveResourcePath(resourcePath);
     if (isUdimPath(resourcePath)) return this.getUdimTexture(resourcePath, readable);
     // Known uploaded files can be stored as MEMFS paths without a leading slash.
@@ -682,7 +682,8 @@ class TextureRegistry {
       if (this.config.USD?.FS_analyzePath?.(file)?.exists) sourceIdentity = '/' + resourcePath;
     }
     const encoded = allowEncoded && !readable && this.config.textureMode === 'export';
-    const cacheKey = resourcePath + (readable ? '#usd-readable' : encoded ? '#usd-encoded' : '');
+    const compressor = !encoded && !readable && !this.config.maxTextureSize && compression && this.config.textureCompressor;
+    const cacheKey = resourcePath + (readable ? '#usd-readable' : encoded ? '#usd-encoded' : compressor ? compression.key : '');
     if (debugTextures) console.log("get texture", resourcePath);
     if (this.textures[cacheKey]) {
       return this.textures[cacheKey];
@@ -755,7 +756,7 @@ class TextureRegistry {
       else loadWith(this.loader);
     };
 
-    const loadFromFile = (_loadedFile) => {
+    const loadFromFile = async (_loadedFile) => {
       if (debugTextures) console.log("window.driver.getFile", resourcePath, " => ", _loadedFile);
       if (!_loadedFile) {
         textureReject(new Error('Unknown file: ' + resourcePath));
@@ -784,6 +785,25 @@ class TextureRegistry {
           this.loadedTextures.add(texture);
           textureResolve(texture);
           return;
+        }
+      }
+      if (compressor && filetype === 'image/png') {
+        const options = compression.options(sourceEncoding, _loadedFile);
+        if (options) {
+          let texture;
+          try { texture = await compressor.encode(new Blob([_loadedFile], {type: filetype}), options); }
+          catch { /* Decode normally when the GPU codec cannot encode this image. */ }
+          if (this.disposed) {
+            texture?.dispose();
+            textureReject(new Error('Texture registry disposed'));
+            return;
+          }
+          if (texture) {
+            texture.name = sourceIdentity;
+            this.loadedTextures.add(texture);
+            textureResolve(texture);
+            return;
+          }
         }
       }
       const limit=this.config.maxTextureSize;
@@ -817,7 +837,7 @@ class TextureRegistry {
       // color metadata must be removed before the browser decodes the image.
       Promise.resolve().then(() => this.config.resolveTextureUrl?.(url) || url)
         .then(target => fetchAsset(target || url, progress, {signal:this.httpAbort.signal}))
-        .then(bytes => { if (this.disposed) throw new Error('Texture registry disposed'); loadFromFile(bytes); })
+        .then(bytes => { if (this.disposed) throw new Error('Texture registry disposed'); return loadFromFile(bytes); })
         .catch(textureReject);
     };
 
@@ -836,7 +856,7 @@ class TextureRegistry {
     // suspend that native function through Asyncify, while this read is sync.
     const resolvedFile = this.readResolvedResource(resourcePath);
     if (resolvedFile) {
-      loadFromFile(resolvedFile);
+      void loadFromFile(resolvedFile).catch(textureReject);
       return this.textures[cacheKey];
     }
 
@@ -853,8 +873,7 @@ class TextureRegistry {
               textureReject(new Error('Unknown file: ' + resourcePath));
               return;
             }
-            try { loadFromFile(loadedFile); }
-            catch (error) { textureReject(error); }
+            void loadFromFile(loadedFile).catch(textureReject);
           })).catch(fail);
         } catch (error) { fail(error); }
       }));
@@ -916,7 +935,7 @@ class TextureRegistry {
     if(!['original','preview'].includes(resolution))throw new RangeError('Invalid export texture resolution.');
     const preview=resolution==='preview',limit=this.config.maxTextureSize||512;
     const useStageTextures = this.config.textureMode === 'export' && !preview;
-    const registry = useStageTextures ? this : new TextureRegistry({...this.config, textureMode: encoded&&!preview?'export':undefined,
+    const registry = useStageTextures ? this : new TextureRegistry({...this.config, textureCompressor: undefined, textureMode: encoded&&!preview?'export':undefined,
       resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
     registry.udimTiles = this.udimTiles;
     const pending = new Map(), converted = new Set(), tileRegistries = new Map();
@@ -962,6 +981,7 @@ class TextureRegistry {
   dispose() {
     this.disposed = true;
     this.httpAbort.abort();
+    this.config.textureCompressor?.dispose();
     this.pngDownsampler?.dispose();
     for (const url of this.objectUrls) {
       URL.revokeObjectURL(url);
@@ -2781,7 +2801,25 @@ class HydraMaterial {
         && (normalScale.some(value => value !== 2) || normalBias.some(value => value !== -1));
       const wrapS = this.convertWrap(node.wrapS, node), wrapT = this.convertWrap(node.wrapT, node);
       const allowEncoded = wrapS !== HydraMaterial.BLACK_WRAP && wrapT !== HydraMaterial.BLACK_WRAP;
-      const texture = await this._interface.registry.getTexture(file, !!(remapScalar || remapNormal), allowEncoded);
+      const registry = this._interface.registry;
+      let compression;
+      if (registry.config.textureCompressor && allowEncoded && !remapScalar && !remapNormal) {
+        const defaultSrgb = HydraMaterial.usdPreviewToColorSpaceMap[parameterName] === SRGBColorSpace;
+        compression = {
+          key: '#usd-gpu:' + JSON.stringify([node.sourceColorSpace, node['colorSpace:file'], defaultSrgb, wrapS, wrapT]),
+          options(encoding, bytes) {
+            if (encoding?.bitDepth !== 8 || bytes.length < 33) return;
+            const header = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            const width = header.getUint32(16), height = header.getUint32(20);
+            if (!width || !height || width % 4 || height % 4 || width * height < 1024 ** 2) return;
+            const name = HydraMaterial.textureColorSpace(node, {userData: {usdImageEncoding: encoding}});
+            const space = resolveColorSpace(name);
+            if (space?.matrix || space && space.transfer !== 'srgb' && space.transfer !== 'linear') return;
+            return {width, height, wrapS, wrapT, srgb: space ? space.transfer === 'srgb' : name ? false : defaultSrgb};
+          },
+        };
+      }
+      const texture = await registry.getTexture(file, !!(remapScalar || remapNormal), allowEncoded, compression);
       if (!texture || this._disposed || revision !== this._syncRevision || !this._material) return;
       // UsdUVTexture applies scale after decoding its color space. With no
       // bias, material factors preserve it exactly without baking the image.

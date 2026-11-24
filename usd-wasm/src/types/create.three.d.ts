@@ -1,5 +1,5 @@
 import { Object3D } from "three"
-import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory, UsdViewportHelpers } from "./hydra.js"
+import { HydraRenderer, WebGpuSupport, MaterialXVolumeFactory, UsdVolumeFactory, UsdViewportHelpers, UsdTextureCompressor } from "./hydra.js"
 import { HydraDriver, USD, USDStage } from "./bindings.js"
 
 export type { UsdViewportHelpers } from "./hydra.js";
@@ -88,6 +88,8 @@ export declare type createThreeHydraConfig = {
     resolveUdimTiles?: (pattern:string) => string[] | Promise<string[]>,
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
+    /** Create a stage-owned compressor for eligible viewport textures. */
+    createTextureCompressor?: (renderer?: HydraRenderer) => UsdTextureCompressor | undefined,
     /** Keep eligible original PNGs encoded for glTF export. Use on stages without a renderer or texture previews. */
     textureMode?: 'export',
 

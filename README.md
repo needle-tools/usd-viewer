@@ -101,6 +101,14 @@ original files. `npm run prepare:public` copies assets for static distribution.
 Minimal package usage examples for plain three.js and Needle Engine live in
 [usd-wasm/README.md](usd-wasm/README.md).
 
+The viewer bundles spark.js and compresses eligible original PNGs by default in
+WebGL and WebGPU raster rendering. Turn off **Compress GPU textures** or use
+`?sparkTextures=0`. Set `USD_VIEWER_SPARK=0` when building a static viewer or
+starting the Node server to omit the runtime. Check the
+[spark.js license terms](https://ludicon.com/sparkjs/eula.html) before distributing
+the viewer with Spark. Exports use the source textures, and Pathtraced mode
+builds its own texture atlas.
+
 The app owns its workspace, catalogs, URL state and input policy. Reusable USD
 loading, scene operations, source reads, editing commands and export live in the
 package. Code and Console load when opened. Embedded viewers can use `/runtime`,

@@ -3,14 +3,14 @@ import {constants} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
-import { viewerBuild } from './viewer-build.cjs';
+import { prepareSparkRuntime, viewerBuild } from './viewer-build.cjs';
 import {stampBuild} from '../usd-wasm/scripts/corpus/stamp.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = resolve(process.argv[2] || '.cache/portable-viewer');
 await mkdir(dirname(output), {recursive: true});
 await mkdir(output);
-const generated = new Set(['usd', 'simready', 'materialx', 'mutracer', 'oidn-webgpu', 'dockview', 'three-mesh-bvh', 'rapier', 'test-fixtures']);
+const generated = new Set(['usd', 'simready', 'materialx', 'mutracer', 'oidn-webgpu', 'dockview', 'three-mesh-bvh', 'rapier', 'test-fixtures', 'spark-textures']);
 await cp(join(root, 'public'), join(output, 'public'), {
 	recursive: true,
 	mode: constants.COPYFILE_FICLONE,
@@ -38,7 +38,8 @@ for (const [target, source] of Object.entries(copies)) {
 await cp(join(root, 'usd-wasm/scripts/corpus'), join(output, 'corpus'), {recursive: true, mode: constants.COPYFILE_FICLONE});
 const git = args => execFileSync('git', args, {cwd: root, encoding: 'utf8'}).trim();
 const revision = git(['rev-parse', 'HEAD']);
-await writeFile(join(output, 'public', 'viewer-build.json'), JSON.stringify(viewerBuild(root, revision)) + '\n');
+const sparkTextures = prepareSparkRuntime(root, join(output, 'public'));
+await writeFile(join(output, 'public', 'viewer-build.json'), JSON.stringify(viewerBuild(root, { revision, sparkTextures })) + '\n');
 await writeFile(join(output, 'build.json'), JSON.stringify({
 	viewer: revision, simready: git(['-C', 'modules/simready', 'rev-parse', 'HEAD']),
 	dirty: git(['status', '--porcelain']).split('\n').filter(Boolean), createdAt: new Date().toISOString(),

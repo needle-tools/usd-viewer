@@ -395,6 +395,7 @@ async function createScopedThreeHydra(config, lifetime) {
         resolveTextureUrl: config.resolveTextureUrl,
         maxTextureSize: config.maxTextureSize,
         textureMode: config.textureMode,
+        textureCompressor: config.textureMode === 'export' ? undefined : config.createTextureCompressor?.(config.renderer),
         scenePrimitiveLightIntensityScale: config.scenePrimitiveLightIntensityScale,
         ktx2TranscoderPath: config.ktx2TranscoderPath,
         helpers: config.helpers,

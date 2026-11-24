@@ -15,6 +15,7 @@ public/simready
 /test-results
 
 public/mutracer
+/public/spark-textures/
 public/oidn-webgpu
 
 public/three-gpu-pathtracer

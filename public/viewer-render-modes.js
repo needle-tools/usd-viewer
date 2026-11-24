@@ -2,7 +2,7 @@ import {readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
 import {configureNeedleAgxDisplay} from './usd/renderers/index.js';
 import { mountRenderModePicker } from './usd/viewer/inspect.js';
 
-export async function mountRenderModes({ renderer, scene, camera, controls, preference }) {
+export async function mountRenderModes({ renderer, scene, camera, controls, preference, pathTracingTextureSources }) {
   let selectedMode = preference;
   const updateUrl = mode => {
     const url = new URL(location.href);
@@ -19,7 +19,20 @@ export async function mountRenderModes({ renderer, scene, camera, controls, pref
   for (const [key, max] of [['bloomStrength', 10], ['bloomRadius', 1], ['bloomThreshold', 100]]) {
     if (Number.isFinite(saved[key]) && saved[key] >= 0 && saved[key] <= max) settings[key] = saved[key];
   }
-  const { modes, select, status, panel } = await mountRenderModePicker({ layout: window.usdWorkbench ? 'settings' : 'compact', settings, onSettingsChange: saveRenderSettings, renderer, scene, camera, controls, container: window.usdWorkbench?.containers.settings, onModeChange: rememberMode, onStatus(info) { if (info.error) updateUrl(info.mode); }, configurePathTracer: engine => configureNeedleAgxDisplay(engine,()=>renderer.toneMapping), loadPathTracer: () => import('@meimu/mutracer'), denoiserWeightsBaseUrl: '/mutracer/oidn/weights/' });
+  async function configurePathTracer(engine) {
+    const releaseTextures = await pathTracingTextureSources.acquire();
+    try {
+      const disposeDisplay = await configureNeedleAgxDisplay(engine, () => renderer.toneMapping);
+      return () => {
+        releaseTextures();
+        disposeDisplay?.();
+      };
+    } catch (error) {
+      releaseTextures();
+      throw error;
+    }
+  }
+  const { modes, select, status, panel } = await mountRenderModePicker({ layout: window.usdWorkbench ? 'settings' : 'compact', settings, onSettingsChange: saveRenderSettings, renderer, scene, camera, controls, container: window.usdWorkbench?.containers.settings, onModeChange: rememberMode, onStatus(info) { if (info.error) updateUrl(info.mode); }, configurePathTracer, loadPathTracer: () => import('@meimu/mutracer'), denoiserWeightsBaseUrl: '/mutracer/oidn/weights/' });
   async function choose(mode) {
     select.disabled = true;
     try {

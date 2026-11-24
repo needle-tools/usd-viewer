@@ -13,6 +13,7 @@ export type PluginContext = {
     onAssetFetchProgress?: import("./create.three.js").createThreeHydraConfig["onAssetFetchProgress"],
     maxTextureSize?: number,
     getMaxTextureSize?: (url:string) => number | undefined,
+    createTextureCompressor?: import("./create.three.js").createThreeHydraConfig["createTextureCompressor"],
     resolveTextureUrl?: import("./create.three.js").createThreeHydraConfig["resolveTextureUrl"],
     /**
      * OpenUSD refinement complexity for subdivision surfaces; see

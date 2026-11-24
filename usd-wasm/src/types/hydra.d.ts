@@ -7,6 +7,12 @@ export type HydraRenderer = WebGLRenderer | {
     readonly samples: number,
 };
 
+/** Optional viewport-only compression supplied by a host using the same renderer. */
+export interface UsdTextureCompressor {
+    encode(image: Blob, options: {width: number; height: number; srgb: boolean; wrapS: number; wrapT: number}): Promise<Texture | undefined>;
+    dispose(): void;
+}
+
 export type MaterialXVolumeFactory = (xml: string, target: string | number, options: {
     renderer?: HydraRenderer,
     getTexture?: (url: string) => Texture | null | Promise<Texture | null>,
@@ -85,6 +91,7 @@ export type threeJsRenderDelegateConfig = {
     /** Optional raster texture size cap. Originals are preserved by default; HDR/data/compressed textures retain their decoder format. */
     maxTextureSize?: number,
     textureMode?: 'export',
+    textureCompressor?: UsdTextureCompressor,
     helpers?: UsdViewportHelpers,
     showScenePrimitiveHelpers?: boolean,
     showCameraHelpers?: boolean,

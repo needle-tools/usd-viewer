@@ -2,6 +2,7 @@ import {GLTF_SAMPLE_ASSETS_INDEX, mergeGltfSampleCards, normalizeModelKey, origi
 import {showViewportHelpers,syncViewportHelpers} from './viewer-helpers.js';
 import {loadSimreadyResources,simreadyLocation,warmSimreadyComposition} from './viewer-simready.js';
 import {preferredRenderMode, preferredDetail, readRenderSettings, saveRenderSettings} from './viewer-preferences.js';
+import {createPathTracingTextureSources, createViewerTextureCompressor, supportsViewerTextureCompression} from './viewer-texture-compression.js';
 import {viewerUsdReady, startupSimreadyReady, assetDownloads, startupPackageAbort, takeStartupPackage} from './viewer-startup.js';
 import {viewerToneMapping,mountDisplayControl} from './viewer-display.js';
 import {
@@ -725,6 +726,7 @@ const useNodeRenderer = viewerMode === VIEWER_MODE_THREE;
 let renderModes;
 let renderModesUi;
 let startRenderMode;
+const pathTracingTextureSources = createPathTracingTextureSources();
 let suiteControls;
 let reloadView;
 try {
@@ -1154,21 +1156,50 @@ async function prepareSimreadyResources(url) {
 function resolveViewerTextureUrl(url) {
   return textureResolution==='original'?url:simreadyResources?.resolveTextureUrl(url) || url;
 }
+function sparkTexturesEnabled() {
+  return (new URLSearchParams(location.search).get('sparkTextures') ?? '1') === '1';
+}
+function viewerTextureCompressor(renderer) {
+  if (window.__usdViewerBuild?.sparkTextures && sparkTexturesEnabled() && (!simreadyResources || textureResolution === 'original')) {
+    return createViewerTextureCompressor(renderer, viewerMode === VIEWER_MODE_THREE ? pathTracingTextureSources : undefined);
+  }
+}
+function reloadTextureSettings(setParam) {
+  const url = new URL(location.href);
+  setParam(url.searchParams);
+  history.replaceState({}, '', url);
+  requestFileLinkLoad({href: url.href, dataset: {force: 'true', name: currentDisplayFilename || filename}, textContent: ''});
+}
 function showTextureResolution() {
-  const host=document.getElementById('usd-texture-controls');host?.replaceChildren();
-  if(!host)return;host.hidden=!simreadyResources?.textureBytes;if(host.hidden)return;
-  const label=document.createElement('label');label.className='usd-settings-row';label.textContent='Textures';
-  const select=document.createElement('select');select.setAttribute('aria-label','Texture resolution');
-  const original = new Option('Original resolution','original');
-  original.title = `Original texture files: ${formatBytes(simreadyResources.textureBytes)}`;
-  select.append(new Option('Preview (up to 512 px)','preview'),original);
-  select.value=textureResolution;
-  select.onchange=()=>{
-    textureResolution=select.value;saveRenderSettings({textures:textureResolution});
-    const url=new URL(location.href);url.searchParams.set('textures',textureResolution);history.replaceState({},'',url);
-    requestFileLinkLoad({href:url.href,dataset:{force:'true',name:currentDisplayFilename || filename},textContent:''});
-  };
-  label.append(select);host.append(label);
+  const host = document.getElementById('usd-texture-controls');
+  if (!host) return;
+  host.replaceChildren();
+  if (simreadyResources?.textureBytes) {
+    const label = document.createElement('label'); label.className = 'usd-settings-row'; label.textContent = 'Textures';
+    const select = document.createElement('select'); select.setAttribute('aria-label', 'Texture resolution');
+    const original = new Option('Original resolution', 'original');
+    original.title = `Original texture files: ${formatBytes(simreadyResources.textureBytes)}`;
+    select.append(new Option('Preview (up to 512 px)', 'preview'), original);
+    select.value = textureResolution;
+    select.onchange = () => {
+      textureResolution = select.value;
+      saveRenderSettings({textures: textureResolution});
+      reloadTextureSettings(params => params.set('textures', textureResolution));
+    };
+    label.append(select); host.append(label);
+  }
+  const renderer = viewerMode === VIEWER_MODE_NEEDLE_LOADER ? window.needleEngineContext?.renderer : window.renderer;
+  if (window.__usdViewerBuild?.sparkTextures && supportsViewerTextureCompression(renderer) && (!simreadyResources || textureResolution === 'original')) {
+    const label = document.createElement('label'); label.className = 'usd-settings-row'; label.textContent = 'Compress GPU textures';
+    label.dataset.tip = 'Keep original resolution and reduce GPU memory with spark.js.';
+    const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.checked = sparkTexturesEnabled();
+    toggle.onchange = () => reloadTextureSettings(params => {
+      if (toggle.checked) params.delete('sparkTextures');
+      else params.set('sparkTextures', '0');
+    });
+    label.append(toggle); host.append(label);
+  }
+  host.hidden = !host.childElementCount;
 }
 
 
@@ -1865,6 +1896,7 @@ async function ensureNeedleEngineLoader() {
       onAssetFetchProgress: updateUsdAssetFetchProgress,
       resolveTextureUrl: resolveViewerTextureUrl,
       getMaxTextureSize: () => simreadyResources && textureResolution!=='original'?512:undefined,
+      createTextureCompressor: viewerTextureCompressor,
       getComplexity: () => complexity ?? activeCatalogAsset?.complexity ?? DEFAULT_DETAIL,
     });
   }
@@ -2265,6 +2297,7 @@ async function loadUsdFile(directory, filename, path, isRootFile = true, filesFo
         onAssetFetchProgress: updateUsdAssetFetchProgress,
         resolveTextureUrl: resolveViewerTextureUrl,
         maxTextureSize: simreadyResources && textureResolution!=='original'?512:undefined,
+        createTextureCompressor: viewerTextureCompressor,
         materialXVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createMaterialXVolumeMaterial : undefined,
         usdVolumeFactory: useNodeRenderer ? (await import('/usd/hydra/materialxVolume.js')).createVdbVolumeMesh : undefined,
       };
@@ -2636,6 +2669,7 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = DEFAULT_C
 }
 
 async function init() {
+  document.getElementById('spark-texture-credit')?.toggleAttribute('hidden', !window.__usdViewerBuild?.sparkTextures);
   const camera = window.camera = new PerspectiveCamera( 27, viewportSize().width / viewportSize().height, 1, 3500 );
   camera.position.z = params.get('cameraZ') || 7;
   camera.position.y = params.get('cameraY') || 7;
@@ -2694,7 +2728,7 @@ async function init() {
 
   if (viewerMode === VIEWER_MODE_THREE) {
     const { mountRenderModes } = await import('./viewer-render-modes.js');
-    renderModesUi = await mountRenderModes({ renderer, scene, camera, controls, preference: renderPreference });
+    renderModesUi = await mountRenderModes({ renderer, scene, camera, controls, preference: renderPreference, pathTracingTextureSources });
     ({ modes: renderModes, start: startRenderMode } = renderModesUi);
     window.usdRenderModes = renderModes;
     window.renderUsdFrame = () => renderModes.render(window.usdRenderCamera || window.camera);

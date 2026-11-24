@@ -1,6 +1,6 @@
 const fastify = require('fastify')()
 const path = require('path')
-const { viewerBuild } = require('./scripts/viewer-build.cjs');
+const { sparkRuntime, viewerBuild } = require('./scripts/viewer-build.cjs');
 const {runtimeCompressionGuard} = require('./scripts/precompressed-runtime')
 const { injectClientIpIntoAnalyticsTrackBody } = require('./scripts/analytics-proxy')
 
@@ -264,7 +264,8 @@ fastify.route({
   handler: proxyToAnalytics,
 });
 
-const build = viewerBuild(__dirname);
+const spark = sparkRuntime(__dirname);
+const build = viewerBuild(__dirname, { sparkTextures: !!spark });
 fastify.get('/viewer-build.json', async () => build);
 
 // Source assets use stable URLs. Revalidate them with their ETag on reuse.
@@ -309,6 +310,17 @@ for (const [prefix, folder] of Object.entries(browserPackages)) {
     root: path.join(__dirname, 'node_modules', folder),
     prefix, setHeaders, decorateReply: false,
   });
+}
+if (spark) {
+  fastify.register(require('@fastify/static'), {
+    root: spark.distribution, prefix: '/spark-textures', setHeaders, decorateReply: false,
+  });
+  fastify.get('/spark-textures/LICENSE', (_request, reply) => {
+    return reply.type('text/plain').sendFile(path.basename(spark.license), path.dirname(spark.license), { contentType: false });
+  });
+} else {
+  // Ignore a previously prepared static runtime when the server opts out.
+  fastify.get('/spark-textures/*', (_request, reply) => reply.callNotFound());
 }
 fastify.get('/modules/mesh-bvh.umd.js', (_request, reply) => {
   return reply.type('text/javascript').sendFile('index.umd.cjs', path.dirname(require.resolve('three-mesh-bvh')), { contentType: false });

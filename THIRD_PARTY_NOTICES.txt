@@ -19,6 +19,12 @@ Copyright 2020 Dimforge EURL
 Apache License 2.0; full license: public/licenses/rapier.txt
 The public viewer loads the unmodified runtime on demand for physics.
 
+spark.js (@ludicon/spark.js)
+https://ludicon.com/sparkjs/
+Copyright (c) 2025 Ludicon LLC
+MIT license for JavaScript and spark.js EULA for the shader codecs.
+The viewer serves the package notice at /spark-textures/LICENSE.
+
 
                                Modified Apache 2.0 License
 

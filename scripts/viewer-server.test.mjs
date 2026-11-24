@@ -19,8 +19,11 @@ test('the Node viewer serves its browser dependencies with an empty public direc
   }
 
   const revision = '1'.repeat(40);
+  const env = { ...process.env, PORT: '0', SOURCE_COMMIT: revision };
+  delete env.USD_VIEWER_SPARK;
+  delete env.USD_VIEWER_SPARK_PACKAGE;
   const server = spawn(process.execPath, ['server.js'], {
-    cwd: dir, env: { ...process.env, PORT: '0', SOURCE_COMMIT: revision }, stdio: ['ignore', 'pipe', 'inherit'],
+    cwd: dir, env, stdio: ['ignore', 'pipe', 'inherit'],
   });
   const closed = once(server, 'close');
   t.after(async () => { server.kill(); await closed; });
@@ -37,7 +40,10 @@ test('the Node viewer serves its browser dependencies with an empty public direc
   assert.match(metadata.viewerVersion, /^\d+\.\d+\.\d+/);
   assert.match(metadata.sdkVersion, /^\d+\.\d+\.\d+/);
   assert.equal(metadata.revision, revision);
+  assert.equal(metadata.sparkTextures, true);
   const assets = {
+    '/spark-textures/spark.esm.js': /javascript/,
+    '/spark-textures/LICENSE': /text\/plain/,
     '/dockview/package/main.esm.mjs': /javascript/,
     '/dockview/styles/dockview.css': /css/,
     '/modules/mesh-bvh.umd.js': /javascript/,

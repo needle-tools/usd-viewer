@@ -143,6 +143,7 @@ function onAddNeedlePlugin(NEEDLE, opts) {
                 onAssetFetchProgress: opts.onAssetFetchProgress,
                 resolveTextureUrl: opts.resolveTextureUrl,
                 maxTextureSize: opts.getMaxTextureSize?.(url) ?? opts.maxTextureSize,
+                createTextureCompressor: opts.createTextureCompressor,
             });
             this.comp.handle = handle;
             hydraHandlesByRoot.set(this.comp.root, handle);
