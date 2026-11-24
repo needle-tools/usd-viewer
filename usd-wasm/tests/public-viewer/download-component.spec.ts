@@ -35,7 +35,7 @@ test('single Download button opens the menu and runs the chosen action', async (
   await expect(menu).toBeHidden();
   await download.focus();
   await page.keyboard.press('ArrowDown');
-  await expect(menu.getByRole('menuitem',{name:'ZIP',exact:true})).toBeFocused();
+  await expect(menu.getByRole('menuitem',{name:'USD (ZIP archive)',exact:true})).toBeFocused();
   await menu.getByRole('menuitem',{name:'Share on Needle Cloud',exact:true}).click();
   await expect.poll(() => page.evaluate(() => (window as any).shared?.textureResolution)).toBe('preview');
   await expect(download).toBeEnabled();
@@ -74,7 +74,7 @@ test('standalone split button styles, unclipped popup, keyboard controls, downlo
   expect(new TextDecoder().decode(entries['scene.usda'])).toContain('Sphere');
   const trigger = page.getByLabel('Download format',{exact:true});
   await trigger.focus(); await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('menuitemradio',{name:'ZIP',exact:true})).toBeFocused();
+  await expect(page.getByRole('menuitemradio',{name:'USD (ZIP archive)',exact:true})).toBeFocused();
   const menu = page.getByRole('menu',{name:'Download formats'});
   const popup = await menu.evaluate(el=>{const rect=el.getBoundingClientRect();return{unclipped:el.contains(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height-10)),background:getComputedStyle(el).backgroundColor};});
   expect(popup).toEqual({unclipped:true,background:'rgb(20, 24, 20)'});
@@ -141,7 +141,7 @@ test('glTF and Cloud share use the same split button without running an unselect
  await page.getByRole('menuitemradio',{name:'USDZ',exact:true}).click();
  await expect(page.getByRole('button',{name:'Download',exact:true})).toHaveAttribute('title','Download USDZ');
  await trigger.click();await expect(quality).toBeEnabled();await expect(quality).not.toBeChecked();
- await page.getByRole('menuitemradio',{name:'ZIP',exact:true}).click();await trigger.click();await expect(quality).not.toBeChecked();
+ await page.getByRole('menuitemradio',{name:'USD (ZIP archive)',exact:true}).click();await trigger.click();await expect(quality).not.toBeChecked();
  await quality.click();await expect(quality).toBeChecked();await page.keyboard.press('Escape');
  await page.evaluate(()=>{const w=window as any;w.source.handle.exportUsdz=async options=>{w.archiveOptions=options;return new Uint8Array([80,75]);};w.component.setFormat('usdz');});
  const archive=page.waitForEvent('download');await page.getByRole('button',{name:'Download',exact:true}).click();await archive;

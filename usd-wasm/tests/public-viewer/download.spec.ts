@@ -32,7 +32,7 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: Download menu package
   });
   await download.click();
   const zipEvent = page.waitForEvent('download');
-  await page.getByRole('menuitem', {name:'ZIP', exact:true}).click();
+  await page.getByRole('menuitem', {name:'USD (ZIP archive)', exact:true}).click();
   const zip = await zipEvent;
   expect(zip.suggestedFilename()).toMatch(/\.zip$/);
   const entries = unzipSync(new Uint8Array(await readFile((await zip.path())!)));
@@ -139,11 +139,11 @@ test('closing a stage during a dependency fetch safely cancels its download', as
     await route.fulfill({body: path.endsWith('.usda') ? '#usda 1.0\ndef Sphere "Ball" {\n custom asset data=@later.bin@\n}\n' : 'asset'});
   });
   await page.goto('/?viewer=three&render=basic&file=/delayed-download/root.usda'); await stageReady(page);
-  const button = page.getByRole('button',{name:'Download',exact:true});
+  const button = page.getByRole('button',{name:/^(Download|Cancelling export)$/});
   const fetch = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/later.bin'));
   try {
     await button.click();
-    await page.getByRole('menuitem', {name:'ZIP', exact:true}).click();
+    await page.getByRole('menuitem', {name:'USD (ZIP archive)', exact:true}).click();
     await fetch;
     await clearStage(page); await expect(button).toBeDisabled();
   } finally { release!(); }

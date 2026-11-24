@@ -289,12 +289,24 @@ export async function mountWorkbench() {
     },
     createTabComponent() {
       const tab = element('div', 'usd-dock-tab'), caption = element('span', 'usd-dock-caption'); tab.append(caption);
-      let subscription;
+      let subscription, activeSubscription, visibleSubscription, resize;
+      // Dockview scrolls an overflowing tab strip but does not follow the active tab. Keep it
+      // in view when it becomes active and when its strip narrows, e.g. for the examples search.
+      const reveal = () => {
+        const item = tab.closest('.dv-tab'), strip = item?.parentElement;
+        if (!item?.classList.contains('dv-active-tab') || !strip) return;
+        const left = item.offsetLeft - strip.offsetLeft, right = left + item.offsetWidth;
+        if (left < strip.scrollLeft) strip.scrollLeft = left;
+        else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+      };
       return { element: tab, init({ api, title }) {
         caption.textContent = title; subscription = api.onDidTitleChange(event => { caption.textContent = event.title; });
+        activeSubscription = api.onDidActiveChange(() => requestAnimationFrame(reveal));
+        visibleSubscription = api.onDidVisibilityChange(() => requestAnimationFrame(reveal));
+        requestAnimationFrame(() => { if (disposed) return; const strip = tab.closest('.dv-tab')?.parentElement; if (strip) { resize = new ResizeObserver(reveal); resize.observe(strip); } reveal(); });
         if (api.id !== 'viewport') { const close = button('', event => { event.stopPropagation(); closePanel(api.id); }, `Close ${title}`); close.append(viewerIcon('close')); close.className = 'usd-tab-close'; close.setAttribute('aria-label', `Close ${title}`); close.onpointerdown = event => event.stopPropagation(); tab.append(close); }
         tab.ondblclick = () => api.isMaximized() ? api.exitMaximized() : api.maximize();
-      }, dispose() { subscription?.dispose(); } };
+      }, dispose() { subscription?.dispose(); activeSubscription?.dispose(); visibleSubscription?.dispose(); resize?.disconnect(); } };
     },
     getTabContextMenuItems: ({ panel }) => [
       { label: panel.api.isMaximized() ? 'Restore' : 'Maximize', action: () => panel.api.isMaximized() ? panel.api.exitMaximized() : panel.api.maximize() },

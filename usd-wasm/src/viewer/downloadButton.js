@@ -3,6 +3,7 @@ import {installViewerStyle} from './style.js';
 import {compressArchive} from '../scene/compressArchive.js';
 
 const formats = ['zip', 'usdz', 'gltf'];
+const formatLabel = {zip: 'USD (ZIP archive)', usdz: 'USDZ', gltf: 'glTF'};
 const sourceFormats = source => source?.formats || (!source || source.exportGltf ? formats : ['zip','usdz']);
 let nextId = 0;
 
@@ -54,7 +55,7 @@ export function mountDownloadButton(options) {
   try { if (options.stateKey) format = JSON.parse(localStorage.getItem(options.stateKey)) || format; } catch {}
   if (!formats.includes(format)) format = 'zip';
   const items = formats.map(value => {
-    const item = document.createElement('button'); item.type = 'button'; item.textContent = value === 'gltf' ? 'glTF' : value.toUpperCase();
+    const item = document.createElement('button'); item.type = 'button'; item.textContent = formatLabel[value];
     item.setAttribute('role', menuOnly ? 'menuitem' : 'menuitemradio');
     item.addEventListener('click', () => { setFormat(value); closeMenu(); button.focus(); if (menuOnly) runAction(download); });
     menu.append(item); return item;
@@ -83,7 +84,7 @@ export function mountDownloadButton(options) {
     const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',textures:'Preparing preview textures',compressing:'Compressing ZIP',physics:'Physics',metadata:'Metadata',geometry:'Geometry',writing:'Writing glTF',sharing:'Sharing',complete:exportingShare?'Share ready':'Download ready'};
     const percent = value.total > 0 ? Math.min(100, Math.floor(value.completed / value.total * 100)) : -1;
     const text = names[value.phase] + (percent >= 0 && value.phase !== 'complete' ? ` ${percent}%` : '');
-    button.title = value.phase === 'complete' ? text : `Exporting ${exportingFormat.toUpperCase()} · ${text}`;
+    button.title = value.phase === 'complete' ? text : `Exporting ${formatLabel[exportingFormat]} · ${text}`;
     if (value.phase !== announcedPhase || percent >= announcedPercent + 10 || percent === 100) {
       status.textContent = text; announcedPhase = value.phase; announcedPercent = percent;
     }
@@ -114,7 +115,7 @@ export function mountDownloadButton(options) {
       else button.setAttribute('aria-haspopup', 'menu');
     }
     if (busy) button.setAttribute('aria-describedby', status.id);
-    else { button.title = !source?'Open a file first':menuOnly?'Download':sharing?'Share on Needle Cloud':`Download ${format==='gltf'?'glTF':format.toUpperCase()}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
+    else { button.title = !source?'Open a file first':menuOnly?'Download':sharing?'Share on Needle Cloud':`Download ${formatLabel[format]}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
     menuTrigger.setAttribute('aria-disabled', String(button.disabled)); menuTrigger.tabIndex = button.disabled ? -1 : 0;
     items.forEach((item, index) => {
       item.disabled = button.disabled || !allowed.includes(formats[index]);
