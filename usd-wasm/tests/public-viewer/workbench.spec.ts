@@ -147,8 +147,8 @@ for (const theme of ['light', 'dark']) test(`${theme}: empty and loaded menus an
   expect(await contrast('.ui-tooltip')).toBeGreaterThan(4.5);
   await page.screenshot({path:info.outputPath(`${theme}-loaded-tooltip.png`)});
   await page.keyboard.press('Escape');
-  await page.getByLabel('Download format',{exact:true}).click();
-  await expect(page.getByRole('menuitemradio',{name:'glTF',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Download',exact:true}).click();
+  await expect(page.getByRole('menuitem',{name:'glTF',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.setViewportSize({width:390,height:700});
   await expect(page.locator('#usd-viewport')).toBeVisible();

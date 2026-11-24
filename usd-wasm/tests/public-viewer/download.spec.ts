@@ -9,7 +9,7 @@ async function expectedCreator(page: Page) {
   return `USD Viewer ${build.viewerVersion}${revision} / @needle-tools/usd ${build.sdkVersion}`;
 }
 
-for (const viewer of ['three', 'needle']) test(`${viewer}: Download packages dependencies and live edits; format choice persists and closing disables it`, async ({page}, info) => {
+for (const viewer of ['three', 'needle']) test(`${viewer}: Download menu packages dependencies and live edits; closing disables it`, async ({page}, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(theme => localStorage.setItem('needle-usd-theme', JSON.stringify(theme)), viewer === 'three' ? 'dark' : 'light');
   await page.goto(`/?viewer=${viewer}&render=basic&file=/test-fixtures/api/examples.js%23department-layers`);
@@ -19,15 +19,19 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: Download packages dep
   await page.evaluate(async () => {
     await (window as any).usdHydra.editStage(stage => stage.DefinePrim('/World/DownloadEdit', 'Xform').delete());
   });
-  const zipEvent = page.waitForEvent('download'); await download.click(); const zip = await zipEvent;
+  await download.click();
+  const zipEvent = page.waitForEvent('download');
+  await page.getByRole('menuitem', {name:'ZIP', exact:true}).click();
+  const zip = await zipEvent;
   expect(zip.suggestedFilename()).toMatch(/\.zip$/);
   const entries = unzipSync(new Uint8Array(await readFile((await zip.path())!)));
   expect(Object.keys(entries).length).toBeGreaterThan(1);
   expect(Object.values(entries).some(bytes => new TextDecoder().decode(bytes).includes('DownloadEdit'))).toBe(true);
 
-  await page.getByLabel('Download format', {exact:true}).click();
-  await page.getByRole('menuitemradio', {name:'USDZ', exact:true}).click();
-  const packageEvent = page.waitForEvent('download'); await download.click(); const usdz = await packageEvent;
+  await download.click();
+  const packageEvent = page.waitForEvent('download');
+  await page.getByRole('menuitem', {name:'USDZ', exact:true}).click();
+  const usdz = await packageEvent;
   expect(usdz.suggestedFilename()).toMatch(/\.usdz$/);
   const usdzBytes = new Uint8Array(await readFile((await usdz.path())!));
   // USDZ stores every member uncompressed, on a 64-byte boundary.
@@ -39,8 +43,8 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: Download packages dep
   }
   expect(count).toBeGreaterThan(1);
   await page.locator('#container').screenshot({path:info.outputPath('download-dark.png')});
-  await page.reload(); await stageReady(page); await expect(download).toHaveAttribute('title', 'Download USDZ');
-  const formatTrigger = page.getByLabel('Download format', {exact:true});
+  await page.reload(); await stageReady(page);
+  const formatTrigger = download;
   await formatTrigger.click();
   await page.locator('[data-usd-menu=view] > summary').hover();
   await expect(formatTrigger).toHaveAttribute('aria-expanded','false');
@@ -51,7 +55,6 @@ for (const viewer of ['three', 'needle']) test(`${viewer}: Download packages dep
   await page.keyboard.press('ArrowRight'); await expect(formatTrigger).toBeFocused();
   await expect(formatTrigger).toHaveAttribute('aria-expanded','true'); await page.keyboard.press('Escape');
   await clearStage(page); await expect(download).toBeDisabled();
-  await page.getByLabel('Download format', {exact:true}).click();
   await expect(page.locator('[data-usd-menu=download]')).not.toHaveAttribute('open', '');
   expect(errors).toEqual([]);
 });
@@ -76,9 +79,9 @@ def Xform "World" {
   });
   await page.goto('/?viewer=three&render=basic&file=/download-test/root.usda'); await stageReady(page);
   await page.evaluate(async () => (window as any).usdHydra.editStage(stage => stage.DefinePrim('/World/HttpEdit', 'Xform').delete()));
-  await page.getByLabel('Download format', {exact:true}).click();
-  await page.getByRole('menuitemradio', {name:'USDZ', exact:true}).click();
-  const event = page.waitForEvent('download'); await page.getByRole('button',{name:'Download',exact:true}).click();
+  await page.getByRole('button',{name:'Download',exact:true}).click();
+  const event = page.waitForEvent('download');
+  await page.getByRole('menuitem', {name:'USDZ', exact:true}).click();
   const file = await event, bytes = new Uint8Array(await readFile((await file.path())!)), entries = unzipSync(bytes);
   expect(Object.keys(entries).some(name => name.endsWith('child.usda'))).toBe(true);
   expect(Object.keys(entries).some(name => name.endsWith('palette.bin'))).toBe(true);
@@ -128,7 +131,9 @@ test('closing a stage during a dependency fetch safely cancels its download', as
   const button = page.getByRole('button',{name:'Download',exact:true});
   const fetch = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/later.bin'));
   try {
-    await button.click(); await fetch;
+    await button.click();
+    await page.getByRole('menuitem', {name:'ZIP', exact:true}).click();
+    await fetch;
     await clearStage(page); await expect(button).toBeDisabled();
   } finally { release!(); }
   await expect(button).toHaveAttribute('aria-busy','false');
@@ -150,14 +155,13 @@ test('USDZ and GLB export the authored pose by default and the live SimReady pos
     return sim.bodies.get(path).body.translation().toArray();
   }, knob);
 
-  const trigger = page.getByLabel('Download format', {exact:true});
+  const trigger = page.getByRole('button', {name:'Download', exact:true});
   const pose = page.getByRole('menuitemcheckbox', {name:'Export with changed SimReady pose'});
   const exportFile = async (format: 'glTF'|'USDZ', changed: boolean) => {
     await trigger.click();
     if (await pose.getAttribute('aria-checked') !== String(changed)) await pose.click();
-    await page.getByRole('menuitemradio', {name:format, exact:true}).click();
     const pending = page.waitForEvent('download');
-    await page.getByRole('button', {name:'Download', exact:true}).click();
+    await page.getByRole('menuitem', {name:format, exact:true}).click();
     const file = await pending;
     expect(await file.failure()).toBeNull();
     return readFile((await file.path())!);

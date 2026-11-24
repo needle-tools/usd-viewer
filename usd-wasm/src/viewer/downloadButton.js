@@ -7,6 +7,7 @@ let nextId = 0;
 
 /** A standalone stage download control; the host owns the current Hydra handle. */
 export function mountDownloadButton(options) {
+  const menuOnly = options.menuOnly === true;
   if (options.style !== false) installViewerStyle();
   const container = options.container || document.body;
   const element = document.createElement('div'); element.className = 'usd-download';
@@ -20,9 +21,16 @@ export function mountDownloadButton(options) {
   const spinner = document.createElement('span'); spinner.className = 'usd-download-spinner';
   glyph.append(viewerIcon('download'), spinner); button.append(glyph, label);
   const menuElement = document.createElement('details'); menuElement.className = 'usd-download-format'; menuElement.dataset.usdMenu = 'download';
-  const menuTrigger = document.createElement('summary'); menuTrigger.className = 'usd-download-trigger';
-  menuTrigger.setAttribute('aria-label', 'Download format'); menuTrigger.title = 'Download format';
-  menuTrigger.setAttribute('aria-haspopup', 'menu'); menuTrigger.append(viewerIcon('expand_more'));
+  const summary = document.createElement('summary');
+  const menuTrigger = menuOnly ? button : summary;
+  menuTrigger.classList.add('usd-download-trigger');
+  if (menuOnly) summary.hidden = true;
+  else {
+    menuTrigger.setAttribute('aria-label', 'Download format'); menuTrigger.title = 'Download format';
+    menuTrigger.append(viewerIcon('expand_more'));
+  }
+  menuTrigger.setAttribute('aria-haspopup', 'menu');
+  menuTrigger.setAttribute('aria-expanded', 'false');
   const menu = document.createElement('div'); menu.className = 'usd-download-menu'; menu.id = `usd-download-formats-${++nextId}`;
   menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Download formats'); menuTrigger.setAttribute('aria-controls', menu.id);
   const topLayer = typeof menu.showPopover === 'function';
@@ -40,12 +48,16 @@ export function mountDownloadButton(options) {
   if (!formats.includes(format)) format = 'zip';
   const items = formats.map(value => {
     const item = document.createElement('button'); item.type = 'button'; item.textContent = value === 'gltf' ? 'glTF' : value.toUpperCase();
-    item.setAttribute('role', 'menuitemradio');
-    item.addEventListener('click', () => { setFormat(value); closeMenu(); button.focus(); });
+    item.setAttribute('role', menuOnly ? 'menuitem' : 'menuitemradio');
+    item.addEventListener('click', () => { setFormat(value); closeMenu(); button.focus(); if (menuOnly) runAction(download); });
     menu.append(item); return item;
   });
-  const shareItem=document.createElement('button');shareItem.type='button';shareItem.textContent='Share on Needle Cloud';shareItem.setAttribute('role','menuitemradio');
-  shareItem.addEventListener('click',()=>{sharing=true;refresh();closeMenu();button.focus();});menu.append(shareItem);
+  const shareItem=document.createElement('button');shareItem.type='button';shareItem.textContent='Share on Needle Cloud';shareItem.setAttribute('role',menuOnly?'menuitem':'menuitemradio');
+  shareItem.addEventListener('click',()=>{
+    closeMenu();button.focus();
+    if (menuOnly) runAction(share);
+    else { sharing=true;refresh(); }
+  });menu.append(shareItem);
   const textureItem=document.createElement('button');textureItem.type='button';textureItem.className='usd-download-textures';
   textureItem.setAttribute('role','menuitemcheckbox');
   const textureCheck=document.createElement('span');textureCheck.setAttribute('aria-hidden','true');textureCheck.className='usd-download-checkbox';
@@ -56,7 +68,7 @@ export function mountDownloadButton(options) {
   const poseCheck=document.createElement('span');poseCheck.setAttribute('aria-hidden','true');poseCheck.className='usd-download-checkbox';
   poseItem.append(poseCheck,'Export with changed SimReady pose');
   poseItem.addEventListener('click',()=>{exportChangedPose=!exportChangedPose;refresh();});menu.append(poseItem);
-  menuElement.append(menuTrigger, menu); element.append(button, menuElement, status); container.append(element);
+  menuElement.append(summary, menu); element.append(button, menuElement, status); container.append(element);
 
   function reportProgress(value) {
     if (disposed) return;
@@ -82,18 +94,20 @@ export function mountDownloadButton(options) {
     if (!allowed.includes(format)) format = allowed[0] || 'zip';
     if(sharing&&!source?.share)sharing=false;
     button.disabled = !source || busy || (sharing ? !source.share : allowed.length === 0);
-    idleLabel.textContent=sharing?'Share':'Download';button.setAttribute('aria-label',sharing?'Share':'Download');
-    glyph.replaceChildren(viewerIcon(sharing?'share':'download'),spinner);
+    const showShare = sharing && !menuOnly;
+    idleLabel.textContent=showShare?'Share':'Download';button.setAttribute('aria-label',showShare?'Share':'Download');
+    glyph.replaceChildren(viewerIcon(showShare?'share':'download'),spinner);
     button.setAttribute('aria-busy', String(busy)); element.dataset.exporting = String(busy);
     if (busy) button.setAttribute('aria-describedby', status.id);
-    else { button.title = !source?'Open a file first':sharing?'Share on Needle Cloud':`Download ${format==='gltf'?'glTF':format.toUpperCase()}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
+    else { button.title = !source?'Open a file first':menuOnly?'Download':sharing?'Share on Needle Cloud':`Download ${format==='gltf'?'glTF':format.toUpperCase()}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
     menuTrigger.setAttribute('aria-disabled', String(button.disabled)); menuTrigger.tabIndex = button.disabled ? -1 : 0;
     items.forEach((item, index) => {
       item.disabled = button.disabled || !allowed.includes(formats[index]);
       item.hidden = formats[index]==='gltf'&&!source?.exportGltf;
-      item.setAttribute('aria-checked', String(!sharing&&formats[index] === format));
+      if (!menuOnly) item.setAttribute('aria-checked', String(!sharing&&formats[index] === format));
     });
-    shareItem.hidden=!source?.share;shareItem.disabled=button.disabled;shareItem.setAttribute('aria-checked',String(sharing));
+    shareItem.hidden=!source?.share;shareItem.disabled=button.disabled;
+    if (!menuOnly) shareItem.setAttribute('aria-checked',String(sharing));
     textureItem.hidden=false;
     textureItem.disabled=button.disabled;
     textureItem.setAttribute('aria-checked',String(textureResolution==='original'));
@@ -173,9 +187,12 @@ export function mountDownloadButton(options) {
     if(disposed||busy||!options.getSource()?.share)return;
     sharing=true;refresh();await download();
   }
-  button.addEventListener('click', () => { void download().catch(error => {
-    if (!disposed) (options.onError || (error => console.error('Download failed:', error)))(error);
-  }); });
+  function runAction(action) {
+    void action().catch(error => {
+      if (!disposed) (options.onError || (error => console.error('Download failed:', error)))(error);
+    });
+  }
+  if (!menuOnly) button.addEventListener('click', () => runAction(download));
   menuTrigger.addEventListener('click', event => { event.preventDefault(); menuElement.open ? closeMenu() : openMenu(); });
   menuTrigger.addEventListener('keydown', event => {
     if (button.disabled) return;

@@ -89,6 +89,7 @@ export async function mountWorkbench() {
   function menuIsOpen() { return menus.some(menu => menu.open) || downloadControl?.menuOpen; }
   function followMenu(trigger) {
     if (!menuIsOpen() || trigger.matches(':disabled,[aria-disabled=true]')) return;
+    if (trigger === downloadControl?.menuTrigger) { downloadControl.openMenu(); return; }
     closeMenus(true);
     if (trigger.tagName === 'SUMMARY') openMenu(trigger.parentElement);
   }
@@ -107,7 +108,8 @@ export async function mountWorkbench() {
     const triggers = [...header.querySelectorAll('.usd-menu > summary, .usd-examples-menu, .usd-download-trigger')].filter(item => item.getClientRects().length && !item.matches('[aria-disabled=true]'));
     const next = triggers[(triggers.indexOf(trigger) + direction + triggers.length) % triggers.length];
     closeMenus(true); next.focus();
-    if (open && next.tagName === 'SUMMARY') openMenu(next.parentElement);
+    if (open && next === downloadControl?.menuTrigger) downloadControl.openMenu();
+    else if (open && next.tagName === 'SUMMARY') openMenu(next.parentElement);
   }
   function createMenu(label, parent = actions) {
     const disclosure = element('details', 'usd-menu'); disclosure.dataset.usdMenu = label.toLowerCase();
@@ -146,6 +148,7 @@ export async function mountWorkbench() {
   const [, helpCommands] = createMenu('Help');
   downloadControl = mountDownloadButton({
     container: header, getSource: () => downloadSource?.(),
+    menuOnly: true,
     stateKey: 'needle-usd-download-format', menuAnchor: header,
     onTextureResolutionChange:resolution=>track('export_texture_resolution_changed',{resolution}),
     onOpenChange(open) { if (open) for (const menu of menus) menu.open = false; },
@@ -154,7 +157,6 @@ export async function mountWorkbench() {
   const downloadGroup = downloadControl.element;
   downloadControl.button.id = 'usd-download';
   downloadControl.menuTrigger.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') followMenu(downloadControl.menuTrigger); });
-  downloadControl.button.addEventListener('click', () => closeMenus());
   const samples = button('Examples', () => { closeMenus(); setMenubarOpen(false); openPanel('examples'); });
   samples.disabled = true; samples.classList.add('usd-examples-menu'); fileMenu.after(samples);
   samples.setAttribute('aria-controls','usd-examples-panel');

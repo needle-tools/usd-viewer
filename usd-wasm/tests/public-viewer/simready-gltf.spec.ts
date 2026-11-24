@@ -169,8 +169,8 @@ test('NVIDIA SimReady glasses export keeps resolved instance ownership and artic
  const messages:string[]=[];page.on('console',message=>{if(message.type()==='error')messages.push(message.text());});
  const source='https://huggingface.co/datasets/nvidia/simready-assets/resolve/4763fbfaa4f8e97658e68b57d01b4c86659e08b5/accessory_eyeglasses_a01/simready_usd/sm_accessory_eyeglasses_a01_01.usd';
  await page.goto('/?viewer=three&workspace=studio&file='+encodeURIComponent(source));await stageReady(page);
- await page.getByLabel('Download format',{exact:true}).click();await page.getByRole('menuitemradio',{name:'glTF',exact:true}).click();
- const downloaded=page.waitForEvent('download',{timeout:60000}).catch(async error=>{throw new Error(messages.join('\n')+'\nstatus: '+await page.locator('.usd-download-status').textContent()+'\n'+error.message);});await page.getByRole('button',{name:'Download',exact:true}).click();
+ await page.getByRole('button',{name:'Download',exact:true}).click();
+ const downloaded=page.waitForEvent('download',{timeout:60000}).catch(async error=>{throw new Error(messages.join('\n')+'\nstatus: '+await page.locator('.usd-download-status').textContent()+'\n'+error.message);});await page.getByRole('menuitem',{name:'glTF',exact:true}).click();
  const file=info.outputPath('nvidia-glasses.glb');
  // Keep one physical copy of the download.
  await link((await(await downloaded).path())!,file);
@@ -245,18 +245,19 @@ def Material "Material" {
   w.usdWorkbench.setDownload(()=>({handle,filename:'quality.usda',formats:['zip','usdz','gltf'],exportGltf:options=>(import(exportPath)).then(module=>module.exportSimreadyGltf({handle,exporter:new GLTFExporter(),...options}))}));
  });
  expect(await page.evaluate(()=>(window as any).qualityMaterial.map.image.width)).toBe(2);
- const exportFile=async(name:string)=>{
-  const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Download',exact:true}).click();
+ const trigger=page.getByRole('button',{name:'Download',exact:true});
+ const exportFile=async(name:string,format='glTF')=>{
+  await trigger.click();
+  const downloaded=page.waitForEvent('download');await page.getByRole('menuitem',{name:format,exact:true}).click();
   const file=info.outputPath(name);await(await downloaded).saveAs(file);return readFile(file);
  };
  const dimensions=(bytes:Buffer)=>{
   const length=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+length).toString()),start=28+length;
   return json.images.map((image:any)=>{const view=json.bufferViews[image.bufferView],offset=start+(view.byteOffset||0);return[bytes.readUInt32BE(offset+16),bytes.readUInt32BE(offset+20)];});
  };
- await page.getByLabel('Download format',{exact:true}).click();await page.getByRole('menuitemradio',{name:'glTF',exact:true}).click();
  expect(dimensions(await exportFile('full.glb'))).toEqual([[8,4],[8,4]]);expect(originalRequests).toBeGreaterThan(0);
  expect(await page.evaluate(()=>{const w=window as any;return w.qualityMaterial.map===w.previewMap&&w.qualityMaterial.map.image.width===2;})).toBe(true);
- await page.getByLabel('Download format',{exact:true}).click();await page.getByRole('menuitemcheckbox',{name:'Full-resolution textures'}).click();
+ await trigger.click();await page.getByRole('menuitemcheckbox',{name:'Full-resolution textures'}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).qualityEvents.filter((event:any)=>event.name==='export_texture_resolution_changed'))).toEqual([{name:'export_texture_resolution_changed',properties:{resolution:'preview'}}]);
  await page.getByRole('menu').screenshot({path:info.outputPath('texture-quality-menu.png')});await page.keyboard.press('Escape');
  const previous=originalRequests;expect(dimensions(await exportFile('preview.glb'))).toEqual([[2,1],[2,1]]);expect(originalRequests).toBe(previous);
@@ -267,9 +268,8 @@ def Material "Material" {
   return[Buffer.from(image).readUInt32BE(16),Buffer.from(image).readUInt32BE(20)];
  };
  for(const format of ['USDZ','ZIP']){
-  const trigger=page.getByLabel('Download format',{exact:true});await trigger.click();await page.getByRole('menuitemradio',{name:format,exact:true}).click();
   await trigger.click();const checkbox=page.getByRole('menuitemcheckbox',{name:'Full-resolution textures'});await expect(checkbox).not.toBeChecked();await expect(checkbox).toBeEnabled();await page.keyboard.press('Escape');
-  const preview=await exportFile('preview.'+format.toLowerCase());expect(imageSize(preview)).toEqual([2,1]);
+  const preview=await exportFile('preview.'+format.toLowerCase(),format);expect(imageSize(preview)).toEqual([2,1]);
   if(format==='USDZ'){
    const restored=await page.evaluate(async bytes=>{
     const hydraPath='/usd/create.three.js',runtimePath='/usd/bindings/index.js';const {Group}=await import('three');
@@ -277,7 +277,7 @@ def Material "Material" {
     try{await handle.ready();await handle.materialsReady();return await handle.readStage(stage=>stage.GetPrimAtPath('/Plane').IsValid());}finally{await handle.dispose();}
    },Array.from(preview));expect(restored).toBe(true);
   }
-  await trigger.click();await checkbox.click();await page.keyboard.press('Escape');expect(imageSize(await exportFile('full.'+format.toLowerCase()))).toEqual([8,4]);
+  await trigger.click();await checkbox.click();await page.keyboard.press('Escape');expect(imageSize(await exportFile('full.'+format.toLowerCase(),format))).toEqual([8,4]);
   await trigger.click();await checkbox.click();await page.keyboard.press('Escape');
  }
  expect(await page.evaluate(()=>(window as any).qualityHandle.readStage(stage=>stage.GetRootLayer().ExportToString()))).toBe(layerBefore);
@@ -287,10 +287,11 @@ def Material "Material" {
 
 test('Cloud sharing hands off the selected format and preview quality without uploading in the test',async({page})=>{
  await page.route('**/cloud-handoff.html?*',route=>route.fulfill({contentType:'text/html',body:'<p>Captured handoff</p>'}));
+ await page.addInitScript(()=>localStorage.setItem('needle-usd-download-format',JSON.stringify('usdz')));
  await page.goto('/?viewer=three&render=basic&file=/test-fixtures/simready/assembly.usda');await stageReady(page);
- const trigger=page.getByLabel('Download format',{exact:true});await trigger.click();await page.getByRole('menuitemradio',{name:'USDZ',exact:true}).click();
- await trigger.click();await page.getByRole('menuitemcheckbox',{name:'Full-resolution textures'}).click();await page.getByRole('menuitemradio',{name:'Share on Needle Cloud',exact:true}).click();
- await page.getByRole('button',{name:'Share',exact:true}).click();await page.waitForURL('**/cloud-handoff.html?*',{timeout:15000});
+ await page.getByRole('button',{name:'Download',exact:true}).click();
+ await page.getByRole('menuitemcheckbox',{name:'Full-resolution textures'}).click();await page.getByRole('menuitem',{name:'Share on Needle Cloud',exact:true}).click();
+ await page.waitForURL('**/cloud-handoff.html?*',{timeout:15000});
  const payload=await page.evaluate(async()=>{const path='/cloud-handoff-store.js',data=await(await import(path)).loadHandoffPayload();return{root:data.rootFilename,files:data.files.map(file=>({name:file.relativePath,bytes:Array.from(new Uint8Array(file.bytes))}))};});
  expect(payload.root).toMatch(/\.usdz$/);expect(payload.files).toHaveLength(1);
  const entries=unzipSync(new Uint8Array(payload.files[0].bytes));expect(Object.keys(entries).some(name=>/\.usd[ac]?$/.test(name))).toBe(true);

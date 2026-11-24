@@ -3,17 +3,43 @@ import {zipSync, unzipSync} from 'three/addons/libs/fflate.module.js';
 import {readFile} from 'node:fs/promises';
 
 const archive = [...zipSync({'scene.usda':new TextEncoder().encode('#usda 1.0\ndef Sphere "Ball" {}\n')}, {level:0})];
-async function mount(page: Page) {
+async function mount(page: Page, menuOnly = false) {
   await page.route('**/download-component.html', route => route.fulfill({contentType:'text/html',body:'<!doctype html><meta name="viewport" content="width=device-width"><script type="importmap">{"imports":{"three/addons/":"/three/examples/jsm/"}}</script><div id="host" style="width:180px;height:32px;overflow:hidden;transform:translateX(10px);--surface-panel:rgb(20,24,20);--text-primary:rgb(240,244,239)"></div><button id="after">After</button>'}));
   await page.goto('/download-component.html');
-  await page.evaluate(async bytes => {
+  await page.evaluate(async ({bytes,menuOnly}) => {
     const w = window as any, path = '/usd/viewer/downloadButton.js';
     w.source = {handle:{exportUsdz:async()=>new Uint8Array(bytes)}, filename:'/files/special%20sample.usda'};
     w.errors = [];
-    w.component = (await import(path)).mountDownloadButton({container:document.getElementById('host'),getSource:()=>w.source,stateKey:'standalone-download',onError:error=>w.errors.push(error.message)});
-  }, archive);
+    w.component = (await import(path)).mountDownloadButton({container:document.getElementById('host'),getSource:()=>w.source,stateKey:'standalone-download',menuOnly,onError:error=>w.errors.push(error.message)});
+  }, {bytes:archive,menuOnly});
   await expect.poll(() => page.locator('.usd-download').evaluate(el=>getComputedStyle(el).display)).toBe('inline-flex');
 }
+
+test('single Download button opens the menu and runs the chosen action', async ({page}) => {
+  await mount(page, true);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.source.share = async options => { w.shared = options; };
+    w.component.refresh();
+  });
+  const download = page.getByRole('button',{name:'Download',exact:true});
+  await download.click();
+  const menu = page.getByRole('menu',{name:'Download formats'});
+  await expect(menu).toBeVisible();
+  await expect(page.getByLabel('Download format',{exact:true})).toHaveCount(0);
+  await menu.getByRole('menuitemcheckbox',{name:'Full-resolution textures'}).click();
+  await expect(menu).toBeVisible();
+  const pending = page.waitForEvent('download');
+  await menu.getByRole('menuitem',{name:'USDZ',exact:true}).click();
+  expect((await pending).suggestedFilename()).toBe('special sample.usdz');
+  await expect(menu).toBeHidden();
+  await download.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('menuitem',{name:'ZIP',exact:true})).toBeFocused();
+  await menu.getByRole('menuitem',{name:'Share on Needle Cloud',exact:true}).click();
+  await expect.poll(() => page.evaluate(() => (window as any).shared?.textureResolution)).toBe('preview');
+  await expect(download).toBeEnabled();
+});
 
 test('standalone split button styles, unclipped popup, keyboard controls, downloads and persistence', async ({page}, info) => {
   await mount(page);

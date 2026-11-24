@@ -20,12 +20,14 @@ export interface DownloadSource {
   /** Enables the Cloud destination. It runs only when Share is clicked. */
   share?: (options: DownloadOptions & {format: DownloadFormat}) => Promise<void>;
 }
-/** Split button for ZIP/USDZ, optional host glTF export and Cloud sharing. */
+/** Download control for ZIP/USDZ, optional host glTF export and Cloud sharing. */
 export function mountDownloadButton(options: {
   container?: HTMLElement;
   getSource: () => DownloadSource | null | undefined;
   /** Install the shared viewer stylesheet. Defaults to true. */
   style?: boolean;
+  /** Use one menu button and run the chosen action immediately. Defaults to false. */
+  menuOnly?: boolean;
   format?: DownloadFormat;
   /** Optional localStorage key; omit to keep the choice local to this control. */
   stateKey?: string;
