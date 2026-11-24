@@ -14,6 +14,21 @@ test('RGBA downsampling interpolates premultiplied alpha without a full-size bit
  const image=png(2,2,8,6,[0,255,0,0,255,0,255,0,0,0,0,0,255,255,255,255,255,255]);
  const out=downsamplePng(image,1,Unzlib);assert.equal(out.width,1);assert.deepEqual([...out.data],[170,85,170,191]);
 });
+test('integer RGB blocks match generic opaque RGBA downsampling at both sample depths',()=>{
+ for(const depth of [8,16]){
+  const rgb=[],rgba=[],max=2**depth-1;
+  const pack=value=>depth===8?[value]:[value>>8,value&255];
+  for(let y=0;y<2;y++){
+   rgb.push(0);rgba.push(0);
+   for(let x=0;x<4;x++){
+    const pixel=[x*101+y*19,x*59+y*13,max-x*37-y*7].flatMap(value=>pack(value%max));
+    rgb.push(...pixel);rgba.push(...pixel,...pack(max));
+   }
+  }
+  assert.deepEqual(downsamplePng(png(4,2,depth,2,rgb),2,Unzlib).data,
+   downsamplePng(png(4,2,depth,6,rgba),2,Unzlib).data);
+ }
+});
 test('every scanline filter preserves RGB samples',()=>{
  const width=3,rows=Array.from({length:5},(_,y)=>Uint8Array.from({length:9},(_,i)=>20+y*13+i*7)),raw=[];
  for(let y=0;y<rows.length;y++){const filter=y;raw.push(filter);for(let i=0;i<9;i++){const a=i>=3?rows[y][i-3]:0,b=y?rows[y-1][i]:0,c=y&&i>=3?rows[y-1][i-3]:0;let p=0;if(filter===1)p=a;else if(filter===2)p=b;else if(filter===3)p=Math.floor((a+b)/2);else if(filter===4){const q=a+b-c,pa=Math.abs(q-a),pb=Math.abs(q-b),pc=Math.abs(q-c);p=pa<=pb&&pa<=pc?a:pb<=pc?b:c;}raw.push((rows[y][i]-p+256)%256);}}
@@ -33,4 +48,20 @@ test('Adam7 passes produce the same resized pixels as noninterlaced data',()=>{
 test('truncated images and invalid filters fail instead of yielding partial textures',()=>{
  const valid=png(1,1,8,6,[0,10,20,30,255]);assert.throws(()=>downsamplePng(valid.subarray(0,valid.length-6),1,Unzlib),/Truncated|Incomplete/);
  assert.throws(()=>downsamplePng(png(1,1,8,6,[9,10,20,30,255]),1,Unzlib),/filter/);
+});
+test('preview worker falls back when native PNG resizing rejects a valid image', async t => {
+ const bytes=png(2,2,8,2,[0,255,0,0,0,0,0, 0,0,0,0,0,255,0]);
+ const names=['self','createImageBitmap','OffscreenCanvas'];
+ const previous=names.map(name=>Object.getOwnPropertyDescriptor(globalThis,name));
+ t.after(()=>names.forEach((name,index)=>{
+  if(previous[index])Object.defineProperty(globalThis,name,previous[index]);
+  else delete globalThis[name];
+ }));
+ let posted;
+ globalThis.self={postMessage(value){posted=value;}};
+ globalThis.createImageBitmap=async()=>{throw new Error('Native resize failed');};
+ globalThis.OffscreenCanvas=class {};
+ await import('../../src/hydra/pngDownsample.worker.js');
+ await globalThis.self.onmessage({data:{bytes,limit:1}});
+ assert.deepEqual(posted.result,downsamplePng(bytes,1,Unzlib));
 });

@@ -42,15 +42,34 @@ export function downsamplePng(bytes, limit, Unzlib) {
     const bit=index*depth;return (row[bit>>3]>>(8-depth-(bit&7)))&((1<<depth)-1);
   }
   const u8=v=>Math.round(v*255/((1<<depth)-1));
+  const blockWidth=width/w,blockHeight=height/h;
+  const rgbBlocks=!interlace&&type===2&&Number.isInteger(blockWidth)&&Number.isInteger(blockHeight);
+  function accumulateRgbRow(){
+    const first=Math.floor(rowY/blockHeight)*w*4,weight=255*w*h;
+    let sampleIndex=0;
+    for(let col=0;col<w;col++){
+      let r=0,g=0,b=0;
+      for(let x=0;x<blockWidth;x++){
+        if(depth===8){r+=row[sampleIndex++];g+=row[sampleIndex++];b+=row[sampleIndex++];}
+        else{r+=u8(sample(sampleIndex++));g+=u8(sample(sampleIndex++));b+=u8(sample(sampleIndex++));}
+      }
+      const dst=first+col*4;
+      accum[dst]+=r*weight;accum[dst+1]+=g*weight;accum[dst+2]+=b*weight;
+      accum[dst+3]+=blockWidth*weight;
+    }
+  }
   function finishRow(){
-    const rows=ys.get(y0+rowY*dy);
-    if(rows)for(const {x,out,weight}of columns){
-      const i=x*channels,a=sample(i),b=sample(i+1),c=sample(i+2);
-      let r,g,bl,opacity=255;
-      if(type===3){if(!palette||a*3+2>=palette.length)throw new Error('Invalid PNG palette');r=palette[a*3];g=palette[a*3+1];bl=palette[a*3+2];opacity=alpha?.[a]??255;}
-      else if(type===0||type===4){r=g=bl=u8(a);if(type===4)opacity=u8(b);else if(alpha&&a===((alpha[0]<<8)|alpha[1]))opacity=0;}
-      else{r=u8(a);g=u8(b);bl=u8(c);if(type===6)opacity=u8(sample(i+3));else if(alpha&&a===((alpha[0]<<8)|alpha[1])&&b===((alpha[2]<<8)|alpha[3])&&c===((alpha[4]<<8)|alpha[5]))opacity=0;}
-      for(const target of rows){const dst=(target.out*w+out)*4,k=weight*target.weight;accum[dst]+=r*opacity*k;accum[dst+1]+=g*opacity*k;accum[dst+2]+=bl*opacity*k;accum[dst+3]+=opacity*k;}
+    if(rgbBlocks&&!alpha)accumulateRgbRow();
+    else{
+      const rows=ys.get(y0+rowY*dy);
+      if(rows)for(const {x,out,weight}of columns){
+        const i=x*channels,a=sample(i),b=sample(i+1),c=sample(i+2);
+        let r,g,bl,opacity=255;
+        if(type===3){if(!palette||a*3+2>=palette.length)throw new Error('Invalid PNG palette');r=palette[a*3];g=palette[a*3+1];bl=palette[a*3+2];opacity=alpha?.[a]??255;}
+        else if(type===0||type===4){r=g=bl=u8(a);if(type===4)opacity=u8(b);else if(alpha&&a===((alpha[0]<<8)|alpha[1]))opacity=0;}
+        else{r=u8(a);g=u8(b);bl=u8(c);if(type===6)opacity=u8(sample(i+3));else if(alpha&&a===((alpha[0]<<8)|alpha[1])&&b===((alpha[2]<<8)|alpha[3])&&c===((alpha[4]<<8)|alpha[5]))opacity=0;}
+        for(const target of rows){const dst=(target.out*w+out)*4,k=weight*target.weight;accum[dst]+=r*opacity*k;accum[dst+1]+=g*opacity*k;accum[dst+2]+=bl*opacity*k;accum[dst+3]+=opacity*k;}
+      }
     }
     const old=previous;previous=row;row=old;at=0;rowY++;if(rowY===ph)nextPass();
   }

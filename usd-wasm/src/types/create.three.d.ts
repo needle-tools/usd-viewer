@@ -231,7 +231,7 @@ export declare type NeedleThreeHydraHandle = {
     exportUsdz(options?: UsdExportOptions): Promise<Uint8Array>,
     /** Export textures at the selected resolution, including authored channel/UV conversions.
      * Dispose after export; the live scene remains at its preview resolution. */
-    createTextureExport(options?: {signal?: AbortSignal; resolution?: 'original' | 'preview'}): {
+    createTextureExport(options?: {signal?: AbortSignal; resolution?: 'original' | 'preview'; encoded?: boolean}): {
       readonly maxTextureSize: number;
       getTexture(texture: import('three').Texture): Promise<import('three').Texture>;
       /** Reapply authored conversions to one original UDIM tile without building an atlas. */

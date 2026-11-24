@@ -912,11 +912,11 @@ class TextureRegistry {
 
   // Originals use a separate registry: no preview URL rewrite, size cap, or
   // replacement of textures in the live scene. The caller owns this scope.
-  createExportScope({signal,resolution='original'} = {}) {
+  createExportScope({signal,resolution='original',encoded=false} = {}) {
     if(!['original','preview'].includes(resolution))throw new RangeError('Invalid export texture resolution.');
     const preview=resolution==='preview',limit=this.config.maxTextureSize||512;
     const useStageTextures = this.config.textureMode === 'export' && !preview;
-    const registry = useStageTextures ? this : new TextureRegistry({...this.config, textureMode: undefined,
+    const registry = useStageTextures ? this : new TextureRegistry({...this.config, textureMode: encoded&&!preview?'export':undefined,
       resolveTextureUrl: preview?this.config.resolveTextureUrl:undefined, maxTextureSize: preview?limit:undefined});
     registry.udimTiles = this.udimTiles;
     const pending = new Map(), converted = new Set(), tileRegistries = new Map();
