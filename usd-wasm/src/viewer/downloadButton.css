@@ -3,10 +3,13 @@
 .usd-download .usd-icon { width: var(--usd-icon-size, 16px); height: var(--usd-icon-size, 16px); flex: none; }
 .usd-download-glyph, .usd-download-label { display: inline-grid; }
 .usd-download-glyph > *, .usd-download-label > * { grid-area: 1 / 1; }
-.usd-download-busy, .usd-download-spinner { visibility: hidden; }
+.usd-download-busy, .usd-download-spinner, .usd-download-cancel { visibility: hidden; }
 .usd-download[data-exporting=true] :is(.usd-download-busy,.usd-download-spinner) { visibility: visible; }
 .usd-download[data-exporting=true] :is(.usd-download-idle,.usd-download-glyph > .usd-icon) { visibility: hidden; }
 .usd-download .usd-download-button[aria-busy=true] { opacity: 1; cursor: progress; }
+.usd-download[data-cancellable=true] .usd-download-button { cursor: pointer; }
+.usd-download[data-cancellable=true] .usd-download-button:is(:hover,:focus-visible) .usd-download-busy { visibility: hidden; }
+.usd-download[data-cancellable=true] .usd-download-button:is(:hover,:focus-visible) .usd-download-cancel { visibility: visible; }
 .usd-download-spinner { box-sizing: border-box; width: var(--usd-icon-size,16px); height: var(--usd-icon-size,16px); border: 1.5px solid color-mix(in srgb,currentColor 25%,transparent); border-top-color: currentColor; border-radius: 50%; animation: usd-export-spin .8s linear infinite; animation-play-state: paused; }
 .usd-download[data-exporting=true] .usd-download-spinner { animation-play-state: running; }
 .usd-download-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

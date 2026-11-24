@@ -17,6 +17,12 @@ export function mountDownloadButton(options) {
   const idleLabel = document.createElement('span'); idleLabel.textContent = 'Download'; idleLabel.className = 'usd-download-idle';
   const busyLabel = document.createElement('span'); busyLabel.textContent = 'Exporting…'; busyLabel.className = 'usd-download-busy';
   label.append(idleLabel, busyLabel);
+  if (menuOnly) {
+    const cancelLabel = document.createElement('span');
+    cancelLabel.className = 'usd-download-cancel';
+    cancelLabel.textContent = 'Cancel';
+    label.append(cancelLabel);
+  }
   const glyph = document.createElement('span'); glyph.className = 'usd-download-glyph'; glyph.setAttribute('aria-hidden','true');
   const spinner = document.createElement('span'); spinner.className = 'usd-download-spinner';
   glyph.append(viewerIcon('download'), spinner); button.append(glyph, label);
@@ -71,7 +77,7 @@ export function mountDownloadButton(options) {
   menuElement.append(summary, menu); element.append(button, menuElement, status); container.append(element);
 
   function reportProgress(value) {
-    if (disposed) return;
+    if (disposed || compressionAbort?.signal.aborted) return;
     progress = value;
     const names = {preparing:'Preparing',dependencies:'Fetching dependencies',packaging:'Packaging',reading:'Reading archive',textures:'Preparing preview textures',compressing:'Compressing ZIP',physics:'Physics',metadata:'Metadata',geometry:'Geometry',writing:'Writing glTF',sharing:'Sharing',complete:sharing?'Share ready':'Download ready'};
     const percent = value.total > 0 ? Math.min(100, Math.floor(value.completed / value.total * 100)) : -1;
@@ -93,11 +99,19 @@ export function mountDownloadButton(options) {
     if (busy && (!source || source.handle !== activeSource?.handle || activeSource?.isCurrent?.() === false)) compressionAbort?.abort();
     if (!allowed.includes(format)) format = allowed[0] || 'zip';
     if(sharing&&!source?.share)sharing=false;
-    button.disabled = !source || busy || (sharing ? !source.share : allowed.length === 0);
+    const canCancel = menuOnly && busy && !compressionAbort.signal.aborted;
+    button.disabled = busy ? !canCancel : !source || (sharing ? !source.share : allowed.length === 0);
     const showShare = sharing && !menuOnly;
-    idleLabel.textContent=showShare?'Share':'Download';button.setAttribute('aria-label',showShare?'Share':'Download');
+    idleLabel.textContent=showShare?'Share':'Download';
+    button.setAttribute('aria-label', canCancel ? 'Cancel export' : menuOnly && busy ? 'Cancelling export' : idleLabel.textContent);
+    busyLabel.textContent = menuOnly && busy && !canCancel ? 'Cancelling…' : 'Exporting…';
     glyph.replaceChildren(viewerIcon(showShare?'share':'download'),spinner);
     button.setAttribute('aria-busy', String(busy)); element.dataset.exporting = String(busy);
+    if (menuOnly) {
+      element.dataset.cancellable = String(canCancel);
+      if (busy) button.removeAttribute('aria-haspopup');
+      else button.setAttribute('aria-haspopup', 'menu');
+    }
     if (busy) button.setAttribute('aria-describedby', status.id);
     else { button.title = !source?'Open a file first':menuOnly?'Download':sharing?'Share on Needle Cloud':`Download ${format==='gltf'?'glTF':format.toUpperCase()}`; element.dataset.tip=button.dataset.tip=button.title;button.removeAttribute('aria-describedby'); }
     menuTrigger.setAttribute('aria-disabled', String(button.disabled)); menuTrigger.tabIndex = button.disabled ? -1 : 0;
@@ -115,7 +129,7 @@ export function mountDownloadButton(options) {
     poseItem.hidden=!source?.canExportChangedPose;
     poseItem.disabled=button.disabled||!source?.canExportChangedPose?.();
     poseItem.setAttribute('aria-checked',String(exportChangedPose));
-    if (button.disabled) closeMenu();
+    if (busy || button.disabled) closeMenu();
   }
   function setFormat(value) {
     if (!formats.includes(value)) throw new RangeError(`Unsupported download format: ${value}`);
@@ -139,7 +153,7 @@ export function mountDownloadButton(options) {
     menu.style.top = `${top}px`;
   }
   function openMenu() {
-    refresh(); if (disposed || button.disabled || menuElement.open) return;
+    refresh(); if (disposed || busy || button.disabled || menuElement.open) return;
     menuElement.open = true; menuTrigger.setAttribute('aria-expanded', 'true');
     if (topLayer) menu.showPopover();
     positionMenu(); options.onOpenChange?.(true);
@@ -161,7 +175,7 @@ export function mountDownloadButton(options) {
     exportingFormat = selectedFormat;
     closeMenu(); busy = true; activeSource = source; compressionAbort = new AbortController(); refresh();
     announcedPhase = ''; announcedPercent = -1; reportProgress({phase:'preparing',completed:0,total:0});
-    const current = () => !disposed && options.getSource()?.handle === source.handle && source.isCurrent?.() !== false;
+    const current = () => !disposed && !compressionAbort.signal.aborted && options.getSource()?.handle === source.handle && source.isCurrent?.() !== false;
     try {
       // Give the busy UI a task boundary before starting work. Native packaging
       // uses a pthread; compression uses a separate module worker below.
@@ -181,7 +195,10 @@ export function mountDownloadButton(options) {
     } catch (error) {
       if (compressionAbort.signal.aborted || !current()) return;
       status.textContent = 'Export failed'; throw error;
-    } finally { busy = false; activeSource = null; compressionAbort = null; refresh(); }
+    } finally {
+      if (menuOnly && compressionAbort.signal.aborted) status.textContent = 'Export cancelled';
+      busy = false; activeSource = null; compressionAbort = null; refresh();
+    }
   }
   async function share() {
     if(disposed||busy||!options.getSource()?.share)return;
@@ -193,9 +210,17 @@ export function mountDownloadButton(options) {
     });
   }
   if (!menuOnly) button.addEventListener('click', () => runAction(download));
-  menuTrigger.addEventListener('click', event => { event.preventDefault(); menuElement.open ? closeMenu() : openMenu(); });
+  menuTrigger.addEventListener('click', event => {
+    event.preventDefault();
+    if (menuOnly && busy) {
+      compressionAbort.abort();
+      status.textContent = 'Cancelling export';
+      refresh();
+    } else if (menuElement.open) closeMenu();
+    else openMenu();
+  });
   menuTrigger.addEventListener('keydown', event => {
-    if (button.disabled) return;
+    if (busy || button.disabled) return;
     if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault(); openMenu();
       const enabled = [...items,shareItem,textureItem,poseItem].filter(item => !item.disabled&&!item.hidden);

@@ -41,6 +41,30 @@ test('single Download button opens the menu and runs the chosen action', async (
   await expect(download).toBeEnabled();
 });
 
+test('clicking the busy Download button cancels export even if the source completes', async ({page}) => {
+  await mount(page, true);
+  await page.evaluate(bytes => {
+    const w = window as any;
+    w.source.handle.exportUsdz = ({signal}) => {
+      w.exportSignal = signal;
+      return new Promise(resolve => { w.finishExport = () => resolve(new Uint8Array(bytes)); });
+    };
+  }, archive);
+  const downloads: string[] = [];
+  page.on('download', file => downloads.push(file.suggestedFilename()));
+  await page.getByRole('button',{name:'Download',exact:true}).click();
+  await page.getByRole('menuitem',{name:'USDZ',exact:true}).click();
+  await page.waitForFunction(() => (window as any).finishExport);
+  const cancel = page.getByRole('button',{name:'Cancel export',exact:true});
+  await cancel.hover();
+  await expect(cancel.getByText('Cancel',{exact:true})).toBeVisible();
+  await cancel.click();
+  expect(await page.evaluate(() => (window as any).exportSignal.aborted)).toBe(true);
+  await page.evaluate(() => (window as any).finishExport());
+  await expect(page.getByRole('button',{name:'Download',exact:true})).toBeEnabled();
+  expect(downloads).toEqual([]);
+});
+
 test('standalone split button styles, unclipped popup, keyboard controls, downloads and persistence', async ({page}, info) => {
   await mount(page);
   const button = page.getByRole('button',{name:'Download',exact:true});
